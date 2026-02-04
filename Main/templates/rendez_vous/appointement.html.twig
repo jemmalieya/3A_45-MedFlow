@@ -1,0 +1,122 @@
+{% extends 'base.html.twig' %}
+{% block body %}
+
+<main class="main">
+<style>
+    /* Tweak Flatpickr to match white/blue simple design */
+    .flatpickr-calendar {
+      background: #ffffff;
+      border: 1px solid #cfe0ff;
+      box-shadow: 0 6px 18px rgba(20,85,200,0.08);
+      color: #0b2e6b;
+    }
+    .flatpickr-months, .flatpickr-weekdays { background: transparent; }
+    .flatpickr-weekday { color: #2a5db0; }
+    .flatpickr-day.today { border-color: #2a5db0; }
+    .flatpickr-day.selected, .flatpickr-day.startRange, .flatpickr-day.endRange { background: #2a5db0; color: #fff; }
+    .flatpickr-time { background: transparent; }
+    /* Ensure the inline calendar sits nicely inside our form column */
+    .flatpickr-input { width:100%; padding:0.5rem 0.75rem; display:block; }
+    .flatpickr-calendar.inline { margin-top: 0.5rem; box-sizing: border-box; }
+    /* Constrain and center the inline calendar for a cleaner look */
+    #appointment-form .col-lg-8 .flatpickr-calendar.inline {
+      width: auto !important;
+      max-width: 520px !important;
+      margin-left: auto !important;
+      margin-right: auto !important;
+      display: block;
+    }
+    /* Let internal elements size naturally and center content */
+    .flatpickr-calendar.inline .flatpickr-innerContainer {
+      display: block;
+    }
+    .flatpickr-calendar.inline .flatpickr-months,
+    .flatpickr-calendar.inline .flatpickr-weekdays,
+    .flatpickr-calendar.inline .flatpickr-days {
+      width: auto !important;
+      margin: 0 auto !important;
+    }
+    /* Tidy the time selector: center and reduce large gaps */
+    .flatpickr-time {
+      display: flex;
+      justify-content: center;
+      gap: 1.5rem;
+      padding: .5rem 0;
+    }
+    .flatpickr-time .flatpickr-time-separator { margin: 0 .5rem; }
+    /* Offset the appointment section so content is not hidden by fixed header */
+    /* Adjust the value if your header is taller/shorter */
+    #appointment-form { padding-top: 100px; }
+    @media (max-width: 768px) {
+      #appointment-form { padding-top: 80px; }
+    }
+    /* Spacer element sizing (keeps same values as #appointment-form) */
+    .header-spacer { height: 100px; }
+    @media (max-width: 768px) { .header-spacer { height: 80px; } }
+  </style>
+   
+    <main class="main">
+   
+    <section id="appointment-form" class="section py-5">
+      <div class="container">
+        <div class="row justify-content-center">
+          <div class="col-lg-8">
+           <div class="container section-title" data-aos="fade-up">
+        <h2>Rendez-vous Section</h2>
+        <p>Prendre Rendez-vous</p>
+      </div><!-- End Section Title -->
+
+            {% for label, messages in app.flashes %}
+              {% for message in messages %}
+                <div class="alert alert-{{ label == 'error' ? 'danger' : 'success' }}">{{ message }}</div>
+              {% endfor %}
+            {% endfor %}
+
+            {{ form_start(form, {'attr': {'novalidate': 'novalidate'}}) }}
+              <div class="mb-3">
+                {{ form_label(form.datetime, 'Date & Heure') }}
+                {{ form_widget(form.datetime) }}
+                {{ form_errors(form.datetime) }}
+              </div>
+
+              <div class="mb-3">
+                {{ form_label(form.mode) }}
+                {{ form_widget(form.mode) }}
+                {{ form_errors(form.mode) }}
+              </div>
+
+              <div class="mb-3">
+                {{ form_label(form.motif) }}
+                {{ form_widget(form.motif) }}
+                {{ form_errors(form.motif) }}
+              </div>
+
+              <div class="row">
+                <div class="col-md-6 mb-3">
+                  <label class="form-label">Patient (ID)</label>
+                  <div class="form-control" style="background-color: #e9ecef; pointer-events: none;">
+                    <strong>1</strong>
+                  </div>
+                </div>
+                <div class="col-md-6 mb-3">
+                  <label class="form-label">Staff (ID)</label>
+                  <div class="form-control" style="background-color: #e9ecef; pointer-events: none;">
+                    <strong>{{ idStaff ?? 'Non défini' }}</strong>
+                  </div>
+                </div>
+              </div>
+
+              <div class="d-grid">
+                <button type="submit" class="btn btn-primary">Envoyer la demande</button>
+              </div>
+            {{ form_end(form) }}
+
+          </div>
+        </div>
+      </div>
+    </section>
+  
+  </main>
+  
+  
+{% endblock %}

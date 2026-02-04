@@ -1,0 +1,216 @@
+{% extends 'base_dashboard.html.twig' %}
+{% block body %}
+<div class="container-fluid">
+
+                    <!-- Page Heading -->
+                    <h1 class="h3 mb-2 text-gray-800">Appointments by Doctor</h1>
+                    <p class="mb-4">Showing all appointments for Doctor ID: <strong>{{ idStaff }}</strong></p>
+
+                    <!-- RendezVous Table -->
+                    <div class="card shadow mb-4">
+                        <div class="card-header py-3">
+                            <h6 class="m-0 font-weight-bold text-primary">Appointments List</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-bordered" width="100%" cellspacing="0">
+                                    <thead>
+                                        <tr>
+                                            <th>ID</th>
+                                            <th>Date & Time</th>
+                                            <th>Status</th>
+                                            <th>Mode</th>
+                                            <th>Reason</th>
+                                            <th>Patient ID</th>
+                                            <th>Doctor ID</th>
+                                            <th>Created</th>
+                                            <th>Start Consultation</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% if rendezvous is not empty %}
+                                            {% for appointment in rendezvous %}
+                                                <tr>
+                                                    <td>{{ appointment.id }}</td>
+                                                    <td>{{ appointment.datetime|date('Y-m-d H:i') }}</td>
+                                                    <td>
+                                                        <span class="badge badge-{% if appointment.statut == 'approuvé' %}success{% elseif appointment.statut == 'rejeté' %}danger{% else %}warning{% endif %}">
+                                                            {{ appointment.statut }}
+                                                        </span>
+                                                    </td>
+                                                    <td>{{ appointment.mode }}</td>
+                                                    <td>{{ appointment.motif }}</td>
+                                                    <td>{{ appointment.idPatient }}</td>
+                                                    <td>{{ appointment.idStaff }}</td>
+                                                    <td>{{ appointment.createdAt|date('Y-m-d H:i') }}</td>
+                                                    <td>
+                                                        <div class="d-flex">
+                                                            <button class="btn btn-sm btn-info mr-1" type="button" data-toggle="collapse" data-target="#fiches-{{ appointment.id }}" aria-expanded="false" aria-controls="fiches-{{ appointment.id }}">
+                                                                <i class="fas fa-chevron-down"></i>
+                                                            </button>
+                                                            {% if appointment.statut == 'Confirmé' %}
+                                                                <button class="btn btn-sm btn-secondary" disabled>
+                                                                    <i class="fas fa-check"></i> Completed
+                                                                </button>
+                                                            {% else %}
+                                                                <a href="{{ path('start_consultation', {'id': appointment.id}) }}" class="btn btn-sm btn-primary">
+                                                                    <i class="fas fa-play"></i> Start
+                                                                </a>
+                                                            {% endif %}
+                                                        </div>
+                                                    </td>
+                                                </tr>
+
+                                                <tr class="collapse-row">
+                                                    <td colspan="9" class="p-0 border-0">
+                                                        <div id="fiches-{{ appointment.id }}" class="collapse">
+                                                            <div class="p-3 bg-light">
+                                                                <table class="table table-sm table-bordered mb-0">
+                                                                    <thead>
+                                                                        <tr>
+                                                                            <th>Fiche ID</th>
+                                                                            <th>Diagnostic</th>
+                                                                            <th>Observations</th>
+                                                                            <th>Exam Results</th>
+                                                                            <th>Start</th>
+                                                                            <th>End</th>
+                                                                            <th>Duration (min)</th>
+                                                                            <th>Created At</th>
+                                                                        </tr>
+                                                                    </thead>
+                                                                    <tbody>
+                                                                        {% set hasFiche = false %}
+                                                                        {% for fiche in fiches %}
+                                                                            {% if fiche.rendezVous.id == appointment.id %}
+                                                                                {% set hasFiche = true %}
+                                                                                <tr>
+                                                                                    <td>{{ fiche.id }}</td>
+                                                                                    <td>{{ fiche.diagnostic }}</td>
+                                                                                    <td>{{ fiche.observations ?? 'N/A' }}</td>
+                                                                                    <td>{{ fiche.resultatsExamens ?? 'N/A' }}</td>
+                                                                                    <td>{{ fiche.startTime ? fiche.startTime|date('Y-m-d H:i:s') : 'N/A' }}</td>
+                                                                                    <td>{{ fiche.endTime ? fiche.endTime|date('Y-m-d H:i:s') : 'N/A' }}</td>
+                                                                                    <td>{{ fiche.dureeMinutes ?? 'N/A' }}</td>
+                                                                                    <td>{{ fiche.createdAt|date('Y-m-d H:i:s') }}</td>
+                                                                                </tr>
+                                                                            {% endif %}
+                                                                        {% endfor %}
+                                                                        {% if not hasFiche %}
+                                                                            <tr>
+                                                                                <td colspan="8" class="text-center">No medical files for this appointment.</td>
+                                                                            </tr>
+                                                                        {% endif %}
+                                                                    </tbody>
+                                                                </table>
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            {% endfor %}
+                                        {% else %}
+                                            <tr>
+                                                <td colspan="9" class="text-center">No appointments found for this doctor.</td>
+                                            </tr>
+                                        {% endif %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- FicheMedicale Table -->
+                    <div class="card shadow mb-4">
+                        <div class="card-header py-3">
+                            <h6 class="m-0 font-weight-bold text-primary">Medical Files List</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-bordered" width="100%" cellspacing="0">
+                                    <thead>
+                                        <tr>
+                                            <th>ID</th>
+                                            <th>Rendezvous ID</th>
+                                            <th>Diagnostic</th>
+                                            <th>Observations</th>
+                                            <th>Exam Results</th>
+                                            <th>Start Time</th>
+                                            <th>End Time</th>
+                                            <th>Duration (minutes)</th>
+                                            <th>Created At</th>
+                                            <th>Modify</th>
+                                            <th>Delete</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% if fiches is not empty %}
+                                            {% for fiche in fiches %}
+                                                <tr>
+                                                    <td>{{ fiche.id }}</td>
+                                                    <td>{{ fiche.rendezVous.id }}</td>
+                                                    <td>{{ fiche.diagnostic }}</td>
+                                                    <td>{{ fiche.observations ?? 'N/A' }}</td>
+                                                    <td>{{ fiche.resultatsExamens ?? 'N/A' }}</td>
+                                                    <td>{{ fiche.startTime ? fiche.startTime|date('Y-m-d H:i:s') : 'N/A' }}</td>
+                                                    <td>{{ fiche.endTime ? fiche.endTime|date('Y-m-d H:i:s') : 'N/A' }}</td>
+                                                    <td>{{ fiche.dureeMinutes ?? 'N/A' }}</td>
+                                                    <td>{{ fiche.createdAt|date('Y-m-d H:i:s') }}</td>
+                                                                                                        <td class="text-center">
+                                                                                                                <button type="button" class="btn btn-sm btn-link" data-toggle="modal" data-target="#editFicheModal-{{ fiche.id }}" title="Edit">
+                                                                                                                        ✏️
+                                                                                                                </button>
+
+                                                                                                                <!-- Edit modal -->
+                                                                                                                <div class="modal fade" id="editFicheModal-{{ fiche.id }}" tabindex="-1" role="dialog" aria-labelledby="editFicheLabel-{{ fiche.id }}" aria-hidden="true">
+                                                                                                                    <div class="modal-dialog modal-sm" role="document">
+                                                                                                                        <div class="modal-content">
+                                                                                                                            <form method="post" action="{{ path('consultation_view') }}">
+                                                                                                                                <div class="modal-header">
+                                                                                                                                    <h5 class="modal-title" id="editFicheLabel-{{ fiche.id }}">Edit Fiche #{{ fiche.id }}</h5>
+                                                                                                                                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                                                                                                                                </div>
+                                                                                                                                <div class="modal-body">
+                                                                                                                                    <input type="hidden" name="fiche_id" value="{{ fiche.id }}">
+                                                                                                                                    <div class="form-group">
+                                                                                                                                        <label for="diag-{{ fiche.id }}">Diagnostic</label>
+                                                                                                                                        <textarea id="diag-{{ fiche.id }}" name="diagnostic" class="form-control" rows="3" required>{{ fiche.diagnostic }}</textarea>
+                                                                                                                                    </div>
+                                                                                                                                    <div class="form-group">
+                                                                                                                                        <label for="obs-{{ fiche.id }}">Observations</label>
+                                                                                                                                        <textarea id="obs-{{ fiche.id }}" name="observations" class="form-control" rows="2">{{ fiche.observations }}</textarea>
+                                                                                                                                    </div>
+                                                                                                                                    <div class="form-group">
+                                                                                                                                        <label for="res-{{ fiche.id }}">Exam Results</label>
+                                                                                                                                        <textarea id="res-{{ fiche.id }}" name="resultatsExamens" class="form-control" rows="2">{{ fiche.resultatsExamens }}</textarea>
+                                                                                                                                    </div>
+                                                                                                                                </div>
+                                                                                                                                <div class="modal-footer">
+                                                                                                                                    <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Cancel</button>
+                                                                                                                                    <button type="submit" name="save" class="btn btn-primary btn-sm">Save</button>
+                                                                                                                                </div>
+                                                                                                                            </form>
+                                                                                                                        </div>
+                                                                                                                    </div>
+                                                                                                                </div>
+                                                                                                        </td>
+                                                    <td class="text-center">
+                                                        <form method="post" action="{{ path('app_fiche_delete', {'id': fiche.id}) }}" onsubmit="return confirm('Delete this medical file?');">
+                                                            <input type="hidden" name="_token" value="{{ csrf_token('delete' ~ fiche.id) }}">
+                                                            <button class="btn btn-sm btn-link text-danger" type="submit" title="Delete">🗑️</button>
+                                                        </form>
+                                                    </td>
+                                                </tr>
+                                            {% endfor %}
+                                        {% else %}
+                                            <tr>
+                                                <td colspan="9" class="text-center">No medical files found for this doctor.</td>
+                                            </tr>
+                                        {% endif %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+                <!-- /.container-fluid -->
+{% endblock %}

@@ -15,7 +15,7 @@ class RendezVous
     #[ORM\GeneratedValue]
     #[ORM\Column]
     private ?int $id = null;
-
+    
     #[ORM\Column]
     #[Assert\NotBlank(message: 'La date et l\'heure sont obligatoires')]
     #[Assert\GreaterThan('now', message: 'La date et l\'heure doivent être dans le futur')]

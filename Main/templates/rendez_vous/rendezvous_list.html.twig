@@ -1,0 +1,99 @@
+{% extends 'base.html.twig' %}
+{% block body %}
+<!-- rendezvous_list -->
+  <main class="main">
+    <div class="container py-5">
+      <h1 class="mb-4">Liste des Rendez-vous</h1>
+
+      {% for label, messages in app.flashes %}
+        {% for message in messages %}
+          <div class="alert alert-{{ label == 'error' ? 'danger' : 'success' }}">{{ message }}</div>
+        {% endfor %}
+      {% endfor %}
+
+      {% if rendezvous is empty %}
+        <div class="alert alert-info">Aucun rendez-vous trouvé.</div>
+      {% else %}
+        <div class="table-responsive">
+          <table class="table table-striped">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Date & Heure</th>
+                <th>Statut</th>
+                <th>Mode</th>
+                <th>Motif</th>
+                <th>Patient ID</th>
+                <th>Staff ID</th>
+                <th>Créé le</th>
+                <th>Modifier</th>
+                <th>Supprimer</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for r in rendezvous %}
+                <tr>
+                  <td>{{ r.id }}</td>
+                  <td>{{ r.datetime ? r.datetime|date('Y-m-d H:i') : '—' }}</td>
+                  <td>{{ r.statut }}</td>
+                  <td>{{ r.mode }}</td>
+                  <td>{{ r.motif }}</td>
+                  <td>{{ r.idPatient }}</td>
+                  <td>{{ r.idStaff }}</td>
+                  <td>{{ r.createdAt ? r.createdAt|date('Y-m-d H:i') : '—' }}</td>
+                  <td>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="toggleEdit({{ r.id }})">📝</button>
+                  </td>
+                  <td>
+                    <form method="post" action="{{ path('rendezvous_delete', {'id': r.id}) }}" onsubmit="return confirm('Supprimer ce rendez-vous ?');">
+                      <input type="hidden" name="_token" value="{{ csrf_token('delete' ~ r.id) }}">
+                      <button class="btn btn-sm btn-outline-danger" type="submit">🗑️</button>
+                    </form>
+                  </td>
+                </tr>
+                <tr id="edit-row-{{ r.id }}" class="edit-row" style="display:none;">
+                  <td colspan="10">
+                    <form method="post" action="{{ path('rendezvous_edit', {'id': r.id}) }}">
+                      <input type="hidden" name="_token" value="{{ csrf_token('edit' ~ r.id) }}">
+                      <div class="row g-2 align-items-end">
+                        <div class="col-md-3">
+                          <label class="form-label">Date & Heure</label>
+                          <input name="datetime" type="datetime-local" class="form-control" value="{{ r.datetime ? r.datetime|date('Y-m-d\TH:i') : '' }}">
+                        </div>
+                        <div class="col-md-2">
+                          <label class="form-label">Mode</label>
+                          <select name="mode" class="form-select">
+                            <option value="présentiel" {{ r.mode == 'présentiel' ? 'selected' : '' }}>présentiel</option>
+                            <option value="distanciel" {{ r.mode == 'distanciel' ? 'selected' : '' }}>distanciel</option>
+                          </select>
+                        </div>
+                        <div class="col-md-5">
+                          <label class="form-label">Motif</label>
+                          <input name="motif" class="form-control" value="{{ r.motif }}">
+                        </div>
+                        <div class="col-md-2 text-end">
+                          <button class="btn btn-sm btn-success" type="submit">✅</button>
+                          <button type="button" class="btn btn-sm btn-secondary" onclick="toggleEdit({{ r.id }})">✖️</button>
+                        </div>
+                      </div>
+                    </form>
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% endif %}
+    </div>
+  </main>
+  
+  <script>
+    function toggleEdit(id) {
+      const row = document.getElementById('edit-row-' + id);
+      if (!row) return;
+      row.style.display = row.style.display === 'none' ? 'table-row' : 'none';
+      // scroll into view when opened
+      if (row.style.display !== 'none') row.scrollIntoView({behavior: 'smooth', block: 'center'});
+    }
+  </script>
+{% endblock %}
