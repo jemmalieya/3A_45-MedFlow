@@ -1,0 +1,261 @@
+/* ===== FORMULAIRE PRODUIT - VERSION AMÉLIORÉE ===== */
+
+/* ===== OPTIONS DE STATUT ===== */
+.status-options {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.status-option {
+    position: relative;
+}
+
+.status-option input[type="radio"] {
+    position: absolute;
+    opacity: 0;
+    cursor: pointer;
+}
+
+.status-option label {
+    display: block;
+    padding: 20px;
+    border: 2px solid #e2e8f0;
+    border-radius: 16px;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+    position: relative;
+    overflow: hidden;
+}
+
+/* Effet de brillance au survol */
+.status-option label::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle, rgba(102, 126, 234, 0.1) 0%, transparent 70%);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.status-option label:hover::before {
+    opacity: 1;
+}
+
+.status-option label:hover {
+    border-color: #667eea;
+    background: linear-gradient(135deg, #f8fafc 0%, #eff6ff 100%);
+    transform: translateX(8px) scale(1.02);
+    box-shadow: 0 8px 24px rgba(102, 126, 234, 0.15);
+}
+
+/* État sélectionné */
+.status-option input:checked + label {
+    border-color: #667eea;
+    background: linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%);
+    box-shadow: 0 8px 32px rgba(102, 126, 234, 0.25);
+    transform: translateX(8px) scale(1.02);
+}
+
+/* Animation au clic */
+.status-option input:checked + label::after {
+    content: '✓';
+    position: absolute;
+    top: 50%;
+    right: 20px;
+    transform: translateY(-50%) scale(0);
+    font-size: 1.5rem;
+    color: #667eea;
+    font-weight: bold;
+    animation: checkmark 0.3s ease forwards;
+}
+
+@keyframes checkmark {
+    0% {
+        transform: translateY(-50%) scale(0) rotate(-180deg);
+        opacity: 0;
+    }
+    50% {
+        transform: translateY(-50%) scale(1.2) rotate(0deg);
+    }
+    100% {
+        transform: translateY(-50%) scale(1) rotate(0deg);
+        opacity: 1;
+    }
+}
+
+.status-option i {
+    font-size: 1.75rem;
+    margin-right: 12px;
+    transition: all 0.3s ease;
+}
+
+.status-option input:checked + label i {
+    transform: scale(1.2) rotate(10deg);
+}
+
+/* Variante pour les form-check-label (edit.html.twig) */
+.status-option .form-check-label {
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    border: 2px solid #e2e8f0;
+    background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+    border-radius: 16px;
+    padding: 20px;
+    position: relative;
+    overflow: hidden;
+}
+
+.status-option .form-check-label::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle, rgba(102, 126, 234, 0.1) 0%, transparent 70%);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.status-option .form-check-label:hover::before {
+    opacity: 1;
+}
+
+.status-option .form-check-label:hover {
+    border-color: #667eea;
+    background: linear-gradient(135deg, #f8fafc 0%, #eff6ff 100%);
+    transform: translateX(8px) scale(1.02);
+    box-shadow: 0 8px 24px rgba(102, 126, 234, 0.15);
+}
+
+.status-option input:checked + .form-check-label {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-color: #667eea;
+    transform: translateX(8px) scale(1.05);
+    box-shadow: 0 12px 40px rgba(102, 126, 234, 0.35);
+}
+
+.status-option input:checked + .form-check-label i {
+    color: white;
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
+}
+
+/* ===== APERÇU IMAGE ===== */
+#imagePreview {
+    transition: all 0.3s ease;
+}
+
+#imagePreview img {
+    transition: all 0.3s ease;
+    border: 3px solid #e2e8f0;
+    border-radius: 16px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+}
+
+#imagePreview img:hover {
+    transform: scale(1.05) rotate(1deg);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+    border-color: #667eea;
+}
+
+/* ===== BOUTONS FORMULAIRE ===== */
+.btn-primary,
+.btn-warning {
+    position: relative;
+    overflow: hidden;
+    z-index: 1;
+}
+
+.btn-primary::after,
+.btn-warning::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.3);
+    transform: translate(-50%, -50%);
+    transition: width 0.6s ease, height 0.6s ease;
+    z-index: -1;
+}
+
+.btn-primary:hover::after,
+.btn-warning:hover::after {
+    width: 400px;
+    height: 400px;
+}
+
+/* ===== LABELS AMÉLIORÉS ===== */
+.form-label.fw-bold {
+    color: #1e293b;
+    font-size: 0.95rem;
+    margin-bottom: 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.form-label.fw-bold i {
+    color: #667eea;
+    font-size: 1.1rem;
+}
+
+/* ===== ERREURS DE VALIDATION ===== */
+.invalid-feedback {
+    font-size: 0.875rem;
+    color: #dc2626;
+    margin-top: 0.5rem;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.invalid-feedback::before {
+    content: '⚠';
+    font-size: 1.1rem;
+}
+
+/* ===== ANIMATIONS SUPPLÉMENTAIRES ===== */
+@keyframes slideInRight {
+    from {
+        opacity: 0;
+        transform: translateX(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.status-option {
+    animation: slideInRight 0.4s ease;
+}
+
+.status-option:nth-child(1) { animation-delay: 0.1s; }
+.status-option:nth-child(2) { animation-delay: 0.2s; }
+.status-option:nth-child(3) { animation-delay: 0.3s; }
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 768px) {
+    .status-option label,
+    .status-option .form-check-label {
+        padding: 16px;
+    }
+    
+    .status-option i {
+        font-size: 1.5rem;
+    }
+    
+    .status-option label:hover,
+    .status-option .form-check-label:hover {
+        transform: translateX(4px) scale(1.01);
+    }
+}
