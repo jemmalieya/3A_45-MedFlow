@@ -84,6 +84,23 @@
               <li><a href="#">404</a></li>
             </ul>
           </li>
+              <li>
+      <a href="{{ path('front_produit_index') }}" 
+         class="{{ app.request.attributes.get('_route') starts with 'front_produit' ? 'active' : '' }}">
+         Pharmacie
+      </a>
+    </li>
+
+    <li>
+      <a href="{{ path('panier_index') }}" 
+         class="{{ app.request.attributes.get('_route') == 'panier_index' ? 'active' : '' }} position-relative">
+        <i class="bi bi-cart-fill fs-4"></i>
+        <span id="cart-count" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+          {{ app.session.get('panier') ? app.session.get('panier')|length : 0 }}
+        </span>
+      </a>
+    </li>
+
 
           <li><a href="#">Contact</a></li>
         </ul>

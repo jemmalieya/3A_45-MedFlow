@@ -1,0 +1,204 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Valider ma commande{% endblock %}
+
+{% block body %}
+<div class="container my-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            
+            {# En-tête #}
+            <div class="text-center mb-4">
+                <i class="bi bi-cart-check" style="font-size: 4rem; color: #667eea;"></i>
+                <h2 class="mt-3">Confirmer votre commande</h2>
+                <p class="text-muted">Vérifiez les détails avant de valider</p>
+            </div>
+
+            {# Récapitulatif des produits #}
+            <div class="card shadow-sm mb-4">
+                <div class="card-header text-white" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                    <h5 class="mb-0"><i class="bi bi-list-check"></i> Récapitulatif</h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Produit</th>
+                                    <th class="text-center">Quantité</th>
+                                    <th class="text-end">Prix unitaire</th>
+                                    <th class="text-end">Sous-total</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for produit in produits %}
+                                <tr>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <img src="{{ produit.imageProduit }}" alt="{{ produit.nomProduit }}" 
+                                                 style="width: 50px; height: 50px; object-fit: cover; border-radius: 8px;" class="me-3">
+                                            <span class="fw-semibold">{{ produit.nomProduit }}</span>
+                                        </div>
+                                    </td>
+                                    <td class="text-center">
+                                        <span class="badge bg-primary rounded-pill">{{ produit.quantite_panier }}</span>
+                                    </td>
+                                    <td class="text-end">{{ produit.prixProduit|number_format(2, '.', '') }} Dt</td>
+                                    <td class="text-end fw-bold">{{ (produit.prixProduit * produit.quantite_panier)|number_format(2, '.', '') }} Dt</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                            <tfoot class="table-light">
+                                <tr>
+                                    <td colspan="3" class="text-end fw-bold fs-5">Total :</td>
+                                    <td class="text-end fw-bold fs-5 text-success">{{ total|number_format(2, '.', '') }} Dt</td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            {# Boutons d'action #}
+            <div class="d-flex gap-3 justify-content-between">
+                <a href="{{ path('front_produit_index') }}" class="btn btn-outline-secondary btn-lg">
+                    <i class="bi bi-arrow-left"></i> Continuer mes achats
+                </a>
+                
+                <button type="button" class="btn btn-success btn-lg" onclick="confirmerCommande()">
+                    <i class="bi bi-check-circle"></i> Confirmer la commande
+                </button>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+{# Modal de confirmation #}
+<div id="confirmModal" class="confirm-modal">
+    <div class="confirm-modal-content">
+        <div class="confirm-modal-header">
+            <i class="bi bi-question-circle-fill text-warning"></i>
+            <h5>Confirmer votre commande</h5>
+        </div>
+        <div class="confirm-modal-body">
+            <p>Voulez-vous vraiment confirmer cette commande d'un montant de <strong>{{ total|number_format(2, '.', '') }} Dt</strong> ?</p>
+            <p class="text-muted mb-0">Cette action est irréversible.</p>
+        </div>
+        <div class="confirm-modal-footer">
+            <button class="btn btn-secondary" onclick="fermerModal()">
+                <i class="bi bi-x-circle"></i> Annuler
+            </button>
+            <form method="post" action="{{ path('commande_confirmer') }}" id="formConfirm">
+                <button type="submit" class="btn btn-success">
+                    <i class="bi bi-check-circle"></i> Oui, confirmer
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block javascripts %}
+{{ parent() }}
+<script>
+function confirmerCommande() {
+    document.getElementById('confirmModal').classList.add('active');
+}
+
+function fermerModal() {
+    document.getElementById('confirmModal').classList.remove('active');
+}
+
+// Fermer avec Escape
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        fermerModal();
+    }
+});
+</script>
+
+<style>
+.confirm-modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.6);
+    backdrop-filter: blur(5px);
+    z-index: 10001;
+}
+
+.confirm-modal.active {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: fadeIn 0.3s ease;
+}
+
+.confirm-modal-content {
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    max-width: 500px;
+    width: 90%;
+    overflow: hidden;
+    animation: slideUp 0.3s ease;
+}
+
+.confirm-modal-header {
+    padding: 25px;
+    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.confirm-modal-header i {
+    font-size: 2.5rem;
+}
+
+.confirm-modal-header h5 {
+    margin: 0;
+    font-weight: 700;
+    color: #78350f;
+}
+
+.confirm-modal-body {
+    padding: 30px 25px;
+}
+
+.confirm-modal-body p {
+    margin-bottom: 15px;
+    font-size: 1.05rem;
+    color: #4a5568;
+}
+
+.confirm-modal-footer {
+    padding: 20px 25px;
+    background: #f8fafc;
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes slideUp {
+    from {
+        transform: translateY(50px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+</style>
+{% endblock %}

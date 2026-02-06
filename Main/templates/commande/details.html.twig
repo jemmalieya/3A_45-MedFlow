@@ -1,0 +1,124 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Commande #{{ commande.idCommande }}{% endblock %}
+
+{% block body %}
+<div class="container my-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            
+            {# Message de succès #}
+            {% for message in app.flashes('success') %}
+                <div class="alert alert-success alert-dismissible fade show" role="alert">
+                    <i class="bi bi-check-circle-fill me-2"></i>
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            {% endfor %}
+
+            {# En-tête de la commande #}
+            <div class="card shadow-lg mb-4 border-0">
+                <div class="card-header text-white" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 30px;">
+                    <div class="row align-items-center">
+                        <div class="col-md-8">
+                            <h3 class="mb-2">
+                                <i class="bi bi-receipt"></i> Commande #{{ commande.idCommande }}
+                            </h3>
+                            <p class="mb-0 opacity-75">
+                                <i class="bi bi-calendar"></i> {{ commande.dateCreationCommande|date('d/m/Y à H:i') }}
+                            </p>
+                        </div>
+                        <div class="col-md-4 text-md-end mt-3 mt-md-0">
+                            <span class="badge bg-warning text-dark fs-6 px-4 py-2">
+                                {{ commande.statutCommande }}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card-body p-4">
+                    
+                    {# Détails de la commande #}
+                    <h5 class="mb-3"><i class="bi bi-box-seam"></i> Produits commandés</h5>
+                    
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Produit</th>
+                                    <th class="text-center">Quantité</th>
+                                    <th class="text-end">Prix unitaire</th>
+                                    <th class="text-end">Sous-total</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for ligne in commande.ligneCommandes %}
+                                <tr>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <img src="{{ ligne.produit.imageProduit }}" 
+                                                 alt="{{ ligne.produit.nomProduit }}" 
+                                                 style="width: 60px; height: 60px; object-fit: cover; border-radius: 10px;" 
+                                                 class="me-3">
+                                            <div>
+                                                <div class="fw-bold">{{ ligne.produit.nomProduit }}</div>
+                                                <small class="text-muted">{{ ligne.produit.categorieProduit }}</small>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="text-center">
+                                        <span class="badge bg-primary rounded-pill fs-6">{{ ligne.quantite_commandee }}</span>
+                                    </td>
+                                    <td class="text-end">{{ ligne.produit.prixProduit|number_format(2, '.', '') }} Dt</td>
+                                    <td class="text-end fw-bold text-success">
+                                        {{ (ligne.produit.prixProduit * ligne.quantite_commandee)|number_format(2, '.', '') }} Dt
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                            <tfoot class="table-light">
+                                <tr class="fw-bold fs-5">
+                                    <td colspan="3" class="text-end">Total :</td>
+                                    <td class="text-end text-success">{{ commande.montantTotal|number_format(2, '.', '') }} Dt</td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+
+                </div>
+            </div>
+
+            {# Informations supplémentaires #}
+            <div class="row g-4 mb-4">
+                <div class="col-md-6">
+                    <div class="card h-100 shadow-sm">
+                        <div class="card-body">
+                            <h6 class="card-title"><i class="bi bi-info-circle"></i> Statut de la commande</h6>
+                            <p class="mb-0">Votre commande est actuellement <strong>{{ commande.statutCommande }}</strong>.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card h-100 shadow-sm">
+                        <div class="card-body">
+                            <h6 class="card-title"><i class="bi bi-credit-card"></i> Paiement</h6>
+                            <p class="mb-0">Montant total : <strong class="text-success">{{ commande.montantTotal|number_format(2, '.', '') }} Dt</strong></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {# Boutons d'action #}
+            <div class="d-flex gap-3 justify-content-between">
+                <a href="{{ path('mes_commandes') }}" class="btn btn-outline-primary">
+                    <i class="bi bi-arrow-left"></i> Mes commandes
+                </a>
+                <a href="{{ path('front_produit_index') }}" class="btn btn-primary">
+                    <i class="bi bi-shop"></i> Continuer mes achats
+                </a>
+            </div>
+
+        </div>
+    </div>
+</div>
+{% endblock %}

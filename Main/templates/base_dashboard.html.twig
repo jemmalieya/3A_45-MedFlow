@@ -88,6 +88,23 @@
                     </div>
                 </div>
             </li>
+            <!-- Nav Item - Products Collapse Menu -->
+<li class="nav-item">
+    <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseProducts"
+        aria-expanded="true" aria-controls="collapseProducts">
+        <i class="fas fa-fw fa-box"></i>
+        <span>Produits</span>
+    </a>
+    <div id="collapseProducts" class="collapse" aria-labelledby="headingProducts" data-parent="#accordionSidebar">
+        <div class="bg-white py-2 collapse-inner rounded">
+            <h6 class="collapse-header">Gestion des Produits :</h6>
+            <a class="collapse-item" href="{{ path('admin_produits_index') }}">Voir tous les produits</a>
+        
+            <a class="collapse-item" href="#">Autres actions</a>
+        </div>
+    </div>
+</li>
+
 
             <!-- Divider -->
             <hr class="sidebar-divider">

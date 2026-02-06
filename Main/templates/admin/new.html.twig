@@ -1,0 +1,294 @@
+{% extends 'base_dashboard.html.twig' %}
+
+{% block title %}Ajouter un produit{% endblock %}
+
+{% block body %}
+<div class="container-fluid py-4">
+    <div class="row justify-content-center">
+        <div class="col-xl-10">
+            
+            {# En-tête #}
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h2 class="mb-1 fw-bold">
+                        <i class="bi bi-plus-circle text-primary me-2"></i>Ajouter un produit
+                    </h2>
+                    <p class="text-muted mb-0">Remplissez les informations du nouveau produit</p>
+                </div>
+                <a href="{{ path('admin_produit_new') }}" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left me-2"></i>Retour
+                </a>
+            </div>
+
+            {# Flash messages #}
+            {% for message in app.flashes('success') %}
+                <div class="alert alert-success alert-dismissible fade show shadow-sm">
+                    <i class="bi bi-check-circle-fill me-2"></i>{{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            {% endfor %}
+
+            {# Formulaire #}
+            {{ form_start(form, {'attr': {'novalidate': 'novalidate'}}) }}
+
+            <div class="row g-4">
+                
+                {# Colonne gauche #}
+                <div class="col-lg-8">
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-header bg-gradient-primary text-white py-3">
+                            <h5 class="mb-0">
+                                <i class="bi bi-info-circle me-2"></i>Informations principales
+                            </h5>
+                        </div>
+                        <div class="card-body p-4">
+                            
+                            {# Nom #}
+                            <div class="mb-4">
+                                <label class="form-label fw-bold">
+                                    <i class="bi bi-tag me-2"></i>Nom du produit <span class="text-danger">*</span>
+                                </label>
+                                {{ form_widget(form.nom_produit, {
+                                    'attr': {
+                                        'class': 'form-control form-control-lg',
+                                        'placeholder': 'Ex: Paracétamol'
+                                    }
+                                }) }}
+                                {{ form_errors(form.nom_produit) }}
+                            </div>
+
+                            {# Description #}
+                            <div class="mb-4">
+                                <label class="form-label fw-bold">
+                                    <i class="bi bi-card-text me-2"></i>Description <span class="text-danger">*</span>
+                                </label>
+                                {{ form_widget(form.description_produit, {
+                                    'attr': {
+                                        'class': 'form-control',
+                                        'rows': 5,
+                                        'placeholder': 'Décrivez le produit en détail...'
+                                    }
+                                }) }}
+                                {{ form_errors(form.description_produit) }}
+                            </div>
+
+                            {# Prix et Quantité #}
+                            <div class="row">
+                                <div class="col-md-6 mb-4">
+                                    <label class="form-label fw-bold">
+                                        <i class="bi bi-currency-dollar me-2"></i>Prix (DT) <span class="text-danger">*</span>
+                                    </label>
+                                    <div class="input-group input-group-lg">
+                                        {{ form_widget(form.prix_produit, {
+                                            'attr': {
+                                                'class': 'form-control',
+                                                'placeholder': '0.00',
+                                                'step': '0.01'
+                                            }
+                                        }) }}
+                                        <span class="input-group-text bg-success text-white">
+                                            <i class="bi bi-cash-coin me-1"></i>DT
+                                        </span>
+                                    </div>
+                                    {{ form_errors(form.prix_produit) }}
+                                </div>
+
+                                <div class="col-md-6 mb-4">
+                                    <label class="form-label fw-bold">
+                                        <i class="bi bi-box-seam me-2"></i>Quantité <span class="text-danger">*</span>
+                                    </label>
+                                    {{ form_widget(form.quantite_produit, {
+                                        'attr': {
+                                            'class': 'form-control form-control-lg',
+                                            'placeholder': '0'
+                                        }
+                                    }) }}
+                                    {{ form_errors(form.quantite_produit) }}
+                                </div>
+                            </div>
+
+                            {# Catégorie #}
+                            <div class="mb-4">
+                                <label class="form-label fw-bold">
+                                    <i class="bi bi-grid me-2"></i>Catégorie <span class="text-danger">*</span>
+                                </label>
+                                {{ form_widget(form.categorie_produit, {
+                                    'attr': {
+                                        'class': 'form-select form-select-lg'
+                                    }
+                                }) }}
+                                {{ form_errors(form.categorie_produit) }}
+                            </div>
+
+                            {# Image URL #}
+                            <div class="mb-0">
+                                <label class="form-label fw-bold">
+                                    <i class="bi bi-image me-2"></i>URL de l'image <span class="text-danger">*</span>
+                                </label>
+                                <div class="input-group input-group-lg">
+                                    <span class="input-group-text bg-light">
+                                        <i class="bi bi-link-45deg"></i>
+                                    </span>
+                                    {{ form_widget(form.image_produit, {
+                                        'attr': {
+                                            'class': 'form-control',
+                                            'placeholder': 'https://exemple.com/image.jpg'
+                                        }
+                                    }) }}
+                                </div>
+                                {{ form_errors(form.image_produit) }}
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+
+                {# Colonne droite - Statut #}
+                <div class="col-lg-4">
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-header bg-light border-0 py-3">
+                            <h6 class="mb-0 fw-bold">
+                                <i class="bi bi-toggle-on me-2"></i>Statut du produit
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            {{ form_widget(form.status_produit, {'attr': {'class': 'd-none'}}) }}
+                            
+                            <div class="status-options">
+                                <div class="status-option">
+                                    <input type="radio" name="status" id="status_dispo" value="Disponible" checked>
+                                    <label for="status_dispo" class="w-100">
+                                        <i class="bi bi-check-circle text-success"></i>
+                                        <span class="fw-bold">Disponible</span>
+                                        <small class="d-block text-muted">Produit en stock</small>
+                                    </label>
+                                </div>
+
+                                <div class="status-option">
+                                    <input type="radio" name="status" id="status_rupture" value="Rupture">
+                                    <label for="status_rupture" class="w-100">
+                                        <i class="bi bi-exclamation-triangle text-warning"></i>
+                                        <span class="fw-bold">Rupture de stock</span>
+                                        <small class="d-block text-muted">Temporairement indisponible</small>
+                                    </label>
+                                </div>
+
+                                <div class="status-option">
+                                    <input type="radio" name="status" id="status_indispo" value="Indisponible">
+                                    <label for="status_indispo" class="w-100">
+                                        <i class="bi bi-x-circle text-danger"></i>
+                                        <span class="fw-bold">Indisponible</span>
+                                        <small class="d-block text-muted">Produit retiré</small>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            {# Boutons #}
+            <div class="card border-0 shadow-sm mt-4">
+                <div class="card-body p-4">
+                    <div class="d-flex gap-3 justify-content-between align-items-center">
+                        <small class="text-muted">
+                            <i class="bi bi-info-circle me-1"></i>
+                            Les champs marqués d'un <span class="text-danger">*</span> sont obligatoires
+                        </small>
+                        <div class="d-flex gap-3">
+                            <a href="{{ path('admin_produit_new') }}" class="btn btn-outline-secondary btn-lg px-5">
+                                <i class="bi bi-x-circle me-2"></i>Annuler
+                            </a>
+                            <button type="submit" class="btn btn-primary btn-lg px-5">
+                                <i class="bi bi-check-circle me-2"></i>Ajouter le produit
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {{ form_end(form) }}
+
+        </div>
+    </div>
+</div>
+
+<style>
+.bg-gradient-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.status-options {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.status-option {
+    position: relative;
+}
+
+.status-option input[type="radio"] {
+    position: absolute;
+    opacity: 0;
+}
+
+.status-option label {
+    display: block;
+    padding: 16px;
+    border: 2px solid #e9ecef;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    background: white;
+}
+
+.status-option label:hover {
+    border-color: #667eea;
+    background: #f8f9fa;
+    transform: translateX(5px);
+}
+
+.status-option input:checked + label {
+    border-color: #667eea;
+    background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+}
+
+.status-option i {
+    font-size: 1.5rem;
+    margin-right: 8px;
+}
+
+.card {
+    animation: fadeInUp 0.5s ease;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const statusRadios = document.querySelectorAll('.status-option input[type="radio"]');
+    const hiddenStatusSelect = document.querySelector('select[name="produit[status_produit]"]');
+
+    statusRadios.forEach(radio => {
+        radio.addEventListener('change', () => {
+            if (hiddenStatusSelect) {
+                hiddenStatusSelect.value = radio.value;
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

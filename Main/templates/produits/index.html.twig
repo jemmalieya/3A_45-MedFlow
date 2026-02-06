@@ -1,20 +1,712 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}Hello ProduitsController!{% endblock %}
+{% block title %}Pharmacie{% endblock %}
+
+{% block stylesheets %}
+    {{ parent() }}
+    <style>
+        /* ===== VARIABLES ===== */
+        :root {
+            --primary: #667eea;
+            --primary-dark: #5568d3;
+            --success: #10b981;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --gray-50: #f9fafb;
+            --gray-100: #f3f4f6;
+            --gray-200: #e5e7eb;
+            --gray-800: #1f2937;
+            --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.08);
+            --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.12);
+            --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.15);
+        }
+
+        /* ===== MESSAGES FLASH ===== */
+        #flash-messages-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 10000;
+            max-width: 400px;
+        }
+
+        .alert-custom {
+            background: white;
+            border: none;
+            border-left: 4px solid;
+            border-radius: 12px;
+            padding: 16px 20px;
+            margin-bottom: 12px;
+            box-shadow: var(--shadow-lg);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            opacity: 0;
+            transform: translateX(400px);
+            animation: slideIn 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+        }
+
+        .alert-custom.show {
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+        .alert-success {
+            border-left-color: var(--success);
+        }
+
+        .alert-success i {
+            color: var(--success);
+            font-size: 1.5rem;
+        }
+
+        .alert-error {
+            border-left-color: var(--danger);
+        }
+
+        .alert-error i {
+            color: var(--danger);
+            font-size: 1.5rem;
+        }
+
+        .btn-close-custom {
+            background: none;
+            border: none;
+            font-size: 20px;
+            color: #6b7280;
+            cursor: pointer;
+            padding: 0;
+            margin-left: auto;
+            transition: color 0.2s;
+        }
+
+        .btn-close-custom:hover {
+            color: #1f2937;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        @keyframes slideOut {
+            to {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+        }
+
+        /* ===== HEADER ===== */
+        .page-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 60px 0;
+            margin-bottom: 60px;
+            border-radius: 0 0 50px 50px;
+            box-shadow: var(--shadow-lg);
+        }
+
+        .page-header h1 {
+            font-size: 3rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .page-header p {
+            font-size: 1.25rem;
+            opacity: 0.9;
+        }
+
+        /* ===== CARTES PRODUITS ===== */
+        .produit-card {
+            background: white;
+            border-radius: 20px;
+            overflow: hidden;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            border: 2px solid var(--gray-100);
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .produit-card:hover {
+            transform: translateY(-8px);
+            box-shadow: var(--shadow-lg);
+            border-color: var(--primary);
+        }
+
+        .produit-card.unavailable {
+            opacity: 0.7;
+        }
+
+        .produit-card.unavailable:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-md);
+        }
+
+        /* Image Container */
+        .produit-image-container {
+            position: relative;
+            width: 100%;
+            height: 240px;
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            overflow: hidden;
+        }
+
+        .produit-img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            padding: 20px;
+            transition: transform 0.3s;
+        }
+
+        .produit-card:hover .produit-img:not(.img-grayscale) {
+            transform: scale(1.1);
+        }
+
+        .img-grayscale {
+            filter: grayscale(100%) opacity(0.5);
+        }
+
+        /* Badge Indisponible */
+        .badge-indisponible {
+            position: absolute;
+            top: 16px;
+            left: 16px;
+            background: linear-gradient(135deg, var(--danger) 0%, #dc2626 100%);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 50px;
+            font-weight: 600;
+            font-size: 0.875rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
+            z-index: 10;
+        }
+
+        /* Badge Prix */
+        .price-badge {
+            position: absolute;
+            top: 16px;
+            right: 16px;
+            background: linear-gradient(135deg, var(--success) 0%, #059669 100%);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 50px;
+            font-weight: 700;
+            font-size: 1.125rem;
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+            z-index: 10;
+        }
+
+        /* Card Body */
+        .card-body {
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            flex-grow: 1;
+        }
+
+        .card-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--gray-800);
+            margin-bottom: 12px;
+            line-height: 1.4;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .card-category {
+            display: inline-block;
+            padding: 6px 12px;
+            background: var(--gray-100);
+            color: var(--gray-800);
+            border-radius: 8px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            margin-bottom: 12px;
+        }
+
+        .card-stock {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.875rem;
+            color: #6b7280;
+            margin-bottom: 16px;
+        }
+
+        .status-badge {
+            padding: 8px 16px;
+            border-radius: 50px;
+            font-weight: 600;
+            font-size: 0.875rem;
+            margin-bottom: 16px;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .status-badge.available {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .status-badge.unavailable {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        /* Boutons */
+        .card-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: auto;
+        }
+
+        .btn-add-cart {
+            flex: 1;
+            padding: 12px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-add-cart:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-add-cart:active {
+            transform: translateY(0);
+        }
+
+        .btn-details {
+            padding: 12px 20px;
+            background: white;
+            color: var(--primary);
+            border: 2px solid var(--primary);
+            border-radius: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-details:hover {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-unavailable {
+            flex: 1;
+            padding: 12px;
+            background: var(--gray-200);
+            color: #6b7280;
+            border: none;
+            border-radius: 12px;
+            font-weight: 600;
+            cursor: not-allowed;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        /* Modal */
+        .modal-content {
+            border-radius: 20px;
+            border: none;
+            overflow: hidden;
+        }
+
+        .modal-header {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+            border: none;
+            padding: 24px;
+        }
+
+        .modal-title {
+            font-weight: 700;
+            font-size: 1.5rem;
+        }
+
+        .modal-body {
+            padding: 32px;
+        }
+
+        .modal-body img {
+            border-radius: 12px;
+            box-shadow: var(--shadow-md);
+        }
+
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px 0;
+            border-bottom: 1px solid var(--gray-200);
+        }
+
+        .detail-row:last-child {
+            border-bottom: none;
+        }
+
+        .detail-label {
+            font-weight: 600;
+            color: var(--gray-800);
+        }
+
+        .detail-value {
+            color: #6b7280;
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 80px 20px;
+        }
+
+        .empty-state i {
+            font-size: 6rem;
+            color: var(--gray-200);
+            margin-bottom: 24px;
+        }
+
+        .empty-state h3 {
+            color: var(--gray-800);
+            margin-bottom: 12px;
+        }
+
+        .empty-state p {
+            color: #6b7280;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .page-header h1 {
+                font-size: 2rem;
+            }
+
+            .produit-image-container {
+                height: 200px;
+            }
+
+            .card-actions {
+                flex-direction: column;
+            }
+
+            #flash-messages-container {
+                left: 20px;
+                right: 20px;
+                max-width: none;
+            }
+        }
+
+        /* Animations */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .produit-card {
+            animation: fadeInUp 0.5s ease;
+        }
+
+        .produit-card:nth-child(1) { animation-delay: 0.1s; }
+        .produit-card:nth-child(2) { animation-delay: 0.2s; }
+        .produit-card:nth-child(3) { animation-delay: 0.3s; }
+        .produit-card:nth-child(4) { animation-delay: 0.4s; }
+        .btn-orders{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  padding:12px 18px;
+  border-radius:14px;
+  border:2px solid rgba(255,255,255,0.25);
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color:#fff;
+  font-weight:700;
+  box-shadow: 0 10px 22px rgba(16,185,129,0.25);
+  transition: all .25s ease;
+  text-decoration:none;
+}
+.btn-orders:hover{
+  transform: translateY(-2px);
+  box-shadow: 0 14px 28px rgba(16,185,129,0.35);
+  color:#fff;
+}
+
+    </style>
+{% endblock %}
 
 {% block body %}
-<style>
-    .example-wrapper { margin: 1em auto; max-width: 800px; width: 95%; font: 18px/1.5 sans-serif; }
-    .example-wrapper code { background: #F5F5F5; padding: 2px 6px; }
-</style>
-
-<div class="example-wrapper">
-    <h1>Hello {{ controller_name }}! ✅</h1>
-
-    This friendly message is coming from:
-    <ul>
-        <li>Your controller at <code>C:/Users/lenovo/MedFlow/3A_45-MedFlow/Main/src/Controller/ProduitsController.php</code></li>
-        <li>Your template at <code>C:/Users/lenovo/MedFlow/3A_45-MedFlow/Main/templates/produits/index.html.twig</code></li>
-    </ul>
+{# Messages Flash #}
+<div id="flash-messages-container">
+    {% for label, messages in app.flashes %}
+        {% for message in messages %}
+            <div class="alert-custom alert-{{ label }} show" role="alert">
+                <i class="bi bi-{% if label == 'success' %}check{% else %}x{% endif %}-circle-fill"></i>
+                <span>{{ message }}</span>
+                <button type="button" class="btn-close-custom" onclick="this.parentElement.remove()">×</button>
+            </div>
+        {% endfor %}
+    {% endfor %}
 </div>
+
+{# Header #}
+<div class="page-header">
+    <div class="container text-center">
+        <h1><i class="bi bi-shop me-3"></i>Notre Pharmacie</h1>
+        <p>Découvrez notre sélection de produits de santé et bien-être</p>
+    </div>
+</div>
+{# Accès rapide commandes #}
+<div class="container mb-4">
+  <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+    <div class="text-muted">
+      <i class="bi bi-info-circle me-1"></i>
+      Retrouvez toutes vos commandes ici.
+    </div>
+
+    <a href="{{ path('mes_commandes') }}" class="btn btn-orders">
+      <i class="bi bi-bag-check-fill me-2"></i>
+      Mes commandes
+    </a>
+  </div>
+</div>
+
+
+<div class="container mb-5">
+    
+    {# Grille Produits #}
+    {% if produits is not empty %}
+        <div class="row g-4">
+            {% for produit in produits %}
+                <div class="col-lg-3 col-md-4 col-sm-6">
+                    <div class="produit-card {% if produit.statusProduit != 'Disponible' %}unavailable{% endif %}">
+                        
+                        {# Image #}
+                        <div class="produit-image-container">
+                            {% if produit.statusProduit != 'Disponible' %}
+                                <div class="badge-indisponible">{{ produit.statusProduit }}</div>
+                            {% else %}
+                                <div class="price-badge">{{ produit.prixProduit }} DT</div>
+                            {% endif %}
+                            
+                            <img src="{{ produit.imageProduit }}" 
+                                 class="produit-img {% if produit.statusProduit != 'Disponible' %}img-grayscale{% endif %}" 
+                                 alt="{{ produit.nomProduit }}">
+                        </div>
+
+                        {# Body #}
+                        <div class="card-body">
+                            <h5 class="card-title">{{ produit.nomProduit }}</h5>
+                            
+                            <span class="card-category">
+                                <i class="bi bi-tag me-1"></i>{{ produit.categorieProduit }}
+                            </span>
+
+                            <div class="card-stock">
+                                <i class="bi bi-box-seam"></i>
+                                <span>{{ produit.quantiteProduit }} en stock</span>
+                            </div>
+
+                            <span class="status-badge {% if produit.statusProduit == 'Disponible' %}available{% else %}unavailable{% endif %}">
+                                <i class="bi bi-{% if produit.statusProduit == 'Disponible' %}check{% else %}x{% endif %}-circle"></i>
+                                {{ produit.statusProduit }}
+                            </span>
+
+                            {# Actions #}
+                            <div class="card-actions">
+                                {% if produit.statusProduit == 'Disponible' %}
+                                    <button class="btn-add-cart" 
+                                            data-id="{{ produit.id_produit }}" 
+                                            data-nom="{{ produit.nomProduit }}"
+                                            data-stock="{{ produit.quantiteProduit }}">
+                                        <i class="bi bi-cart-plus"></i>
+                                        <span>Ajouter</span>
+                                    </button>
+                                {% else %}
+                                    <button class="btn-unavailable" disabled>
+                                        <i class="bi bi-cart-x"></i>
+                                        <span>Indisponible</span>
+                                    </button>
+                                {% endif %}
+                                
+                                <button class="btn-details" data-bs-toggle="modal" data-bs-target="#modal-{{ produit.id_produit }}">
+                                    <i class="bi bi-info-circle"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {# Modal #}
+                <div class="modal fade" id="modal-{{ produit.id_produit }}" tabindex="-1" aria-hidden="true">
+                    <div class="modal-dialog modal-dialog-centered modal-lg">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title">{{ produit.nomProduit }}</h5>
+                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <div class="row">
+                                    <div class="col-md-5 text-center mb-4 mb-md-0">
+                                        <img src="{{ produit.imageProduit }}" class="img-fluid" style="max-height:300px;">
+                                    </div>
+                                    <div class="col-md-7">
+                                        <div class="detail-row">
+                                            <span class="detail-label">Description</span>
+                                            <span class="detail-value">{{ produit.descriptionProduit }}</span>
+                                        </div>
+                                        <div class="detail-row">
+                                            <span class="detail-label">Prix</span>
+                                            <span class="detail-value fw-bold text-success">{{ produit.prixProduit }} DT</span>
+                                        </div>
+                                        <div class="detail-row">
+                                            <span class="detail-label">Quantité en stock</span>
+                                            <span class="detail-value">{{ produit.quantiteProduit }}</span>
+                                        </div>
+                                        <div class="detail-row">
+                                            <span class="detail-label">Catégorie</span>
+                                            <span class="detail-value">{{ produit.categorieProduit }}</span>
+                                        </div>
+                                        <div class="detail-row">
+                                            <span class="detail-label">Statut</span>
+                                            <span class="badge {% if produit.statusProduit == 'Disponible' %}bg-success{% else %}bg-danger{% endif %}">
+                                                {{ produit.statusProduit }}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="empty-state">
+            <i class="bi bi-inbox"></i>
+            <h3>Aucun produit disponible</h3>
+            <p>Revenez plus tard pour découvrir nos nouveaux produits</p>
+        </div>
+    {% endif %}
+
+</div>
+{% endblock %}
+
+{% block javascripts %}
+  {{ parent() }}
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+
+      // Auto-suppression des messages flash
+      setTimeout(() => {
+        document.querySelectorAll('.alert-custom').forEach(alert => {
+          alert.style.animation = 'slideOut 0.4s ease forwards';
+          setTimeout(() => alert.remove(), 400);
+        });
+      }, 3000);
+
+      // Ajouter au panier sans reload
+      document.querySelectorAll('.btn-add-cart').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const id = btn.dataset.id;
+          const nom = btn.dataset.nom;
+          const stock = parseInt(btn.dataset.stock || '0', 10);
+
+          btn.disabled = true;
+
+          try {
+            // 1) Vérifier quantité actuelle dans panier
+            const checkRes = await fetch(`/panier/verifier/${id}`);
+            const checkData = await checkRes.json();
+            const quantiteDansPanier = parseInt(checkData.quantite || '0', 10);
+
+            if (stock > 0 && quantiteDansPanier >= stock) {
+              showFlashMessage(`Stock insuffisant ! Seulement ${stock} disponible(s)`, 'error');
+              btn.disabled = false;
+              return;
+            }
+
+            // 2) Ajouter au panier
+            const addRes = await fetch(`/panier/ajouter/${id}`, { method: 'POST' });
+            const addData = await addRes.json();
+
+            if (!addRes.ok || !addData.success) {
+              showFlashMessage(addData.message || "Erreur lors de l'ajout au panier", 'error');
+              btn.disabled = false;
+              return;
+            }
+
+            // ✅ Flash + mise à jour badge sans reload
+            showFlashMessage(addData.message, 'success');
+            updateCartBadge(addData.count);
+
+            btn.disabled = false;
+          } catch (e) {
+            showFlashMessage("Erreur lors de l'ajout au panier", 'error');
+            btn.disabled = false;
+          }
+        });
+      });
+    });
+
+    // ✅ Met à jour le badge panier (sans reload)
+    function updateCartBadge(newCount) {
+      const badge = document.getElementById('cart-count');
+      if (!badge) return;
+
+      const count = parseInt(newCount || '0', 10);
+      badge.textContent = count;
+
+      if (count <= 0) badge.classList.add('d-none');
+      else badge.classList.remove('d-none');
+    }
+
+    function showFlashMessage(message, type) {
+      const container = document.getElementById('flash-messages-container');
+      const alert = document.createElement('div');
+      alert.className = `alert-custom alert-${type}`;
+      alert.innerHTML = `
+        <i class="bi bi-${type === 'success' ? 'check' : 'x'}-circle-fill"></i>
+        <span>${message}</span>
+        <button type="button" class="btn-close-custom" onclick="this.parentElement.remove()">×</button>
+      `;
+
+      container.appendChild(alert);
+      setTimeout(() => alert.classList.add('show'), 10);
+      setTimeout(() => {
+        alert.style.animation = 'slideOut 0.4s ease forwards';
+        setTimeout(() => alert.remove(), 400);
+      }, 3000);
+    }
+  </script>
 {% endblock %}

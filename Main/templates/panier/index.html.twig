@@ -1,20 +1,658 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}Hello PanierController!{% endblock %}
+{% block title %}Mon Panier{% endblock %}
 
 {% block body %}
-<style>
-    .example-wrapper { margin: 1em auto; max-width: 800px; width: 95%; font: 18px/1.5 sans-serif; }
-    .example-wrapper code { background: #F5F5F5; padding: 2px 6px; }
-</style>
+<div class="panier-page">
 
-<div class="example-wrapper">
-    <h1>Hello {{ controller_name }}! ✅</h1>
+  {# Toast container #}
+  <div class="position-fixed top-0 start-50 translate-middle-x p-3"
+       style="z-index: 1050; max-width:400px;"
+       id="toast-container"></div>
 
-    This friendly message is coming from:
-    <ul>
-        <li>Your controller at <code>C:/Users/lenovo/MedFlow/3A_45-MedFlow/Main/src/Controller/PanierController.php</code></li>
-        <li>Your template at <code>C:/Users/lenovo/MedFlow/3A_45-MedFlow/Main/templates/panier/index.html.twig</code></li>
-    </ul>
+  {# Confirmation overlay #}
+  <div id="confirmOverlay" class="confirm-overlay d-none">
+    <div class="confirm-box">
+      <div class="confirm-icon">
+        <i class="bi bi-exclamation-circle text-warning"></i>
+      </div>
+      <h5 class="mt-3">Confirmation</h5>
+      <p id="confirmMessage" class="text-muted"></p>
+      <div class="confirm-buttons mt-4">
+        <button class="btn btn-outline-secondary px-4" id="confirmNo" type="button">Annuler</button>
+        <button class="btn btn-danger px-4" id="confirmYes" type="button">Confirmer</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="container py-5">
+
+    {# En-tête #}
+    <div class="panier-header text-center mb-5">
+      <div class="panier-icon mb-3">
+        <i class="bi bi-cart3"></i>
+      </div>
+      <h1 class="display-5 fw-bold mb-2">Mon Panier</h1>
+
+      <p class="text-muted" id="cart-items-text">
+        {% if produits|length > 0 %}
+          {{ produits|length }} article(s) dans votre panier
+        {% else %}
+          Votre panier est vide
+        {% endif %}
+      </p>
+    </div>
+
+    {% if produits is empty %}
+      {# Panier vide #}
+      <div class="empty-cart text-center py-5" id="empty-cart-block">
+        <div class="empty-cart-icon mb-4">
+          <i class="bi bi-cart-x"></i>
+        </div>
+        <h3 class="mb-3">Votre panier est vide</h3>
+        <p class="text-muted mb-4">Découvrez nos produits et commencez vos achats !</p>
+        <a href="{{ path('front_produit_index') }}" class="btn btn-primary btn-lg px-5">
+          <i class="bi bi-shop me-2"></i>Découvrir nos produits
+        </a>
+      </div>
+    {% else %}
+      <div class="row g-4" id="cart-content">
+
+        {# Liste des produits #}
+        <div class="col-lg-8">
+          <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white border-0 py-3">
+              <div class="d-flex justify-content-between align-items-center">
+                <h5 class="mb-0 fw-bold">Articles (<span id="cart-count-products">{{ produits|length }}</span>)</h5>
+
+                <button class="btn btn-outline-danger btn-sm" id="btnViderPanier" type="button">
+                  <i class="bi bi-trash me-1"></i>Vider le panier
+                </button>
+              </div>
+            </div>
+
+            <div class="card-body p-0" id="cart-items-list">
+              {% for produit in produits %}
+                <div class="cart-item produit-row" id="cart-row-{{ produit.id_produit }}"
+                     data-id="{{ produit.id_produit }}"
+                     data-price="{{ produit.prixProduit }}"
+                     data-qty="{{ produit.quantite_panier }}">
+
+                  <div class="row g-3 align-items-center">
+
+                    {# Image #}
+                    <div class="col-md-2 col-3">
+                      <div class="product-image">
+                        <img src="{{ produit.imageProduit }}" alt="{{ produit.nomProduit }}">
+                      </div>
+                    </div>
+
+                    {# Infos produit #}
+                    <div class="col-md-4 col-9">
+                      <h6 class="mb-1 fw-bold">{{ produit.nomProduit }}</h6>
+                      <p class="text-muted small mb-0">{{ produit.categorieProduit }}</p>
+                      <span class="badge bg-success-soft text-success mt-1">
+                        <i class="bi bi-check-circle me-1"></i>En stock
+                      </span>
+                    </div>
+
+                    {# Prix unitaire #}
+                    <div class="col-md-2 col-6 text-center">
+                      <small class="text-muted d-block mb-1">Prix unitaire</small>
+                      <span class="fw-bold">{{ produit.prixProduit }} DT</span>
+                    </div>
+
+                    {# Quantité #}
+                    <div class="col-md-2 col-6">
+                      <small class="text-muted d-block mb-2 text-center">Quantité</small>
+
+                      <div class="qty-control">
+                        <button class="qty-btn btn-minus" type="button"
+                                data-id="{{ produit.id_produit }}"
+                                data-nom="{{ produit.nomProduit }}">
+                          <i class="bi bi-dash"></i>
+                        </button>
+
+                        <input type="text"
+                               class="qty-input"
+                               id="qty-{{ produit.id_produit }}"
+                               value="{{ produit.quantite_panier }}"
+                               data-stock="{{ produit.quantiteProduit }}"
+                               readonly>
+
+                        <button class="qty-btn btn-plus" type="button"
+                                data-id="{{ produit.id_produit }}"
+                                data-nom="{{ produit.nomProduit }}">
+                          <i class="bi bi-plus"></i>
+                        </button>
+                      </div>
+                    </div>
+
+                    {# Total ligne + supprimer #}
+                    <div class="col-md-2 col-12">
+                      <div class="text-center text-md-end">
+                        <small class="text-muted d-block mb-1">Total</small>
+                        <span class="fw-bold fs-5 text-primary line-total" id="line-{{ produit.id_produit }}">
+                          {{ produit.prixProduit * produit.quantite_panier }}
+                        </span> <span class="text-muted">DT</span>
+                      </div>
+
+                      <div class="text-center text-md-end mt-2">
+                        <button class="btn btn-link text-danger btn-sm p-0 btn-supprimer"
+                                type="button"
+                                data-id="{{ produit.id_produit }}"
+                                data-nom="{{ produit.nomProduit }}">
+                          <i class="bi bi-trash me-1"></i>Supprimer
+                        </button>
+                      </div>
+                    </div>
+
+                  </div>
+                </div>
+              {% endfor %}
+            </div>
+          </div>
+
+          {# Continuer les achats #}
+          <div class="mt-4">
+            <a href="{{ path('front_produit_index') }}" class="btn btn-outline-primary">
+              <i class="bi bi-arrow-left me-2"></i>Continuer mes achats
+            </a>
+          </div>
+        </div>
+
+        {# Résumé de commande #}
+        <div class="col-lg-4">
+          <div class="card border-0 shadow-sm sticky-top" style="top: 100px;">
+            <div class="card-header bg-primary text-white py-3">
+              <h5 class="mb-0"><i class="bi bi-receipt me-2"></i>Résumé</h5>
+            </div>
+
+            <div class="card-body">
+              <div class="summary-line">
+                <span class="text-muted">Sous-total</span>
+                <span class="fw-bold"><span id="cart-subtotal">{{ total }}</span> DT</span>
+              </div>
+
+              <div class="summary-line">
+                <span class="text-muted">Livraison</span>
+                <span class="text-success fw-bold">Gratuite</span>
+              </div>
+
+              <hr>
+
+              <div class="summary-total">
+                <span class="fs-5 fw-bold">Total</span>
+                <span class="fs-4 fw-bold text-primary"><span id="cart-total">{{ total }}</span> <span class="text-muted">DT</span></span>
+              </div>
+
+              <a href="{{ path('commande_valider') }}" class="btn btn-success w-100 btn-lg mt-4 shadow-sm">
+                <i class="bi bi-check-circle me-2"></i>Valider la commande
+              </a>
+
+              <div class="mt-4 p-3 bg-light rounded">
+                <h6 class="small fw-bold mb-2">
+                  <i class="bi bi-shield-check text-success me-1"></i>Paiement sécurisé
+                </h6>
+                <p class="small text-muted mb-0">Vos informations sont protégées</p>
+              </div>
+
+              <div class="mt-3 p-3 bg-light rounded">
+                <h6 class="small fw-bold mb-2">
+                  <i class="bi bi-truck text-primary me-1"></i>Livraison rapide
+                </h6>
+                <p class="small text-muted mb-0">Sous 2-3 jours ouvrables</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    {% endif %}
+  </div>
 </div>
+
+{# ===== SCRIPTS ===== #}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const toastContainer = document.getElementById('toast-container');
+  const confirmOverlay = document.getElementById('confirmOverlay');
+  const confirmMessage = document.getElementById('confirmMessage');
+  const confirmYes = document.getElementById('confirmYes');
+  const confirmNo = document.getElementById('confirmNo');
+
+  let currentAction = null; // { url, type, id }
+
+  function showToast(message, color='success') {
+    const icon = (color === 'success') ? 'check-circle' : 'x-circle';
+
+    const toastEl = document.createElement('div');
+    toastEl.className = `toast align-items-center text-white bg-${color} border-0 shadow-lg`;
+    toastEl.role = 'alert';
+    toastEl.innerHTML = `
+      <div class="d-flex">
+        <div class="toast-body"><i class="bi bi-${icon} me-2"></i>${message}</div>
+        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+      </div>`;
+    toastContainer.appendChild(toastEl);
+    const toast = new bootstrap.Toast(toastEl, { delay: 3000 });
+    toast.show();
+  }
+
+  function updateCartBadge(count) {
+    const badge = document.getElementById('cart-count');
+    if (!badge) return;
+
+    badge.textContent = count;
+    if (count <= 0) badge.classList.add('d-none');
+    else badge.classList.remove('d-none');
+  }
+
+  function recalcTotals() {
+    let subtotal = 0;
+    document.querySelectorAll('.cart-item.produit-row').forEach(row => {
+      const price = parseFloat(row.dataset.price || '0');
+      const qty = parseInt(row.dataset.qty || '0', 10);
+      subtotal += price * qty;
+    });
+
+    subtotal = Math.round(subtotal * 100) / 100;
+
+    const subtotalEl = document.getElementById('cart-subtotal');
+    const totalEl = document.getElementById('cart-total');
+    if (subtotalEl) subtotalEl.textContent = subtotal;
+    if (totalEl) totalEl.textContent = subtotal;
+  }
+
+  function refreshHeaderCounts() {
+    const rows = document.querySelectorAll('.cart-item.produit-row');
+    const countProducts = rows.length;
+
+    const countProductsEl = document.getElementById('cart-count-products');
+    if (countProductsEl) countProductsEl.textContent = countProducts;
+
+    const textEl = document.getElementById('cart-items-text');
+    if (textEl) {
+      if (countProducts > 0) textEl.textContent = `${countProducts} article(s) dans votre panier`;
+      else textEl.textContent = `Votre panier est vide`;
+    }
+  }
+
+  // ---- Supprimer produit (ouvre overlay) ----
+  document.querySelectorAll('.btn-supprimer').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = btn.dataset.id;
+      const nom = btn.dataset.nom;
+
+      currentAction = { url: `/panier/supprimer/${id}`, type: 'delete', id: id };
+
+      confirmMessage.textContent = `Voulez-vous vraiment supprimer "${nom}" de votre panier ?`;
+      confirmOverlay.classList.remove('d-none');
+    });
+  });
+
+  // ---- Vider panier (ouvre overlay) ----
+  const btnVider = document.getElementById('btnViderPanier');
+  if (btnVider) {
+    btnVider.addEventListener('click', () => {
+      currentAction = { url: `/panier/vider`, type: 'clear', id: null };
+
+      confirmMessage.textContent = 'Êtes-vous sûr de vouloir vider votre panier ?';
+      confirmOverlay.classList.remove('d-none');
+    });
+  }
+
+  async function postJson(url) {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'X-Requested-With': 'XMLHttpRequest',
+        'Accept': 'application/json'
+      }
+    });
+
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      throw new Error(data.message || 'Erreur');
+    }
+    return data;
+  }
+
+  function updateQtyUI(id, newQty) {
+    const qtyInput = document.getElementById(`qty-${id}`);
+    if (qtyInput) qtyInput.value = newQty;
+
+    const row = document.getElementById(`cart-row-${id}`);
+    if (row) row.dataset.qty = newQty;
+
+    const price = row ? parseFloat(row.dataset.price || '0') : 0;
+    const lineTotal = document.getElementById(`line-${id}`);
+    if (lineTotal) lineTotal.textContent = (price * newQty).toFixed(0);
+
+    recalcTotals();
+    refreshHeaderCounts();
+  }
+
+  // ✅ PLUS
+  document.querySelectorAll('.btn-plus').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const id = btn.dataset.id;
+      const nom = btn.dataset.nom || 'Produit';
+
+      try {
+        const data = await postJson(`/panier/augmenter/${id}`);
+
+        // ✅ fallback si backend renvoie pas message
+        const msg = (typeof data.message !== 'undefined' && data.message)
+          ? data.message
+          : `Quantité de "${nom}" augmentée ✅`;
+
+        showToast(msg, 'success');
+        updateCartBadge(data.count);
+
+        if (typeof data.quantite !== 'undefined') {
+          updateQtyUI(id, data.quantite);
+        }
+      } catch (e) {
+        showToast(e.message || 'Erreur', 'danger');
+      }
+    });
+  });
+
+  // ✅ MINUS
+  document.querySelectorAll('.btn-minus').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const id = btn.dataset.id;
+      const nom = btn.dataset.nom || 'Produit';
+
+      try {
+        const data = await postJson(`/panier/diminuer/${id}`);
+
+        const msg = (typeof data.message !== 'undefined' && data.message)
+          ? data.message
+          : `Quantité de "${nom}" diminuée ✅`;
+
+        showToast(msg, 'success');
+        updateCartBadge(data.count);
+
+        if ((data.message || '').toLowerCase().includes('retiré')) {
+          const row = document.getElementById(`cart-row-${id}`);
+          if (row) row.remove();
+          recalcTotals();
+          refreshHeaderCounts();
+          return;
+        }
+
+        if (typeof data.quantite !== 'undefined') {
+          updateQtyUI(id, data.quantite);
+        }
+      } catch (e) {
+        showToast(e.message || 'Erreur', 'danger');
+      }
+    });
+  });
+
+// ---- Confirmation OUI : AJAX POST ----
+confirmYes.addEventListener('click', async () => {
+  confirmOverlay.classList.add('d-none');
+  if (!currentAction) return;
+
+  try {
+    const res = await fetch(currentAction.url, {
+      method: 'POST',
+      headers: {
+        'X-Requested-With': 'XMLHttpRequest',
+        'Accept': 'application/json'
+      }
+    });
+
+    const data = await res.json().catch(() => ({}));
+
+    if (!res.ok || !data.success) {
+      showToast(data.message || 'Erreur', 'danger');
+      currentAction = null;
+      return;
+    }
+
+    // ✅ Messages personnalisés (PAS "Action effectuée")
+    if (currentAction.type === 'delete') {
+      showToast('Produit supprimé avec succès ✅', 'success');
+    } else if (currentAction.type === 'clear') {
+      showToast('Panier vidé avec succès ✅', 'success');
+    } else {
+      // fallback si un autre type arrive
+      showToast(data.message || 'Succès ✅', 'success');
+    }
+
+    updateCartBadge(data.count);
+
+    // ---- Effets UI ----
+    if (currentAction.type === 'delete' && currentAction.id) {
+      const row = document.getElementById(`cart-row-${currentAction.id}`);
+      if (row) row.remove();
+    }
+
+    if (currentAction.type === 'clear') {
+      const content = document.getElementById('cart-content');
+      if (content) content.remove();
+
+      const container = document.querySelector('.container.py-5');
+      if (container) {
+        container.insertAdjacentHTML('beforeend', `
+          <div class="empty-cart text-center py-5" id="empty-cart-block">
+            <div class="empty-cart-icon mb-4">
+              <i class="bi bi-cart-x"></i>
+            </div>
+            <h3 class="mb-3">Votre panier est vide</h3>
+            <p class="text-muted mb-4">Découvrez nos produits et commencez vos achats !</p>
+            <a href="{{ path('front_produit_index') }}" class="btn btn-primary btn-lg px-5">
+              <i class="bi bi-shop me-2"></i>Découvrir nos produits
+            </a>
+          </div>
+        `);
+      }
+    }
+
+    refreshHeaderCounts();
+    recalcTotals();
+
+    const remaining = document.querySelectorAll('.cart-item.produit-row').length;
+    if (remaining === 0) {
+      setTimeout(() => location.reload(), 800);
+    }
+
+  } catch (e) {
+    showToast('Erreur réseau', 'danger');
+  }
+
+  currentAction = null;
+});
+
+  // ---- Confirmation NON ----
+  confirmNo.addEventListener('click', () => {
+    confirmOverlay.classList.add('d-none');
+    currentAction = null;
+  });
+
+  // ---- Flash messages serveur (si tu en as encore) ----
+  {% for message in app.flashes('success') %}
+    showToast("{{ message|e('js') }}", 'success');
+  {% endfor %}
+  {% for message in app.flashes('error') %}
+    showToast("{{ message|e('js') }}", 'danger');
+  {% endfor %}
+});
+</script>
+
+<style>
+/* ===== PANIER MODERNE ===== */
+.panier-page {
+  min-height: 100vh;
+  background: linear-gradient(to bottom, #f8f9fa 0%, #ffffff 100%);
+}
+
+.panier-icon i {
+  font-size: 4rem;
+  color: #0d6efd;
+}
+
+/* En-tête */
+.panier-header {
+  animation: fadeInDown 0.5s ease;
+}
+
+/* Panier vide */
+.empty-cart-icon i {
+  font-size: 6rem;
+  color: #dee2e6;
+}
+
+.empty-cart {
+  animation: fadeIn 0.5s ease;
+}
+
+/* Item du panier */
+.cart-item {
+  padding: 1.5rem;
+  border-bottom: 1px solid #e9ecef;
+  transition: all 0.3s ease;
+}
+
+.cart-item:hover {
+  background-color: #f8f9fa;
+}
+
+.cart-item:last-child {
+  border-bottom: none;
+}
+
+.product-image img {
+  width: 100%;
+  height: 80px;
+  object-fit: cover;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+/* Contrôles de quantité (affichage) */
+.qty-control {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f8f9fa;
+  border-radius: 50px;
+  padding: 4px;
+  max-width: 130px;
+  margin: 0 auto;
+}
+
+.qty-input {
+  width: 60px;
+  text-align: center;
+  border: none;
+  background: transparent;
+  font-weight: bold;
+  font-size: 1rem;
+}
+
+/* Résumé */
+.summary-line {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 0;
+}
+
+.summary-total {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 0;
+}
+
+/* Confirmation overlay */
+.confirm-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 2000;
+  animation: fadeIn 0.2s ease;
+}
+
+.confirm-box {
+  background: white;
+  padding: 2rem;
+  border-radius: 20px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+  text-align: center;
+  max-width: 450px;
+  width: 90%;
+  animation: slideUp 0.3s ease;
+}
+
+.confirm-icon i {
+  font-size: 4rem;
+}
+
+.confirm-buttons {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+}
+
+/* Badges */
+.bg-success-soft {
+  background-color: #d1fae5;
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes fadeInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(50px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .panier-icon i {
+    font-size: 3rem;
+  }
+
+  .cart-item {
+    padding: 1rem;
+  }
+
+  .product-image img {
+    height: 60px;
+  }
+}
+</style>
 {% endblock %}
