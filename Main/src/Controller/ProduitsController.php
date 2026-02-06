@@ -53,7 +53,7 @@ public function adminIndex(ProduitRepository $repo): Response
             return $this->redirectToRoute('admin_produits_index');
         }
 
-        return $this->render('admin/new.html.twig', [
+        return $this->render('admin/newProduit.html.twig', [
             'form' => $form->createView(),
         ]);
     }
@@ -73,7 +73,7 @@ public function adminIndex(ProduitRepository $repo): Response
             return $this->redirectToRoute('admin_produits_index');
         }
 
-        return $this->render('admin/edit.html.twig', [
+        return $this->render('admin/editProduit.html.twig', [
             'produit' => $produit,
             'form' => $form->createView(),
         ]);

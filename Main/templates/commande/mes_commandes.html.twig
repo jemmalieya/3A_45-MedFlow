@@ -113,21 +113,13 @@
 </div>
 {% endblock %}
 
+
 {% block stylesheets %}
-{{ parent() }}
-<style>
-.hover-card {
-    transition: all 0.3s ease;
-}
+  {{ parent() }}
+  <link rel="stylesheet" href="{{ asset('assets/css/commande.css') }}">
+{% endblock %}
 
-.hover-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 10px 30px rgba(0,0,0,0.15) !important;
-}
-
-.img-thumbnail {
-    padding: 0;
-    background: transparent;
-}
-</style>
+{% block javascripts %}
+  {{ parent() }}
+  <script src="{{ asset('assets/js/commande.js') }}"></script>
 {% endblock %}

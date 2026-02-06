@@ -122,3 +122,12 @@
     </div>
 </div>
 {% endblock %}
+{% block stylesheets %}
+  {{ parent() }}
+  <link rel="stylesheet" href="{{ asset('assets/css/commande.css') }}">
+{% endblock %}
+
+{% block javascripts %}
+  {{ parent() }}
+  <script src="{{ asset('assets/js/commande.js') }}"></script>
+{% endblock %}

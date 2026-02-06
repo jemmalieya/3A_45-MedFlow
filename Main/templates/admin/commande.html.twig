@@ -258,3 +258,16 @@
 
 {% endif %}
 {% endblock %}
+
+
+
+
+{% block stylesheets %}
+  {{ parent() }}
+  <link rel="stylesheet" href="{{ asset('assets_dash/css/commandes.css') }}">
+{% endblock %}
+
+{% block javascripts %}
+  {{ parent() }}
+  <script src="{{ asset('assets_dash/js/commandes.js') }}"></script>
+{% endblock %}
