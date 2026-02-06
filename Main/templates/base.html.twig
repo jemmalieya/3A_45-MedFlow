@@ -24,7 +24,8 @@
   <link href="{{ asset('assets/vendor/fontawesome-free/css/all.min.css') }}" rel="stylesheet">
   <link href="{{ asset('assets/vendor/swiper/swiper-bundle.min.css') }}" rel="stylesheet">
   <link href="{{ asset('assets/vendor/glightbox/css/glightbox.min.css') }}" rel="stylesheet">
-
+  <!-- css events -->
+  <link rel="stylesheet" href="{{ asset('assets/css/events.css') }}">
   <!-- Main CSS File -->
   <link href="{{ asset('assets/css/main.css') }}" rel="stylesheet">
 
@@ -65,6 +66,8 @@
         <ul>
           <li><a href="{{ path('app_home') }}" class="{{ app.request.attributes.get('_route') == 'app_home' ? 'active' : '' }}">Home</a></li>
           <li>Réclamations</li>
+           <li><a href="{{ path('app_evenements') }}" class="{% if app.request.attributes.get('_route') == 'app_evenements' %}active{% endif %}">Événements</a></li>
+
 
           {# Liens template laissés en statique pour l’instant #}
           <li><a href="#">About</a></li>

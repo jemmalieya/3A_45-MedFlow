@@ -126,11 +126,32 @@
             </li>
 
             <!-- Nav Item - Tables -->
+            <!-- Nav Item - Events Collapse Menu -->
             <li class="nav-item">
-                <a class="nav-link" href="tables.html">
-                    <i class="fas fa-fw fa-table"></i>
-                    <span>Tables</span></a>
+               <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseEvents"
+                    aria-expanded="true" aria-controls="collapseEvents">
+                    <i class="fas fa-fw fa-calendar-alt"></i>
+                    <span>Gestion des Événements</span>
+                </a>
+                <div id="collapseEvents" class="collapse" aria-labelledby="headingEvents" data-parent="#accordionSidebar">
+                <div class="bg-white py-2 collapse-inner rounded">
+                <h6 class="collapse-header">Gestion des Événements :</h6>
+                <a class="collapse-item" href="{{ path('admin_evenement_cards') }}">Voir tous les événements</a>
+
+                <a class="collapse-item" href="{{ path('admin_evenement_index') }}">Autres actions</a>
+
+                <a class="collapse-item" href="{{ path('admin_evenement_demandes_index') }}">
+                Demandes de participation
+                </a>
+
+  
+                </div>
+                </div>
+
+                
             </li>
+
+            
 
             <!-- Divider -->
             <hr class="sidebar-divider d-none d-md-block">
@@ -147,7 +168,7 @@
         <div id="content-wrapper" class="d-flex flex-column">
 
             <!-- Main Content -->
-            <div id="content">
+            <div id="content" class="px-4">
 
                 <!-- Topbar -->
                 <nav class="navbar navbar-expand navbar-light bg-white topbar mb-4 static-top shadow">

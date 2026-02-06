@@ -1,0 +1,137 @@
+{{ form_start(form) }}
+
+{# ===================== SECTION 1: INFO EVENT ===================== #}
+<div class="mb-4">
+  <h5 class="fw-semibold text-primary mb-3">
+    <i class="bi bi-calendar-event me-2"></i> Informations de l’événement
+  </h5>
+
+  <div class="row g-3">
+    <div class="col-md-6">
+      {{ form_row(form.titre_event, {'attr': {'class': 'form-control'}}) }}
+    </div>
+
+    <div class="col-md-6">
+      {{ form_row(form.slug_event, {'attr': {'class': 'form-control'}}) }}
+      <small class="text-muted">Ex: conference-sante-publique</small>
+    </div>
+
+    <div class="col-md-6">
+      {{ form_row(form.type_event, {'attr': {'class': 'form-select'}}) }}
+    </div>
+
+    <div class="col-md-6">
+      {{ form_row(form.statut_event, {'attr': {'class': 'form-select'}}) }}
+    </div>
+
+    <div class="col-12">
+      {{ form_row(form.description_event, {'attr': {'class': 'form-control', 'rows': 4}}) }}
+    </div>
+
+    <div class="col-12">
+      {{ form_row(form.objectif_event, {'attr': {'class': 'form-control', 'rows': 3}}) }}
+    </div>
+  </div>
+</div>
+
+<hr class="my-4">
+
+{# ===================== SECTION 2: DATES & LIEU ===================== #}
+<div class="mb-4">
+  <h5 class="fw-semibold text-primary mb-3">
+    <i class="bi bi-geo-alt me-2"></i> Dates & lieu
+  </h5>
+
+  <div class="row g-3">
+    <div class="col-md-6">
+      {{ form_row(form.date_debut_event, {'attr': {'class': 'form-control'}}) }}
+    </div>
+
+    <div class="col-md-6">
+      {{ form_row(form.date_fin_event, {'attr': {'class': 'form-control'}}) }}
+    </div>
+
+    <div class="col-md-4">
+      {{ form_row(form.nom_lieu_event, {'attr': {'class': 'form-control'}}) }}
+    </div>
+
+    <div class="col-md-4">
+      {{ form_row(form.ville_event, {'attr': {'class': 'form-control'}}) }}
+    </div>
+
+    <div class="col-md-4">
+      {{ form_row(form.nb_participants_max_event, {'attr': {'class': 'form-control'}}) }}
+    </div>
+
+    <div class="col-12">
+      {{ form_row(form.adresse_event, {'attr': {'class': 'form-control'}}) }}
+    </div>
+  </div>
+</div>
+
+<hr class="my-4">
+
+{# ===================== SECTION 3: INSCRIPTION & VISIBILITE ===================== #}
+<div class="mb-4">
+  <h5 class="fw-semibold text-primary mb-3">
+    <i class="bi bi-shield-check me-2"></i> Inscription & visibilité
+  </h5>
+
+  <div class="row g-3 align-items-end">
+    <div class="col-md-6">
+      {{ form_row(form.date_limite_inscription_event, {'attr': {'class': 'form-control'}}) }}
+    </div>
+
+    <div class="col-md-6">
+      {{ form_row(form.visibilite_event, {'attr': {'class': 'form-select'}}) }}
+    </div>
+
+    <div class="col-12">
+      <div class="form-check form-switch mt-2">
+        {{ form_widget(form.inscription_obligatoire_event, {'attr': {'class': 'form-check-input'}}) }}
+        {{ form_label(form.inscription_obligatoire_event, null, {'label_attr': {'class': 'form-check-label'}}) }}
+        {{ form_errors(form.inscription_obligatoire_event) }}
+      </div>
+    </div>
+  </div>
+</div>
+
+<hr class="my-4">
+
+{# ===================== SECTION 4: CONTACT & MEDIA ===================== #}
+<div class="mb-4">
+  <h5 class="fw-semibold text-primary mb-3">
+    <i class="bi bi-envelope me-2"></i> Contact & média
+  </h5>
+
+  <div class="row g-3">
+    <div class="col-md-6">
+      {{ form_row(form.email_contact_event, {'attr': {'class': 'form-control'}}) }}
+    </div>
+
+    <div class="col-md-6">
+      {{ form_row(form.tel_contact_event, {'attr': {'class': 'form-control'}}) }}
+    </div>
+
+    <div class="col-md-6">
+      {{ form_row(form.nom_organisateur_event, {'attr': {'class': 'form-control'}}) }}
+    </div>
+
+    <div class="col-md-6">
+      {{ form_row(form.image_couverture_event, {'attr': {'class': 'form-control'}}) }}
+      <small class="text-muted">Colle un lien direct d’image (finit par .jpg .png .webp)</small>
+    </div>
+  </div>
+</div>
+
+{# ===================== ACTIONS ===================== #}
+<div class="d-flex justify-content-end gap-2 mt-4">
+  <a href="{{ path('admin_evenement_index') }}" class="btn btn-outline-secondary">
+    Annuler
+  </a>
+  <button class="btn btn-primary px-4">
+    <i class="bi bi-check-circle me-1"></i> {{ button_label|default('Enregistrer') }}
+  </button>
+</div>
+
+{{ form_end(form) }}

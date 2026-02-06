@@ -17,6 +17,9 @@ class Evenement
     #[ORM\Column]
     private ?int $id = null;
 
+    #[ORM\Column(type: Types::TEXT, nullable: true)]
+    private ?string $demandes_json = null;
+
     // ✅ Relation: 1 événement -> N ressources
     #[ORM\OneToMany(mappedBy: 'evenement', targetEntity: Ressource::class, orphanRemoval: true, cascade: ['persist', 'remove'])]
     private Collection $ressources;
@@ -349,4 +352,104 @@ class Evenement
         $this->date_mise_a_jour_event = $date_mise_a_jour_event;
         return $this;
     }
+
+
+    public function getDemandesJson(): array
+    {
+         if (!$this->demandes_json) return [];
+          $data = json_decode($this->demandes_json, true);
+           return is_array($data) ? $data : [];
+    }
+    public function setDemandesJsonArray(array $demandes): static
+    {
+           $this->demandes_json = json_encode(array_values($demandes), JSON_UNESCAPED_UNICODE);
+              return $this;
+    }
+    public function countDemandesByStatus(string $status): int
+    {
+           return count(array_filter($this->getDemandesJson(), fn($d) => ($d['status'] ?? '') === $status));
+    }
+    public function countAcceptedDemandes(): int
+    {
+            return $this->countDemandesByStatus('accepted');
+    }
+    public function canReceiveDemandes(): bool
+    {
+        // règles métier
+        $now = new \DateTime();
+
+        if ($this->getStatutEvent() && strtolower($this->getStatutEvent()) === 'annulé') return false;
+        if ($this->getDateFinEvent() && $this->getDateFinEvent() < $now) return false;
+        if ($this->isInscriptionObligatoireEvent() && $this->getDateLimiteInscriptionEvent() && $this->getDateLimiteInscriptionEvent() < $now) {
+               return false;
+        }
+    if ($this->getNbParticipantsMaxEvent() !== null && $this->countAcceptedDemandes() >= $this->getNbParticipantsMaxEvent()) {
+         return false;
+         }
+         return true;
+    }
+    public function addDemande(array $payload): static
+    {
+          $demandes = $this->getDemandesJson();
+           $email = strtolower(trim($payload['email'] ?? ''));
+            if (!$email) {
+                    throw new \InvalidArgumentException("Email obligatoire.");
+                     }
+        // anti-duplicate: même email + même event
+         foreach ($demandes as $d) {
+              if (strtolower($d['email'] ?? '') === $email) {
+                    throw new \RuntimeException("Une demande existe déjà avec cet email pour cet événement.");
+                }
+        }
+
+    $demandes[] = [
+        'id' => bin2hex(random_bytes(8)),
+        'nom' => trim($payload['nom'] ?? ''),
+        'email' => $email,
+        'tel' => trim($payload['tel'] ?? ''),
+        'message' => trim($payload['message'] ?? ''),
+        'created_at' => (new \DateTime())->format('Y-m-d H:i:s'),
+        'status' => 'pending', // pending | accepted | refused
+        'decision_at' => null,
+        'decision_by' => null,
+        'decision_note' => null,
+    ];
+
+    return $this->setDemandesJsonArray($demandes);
+}
+
+public function decideDemande(string $demandeId, string $status, ?string $decidedBy = null, ?string $note = null): static
+{
+    $allowed = ['accepted', 'refused'];
+    if (!in_array($status, $allowed, true)) {
+        throw new \InvalidArgumentException("Statut invalide.");
+    }
+
+    $demandes = $this->getDemandesJson();
+    $found = false;
+
+    foreach ($demandes as &$d) {
+        if (($d['id'] ?? null) === $demandeId) {
+            $d['status'] = $status;
+            $d['decision_at'] = (new \DateTime())->format('Y-m-d H:i:s');
+            $d['decision_by'] = $decidedBy;
+            $d['decision_note'] = $note;
+            $found = true;
+            break;
+        }
+    }
+
+    if (!$found) {
+        throw new \RuntimeException("Demande introuvable.");
+    }
+
+    // règle: si accepted, vérifier max participants
+    if ($status === 'accepted' && $this->getNbParticipantsMaxEvent() !== null) {
+        if ($this->countAcceptedDemandes() > $this->getNbParticipantsMaxEvent()) {
+            throw new \RuntimeException("Impossible: nombre max de participants dépassé.");
+        }
+    }
+
+    return $this->setDemandesJsonArray($demandes);
+}
 }

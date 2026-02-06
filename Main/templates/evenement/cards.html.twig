@@ -1,0 +1,96 @@
+{% extends 'base_dashboard.html.twig' %}
+
+{% block title %}Dashboard Admin - Événements (Cards){% endblock %}
+
+{% block body %}
+<div class="container-fluid">
+
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h1 class="mb-1">Événements</h1>
+      <p class="text-muted mb-0">Affichage en cartes (Admin)</p>
+    </div>
+
+    <a href="{{ path('admin_evenement_new') }}" class="btn btn-primary">
+      + Ajouter un événement
+    </a>
+  </div>
+
+  {# Flash messages #}
+  {% for message in app.flashes('success') %}
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+      {{ message }}
+      <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+        <span aria-hidden="true">&times;</span>
+      </button>
+    </div>
+  {% endfor %}
+
+  {% if evenements is empty %}
+    <div class="alert alert-info mb-0">Aucun événement trouvé.</div>
+  {% else %}
+    <div class="row">
+      {% for e in evenements %}
+        <div class="col-12 col-md-6 col-lg-4 mb-4">
+
+          <div class="card shadow-sm border-0 h-100">
+            <div class="card-body d-flex flex-column">
+
+              {# Titre + Statut #}
+              <div class="d-flex justify-content-between align-items-start mb-2">
+                <h5 class="card-title mb-0">{{ e.titreEvent }}</h5>
+
+                {% set badgeClass =
+                  e.statutEvent == 'Publié' ? 'badge-success' :
+                  (e.statutEvent == 'Annulé' ? 'badge-danger' :
+                  (e.statutEvent == 'En cours' ? 'badge-warning' : 'badge-secondary'))
+                %}
+                <span class="badge {{ badgeClass }}">{{ e.statutEvent }}</span>
+              </div>
+
+              {# Infos #}
+              <div class="text-muted small mb-2">
+                <i class="fas fa-tag mr-2"></i> {{ e.typeEvent }}
+              </div>
+
+              <div class="text-muted small mb-2">
+                <i class="fas fa-map-marker-alt mr-2"></i> {{ e.villeEvent }}
+              </div>
+
+              <div class="text-muted small mb-3">
+                <i class="far fa-calendar-alt mr-2"></i>
+                {{ e.dateDebutEvent|date('d/m/Y') }} → {{ e.dateFinEvent|date('d/m/Y') }}
+              </div>
+
+              {# Actions en bas #}
+              <div class="mt-auto d-flex justify-content-end" style="gap: 8px; flex-wrap: wrap;">
+                <a href="{{ path('admin_evenement_show', {id: e.id}) }}"
+                   class="btn btn-sm btn-outline-primary">
+                  Voir
+                </a>
+
+                <a href="{{ path('admin_evenement_edit', {id: e.id}) }}"
+                   class="btn btn-sm btn-warning">
+                  Modifier
+                </a>
+
+                <form method="post"
+                      action="{{ path('admin_evenement_delete', {id: e.id}) }}"
+                      onsubmit="return confirm('Supprimer cet evenement ?');">
+                  <input type="hidden" name="_token" value="{{ csrf_token('delete_evenement_' ~ e.id) }}">
+                  <button class="btn btn-sm btn-danger">
+                    Supprimer
+                  </button>
+                </form>
+              </div>
+
+            </div>
+          </div>
+
+        </div>
+      {% endfor %}
+    </div>
+  {% endif %}
+
+</div>
+{% endblock %}

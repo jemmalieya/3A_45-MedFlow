@@ -1,0 +1,69 @@
+{% extends 'base_dashboard.html.twig' %}
+
+{% block title %}Détails Événement{% endblock %}
+
+{% block body %}
+<div class="container-fluid">
+
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h1 class="mb-1">{{ evenement.titreEvent }}</h1>
+      <p class="text-muted mb-0">Détails de l’événement (Admin)</p>
+    </div>
+
+    <div class="d-flex" style="gap: 8px;">
+      <a href="{{ path('admin_evenement_cards') }}" class="btn btn-outline-secondary">
+        ← Retour
+      </a>
+      <a href="{{ path('admin_evenement_edit', {id: evenement.id}) }}" class="btn btn-warning">
+        Modifier
+      </a>
+    </div>
+  </div>
+
+  <div class="card shadow-sm border-0">
+    <div class="card-body">
+
+      <div class="row">
+        <div class="col-md-6 mb-3">
+          <strong>Type :</strong> {{ evenement.typeEvent }}
+        </div>
+
+        <div class="col-md-6 mb-3">
+          <strong>Statut :</strong>
+          <span class="badge badge-secondary">{{ evenement.statutEvent }}</span>
+        </div>
+
+        <div class="col-md-6 mb-3">
+          <strong>Date début :</strong> {{ evenement.dateDebutEvent|date('d/m/Y') }}
+        </div>
+
+        <div class="col-md-6 mb-3">
+          <strong>Date fin :</strong> {{ evenement.dateFinEvent|date('d/m/Y') }}
+        </div>
+
+        <div class="col-md-6 mb-3">
+          <strong>Ville :</strong> {{ evenement.villeEvent }}
+        </div>
+
+        <div class="col-md-6 mb-3">
+          <strong>ID :</strong> {{ evenement.id }}
+        </div>
+      </div>
+
+      <hr>
+
+      <form method="post"
+            action="{{ path('admin_evenement_delete', {id: evenement.id}) }}"
+            onsubmit="return confirm('Supprimer cet evenement ?');">
+        <input type="hidden" name="_token" value="{{ csrf_token('delete_evenement_' ~ evenement.id) }}">
+        <button class="btn btn-danger">
+          Supprimer
+        </button>
+      </form>
+
+    </div>
+  </div>
+
+</div>
+{% endblock %}
