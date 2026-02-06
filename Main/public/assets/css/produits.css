@@ -456,3 +456,150 @@
   color:#fff;
 }
 
+/* Barre de recherche et filtres */
+.search-filter-section {
+    background: #fff;
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+.search-box {
+    position: relative;
+}
+
+.search-box i.bi-search {
+    position: absolute;
+    left: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #6c757d;
+    font-size: 18px;
+}
+
+.search-box input {
+    padding-left: 45px;
+    padding-right: 40px;
+    height: 45px;
+    border: 2px solid #e9ecef;
+    border-radius: 8px;
+    transition: all 0.3s;
+}
+
+.search-box input:focus {
+    border-color: #0d6efd;
+    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.15);
+}
+
+.search-box .btn-clear {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: #6c757d;
+    cursor: pointer;
+    padding: 5px;
+    transition: color 0.3s;
+}
+
+.search-box .btn-clear:hover {
+    color: #dc3545;
+}
+
+.form-select {
+    height: 45px;
+    border: 2px solid #e9ecef;
+    border-radius: 8px;
+    transition: all 0.3s;
+}
+
+.form-select:focus {
+    border-color: #0d6efd;
+    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.15);
+}
+
+#resultCount {
+    font-size: 14px;
+    font-weight: 500;
+}
+
+#resultCount #count {
+    color: #0d6efd;
+    font-weight: 700;
+}
+
+/* Animation de fade pour les produits */
+.produit-item {
+    transition: opacity 0.3s, transform 0.3s;
+}
+
+.produit-item.hidden {
+    display: none !important;
+}
+
+.produit-item.fade-out {
+    opacity: 0;
+    transform: scale(0.95);
+}
+
+#noResults {
+    animation: fadeIn 0.5s;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+/* Bouton réinitialiser */
+.btn-outline-secondary {
+    border-radius: 6px;
+    font-size: 13px;
+    padding: 4px 12px;
+    transition: all 0.3s;
+}
+
+.btn-outline-secondary:hover {
+    background-color: #6c757d;
+    color: white;
+}
+/* Animations pour le filtrage en temps réel */
+.produit-item {
+    transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.produit-item.fade-out {
+    opacity: 0;
+    transform: scale(0.95);
+}
+
+.produit-item.hidden {
+    display: none !important;
+}
+
+#noResults {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 20px;
+    animation: fadeIn 0.5s ease;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}

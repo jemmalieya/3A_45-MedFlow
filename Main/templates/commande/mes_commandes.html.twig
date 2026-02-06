@@ -88,6 +88,10 @@
                                     <span class="text-muted">Total :</span>
                                     <span class="fs-5 fw-bold text-success">{{ commande.montantTotal|number_format(2, '.', '') }} Dt</span>
                                 </div>
+<a class="btn btn-success w-100 mt-2"
+   href="{{ path('commande_facture_pdf', {id: commande.idCommande}) }}">
+   <i class="bi bi-download"></i> Facture PDF
+</a>
 
                                 {# Bouton détails #}
                                 <a href="{{ path('commande_details', {id: commande.idCommande}) }}" 

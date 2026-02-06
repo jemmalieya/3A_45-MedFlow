@@ -2,9 +2,6 @@
 
 {% block title %}Pharmacie{% endblock %}
 
-
-
-
 {% block body %}
 {# Messages Flash #}
 <div id="flash-messages-container">
@@ -26,6 +23,7 @@
         <p>Découvrez notre sélection de produits de santé et bien-être</p>
     </div>
 </div>
+
 {# Accès rapide commandes #}
 <div class="container mb-4">
   <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
@@ -33,7 +31,6 @@
       <i class="bi bi-info-circle me-1"></i>
       Retrouvez toutes vos commandes ici.
     </div>
-
     <a href="{{ path('mes_commandes') }}" class="btn btn-orders">
       <i class="bi bi-bag-check-fill me-2"></i>
       Mes commandes
@@ -41,14 +38,69 @@
   </div>
 </div>
 
-
 <div class="container mb-5">
+    
+    {# Barre de recherche et filtres - SANS FORMULAIRE pour recherche en temps réel #}
+    <div class="search-filter-section mb-4">
+        <div class="row g-3">
+            {# Recherche #}
+            <div class="col-md-6">
+                <div class="search-box">
+                    <i class="bi bi-search"></i>
+                    <input type="text" 
+                           id="searchInput" 
+                           class="form-control" 
+                           placeholder="Rechercher un produit (nom, catégorie...)">
+                    <button id="clearSearch" class="btn-clear" style="display: none;">
+                        <i class="bi bi-x-circle-fill"></i>
+                    </button>
+                </div>
+            </div>
+
+            {# Tri par prix #}
+            <div class="col-md-3">
+                <select id="sortPrice" class="form-select">
+                    <option value="">Trier par prix</option>
+                    <option value="asc">Prix croissant</option>
+                    <option value="desc">Prix décroissant</option>
+                </select>
+            </div>
+
+            {# Filtre par catégorie #}
+            <div class="col-md-3">
+                <select id="filterCategory" class="form-select">
+                    <option value="">Toutes catégories</option>
+                    {% set categories = [] %}
+                    {% for produit in produits %}
+                        {% if produit.categorieProduit not in categories %}
+                            {% set categories = categories|merge([produit.categorieProduit]) %}
+                        {% endif %}
+                    {% endfor %}
+                    {% for categorie in categories|sort %}
+                        <option value="{{ categorie }}">{{ categorie }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+
+        {# Compteur de résultats #}
+        <div class="mt-3">
+            <span id="resultCount" class="text-muted">
+                <i class="bi bi-bag"></i>
+                <span id="count">{{ produits|length }}</span> produit(s) trouvé(s)
+            </span>
+        </div>
+    </div>
     
     {# Grille Produits #}
     {% if produits is not empty %}
-        <div class="row g-4">
+        <div class="row g-4" id="produitsContainer">
             {% for produit in produits %}
-                <div class="col-lg-3 col-md-4 col-sm-6">
+                <div class="col-lg-3 col-md-4 col-sm-6 produit-item" 
+                     data-nom="{{ produit.nomProduit|lower }}"
+                     data-categorie="{{ produit.categorieProduit|lower }}"
+                     data-prix="{{ produit.prixProduit }}"
+                     data-description="{{ produit.descriptionProduit|lower }}">
                     <div class="produit-card {% if produit.statusProduit != 'Disponible' %}unavailable{% endif %}">
                         
                         {# Image #}
@@ -107,7 +159,7 @@
                     </div>
                 </div>
 
-                {# Modal #}
+                {# Modal détails #}
                 <div class="modal fade" id="modal-{{ produit.id_produit }}" tabindex="-1" aria-hidden="true">
                     <div class="modal-dialog modal-dialog-centered modal-lg">
                         <div class="modal-content">
@@ -151,6 +203,13 @@
                 </div>
             {% endfor %}
         </div>
+
+        {# Message aucun résultat #}
+        <div id="noResults" class="empty-state" style="display: none;">
+            <i class="bi bi-search"></i>
+            <h3>Aucun produit trouvé</h3>
+            <p>Essayez avec d'autres mots-clés ou filtres</p>
+        </div>
     {% else %}
         <div class="empty-state">
             <i class="bi bi-inbox"></i>
@@ -161,10 +220,6 @@
 
 </div>
 {% endblock %}
-
-
-
-
 
 {% block stylesheets %}
   {{ parent() }}

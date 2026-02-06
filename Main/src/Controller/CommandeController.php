@@ -11,7 +11,9 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\Session\SessionInterface;
 use Symfony\Component\Routing\Annotation\Route;
-
+use Dompdf\Dompdf;
+use Dompdf\Options;
+use Symfony\Component\HttpFoundation\ResponseHeaderBag;
 class CommandeController extends AbstractController
 {
     /* =========================
@@ -197,4 +199,39 @@ class CommandeController extends AbstractController
             'commandes' => $commandes
         ]);
     }
+
+
+
+#[Route('/commande/{id}/facture', name: 'commande_facture_pdf', methods: ['GET'])]
+public function facturePdf(Commande $commande): Response
+{
+    // HTML depuis twig
+    $html = $this->renderView('commande/facture_pdf.html.twig', [
+        'commande' => $commande
+    ]);
+
+    $options = new Options();
+    $options->set('defaultFont', 'DejaVu Sans');
+    $options->set('isRemoteEnabled', true);
+
+    $dompdf = new Dompdf($options);
+    $dompdf->loadHtml($html);
+    $dompdf->setPaper('A4', 'portrait');
+    $dompdf->render();
+
+    $filename = 'facture_commande_'.$commande->getIdCommande().'.pdf';
+
+    return new Response(
+        $dompdf->output(),
+        200,
+        [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => (new ResponseHeaderBag())->makeDisposition(
+                ResponseHeaderBag::DISPOSITION_ATTACHMENT,
+                $filename
+            ),
+        ]
+    );
+}
+
 }

@@ -13,30 +13,44 @@ use Symfony\Component\Routing\Annotation\Route;
 
 final class ProduitsController extends AbstractController
 {
+    /**
+     * FRONT - LISTE DES PRODUITS AVEC RECHERCHE ET TRI
+     */
+    #[Route('/produits', name: 'front_produit_index', methods: ['GET'])]
+    public function frontIndex(Request $request, ProduitRepository $repo): Response
+    {
+        // Récupération des paramètres de recherche/filtrage
+        $search = $request->query->get('search', '');
+        $category = $request->query->get('category', '');
+        $sortPrice = $request->query->get('sort', '');
 
-    
-    // FRONT - LISTE DES PRODUITS
-#[Route('/produits', name: 'front_produit_index', methods: ['GET'])]
-public function frontIndex(ProduitRepository $repo): Response
-{
-    return $this->render('produits/index.html.twig', [
-        'produits' => $repo->findAll()
-    ]);
-}
+        // Appel du repository avec les filtres
+        $produits = $repo->findFiltered($search, $category, $sortPrice);
+        $categories = $repo->findAllCategories();
 
-// BACK (ADMIN) - LISTE DES PRODUITS
-#[Route('/admin/produits', name: 'admin_produits_index', methods: ['GET'])]
-public function adminIndex(ProduitRepository $repo): Response
-{
-    return $this->render('admin/index_produit.html.twig', [
-        'produits' => $repo->findAll()
-    ]);
-}
+        return $this->render('produits/index.html.twig', [
+            'produits' => $produits,
+            'categories' => $categories,
+            'currentSearch' => $search,
+            'currentCategory' => $category,
+            'currentSort' => $sortPrice,
+        ]);
+    }
 
+    /**
+     * BACK (ADMIN) - LISTE DES PRODUITS
+     */
+    #[Route('/admin/produits', name: 'admin_produits_index', methods: ['GET'])]
+    public function adminIndex(ProduitRepository $repo): Response
+    {
+        return $this->render('admin/index_produit.html.twig', [
+            'produits' => $repo->findAll()
+        ]);
+    }
 
-
-
-    // AJOUTER UN PRODUIT (admin)
+    /**
+     * AJOUTER UN PRODUIT (admin)
+     */
     #[Route('/admin/produits/new', name: 'admin_produit_new', methods: ['GET', 'POST'])]
     public function new(Request $request, EntityManagerInterface $em): Response
     {
@@ -58,7 +72,9 @@ public function adminIndex(ProduitRepository $repo): Response
         ]);
     }
 
-    // MODIFIER UN PRODUIT (admin)
+    /**
+     * MODIFIER UN PRODUIT (admin)
+     */
     #[Route('/admin/produits/{id}/edit', name: 'admin_produit_edit', methods: ['GET', 'POST'])]
     public function edit(Produit $produit, Request $request, EntityManagerInterface $em): Response
     {
@@ -79,7 +95,9 @@ public function adminIndex(ProduitRepository $repo): Response
         ]);
     }
 
-    // SUPPRIMER UN PRODUIT (admin)
+    /**
+     * SUPPRIMER UN PRODUIT (admin)
+     */
     #[Route('/admin/produits/{id}/delete', name: 'admin_produit_delete', methods: ['POST'])]
     public function delete(Produit $produit, Request $request, EntityManagerInterface $em): Response
     {
