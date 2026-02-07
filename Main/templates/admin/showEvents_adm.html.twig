@@ -1,0 +1,92 @@
+{% extends 'base_dashboard.html.twig' %}
+{% block title %}Demandes - {{ evenement.titreEvent }}{% endblock %}
+
+{% block body %}
+<div class="container-fluid py-4">
+
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h1 class="h3 mb-1">Demandes — {{ evenement.titreEvent }}</h1>
+      <p class="text-muted mb-0">
+        Pending: {{ pendingCount }} • Acceptés: {{ acceptedCount }}
+        {% if evenement.nbParticipantsMaxEvent is not null %} / {{ evenement.nbParticipantsMaxEvent }}{% endif %}
+      </p>
+    </div>
+
+    <a href="{{ path('admin_evenement_demandes_index') }}" class="btn btn-outline-secondary btn-sm">
+      ← Retour
+    </a>
+  </div>
+
+  {% for m in app.flashes('success') %}
+    <div class="alert alert-success">{{ m }}</div>
+  {% endfor %}
+  {% for m in app.flashes('danger') %}
+    <div class="alert alert-danger">{{ m }}</div>
+  {% endfor %}
+
+  <div class="card shadow-sm border-0">
+    <div class="card-body">
+
+      {% if demandes is empty %}
+        <div class="alert alert-info mb-0">Aucune demande pour cet événement.</div>
+      {% else %}
+        <div class="table-responsive">
+          <table class="table align-middle">
+            <thead class="table-light">
+              <tr>
+                <th>Nom</th>
+                <th>Email</th>
+                <th>Tél</th>
+                <th>Message</th>
+                <th>Statut</th>
+                <th>Créée</th>
+                <th class="text-end">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for d in demandes %}
+                <tr>
+                  <td>{{ d.nom }}</td>
+                  <td>{{ d.email }}</td>
+                  <td>{{ d.tel }}</td>
+                  <td style="max-width:340px;">
+                    <div class="text-truncate" title="{{ d.message }}">{{ d.message }}</div>
+                  </td>
+                  <td>
+                    {% if d.status == 'pending' %}
+                      <span class="badge bg-warning text-dark">Pending</span>
+                    {% elseif d.status == 'accepted' %}
+                      <span class="badge bg-success">Acceptée</span>
+                    {% else %}
+                      <span class="badge bg-danger">Refusée</span>
+                    {% endif %}
+                  </td>
+                  <td>{{ d.created_at }}</td>
+                  <td class="text-end">
+                    {% if d.status == 'pending' %}
+                      <form method="post" action="{{ path('admin_evenement_demandes_decide', {id: evenement.id, demandeId: d.id}) }}" class="d-inline">
+                        <input type="hidden" name="status" value="accepted">
+                        <button class="btn btn-sm btn-success">Accepter</button>
+                      </form>
+
+                      <form method="post" action="{{ path('admin_evenement_demandes_decide', {id: evenement.id, demandeId: d.id}) }}" class="d-inline">
+                        <input type="hidden" name="status" value="refused">
+                        <button class="btn btn-sm btn-danger">Refuser</button>
+                      </form>
+                    {% else %}
+                      <span class="text-muted small">Décision: {{ d.decision_at }}</span>
+                    {% endif %}
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% endif %}
+
+    </div>
+  </div>
+
+</div>
+{% endblock %}

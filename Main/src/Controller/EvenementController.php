@@ -41,7 +41,7 @@ class EvenementController extends AbstractController
     {
         $evenements = $repo->findBy([], ['date_debut_event' => 'DESC']);
 
-        return $this->render('evenement/admin_index.html.twig', [
+        return $this->render('admin/adminEvent_index.html.twig', [
             'evenements' => $evenements,
         ]);
     }
@@ -66,7 +66,7 @@ class EvenementController extends AbstractController
             return $this->redirectToRoute('admin_evenement_index');
         }
 
-        return $this->render('evenement/new.html.twig', [
+        return $this->render('admin/newEvents.html.twig', [
             'form' => $form->createView(),
         ]);
     }
@@ -86,7 +86,7 @@ class EvenementController extends AbstractController
             return $this->redirectToRoute('admin_evenement_index');
         }
 
-        return $this->render('evenement/edit.html.twig', [
+        return $this->render('admin/editEvents.html.twig', [
             'evenement' => $evenement,
             'form' => $form->createView(),
         ]);
@@ -110,7 +110,7 @@ class EvenementController extends AbstractController
     public function adminCards(EvenementRepository $repo): Response
     {
            $evenements = $repo->findBy([], ['date_debut_event' => 'DESC']);
-             return $this->render('evenement/cards.html.twig', [
+             return $this->render('admin/cardsEvents.html.twig', [
                     'evenements' => $evenements,
                     ]);
     }
@@ -118,7 +118,7 @@ class EvenementController extends AbstractController
     #[Route('/admin/evenements/{id}', name: 'admin_evenement_show', requirements: ['id' => '\d+'], methods: ['GET'])]
     public function adminShow(Evenement $evenement): Response
     {
-          return $this->render('evenement/show_adm.html.twig', [
+          return $this->render('admin/showEvents_adm.html.twig', [
                   'evenement' => $evenement,
                     ]);
     }
@@ -167,7 +167,7 @@ public function demandesIndex(EvenementRepository $repo): Response
         $totalPending += $ev->countDemandesByStatus('pending');
     }
 
-    return $this->render('evenement/demandes_index.html.twig', [
+    return $this->render('admin/demandesEvents_index.html.twig', [
         'events' => $events,
         'totalPending' => $totalPending,
     ]);
@@ -187,7 +187,7 @@ public function demandesShow(Evenement $evenement): Response
         return strcmp(($b['created_at'] ?? ''), ($a['created_at'] ?? ''));
     });
 
-    return $this->render('evenement/demandes_show.html.twig', [
+    return $this->render('admin/demandesEvents_show.html.twig', [
         'evenement' => $evenement,
         'demandes' => $demandes,
         'acceptedCount' => $evenement->countAcceptedDemandes(),

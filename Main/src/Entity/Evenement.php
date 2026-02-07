@@ -7,6 +7,9 @@ use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Validator\Constraints as Assert;
+use Symfony\Component\Validator\Constraints\Regex;
+
 
 #[ORM\Entity(repositoryClass: EvenementRepository::class)]
 #[ORM\Table(name: 'evenement')]
@@ -24,62 +27,130 @@ class Evenement
     #[ORM\OneToMany(mappedBy: 'evenement', targetEntity: Ressource::class, orphanRemoval: true, cascade: ['persist', 'remove'])]
     private Collection $ressources;
 
-    #[ORM\Column(length: 255)]
+   #[ORM\Column(length: 255)]
+   #[Assert\NotBlank(message: "Le titre est obligatoire.")]
+   #[Assert\Length(
+    min: 5,
+    max: 120,
+    minMessage: "Le titre doit contenir au moins {{ 5 }} caractères.",
+    maxMessage: "Le titre ne doit pas dépasser {{ 5 }} caractères."
+   )]
     private ?string $titre_event = null;
 
-    #[ORM\Column(length: 255)]
-    private ?string $slug_event = null;
 
     #[ORM\Column(length: 255)]
-    private ?string $type_event = null;
+#[Assert\NotBlank(message: "Le slug est obligatoire.")]
+#[Assert\Length(max: 255)]
+#[Assert\Regex(
+    pattern: "/^[a-z0-9]+(?:-[a-z0-9]+)*$/",
+    message: "Slug invalide (ex: journee-don-du-sang)."
+)]
+private ?string $slug_event = null;
+  
 
     #[ORM\Column(length: 255)]
-    private ?string $description_event = null;
+#[Assert\NotBlank(message: "Le type est obligatoire.")]
+#[Assert\Choice(
+    choices: ["Campagne", "Conférence", "Atelier", "Caritatif", "Autre"],
+    message: "Type invalide."
+)]
+private ?string $type_event = null;
+
 
     #[ORM\Column(length: 255)]
-    private ?string $objectif_event = null;
+#[Assert\NotBlank(message: "La description est obligatoire.")]
+#[Assert\Length(
+    min: 20,
+    max: 255,
+    minMessage: "La description doit contenir au moins {{ 10 }} caractères.",
+    maxMessage: "La description ne doit pas dépasser {{ 10 }} caractères."
+)]
+private ?string $description_event = null;
+
+
+   #[ORM\Column(length: 255)]
+#[Assert\NotBlank(message: "L'objectif est obligatoire.")]
+#[Assert\Length(min: 10, max: 255)]
+private ?string $objectif_event = null;
+
 
     #[ORM\Column(length: 255)]
-    private ?string $statut_event = null;
+#[Assert\NotBlank(message: "Le statut est obligatoire.")]
+#[Assert\Choice(choices: ["Brouillon","Publié","Annulé"], message: "Statut invalide.")]
+private ?string $statut_event = null;
+
 
     #[ORM\Column(type: Types::DATE_MUTABLE)]
-    private ?\DateTimeInterface $date_debut_event = null;
+#[Assert\NotNull(message: "La date de début est obligatoire.")]
+private ?\DateTimeInterface $date_debut_event = null;
 
-    #[ORM\Column(type: Types::DATE_MUTABLE)]
-    private ?\DateTimeInterface $date_fin_event = null;
+#[ORM\Column(type: Types::DATE_MUTABLE)]
+#[Assert\NotNull(message: "La date de fin est obligatoire.")]
+private ?\DateTimeInterface $date_fin_event = null;
 
-    #[ORM\Column(length: 255)]
-    private ?string $nom_lieu_event = null;
-
-    #[ORM\Column(length: 255)]
-    private ?string $adresse_event = null;
 
     #[ORM\Column(length: 255)]
-    private ?string $ville_event = null;
+#[Assert\NotBlank(message: "Le nom du lieu est obligatoire.")]
+#[Assert\Length(min: 3, max: 255)]
+private ?string $nom_lieu_event = null;
+
+#[ORM\Column(length: 255)]
+#[Assert\NotBlank(message: "L'adresse est obligatoire.")]
+#[Assert\Length(min: 5, max: 255)]
+private ?string $adresse_event = null;
+
+#[ORM\Column(length: 255)]
+#[Assert\NotBlank(message: "La ville est obligatoire.")]
+#[Assert\Length(min: 2, max: 60)]
+#[Assert\Regex(
+    pattern: "/^[\p{L}\s'-]+$/u",
+    message: "Ville invalide (lettres uniquement)."
+)]
+private ?string $ville_event = null;
+
 
     #[ORM\Column(nullable: true)]
-    private ?int $nb_participants_max_event = null;
+#[Assert\Positive(message: "Le nombre max de participants doit être > 0.")]
+private ?int $nb_participants_max_event = null;
 
-    #[ORM\Column]
-    private ?bool $inscription_obligatoire_event = null;
 
-    #[ORM\Column(type: Types::DATE_MUTABLE, nullable: true)]
-    private ?\DateTimeInterface $date_limite_inscription_event = null;
+   #[ORM\Column]
+#[Assert\NotNull(message: "Veuillez préciser si l'inscription est obligatoire.")]
+private ?bool $inscription_obligatoire_event = null;
 
-    #[ORM\Column(length: 255)]
-    private ?string $email_contact_event = null;
 
-    #[ORM\Column(length: 30)]
-    private ?string $tel_contact_event = null;
+   #[ORM\Column(type: Types::DATE_MUTABLE, nullable: true)]
+private ?\DateTimeInterface $date_limite_inscription_event = null;
 
-    #[ORM\Column(length: 255)]
-    private ?string $nom_organisateur_event = null;
+
+   #[ORM\Column(length: 255)]
+#[Assert\NotBlank(message: "L'email contact est obligatoire.")]
+#[Assert\Email(message: "Email invalide.")]
+private ?string $email_contact_event = null;
+
+   #[ORM\Column(length: 30)]
+#[Assert\NotBlank(message: "Le téléphone contact est obligatoire.")]
+#[Assert\Regex(
+    pattern: "/^\+?\d{8,15}$/",
+    message: "Téléphone invalide (ex: +21612345678)."
+)]
+private ?string $tel_contact_event = null;
+
+
+ #[ORM\Column(length: 255)]
+#[Assert\NotBlank(message: "Le nom de l'organisateur est obligatoire.")]
+#[Assert\Length(min: 2, max: 255)]
+private ?string $nom_organisateur_event = null;
 
     #[ORM\Column(length: 255, nullable: true)]
-    private ?string $image_couverture_event = null;
+#[Assert\Url(message: "Lien image invalide.")]
+private ?string $image_couverture_event = null;
 
-    #[ORM\Column(length: 255, nullable: true)]
-    private ?string $visibilite_event = null;
+
+   #[ORM\Column(length: 255, nullable: true)]
+#[Assert\Choice(choices: ["Public","Prive"], message: "Visibilité invalide.")]
+private ?string $visibilite_event = null;
+
 
     #[ORM\Column(type: Types::DATE_MUTABLE)]
     private ?\DateTimeInterface $date_creation_event = null;
@@ -353,6 +424,8 @@ class Evenement
         return $this;
     }
 
+    
+
 
     public function getDemandesJson(): array
     {
@@ -451,5 +524,12 @@ public function decideDemande(string $demandeId, string $status, ?string $decide
     }
 
     return $this->setDemandesJsonArray($demandes);
+
+    
 }
+public function __toString(): string
+{
+    return (string) ($this->titre_event ?? 'Événement #' . $this->id);
+}
+
 }

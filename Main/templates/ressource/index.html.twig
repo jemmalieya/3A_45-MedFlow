@@ -1,20 +1,204 @@
-{% extends 'base.html.twig' %}
-
-{% block title %}Hello RessourceController!{% endblock %}
+{% extends 'base_dashboard.html.twig' %}
+{% block title %}Ressources{% endblock %}
 
 {% block body %}
-<style>
-    .example-wrapper { margin: 1em auto; max-width: 800px; width: 95%; font: 18px/1.5 sans-serif; }
-    .example-wrapper code { background: #F5F5F5; padding: 2px 6px; }
-</style>
 
-<div class="example-wrapper">
-    <h1>Hello {{ controller_name }}! ✅</h1>
+{# ===== Header ===== #}
+<div class="d-flex align-items-center justify-content-between flex-wrap mb-4 gap-2">
+  <div>
+    <h1 class="h3 mb-1 text-gray-800">Ressources</h1>
+    <div class="text-muted small">Gère fichiers, liens et matériel associés aux événements.</div>
+  </div>
 
-    This friendly message is coming from:
-    <ul>
-        <li>Your controller at <code>C:/Users/lenovo/MedFlow/3A_45-MedFlow/Main/src/Controller/RessourceController.php</code></li>
-        <li>Your template at <code>C:/Users/lenovo/MedFlow/3A_45-MedFlow/Main/templates/ressource/index.html.twig</code></li>
-    </ul>
+  <div class="d-flex align-items-center gap-2">
+    <div class="input-group res-search">
+      <div class="input-group-prepend">
+        <span class="input-group-text"><i class="fas fa-search"></i></span>
+      </div>
+      <input id="ressourceSearch" type="text" class="form-control" placeholder="Rechercher (nom, catégorie, événement...)">
+    </div>
+
+    <a href="{{ path('admin_ressource_new') }}" class="btn btn-primary res-btn-add">
+      <i class="fas fa-plus mr-1"></i> Ajouter
+    </a>
+  </div>
 </div>
+
+{# ===== Flash messages ===== #}
+{% for label, messages in app.flashes %}
+  {% for message in messages %}
+    <div class="alert alert-{{ label }} alert-dismissible fade show" role="alert">
+      {{ message }}
+      <button type="button" class="close" data-dismiss="alert">&times;</button>
+    </div>
+  {% endfor %}
+{% endfor %}
+
+{# ===== Stats mini cards ===== #}
+<div class="row mb-4">
+  <div class="col-md-4 mb-3">
+    <div class="res-kpi card border-0 shadow-sm">
+      <div class="card-body d-flex align-items-center justify-content-between">
+        <div>
+          <div class="res-kpi-label">Total ressources</div>
+          <div class="res-kpi-value">{{ ressources|length }}</div>
+        </div>
+        <div class="res-kpi-icon bg-primary-soft"><i class="fas fa-layer-group"></i></div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4 mb-3">
+    <div class="res-kpi card border-0 shadow-sm">
+      <div class="card-body d-flex align-items-center justify-content-between">
+        <div>
+          <div class="res-kpi-label">Types</div>
+          <div class="res-kpi-value">Fichier • Lien • Stock</div>
+        </div>
+        <div class="res-kpi-icon bg-info-soft"><i class="fas fa-tags"></i></div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4 mb-3">
+    <div class="res-kpi card border-0 shadow-sm">
+      <div class="card-body d-flex align-items-center justify-content-between">
+        <div>
+          <div class="res-kpi-label">Astuce</div>
+          <div class="res-kpi-value">Utilise “Stock” pour quantités</div>
+        </div>
+        <div class="res-kpi-icon bg-success-soft"><i class="fas fa-lightbulb"></i></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{# ===== Table card ===== #}
+<div class="card shadow-sm border-0 res-card">
+  <div class="card-header bg-white border-0 d-flex align-items-center justify-content-between flex-wrap gap-2">
+    <div class="font-weight-bold text-primary">
+      <i class="fas fa-table mr-1"></i> Liste des ressources
+    </div>
+    <small class="text-muted">Clique sur “Voir” pour le détail.</small>
+  </div>
+
+  <div class="card-body">
+    <div class="table-responsive">
+      <table class="table res-table" id="ressourceTable">
+        <thead>
+          <tr>
+            <th style="width:70px;">#</th>
+            <th>Nom</th>
+            <th>Catégorie</th>
+            <th style="width:150px;">Type</th>
+            <th>Événement</th>
+            <th style="width:150px;">Quantité</th>
+            <th style="width:210px;" class="text-right">Actions</th>
+          </tr>
+        </thead>
+
+        <tbody>
+        {% for r in ressources %}
+          <tr>
+            <td class="text-muted">{{ r.id }}</td>
+
+            <td class="font-weight-bold">
+              {{ r.nomRessource }}
+              <div class="small text-muted">#R-{{ r.id }}</div>
+            </td>
+
+            <td>{{ r.categorieRessource ?: '-' }}</td>
+
+            <td>
+              {% set t = r.typeRessource %}
+              {% if t == 'file' %}
+                <span class="badge badge-pill res-badge res-badge-file"><i class="fas fa-file mr-1"></i> Fichier</span>
+              {% elseif t == 'external_link' %}
+                <span class="badge badge-pill res-badge res-badge-link"><i class="fas fa-link mr-1"></i> Lien</span>
+              {% else %}
+                <span class="badge badge-pill res-badge res-badge-stock"><i class="fas fa-box mr-1"></i> Stock</span>
+              {% endif %}
+            </td>
+
+            <td>
+              {# IMPORTANT: pour éviter l’erreur "could not be converted to string", affiche un champ texte #}
+              {{ r.evenement ? r.evenement.titreEvent : '-' }}
+            </td>
+
+            <td>
+              {% if r.quantiteDisponibleRessource is not null %}
+                <span class="font-weight-bold">{{ r.quantiteDisponibleRessource }}</span>
+                <span class="text-muted">{{ r.uniteRessource ?: '' }}</span>
+              {% else %}
+                <span class="text-muted">-</span>
+              {% endif %}
+            </td>
+
+            <td class="text-right">
+  <div class="res-actions">
+
+    <a href="{{ path('admin_ressource_show', {id: r.id}) }}"
+       class="btn res-btn res-btn-view">
+      <i class="far fa-eye"></i>
+      <span>Voir</span>
+    </a>
+
+    <a href="{{ path('admin_ressource_edit', {id: r.id}) }}"
+       class="btn res-btn res-btn-edit">
+      <i class="far fa-edit"></i>
+      <span>Edit</span>
+    </a>
+
+    <form method="post"
+          action="{{ path('admin_ressource_delete', {id: r.id}) }}"
+          onsubmit="return confirm('Confirmer la suppression ?');"
+          class="d-inline">
+      <input type="hidden" name="_token" value="{{ csrf_token('delete' ~ r.id) }}">
+      <button type="submit" class="btn res-btn res-btn-delete">
+        <i class="far fa-trash-alt"></i>
+        <span>Delete</span>
+      </button>
+    </form>
+
+  </div>
+</td>
+
+          </tr>
+        {% else %}
+          <tr>
+            <td colspan="7" class="text-center text-muted py-4">
+              <i class="fas fa-inbox fa-2x mb-2"></i>
+              <div>Aucune ressource pour le moment.</div>
+              <a class="btn btn-primary btn-sm mt-2" href="{{ path('admin_ressource_new') }}">
+                <i class="fas fa-plus mr-1"></i> Créer une ressource
+              </a>
+            </td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+{# ===== JS Search (optionnel) ===== #}
+<script>
+  (function(){
+    const input = document.getElementById('ressourceSearch');
+    const table = document.getElementById('ressourceTable');
+    if(!input || !table) return;
+
+    input.addEventListener('input', function(){
+      const q = this.value.toLowerCase().trim();
+      const rows = table.querySelectorAll('tbody tr');
+
+      rows.forEach(tr => {
+        // ignore "empty state" row
+        if(tr.querySelector('td[colspan]')) return;
+
+        const text = tr.innerText.toLowerCase();
+        tr.style.display = text.includes(q) ? '' : 'none';
+      });
+    });
+  })();
+</script>
+
 {% endblock %}

@@ -8,6 +8,7 @@ use Doctrine\ORM\Mapping as ORM;
 use App\Entity\Evenement;
 
 
+
 #[ORM\Entity(repositoryClass: RessourceRepository::class)]
 #[ORM\Table(name: 'ressource')]
 #[ORM\HasLifecycleCallbacks] 
