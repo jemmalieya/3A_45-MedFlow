@@ -18,17 +18,25 @@ class Commentaire
     private ?string $contenu = null;
 
     #[ORM\Column]
-    private ?\DateTime $date_creation = null;
-   
-    #[ORM\ManyToOne(targetEntity: Post::class, inversedBy: 'commentaires')]
-    #[ORM\JoinColumn(name: 'id_post', referencedColumnName: 'id', nullable: false)]
+    private ?\DateTimeImmutable $date_creation = null;
+
+    #[ORM\ManyToOne(inversedBy: 'commentaires')]
+    #[ORM\JoinColumn(nullable: false, onDelete: 'CASCADE')]
     private ?Post $post = null;
 
     #[ORM\Column]
     private ?bool $est_anonyme = null;
 
+    // ex: PUBLIC | PRIVE | AMIS
     #[ORM\Column(length: 60)]
     private ?string $parametres_confidentialite = null;
+
+    public function __construct()
+    {
+        $this->date_creation = new \DateTimeImmutable();
+        $this->est_anonyme = false;
+        $this->parametres_confidentialite = 'PUBLIC';
+    }
 
     public function getId(): ?int
     {
@@ -43,22 +51,30 @@ class Commentaire
     public function setContenu(string $contenu): static
     {
         $this->contenu = $contenu;
-
         return $this;
     }
 
-    public function getDateCreation(): ?\DateTime
+    public function getDateCreation(): ?\DateTimeImmutable
     {
         return $this->date_creation;
     }
 
-    public function setDateCreation(\DateTime $date_creation): static
+    public function setDateCreation(\DateTimeImmutable $date_creation): static
     {
         $this->date_creation = $date_creation;
-
         return $this;
     }
 
+    public function getPost(): ?Post
+    {
+        return $this->post;
+    }
+
+    public function setPost(?Post $post): static
+    {
+        $this->post = $post;
+        return $this;
+    }
 
     public function isEstAnonyme(): ?bool
     {
@@ -68,7 +84,6 @@ class Commentaire
     public function setEstAnonyme(bool $est_anonyme): static
     {
         $this->est_anonyme = $est_anonyme;
-
         return $this;
     }
 
@@ -80,7 +95,6 @@ class Commentaire
     public function setParametresConfidentialite(string $parametres_confidentialite): static
     {
         $this->parametres_confidentialite = $parametres_confidentialite;
-
         return $this;
     }
 }

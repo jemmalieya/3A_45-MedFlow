@@ -1,0 +1,211 @@
+{% extends 'base.html.twig' %}
+{% block title %}Nouveau post{% endblock %}
+
+{% block body %}
+<section class="section" style="padding-top:120px;">
+  <div class="container">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <div>
+        <h2 class="mb-1">Créer un post</h2>
+        <p class="text-muted mb-0">Publie un article avec image, catégorie et hashtags.</p>
+      </div>
+      <a href="{{ path('post_index') }}" class="btn btn-outline-secondary">
+        ← Retour au blog
+      </a>
+    </div>
+
+    <div class="row g-4">
+      <!-- Form -->
+      <div class="col-lg-8">
+        <div class="card border-0 shadow-sm">
+          <div class="card-body p-4 p-lg-5">
+
+           {{ form_start(form, {
+  'attr': {
+    'class': 'needs-validation',
+    'novalidate': 'novalidate'
+  },
+  'enctype': 'multipart/form-data'
+}) }}
+
+
+            <div class="mb-4">
+              <label class="form-label fw-semibold">Titre</label>
+              {{ form_widget(form.titre, {
+                'attr': {
+                  'class': 'form-control form-control-lg',
+                  'placeholder': 'Ex : Prise de RDV en ligne : nouvelles étapes…'
+                }
+              }) }}
+              <div class="form-error">
+                {{ form_errors(form.titre) }}
+              </div>
+            </div>
+
+            <div class="mb-4">
+              <label class="form-label fw-semibold">Contenu</label>
+              {{ form_widget(form.contenu, {
+                'attr': {
+                  'class': 'form-control',
+                  'rows': 8,
+                  'placeholder': 'Écris ton contenu ici…'
+                }
+              }) }}
+              <div class="form-text">
+                Astuce : sois clair, ajoute des détails utiles (service, rdv, labo…).
+              </div>
+              <div class="form-error">
+                {{ form_errors(form.contenu) }}
+              </div>
+            </div>
+
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label class="form-label fw-semibold">Catégorie</label>
+                {{ form_widget(form.categorie, {
+                  'attr': {
+                    'class': 'form-control'
+                  }
+                }) }}
+                <div class="form-error">
+                  {{ form_errors(form.categorie) }}
+                </div>
+              </div>
+
+              <div class="col-md-6">
+                <label class="form-label fw-semibold">Humeur</label>
+                {{ form_widget(form.humeur, {
+                  'attr': {
+                    'class': 'form-control',
+                    'placeholder': 'Ex : Heureux, Stressé, Motivé…'
+                  }
+                }) }}
+                <div class="form-error">
+                  {{ form_errors(form.humeur) }}
+                </div>
+              </div>
+
+             <div class="col-md-6">
+  <label class="form-label fw-semibold">Localisation</label>
+
+  {{ form_widget(form.localisation, {
+    'attr': {
+      'class': 'form-control',
+      'placeholder': 'Ex : Tunis, Ariana, Sousse…'
+    }
+  }) }}
+
+  <div class="form-error">
+    {{ form_errors(form.localisation) }}
+  </div>
+</div>
+
+
+              <div class="col-md-6">
+                <label class="form-label fw-semibold">Visibilité</label>
+                {{ form_widget(form.visibilite, {
+                  'attr': {
+                    'class': 'form-select'
+                  }
+                }) }}
+                <div class="form-error">
+                  {{ form_errors(form.visibilite) }}
+                </div>
+              </div>
+
+              <div class="col-md-6">
+                <label class="form-label fw-semibold">Hashtags</label>
+                {{ form_widget(form.hashtags, {
+                  'attr': {
+                    'class': 'form-control',
+                    'placeholder': '#news #health #rdv'
+                  }
+                }) }}
+                <div class="form-text">Sépare avec espace ou virgule.</div>
+                <div class="form-error">
+                  {{ form_errors(form.hashtags) }}
+                </div>
+              </div>
+
+              <div class="col-md-6">
+                <label class="form-label fw-semibold">Image</label>
+                {{ form_widget(form.img_post, {
+                  'attr': {
+                    'class': 'form-control'
+                  }
+                }) }}
+                <div class="form-text">
+                  Choisissez une image depuis votre ordinateur (JPG / PNG / WEBP).
+                </div>
+                <div class="form-error">
+                  {{ form_errors(form.img_post) }}
+                </div>
+              </div>
+
+              <div class="col-12">
+                <div class="form-check mt-2">
+                  {{ form_widget(form.est_anonyme, {'attr': {'class': 'form-check-input'}}) }}
+                  <label class="form-check-label" for="{{ form.est_anonyme.vars.id }}">
+                    Publier en anonyme
+                  </label>
+                </div>
+                <div class="form-error">
+                  {{ form_errors(form.est_anonyme) }}
+                </div>
+              </div>
+            </div>
+
+            <hr class="my-4">
+
+            <div class="d-flex justify-content-end gap-2">
+              <a href="{{ path('post_index') }}" class="btn btn-outline-secondary px-4">
+                Annuler
+              </a>
+              <button class="btn btn-primary px-4">
+                Publier
+              </button>
+            </div>
+
+            {{ form_end(form) }}
+
+          </div>
+        </div>
+      </div>
+
+      <!-- Preview card (inchangé) -->
+      <div class="col-lg-4">
+        <div class="card border-0 shadow-sm">
+          <div class="card-body p-4">
+            <h5 class="mb-3">Aperçu</h5>
+            <div class="ratio ratio-16x9 rounded overflow-hidden bg-light border">
+              <img id="imgPreview" style="display:none;object-fit:cover;width:100%;height:100%;">
+              <div id="imgPlaceholder" class="d-flex align-items-center justify-content-center text-muted">
+                Aucune image
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="alert alert-info border-0 shadow-sm mt-4">
+          <div class="fw-semibold mb-1">Conseil</div>
+          Une image claire + un titre court donnent un meilleur rendu “Latest blogs”.
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<style>
+  .form-error {
+    color: #dc3545;
+    font-size: 0.85rem;
+    margin-top: 4px;
+  }
+
+  .card { border-radius: 14px; }
+  .btn { border-radius: 10px; }
+  .form-control, .form-select { border-radius: 10px; }
+</style>
+{% endblock %}

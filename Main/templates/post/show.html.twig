@@ -1,0 +1,54 @@
+{% extends 'base.html.twig' %}
+{% block title %}{{ post.titre }}{% endblock %}
+
+{% block body %}
+<section class="section" style="padding-top:120px;">
+  <div class="container">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <a href="{{ path('post_index') }}" class="btn btn-outline-secondary">← Retour</a>
+      <a href="{{ path('post_edit', {id: post.id}) }}" class="btn btn-outline-primary">Edit</a>
+    </div>
+
+    <div class="card border-0 shadow-sm">
+      <div class="card-body p-4 p-lg-5">
+
+        <div class="d-flex gap-2 mb-3">
+          <span class="badge bg-primary">{{ post.categorie }}</span>
+          {% if post.visibilite != 'PUBLIC' %}
+            <span class="badge bg-secondary">{{ post.visibilite }}</span>
+          {% endif %}
+        </div>
+
+        <h2 class="mb-2">{{ post.titre }}</h2>
+
+        <div class="text-muted mb-4">
+          {{ post.dateCreation ? post.dateCreation|date('d/m/Y H:i') : '' }}
+          {% if post.localisation %} · {{ post.localisation }}{% endif %}
+        </div>
+
+        {% if post.imgPost %}
+          <img src="{{ asset(post.imgPost) }}" class="img-fluid rounded mb-4" alt="image post">
+        {% endif %}
+
+        <div class="fs-6">
+          {{ post.contenu|nl2br }}
+        </div>
+
+        {% if post.hashtags %}
+          <hr class="my-4">
+          <div class="d-flex flex-wrap gap-2">
+            {% for t in post.hashtags|split(' ') %}
+              {% if t %}
+                <span class="badge bg-light text-dark border">{{ t }}</span>
+              {% endif %}
+            {% endfor %}
+          </div>
+        {% endif %}
+
+      </div>
+    </div>
+
+  </div>
+</section>
+{% endblock %}

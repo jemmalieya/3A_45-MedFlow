@@ -1,0 +1,49 @@
+{% extends 'base_dashboard.html.twig' %}
+
+{% block title %}Modifier la réponse{% endblock %}
+
+{% block body %}
+<div class="container-fluid py-4">
+
+  <h2 class="mb-4 fw-bold">
+    Modifier la réponse
+    <span class="text-muted">#{{ reponse.idReponse }}</span>
+  </h2>
+
+  <div class="card shadow-sm border-0">
+
+    <div class="card-body">
+
+      <div class="alert alert-info">
+        Réclamation liée :
+        <strong>#{{ reponse.reclamation.referenceReclamation }}</strong>
+      </div>
+
+      {{ form_start(form) }}
+
+      <div class="mb-3">
+        {{ form_label(form.typeReponse) }}
+        {{ form_widget(form.typeReponse, {'attr': {'class': 'form-select'}}) }}
+        {{ form_errors(form.typeReponse) }}
+      </div>
+
+      <div class="mb-3">
+        {{ form_label(form.message) }}
+        {{ form_widget(form.message, {'attr': {'class': 'form-control', 'rows': 6}}) }}
+        {{ form_errors(form.message) }}
+      </div>
+
+      <div class="d-flex justify-content-end">
+        <button class="btn btn-warning">
+          Mettre à jour
+        </button>
+      </div>
+
+      {{ form_end(form) }}
+
+    </div>
+
+  </div>
+
+</div>
+{% endblock %}

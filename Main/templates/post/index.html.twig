@@ -1,20 +1,115 @@
 {% extends 'base.html.twig' %}
-
-{% block title %}Hello PostController!{% endblock %}
+{% block title %}Blog{% endblock %}
 
 {% block body %}
-<style>
-    .example-wrapper { margin: 1em auto; max-width: 800px; width: 95%; font: 18px/1.5 sans-serif; }
-    .example-wrapper code { background: #F5F5F5; padding: 2px 6px; }
-</style>
+<section class="section" style="padding-top:120px;">
+  <div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <div>
+        <h2 class="mb-1">Latest blogs</h2>
+        <p class="text-muted mb-0">Découvrez les derniers posts</p>
+      </div>
+      <a href="{{ path('post_new') }}" class="btn btn-outline-primary">Nouveau post</a>
+    </div>
 
-<div class="example-wrapper">
-    <h1>Hello {{ controller_name }}! ✅</h1>
+    {% for m in app.flashes('success') %}
+      <div class="alert alert-success alert-dismissible fade show">
+        {{ m }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+      </div>
+    {% endfor %}
 
-    This friendly message is coming from:
-    <ul>
-        <li>Your controller at <code>C:/Users/lenovo/MedFlow/3A_45-MedFlow/Main/src/Controller/PostController.php</code></li>
-        <li>Your template at <code>C:/Users/lenovo/MedFlow/3A_45-MedFlow/Main/templates/post/index.html.twig</code></li>
-    </ul>
-</div>
+    <div class="row g-4">
+      <div class="col-lg-8">
+        {% for p in posts %}
+          <div class="card border-0 shadow-sm mb-4">
+            <div class="card-body">
+              <div class="row g-3">
+                <div class="col-md-4">
+                  <a href="{{ path('post_show', {id: p.id}) }}">
+                    <img src="{{ asset(p.imgPost) }}" class="img-fluid rounded" alt="post">
+                  </a>
+                </div>
+
+                <div class="col-md-8">
+                  <div class="d-flex gap-2 align-items-center mb-2">
+                    <span class="badge bg-primary">{{ p.categorie }}</span>
+                    {% if p.visibilite != 'PUBLIC' %}
+                      <span class="badge bg-secondary">{{ p.visibilite }}</span>
+                    {% endif %}
+                  </div>
+
+                  <h4 class="mb-2">
+                    <a class="text-decoration-none" href="{{ path('post_show', {id: p.id}) }}">
+                      {{ p.titre }}
+                    </a>
+                  </h4>
+
+                  <p class="text-muted mb-2">
+                    {{ p.contenu|striptags|slice(0, 130) ~ '...' }}
+                  </p>
+
+                  <div class="d-flex justify-content-between align-items-center">
+                    <small class="text-muted">
+                      {{ p.dateCreation ? p.dateCreation|date('d M Y') : '' }}
+                      {% if p.localisation %} · {{ p.localisation }}{% endif %}
+                    </small>
+
+                    <div class="d-flex gap-2">
+                      <a class="btn btn-sm btn-outline-primary" href="{{ path('post_edit', {id: p.id}) }}">Edit</a>
+
+                      <form method="post" action="{{ path('post_delete', {id: p.id}) }}"
+                            onsubmit="return confirm('Supprimer ce post ?')">
+                        <input type="hidden" name="_token" value="{{ csrf_token('delete_post_' ~ p.id) }}">
+                        <button class="btn btn-sm btn-outline-danger">Delete</button>
+                      </form>
+                    </div>
+                  </div>
+
+                </div>
+              </div>
+            </div>
+          </div>
+        {% else %}
+          <div class="alert alert-info">Aucun post pour le moment.</div>
+        {% endfor %}
+      </div>
+
+      <div class="col-lg-4">
+        <div class="card border-0 shadow-sm mb-4">
+          <div class="card-body">
+            <h5 class="mb-3">Recent post</h5>
+            {% for rp in recentPosts %}
+              <div class="mb-3">
+                <a class="fw-semibold text-decoration-none d-block"
+                   href="{{ path('post_show', {id: rp.id}) }}">
+                  {{ rp.titre }}
+                </a>
+                <small class="text-muted">
+                  {{ rp.dateCreation ? rp.dateCreation|date('d/m/Y H:i') : '' }}
+                </small>
+              </div>
+            {% endfor %}
+            <a class="text-decoration-none" href="{{ path('post_index') }}">View all latest news</a>
+          </div>
+        </div>
+
+        <div class="card border-0 shadow-sm">
+          <div class="card-body">
+            <h5 class="mb-3">Tags</h5>
+            <div class="d-flex flex-wrap gap-2">
+              {% for t in tags %}
+                <span class="badge bg-light text-dark border">{{ t }}</span>
+              {% else %}
+                <span class="text-muted small">Aucun tag</span>
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+</section>
 {% endblock %}

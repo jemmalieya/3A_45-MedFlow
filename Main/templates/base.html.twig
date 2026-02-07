@@ -64,6 +64,8 @@
       <nav id="navmenu" class="navmenu">
         <ul>
           <li><a href="{{ path('app_home') }}" class="{{ app.request.attributes.get('_route') == 'app_home' ? 'active' : '' }}">Home</a></li>
+          <li><a href="{{ path('reclamation_index') }}">Réclamations</a></li>
+          <li><a href="{{ path('post_index') }}">Blog</a></li>
           <li>Réclamations</li>
 
           {# Liens template laissés en statique pour l’instant #}
