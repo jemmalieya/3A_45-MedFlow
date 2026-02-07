@@ -54,21 +54,51 @@
                 Interface
             </div>
 
-            <!-- Nav Item - Pages Collapse Menu -->
-            <li class="nav-item">
-                <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseTwo"
-                    aria-expanded="true" aria-controls="collapseTwo">
-                    <i class="fas fa-fw fa-cog"></i>
-                    <span>Components</span>
-                </a>
-                <div id="collapseTwo" class="collapse" aria-labelledby="headingTwo" data-parent="#accordionSidebar">
-                    <div class="bg-white py-2 collapse-inner rounded">
-                        <h6 class="collapse-header">Custom Components:</h6>
-                        <a class="collapse-item" href="buttons.html">Buttons</a>
-                        <a class="collapse-item" href="cards.html">Cards</a>
-                    </div>
-                </div>
-            </li>
+{# =========================
+   MENU PATIENTS (STAFF)
+   ========================= #}
+
+<li class="nav-item">
+    <a class="nav-link collapsed"
+       href="#"
+       data-bs-toggle="collapse"
+       data-bs-target="#collapsePatients"
+       aria-expanded="false"
+       aria-controls="collapsePatients">
+
+        <i class="fas fa-fw fa-user-injured"></i>
+        <span>Patients</span>
+    </a>
+
+    <div id="collapsePatients"
+         class="collapse {% if app.request.attributes.get('_route') starts with 'staff_patients' %}show{% endif %}"
+         aria-labelledby="headingPatients"
+         data-bs-parent="#accordionSidebar">
+
+        <div class="bg-white py-2 collapse-inner rounded">
+
+            <a class="collapse-item
+               {% if app.request.attributes.get('_route') == 'staff_patients_index' %}active{% endif %}"
+               href="{{ path('staff_patients_index') }}">
+                📋 Liste des patients
+            </a>
+
+            <a class="collapse-item
+               {% if app.request.attributes.get('_route') == 'staff_patients_stats' %}active{% endif %}"
+               href="{{ path('staff_patients_stats') }}">
+                📊 Statistiques
+            </a>
+
+            <a class="collapse-item
+               {% if app.request.attributes.get('_route') == 'staff_patients_report_pdf' %}active{% endif %}"
+               href="{{ path('staff_patients_report_pdf') }}">
+                📄 Rapport PDF
+            </a>
+
+        </div>
+    </div>
+</li>
+
 
             <!-- Nav Item - Utilities Collapse Menu -->
             <li class="nav-item">

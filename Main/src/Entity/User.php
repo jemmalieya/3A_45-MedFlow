@@ -231,14 +231,30 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         return (string) $this->emailUser;
     }
 
-    public function getRoles(): array
-    {
-        return match ($this->roleSysteme) {
-            'ADMIN' => ['ROLE_ADMIN'],
-            'STAFF_MEDICAL' => ['ROLE_STAFF'],
-            default => ['ROLE_PATIENT'],
-        };
+       public function getRoles(): array
+{
+    $roles = ['ROLE_USER'];
+
+    // 1) Rôle système principal
+    if ($this->roleSysteme === 'ADMIN') {
+        $roles[] = 'ROLE_ADMIN';
+    } elseif ($this->roleSysteme === 'STAFF') {
+        $roles[] = 'ROLE_STAFF';
+
+        // 2) Spécialité staff (type_staff)
+        // (utile pour la suite : MEDECIN, INFIRMIER, RESP_PATIENTS, etc.)
+        if ($this->typeStaff) {
+            $roles[] = 'ROLE_' . strtoupper($this->typeStaff);
+        }
+    } else {
+        // PATIENT
+        $roles[] = 'ROLE_PATIENT';
     }
+
+    return array_values(array_unique($roles));
+}
+
+
 
 
     public function eraseCredentials(): void
@@ -261,9 +277,9 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         return $this->roleSysteme;
     }
 
-    public function setRoleSysteme(string $roleSysteme): self
+    public function setRoleSysteme(string $role): self
     {
-        $this->roleSysteme = $roleSysteme;
+        $this->roleSysteme = $role;
         return $this;
     }
 
