@@ -54,6 +54,40 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
 
     #[ORM\Column(length: 30, nullable: true)]
     private ?string $statutCompte = null;
+        // ===== Sécurité / rôles système =====
+
+    #[ORM\Column(length: 20)]
+    private string $roleSysteme = 'PATIENT'; // PATIENT | STAFF_MEDICAL | ADMIN
+
+    #[ORM\Column(length: 40, nullable: true)]
+    private ?string $typeStaff = null; // ex: MEDECIN, INFIRMIER...
+
+    // ===== Vérification email =====
+    #[ORM\Column(length: 255, nullable: true)]
+    private ?string $verificationToken = null;
+
+    #[ORM\Column(type: Types::DATETIME_MUTABLE, nullable: true)]
+    private ?\DateTimeInterface $tokenExpiresAt = null;
+
+    // ===== Demande staff (Option C sans nouvelle table) =====
+    #[ORM\Column(length: 20, nullable: true)]
+    private ?string $staffRequestStatus = null; // PENDING | APPROVED | REJECTED
+
+    #[ORM\Column(length: 40, nullable: true)]
+    private ?string $staffRequestType = null; // type staff demandé
+
+    #[ORM\Column(type: Types::TEXT, nullable: true)]
+    private ?string $staffRequestMessage = null;
+
+    #[ORM\Column(type: Types::DATETIME_MUTABLE, nullable: true)]
+    private ?\DateTimeInterface $staffRequestedAt = null;
+
+    #[ORM\Column(type: Types::DATETIME_MUTABLE, nullable: true)]
+    private ?\DateTimeInterface $staffReviewedAt = null;
+
+    #[ORM\Column(nullable: true)]
+    private ?int $staffReviewedBy = null; // id admin (simple)
+
 
     public function getProfilePicture(): ?string
     {
@@ -199,8 +233,13 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
 
     public function getRoles(): array
     {
-        return ['ROLE_USER'];
+        return match ($this->roleSysteme) {
+            'ADMIN' => ['ROLE_ADMIN'],
+            'STAFF_MEDICAL' => ['ROLE_STAFF'],
+            default => ['ROLE_PATIENT'],
+        };
     }
+
 
     public function eraseCredentials(): void
     {
@@ -217,4 +256,114 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         $this->isVerified = $isVerified;
         return $this;
     }
+        public function getRoleSysteme(): string
+    {
+        return $this->roleSysteme;
+    }
+
+    public function setRoleSysteme(string $roleSysteme): self
+    {
+        $this->roleSysteme = $roleSysteme;
+        return $this;
+    }
+
+    public function getTypeStaff(): ?string
+    {
+        return $this->typeStaff;
+    }
+
+    public function setTypeStaff(?string $typeStaff): self
+    {
+        $this->typeStaff = $typeStaff;
+        return $this;
+    }
+
+    public function getVerificationToken(): ?string
+    {
+        return $this->verificationToken;
+    }
+
+    public function setVerificationToken(?string $verificationToken): self
+    {
+        $this->verificationToken = $verificationToken;
+        return $this;
+    }
+
+    public function getTokenExpiresAt(): ?\DateTimeInterface
+    {
+        return $this->tokenExpiresAt;
+    }
+
+    public function setTokenExpiresAt(?\DateTimeInterface $tokenExpiresAt): self
+    {
+        $this->tokenExpiresAt = $tokenExpiresAt;
+        return $this;
+    }
+
+    public function getStaffRequestStatus(): ?string
+    {
+        return $this->staffRequestStatus;
+    }
+
+    public function setStaffRequestStatus(?string $staffRequestStatus): self
+    {
+        $this->staffRequestStatus = $staffRequestStatus;
+        return $this;
+    }
+
+    public function getStaffRequestType(): ?string
+    {
+        return $this->staffRequestType;
+    }
+
+    public function setStaffRequestType(?string $staffRequestType): self
+    {
+        $this->staffRequestType = $staffRequestType;
+        return $this;
+    }
+
+    public function getStaffRequestMessage(): ?string
+    {
+        return $this->staffRequestMessage;
+    }
+
+    public function setStaffRequestMessage(?string $staffRequestMessage): self
+    {
+        $this->staffRequestMessage = $staffRequestMessage;
+        return $this;
+    }
+
+    public function getStaffRequestedAt(): ?\DateTimeInterface
+    {
+        return $this->staffRequestedAt;
+    }
+
+    public function setStaffRequestedAt(?\DateTimeInterface $staffRequestedAt): self
+    {
+        $this->staffRequestedAt = $staffRequestedAt;
+        return $this;
+    }
+
+    public function getStaffReviewedAt(): ?\DateTimeInterface
+    {
+        return $this->staffReviewedAt;
+    }
+
+    public function setStaffReviewedAt(?\DateTimeInterface $staffReviewedAt): self
+    {
+        $this->staffReviewedAt = $staffReviewedAt;
+        return $this;
+    }
+
+    public function getStaffReviewedBy(): ?int
+    {
+        return $this->staffReviewedBy;
+    }
+
+    public function setStaffReviewedBy(?int $staffReviewedBy): self
+    {
+        $this->staffReviewedBy = $staffReviewedBy;
+        return $this;
+    }
+
 }
