@@ -47,15 +47,27 @@ final class FicheMedicaleController extends AbstractController
 
         // Do not persist yet. Pass rendezvous id and start time to the consultation view via query params.
         $start = new \DateTime();
+        
+        // Check appointment mode and redirect to appropriate consultation template
+        $type = 'Présentiel'; // Default
+        if ($rendez->getMode() === 'Distanciel') {
+            $type = 'Distanciel';
+        }
+        
         return $this->redirectToRoute('consultation_view', [
             'rendezvous' => $id,
             'start' => $start->format('Y-m-d H:i:s'),
+            'type' => $type,
         ]);
     }
 
     #[Route('/consultation', name: 'consultation_view', methods: ['GET','POST'])]
     public function consultation(Request $request, FicheMedicaleRepository $ficheRepo, RendezVousRepository $rendezRepo, EntityManagerInterface $em): Response
     {
+        // Determine consultation type (presentiel or distanciel) - check POST first, then query params
+        $type = $request->request->get('type') ?? $request->query->get('type', 'Présentiel');
+        $templateName = $type === 'Distanciel' ? 'consultationOnline.html.twig' : 'consultation.html.twig';
+
         // Determine whether we're working with an existing fiche or creating a new one
         $ficheId = $request->query->get('id') ?? $request->request->get('fiche_id');
         $fiche = null;
@@ -74,6 +86,62 @@ final class FicheMedicaleController extends AbstractController
             }
 
             if ($request->request->has('save')) {
+                // Get fields from form
+                $diagnostic = trim($request->request->get('diagnostic') ?? '');
+                $observations = trim($request->request->get('observations') ?? '');
+                $resultats = trim($request->request->get('resultatsExamens') ?? '');
+
+                // PHP Server-side validation (controle de saisie)
+                $validationErrors = [];
+
+                // Validate Diagnostic (required, min 5, max 500)
+                if (empty($diagnostic)) {
+                    $validationErrors[] = 'Diagnostic field is required';
+                } elseif (strlen($diagnostic) < 5) {
+                    $validationErrors[] = 'Diagnostic must be at least 5 characters (current: ' . strlen($diagnostic) . ')';
+                } elseif (strlen($diagnostic) > 500) {
+                    $validationErrors[] = 'Diagnostic cannot exceed 500 characters (current: ' . strlen($diagnostic) . ')';
+                }
+
+                // Validate Observations (optional, but if provided min 5, max 500)
+                if (!empty($observations)) {
+                    if (strlen($observations) < 5) {
+                        $validationErrors[] = 'Observations must be at least 5 characters if provided (current: ' . strlen($observations) . ')';
+                    } elseif (strlen($observations) > 500) {
+                        $validationErrors[] = 'Observations cannot exceed 500 characters (current: ' . strlen($observations) . ')';
+                    }
+                }
+
+                // Validate Exam Results (optional, but if provided min 5, max 500)
+                if (!empty($resultats)) {
+                    if (strlen($resultats) < 5) {
+                        $validationErrors[] = 'Exam Results must be at least 5 characters if provided (current: ' . strlen($resultats) . ')';
+                    } elseif (strlen($resultats) > 500) {
+                        $validationErrors[] = 'Exam Results cannot exceed 500 characters (current: ' . strlen($resultats) . ')';
+                    }
+                }
+
+                // If validation errors exist, return with error message
+                if (!empty($validationErrors)) {
+                    $this->addFlash('error', 'Validation failed: ' . implode('. ', $validationErrors));
+                    
+                    // If editing existing fiche (modal), redirect back to fiche by staff page
+                    if ($fiche && $fiche->getRendezVous()) {
+                        $staffId = $fiche->getRendezVous()->getIdStaff();
+                        return $this->redirectToRoute('app_fiche_by_staff', ['idStaff' => $staffId]);
+                    }
+                    // If creating new fiche, redirect to consultation form with same type
+                    else {
+                        $rendezId = $request->request->get('rendezvous_id');
+                        $startStr = $request->request->get('startTime');
+                        return $this->redirectToRoute('consultation_view', [
+                            'rendezvous' => $rendezId,
+                            'start' => $startStr,
+                            'type' => $type,
+                        ]);
+                    }
+                }
+
                 // If we don't have a fiche entity yet, create and persist now
                 if (!$fiche) {
                     $rendezId = $request->request->get('rendezvous_id');
@@ -99,12 +167,8 @@ final class FicheMedicaleController extends AbstractController
                     }
                 }
 
-                // Set fields from form
-                $diagnostic = $request->request->get('diagnostic');
-                $observations = $request->request->get('observations');
-                $resultats = $request->request->get('resultatsExamens');
-
-                $fiche->setDiagnostic($diagnostic ?? '');
+                // Set validated fields into fiche object
+                $fiche->setDiagnostic($diagnostic);
                 $fiche->setObservations($observations);
                 $fiche->setResultatsExamens($resultats);
 
@@ -150,7 +214,7 @@ final class FicheMedicaleController extends AbstractController
             }
         }
 
-        return $this->render('fiche_medicale/consultation.html.twig', [
+        return $this->render('fiche_medicale/' . $templateName, [
             'fiche' => $fiche,
             'rendezvousId' => $rendezvousId,
             'startParam' => $startParam,

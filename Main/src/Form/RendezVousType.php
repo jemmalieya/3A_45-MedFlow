@@ -33,8 +33,8 @@ class RendezVousType extends AbstractType
             ->add('mode', ChoiceType::class, [
                 'label' => 'Mode',
                 'choices' => [
-                    'Présentiel' => 'présentiel',
-                    'Distanciel' => 'distanciel',
+                    'Présentiel' => 'Présentiel',
+                    'Distanciel' => 'Distanciel',
                 ],
                 'attr' => ['class' => 'form-select'],
                 'required' => true,

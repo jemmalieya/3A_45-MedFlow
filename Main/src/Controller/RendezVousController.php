@@ -35,16 +35,56 @@ class RendezVousController extends AbstractController
         $form = $this->createForm(RendezVousType::class, $rendezVous);
         $form->handleRequest($request);
 
-        if ($form->isSubmitted() && $form->isValid()) {
-            try {
-                $rendezVous->setCreatedAt(new \DateTime());
-                $em->persist($rendezVous);
-                $em->flush();
+        // When form submitted, perform server-side validation (PHP) and either save or re-render with errors
+        if ($form->isSubmitted()) {
+            $validationErrors = [];
 
-                $this->addFlash('success', 'Rendez-vous créé avec succès.');
-                return $this->redirectToRoute('rendezvous_list');
-            } catch (\Exception $e) {
-                $this->addFlash('error', 'Erreur: ' . $e->getMessage());
+            // Extract field values from the form
+            $dt = $form->get('datetime')->getData();
+            $mode = $form->get('mode')->getData();
+            $motif = trim((string) $form->get('motif')->getData() ?? '');
+
+            // Validate datetime (required)
+            if (empty($dt)) {
+                $validationErrors[] = 'Date & Heure is required';
+            } elseif (!($dt instanceof \DateTimeInterface)) {
+                $validationErrors[] = 'Invalid date/time format';
+            } else {
+                // ensure datetime is in the future
+                $now = new \DateTime();
+                if ($dt < $now) {
+                    $validationErrors[] = 'Date & Heure must be in the future';
+                }
+            }
+
+            // Validate mode (required)
+            if ($mode === null || trim((string)$mode) === '') {
+                $validationErrors[] = 'Mode is required';
+            }
+
+            // Validate motif (optional, but if provided must be 5-500 chars)
+            if ($motif !== '') {
+                if (strlen($motif) < 5) {
+                    $validationErrors[] = 'Motif must be at least 5 characters';
+                } elseif (strlen($motif) > 500) {
+                    $validationErrors[] = 'Motif cannot exceed 500 characters';
+                }
+            }
+
+            if (!empty($validationErrors)) {
+                // Show errors and re-render the same form so user stays on the appointment page
+                $this->addFlash('error', 'Validation failed: ' . implode('. ', $validationErrors));
+            } else {
+                try {
+                    $rendezVous->setCreatedAt(new \DateTime());
+                    $em->persist($rendezVous);
+                    $em->flush();
+
+                    $this->addFlash('success', 'Rendez-vous créé avec succès.');
+                    return $this->redirectToRoute('rendezvous_list');
+                } catch (\Exception $e) {
+                    $this->addFlash('error', 'Erreur: ' . $e->getMessage());
+                }
             }
         }
 
@@ -112,7 +152,46 @@ class RendezVousController extends AbstractController
 
         $datetime = $request->request->get('datetime'); // expecting HTML datetime-local value
         $mode = $request->request->get('mode');
-        $motif = $request->request->get('motif');
+        $motif = trim((string) $request->request->get('motif'));
+
+        // Server-side validation for edit (controle de saisie)
+        $validationErrors = [];
+
+        if (empty($datetime)) {
+            $validationErrors[] = 'Date & Heure is required';
+        } else {
+            try {
+                // Attempt to parse provided datetime-local value
+                $parsed = new \DateTime($datetime);
+            } catch (\Exception $e) {
+                $validationErrors[] = 'Invalid date/time format';
+            }
+        }
+        // if parsed successfully, ensure it's in the future
+        if (isset($parsed) && $parsed instanceof \DateTimeInterface) {
+            $now = new \DateTime();
+            if ($parsed < $now) {
+                $validationErrors[] = 'Date & Heure must be in the future';
+            }
+        }
+
+        if ($mode === null || trim((string)$mode) === '') {
+            $validationErrors[] = 'Mode is required';
+        }
+
+        if ($motif !== '') {
+            if (strlen($motif) < 5) {
+                $validationErrors[] = 'Motif must be at least 5 characters';
+            } elseif (strlen($motif) > 500) {
+                $validationErrors[] = 'Motif cannot exceed 500 characters';
+            }
+        }
+
+        if (!empty($validationErrors)) {
+            $this->addFlash('error', 'Validation failed: ' . implode('. ', $validationErrors));
+            // Redirect back to the list and open the edit row for this id
+            return $this->redirectToRoute('rendezvous_list', ['openEdit' => $id]);
+        }
 
         try {
             if ($datetime) {

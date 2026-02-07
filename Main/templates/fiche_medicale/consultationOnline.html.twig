@@ -113,8 +113,8 @@
 
                     <!-- Page Heading -->
                     <div class="page-header">
-                        <h1>🩺 Consultation présentiel</h1>
-                        <p>Fiche médicale – consultation en cabinet</p>
+                        <h1>🩺 Consultation en ligne</h1>
+                        <p>Fiche médicale – consultation à distance</p>
                     </div>
 
                     <!-- FicheMedicale Form -->
@@ -176,7 +176,7 @@
                                     <input type="hidden" name="rendezvous_id" value="{{ rendezvousId }}">
                                     <input type="hidden" id="startTime" name="startTime" value="{{ startParam }}">
                                 {% endif %}
-                                <input type="hidden" name="type" value="Présentiel">
+                                <input type="hidden" name="type" value="Distanciel">
                                 <!-- Duration (Minutes) Field -->
                                 <div class="form-group">
                                     <label for="dureeMinutes"><strong>Duration</strong></label>
@@ -192,17 +192,24 @@
                         </div>
                     </div>
 
+                    <!-- Jitsi Video Call Section -->
+                    <div class="card shadow mb-4">
+                        <div class="card-header py-3">
+                            <h6 class="m-0 font-weight-bold text-primary">Video Call</h6>
+                        </div>
+                        <div class="card-body">
+                            <div id="jitsi-container" style="height: 600px; width: 100%; border: 1px solid #ddd; border-radius: 4px;"></div>
+                        </div>
+                    </div>
+
                 </div>
                 <!-- /.container-fluid -->
-                <!-- Bootstrap core JavaScript-->
-    <script src="{{ asset('vendor/jquery/jquery.min.js') }}"></script>
-    <script src="{{ asset('vendor/bootstrap/js/bootstrap.bundle.min.js') }}"></script>
+                <!-- Bootstrap & jQuery from CDN -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/js/bootstrap.bundle.min.js"></script>
 
-    <!-- Core plugin JavaScript-->
-    <script src="{{ asset('vendor/jquery-easing/jquery.easing.min.js') }}"></script>
-
-    <!-- Custom scripts for all pages-->
-    <script src="{{ asset('js/sb-admin-2.min.js') }}"></script>
+    <!-- Jitsi Meet External API -->
+    <script src="https://meet.jit.si/external_api.js"></script>
 
     <script>
         // Real-time field validation
@@ -339,5 +346,80 @@
             update();
             setInterval(update, 1000);
         })();
+
+        // Initialize Jitsi Meet with simplified approach
+        function initJitsi() {
+            const container = document.getElementById('jitsi-container');
+            if (!container) {
+                console.error('❌ Jitsi container not found');
+                return;
+            }
+
+            try {
+                // Generate a unique room name
+                const roomName = 'medflow-' + Date.now() + '-' + Math.floor(Math.random() * 10000);
+                console.log('🎥 Initializing Jitsi with room:', roomName);
+
+                // Jitsi Meet configuration
+                const options = {
+                    roomName: roomName,
+                    width: '100%',
+                    height: 600,
+                    parentNode: container,
+                    configOverwrite: {
+                        startWithAudioMuted: false,
+                        startWithVideoMuted: false,
+                        disableAudioLevels: false,
+                        enableWelcomePage: false
+                    },
+                    interfaceConfigOverwrite: {
+                        MOBILE_APP_PROMO: false,
+                        SHOW_JITSI_WATERMARK: false,
+                        SHOW_WATERMARK_FOR_GUESTS: false,
+                        DEFAULT_BACKGROUND: '#f8f9fa'
+                    }
+                };
+
+                const api = new JitsiMeetExternalAPI('meet.jit.si', options);
+                console.log('✅ Jitsi instance created');
+
+                // Event listeners
+                api.addEventListener('videoConferenceJoined', function(data) {
+                    console.log('✓ Video conference joined', data);
+                });
+
+                api.addEventListener('videoConferenceFailed', function(error) {
+                    console.error('✗ Video conference failed', error);
+                });
+
+                api.addEventListener('videoConferenceLeft', function() {
+                    console.log('✓ Video conference left');
+                });
+
+                api.addEventListener('participantJoined', function(data) {
+                    console.log('👤 Participant joined:', data);
+                });
+
+                api.addEventListener('participantLeft', function(data) {
+                    console.log('👤 Participant left:', data);
+                });
+
+                // Store API for later use
+                window.jitsiApi = api;
+                console.log('✅ Jitsi initialized successfully');
+            } catch (error) {
+                console.error('❌ Error initializing Jitsi:', error);
+            }
+        }
+
+        // Initialize Jitsi when DOM is ready
+        document.addEventListener('DOMContentLoaded', function() {
+            if (typeof JitsiMeetExternalAPI !== 'undefined') {
+                initJitsi();
+            } else {
+                console.warn('⚠️ JitsiMeetExternalAPI not available, retrying...');
+                setTimeout(initJitsi, 500);
+            }
+        });
     </script>
 {% endblock %} 

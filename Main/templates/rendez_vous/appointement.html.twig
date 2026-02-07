@@ -1,122 +1,222 @@
 {% extends 'base.html.twig' %}
 {% block body %}
-
-<main class="main">
 <style>
-    /* Tweak Flatpickr to match white/blue simple design */
-    .flatpickr-calendar {
-      background: #ffffff;
-      border: 1px solid #cfe0ff;
-      box-shadow: 0 6px 18px rgba(20,85,200,0.08);
-      color: #0b2e6b;
+    .appointment-page { min-height: 100vh; background: linear-gradient(160deg, #f0fdfa 0%, #ecfeff 35%, #f5f5f4 100%); padding: 2rem 0 4rem; }
+    .appointment-hero {
+        background: linear-gradient(135deg, #0f766e 0%, #0d9488 50%, #14b8a6 100%);
+        color: #fff;
+        padding: 3rem 2rem;
+        border-radius: 24px;
+        margin-bottom: 2.5rem;
+        box-shadow: 0 20px 50px rgba(15, 118, 110, 0.25);
+        text-align: center;
     }
-    .flatpickr-months, .flatpickr-weekdays { background: transparent; }
-    .flatpickr-weekday { color: #2a5db0; }
-    .flatpickr-day.today { border-color: #2a5db0; }
-    .flatpickr-day.selected, .flatpickr-day.startRange, .flatpickr-day.endRange { background: #2a5db0; color: #fff; }
-    .flatpickr-time { background: transparent; }
-    /* Ensure the inline calendar sits nicely inside our form column */
-    .flatpickr-input { width:100%; padding:0.5rem 0.75rem; display:block; }
-    .flatpickr-calendar.inline { margin-top: 0.5rem; box-sizing: border-box; }
-    /* Constrain and center the inline calendar for a cleaner look */
-    #appointment-form .col-lg-8 .flatpickr-calendar.inline {
-      width: auto !important;
-      max-width: 520px !important;
-      margin-left: auto !important;
-      margin-right: auto !important;
-      display: block;
+    .appointment-hero h1 { font-size: 2.25rem; font-weight: 800; letter-spacing: -0.02em; margin: 0 0 0.5rem; }
+    .appointment-hero p { font-size: 1.1rem; opacity: 0.95; margin: 0; font-weight: 500; }
+    .appointment-card {
+        background: #fff;
+        border-radius: 20px;
+        box-shadow: 0 4px 24px rgba(0,0,0,0.06), 0 1px 3px rgba(0,0,0,0.04);
+        border: 1px solid rgba(15, 118, 110, 0.08);
+        padding: 2rem 2.5rem;
+        margin-bottom: 2rem;
     }
-    /* Let internal elements size naturally and center content */
-    .flatpickr-calendar.inline .flatpickr-innerContainer {
-      display: block;
+    .appointment-card .form-label { font-weight: 600; color: #134e4a; margin-bottom: 0.5rem; }
+    .appointment-card .form-control, .appointment-card .form-select {
+        border: 2px solid #e2e8f0;
+        border-radius: 12px;
+        padding: 0.75rem 1rem;
+        font-size: 1rem;
+        transition: border-color 0.2s, box-shadow 0.2s;
     }
-    .flatpickr-calendar.inline .flatpickr-months,
-    .flatpickr-calendar.inline .flatpickr-weekdays,
-    .flatpickr-calendar.inline .flatpickr-days {
-      width: auto !important;
-      margin: 0 auto !important;
+    .appointment-card .form-control:focus, .appointment-card .form-select:focus {
+        border-color: #0d9488;
+        box-shadow: 0 0 0 4px rgba(13, 148, 136, 0.12);
+        outline: none;
     }
-    /* Tidy the time selector: center and reduce large gaps */
-    .flatpickr-time {
-      display: flex;
-      justify-content: center;
-      gap: 1.5rem;
-      padding: .5rem 0;
+    .appointment-card .form-control[readonly], .appointment-card .form-control:disabled,
+    .appointment-card .form-control.bg-muted { background: #f1f5f9; color: #475569; }
+    .btn-appointment {
+        background: linear-gradient(135deg, #0f766e 0%, #0d9488 100%);
+        color: #fff !important;
+        border: none;
+        border-radius: 14px;
+        padding: 1rem 2rem;
+        font-weight: 700;
+        font-size: 1.05rem;
+        letter-spacing: 0.02em;
+        transition: transform 0.2s, box-shadow 0.2s;
     }
-    .flatpickr-time .flatpickr-time-separator { margin: 0 .5rem; }
-    /* Offset the appointment section so content is not hidden by fixed header */
-    /* Adjust the value if your header is taller/shorter */
+    .btn-appointment:hover { transform: translateY(-2px); box-shadow: 0 12px 28px rgba(15, 118, 110, 0.35); color: #fff !important; }
+    .alert-appointment { border: none; border-radius: 14px; padding: 1rem 1.25rem; font-weight: 500; }
+    .alert-appointment.alert-danger { background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%); color: #991b1b; }
+    .alert-appointment.alert-success { background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%); color: #065f46; }
     #appointment-form { padding-top: 100px; }
-    @media (max-width: 768px) {
-      #appointment-form { padding-top: 80px; }
-    }
-    /* Spacer element sizing (keeps same values as #appointment-form) */
-    .header-spacer { height: 100px; }
-    @media (max-width: 768px) { .header-spacer { height: 80px; } }
-  </style>
-   
-    <main class="main">
-   
+    @media (max-width: 768px) { #appointment-form { padding-top: 80px; } .appointment-hero h1 { font-size: 1.75rem; } }
+    .flatpickr-calendar { background: #fff !important; border: 2px solid #e2e8f0 !important; border-radius: 16px !important; box-shadow: 0 10px 40px rgba(0,0,0,0.08) !important; }
+    .flatpickr-day.today { border-color: #0d9488; }
+    .flatpickr-day.selected, .flatpickr-day.startRange, .flatpickr-day.endRange { background: #0d9488 !important; color: #fff !important; }
+    .flatpickr-weekday { color: #0f766e; }
+    .flatpickr-input { width: 100% !important; padding: 0.75rem 1rem !important; border-radius: 12px !important; }
+    #appointment-form .col-lg-8 .flatpickr-calendar.inline { max-width: 520px !important; margin: 0.5rem auto 0 !important; }
+</style>
+
+<main class="main appointment-page">
     <section id="appointment-form" class="section py-5">
-      <div class="container">
-        <div class="row justify-content-center">
-          <div class="col-lg-8">
-           <div class="container section-title" data-aos="fade-up">
-        <h2>Rendez-vous Section</h2>
-        <p>Prendre Rendez-vous</p>
-      </div><!-- End Section Title -->
+        <div class="container">
+            <div class="row justify-content-center">
+                <div class="col-lg-8">
+                    <div class="appointment-hero">
+                        <h1>📅 Prendre rendez-vous</h1>
+                        <p>Choisissez date, heure et motif — nous nous occupons du reste.</p>
+                    </div>
 
-            {% for label, messages in app.flashes %}
-              {% for message in messages %}
-                <div class="alert alert-{{ label == 'error' ? 'danger' : 'success' }}">{{ message }}</div>
-              {% endfor %}
-            {% endfor %}
+                    {% for label, messages in app.flashes %}
+                        {% for message in messages %}
+                            <div class="alert alert-appointment alert-{{ label == 'error' ? 'danger' : 'success' }}">{{ message }}</div>
+                        {% endfor %}
+                    {% endfor %}
 
-            {{ form_start(form, {'attr': {'novalidate': 'novalidate'}}) }}
-              <div class="mb-3">
-                {{ form_label(form.datetime, 'Date & Heure') }}
-                {{ form_widget(form.datetime) }}
-                {{ form_errors(form.datetime) }}
-              </div>
+                    <div class="appointment-card">
+                        {{ form_start(form, {'attr': {'novalidate': 'novalidate'}}) }}
+                            <div class="mb-4">
+                                {{ form_label(form.datetime, 'Date & Heure') }}
+                                {{ form_widget(form.datetime, {'attr': {'id': 'datetime'}}) }}
+                                {{ form_errors(form.datetime) }}
+                                <small id="datetime-feedback" class="d-block mt-2" style="font-size:0.85rem;"></small>
+                            </div>
+                            <div class="mb-4">
+                                {{ form_label(form.mode) }}
+                                {{ form_widget(form.mode, {'attr': {'id': 'mode'}}) }}
+                                {{ form_errors(form.mode) }}
+                                <small id="mode-feedback" class="d-block mt-2" style="font-size:0.85rem;"></small>
+                            </div>
+                            <div class="mb-4">
+                                {{ form_label(form.motif) }}
+                                {{ form_widget(form.motif, {'attr': {'id': 'motif'}}) }}
+                                {{ form_errors(form.motif) }}
+                                <small id="motif-feedback" class="d-block mt-2" style="font-size:0.85rem;"></small>
+                            </div>
+                            <div class="row g-3 mb-4">
+                                <div class="col-md-6">
+                                    <label class="form-label">Patient (ID)</label>
+                                    <div class="form-control bg-muted" style="pointer-events: none;"><strong>1</strong></div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Staff (ID)</label>
+                                    <div class="form-control bg-muted" style="pointer-events: none;"><strong>{{ idStaff ?? 'Non défini' }}</strong></div>
+                                </div>
+                            </div>
+                            <div class="d-grid">
+                                <button type="submit" class="btn btn-appointment">Envoyer la demande</button>
+                            </div>
+                        {{ form_end(form) }}
+                    </div>
 
-              <div class="mb-3">
-                {{ form_label(form.mode) }}
-                {{ form_widget(form.mode) }}
-                {{ form_errors(form.mode) }}
-              </div>
+                    <script>
+              // Informative client-side validation for appointment form
+              const apptValidationRules = {
+                datetime: { required: true },
+                mode: { required: true },
+                motif: { minLength: 5, maxLength: 500, required: false }
+              };
 
-              <div class="mb-3">
-                {{ form_label(form.motif) }}
-                {{ form_widget(form.motif) }}
-                {{ form_errors(form.motif) }}
-              </div>
+              function findFieldElement(key) {
+                let el = document.getElementById(key);
+                if (el) return el;
+                // Fallback: look for any element with name containing the key (e.g., rendez_vous[motif])
+                el = document.querySelector('[name*="' + key + '"]');
+                return el;
+              }
 
-              <div class="row">
-                <div class="col-md-6 mb-3">
-                  <label class="form-label">Patient (ID)</label>
-                  <div class="form-control" style="background-color: #e9ecef; pointer-events: none;">
-                    <strong>1</strong>
-                  </div>
+              function getOrCreateFeedbackFor(field, key) {
+                const fid = (field.id ? field.id : (field.getAttribute('name') || key)) + '-feedback';
+                let feedback = document.getElementById(fid);
+                if (!feedback) {
+                  feedback = document.createElement('small');
+                  feedback.id = fid;
+                  feedback.className = 'd-block mt-2';
+                  feedback.style.fontSize = '0.85rem';
+                  field.insertAdjacentElement('afterend', feedback);
+                }
+                return feedback;
+              }
+
+              function validateApptField(key) {
+                const field = findFieldElement(key);
+                if (!field) return true;
+                const feedback = document.getElementById((field.id ? field.id : (field.getAttribute('name')||key)) + '-feedback') || getOrCreateFeedbackFor(field, key);
+                const value = (field.value || '').trim();
+                const rules = apptValidationRules[key] || {};
+                let isValid = true;
+                let message = '';
+
+                if (rules.required && value.length === 0) {
+                  isValid = false;
+                  message = '⚠️ This field is required';
+                } else if (rules.minLength && value.length > 0 && value.length < rules.minLength) {
+                  isValid = false;
+                  message = '⚠️ Minimum ' + rules.minLength + ' characters required (' + value.length + '/' + rules.minLength + ')';
+                } else if (rules.maxLength && value.length > rules.maxLength) {
+                  isValid = false;
+                  message = '⚠️ Maximum ' + rules.maxLength + ' characters allowed (' + value.length + '/' + rules.maxLength + ')';
+                } else if (value.length > 0) {
+                  isValid = true;
+                  message = '✓ Perfect';
+                }
+
+                feedback.textContent = message;
+                if (isValid && value.length > 0) {
+                  feedback.style.color = '#28a745';
+                  field.style.borderColor = '#28a745';
+                } else if (!isValid) {
+                  feedback.style.color = '#dc3545';
+                  field.style.borderColor = '#dc3545';
+                } else {
+                  feedback.style.color = '';
+                  field.style.borderColor = '';
+                  feedback.textContent = '';
+                }
+
+                return isValid;
+              }
+
+              document.addEventListener('DOMContentLoaded', function() {
+                const fieldIds = ['datetime','mode','motif'];
+                fieldIds.forEach(id => {
+                  const el = findFieldElement(id);
+                  if (!el) return;
+                  // set min for datetime-local inputs to now (local)
+                  if (id === 'datetime') {
+                    const now = new Date();
+                    // format YYYY-MM-DDTHH:MM
+                    const pad = n => String(n).padStart(2,'0');
+                    const minVal = now.getFullYear() + '-' + pad(now.getMonth()+1) + '-' + pad(now.getDate()) + 'T' + pad(now.getHours()) + ':' + pad(now.getMinutes());
+                    try { el.setAttribute('min', minVal); } catch(e) {}
+                  }
+                  el.addEventListener('input', () => validateApptField(id));
+                  el.addEventListener('blur', () => validateApptField(id));
+                  el.addEventListener('focus', () => {
+                    const rules = apptValidationRules[id];
+                    if (rules && rules.required && (el.value || '').trim().length === 0) {
+                      validateApptField(id);
+                    }
+                  });
+                });
+
+                const form = document.querySelector('#appointment-form form');
+                if (form) {
+                  form.addEventListener('submit', function(e) {
+                    // Informative only: show validation messages but do not prevent submit
+                    ['datetime','mode','motif'].forEach(id => validateApptField(id));
+                  });
+                }
+              });
+            </script>
+
                 </div>
-                <div class="col-md-6 mb-3">
-                  <label class="form-label">Staff (ID)</label>
-                  <div class="form-control" style="background-color: #e9ecef; pointer-events: none;">
-                    <strong>{{ idStaff ?? 'Non défini' }}</strong>
-                  </div>
-                </div>
-              </div>
-
-              <div class="d-grid">
-                <button type="submit" class="btn btn-primary">Envoyer la demande</button>
-              </div>
-            {{ form_end(form) }}
-
-          </div>
+            </div>
         </div>
-      </div>
     </section>
-  
-  </main>
-  
-  
+</main>
 {% endblock %}

@@ -1,91 +1,157 @@
 {% extends 'base.html.twig' %}
 {% block body %}
-<!-- rendezvous_list -->
-  <main class="main">
-    <div class="container py-5">
-      <h1 class="mb-4">Liste des Rendez-vous</h1>
+<style>
+    .rv-list-page { min-height: 100vh; background: linear-gradient(160deg, #f0fdfa 0%, #ecfeff 35%, #f5f5f4 100%); padding: 2rem 0 4rem; }
+    .rv-list-hero {
+        background: linear-gradient(135deg, #0f766e 0%, #0d9488 50%, #14b8a6 100%);
+        color: #fff;
+        padding: 2.5rem 2rem;
+        border-radius: 24px;
+        margin-bottom: 2rem;
+        box-shadow: 0 20px 50px rgba(15, 118, 110, 0.25);
+    }
+    .rv-list-hero h1 { font-size: 2rem; font-weight: 800; letter-spacing: -0.02em; margin: 0 0 0.35rem; }
+    .rv-list-hero p { font-size: 1rem; opacity: 0.9; margin: 0; }
+    .rv-list-card {
+        background: #fff;
+        border-radius: 20px;
+        box-shadow: 0 4px 24px rgba(0,0,0,0.06), 0 1px 3px rgba(0,0,0,0.04);
+        border: 1px solid rgba(15, 118, 110, 0.08);
+        overflow: hidden;
+    }
+    .rv-table { margin: 0; }
+    .rv-table thead th {
+        background: linear-gradient(135deg, #0f766e 0%, #0d9488 100%);
+        color: #fff;
+        font-weight: 600;
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        padding: 1rem 0.85rem;
+        border: none;
+    }
+    .rv-table tbody td { padding: 0.9rem 0.85rem; vertical-align: middle; border-color: #f1f5f9; }
+    .rv-table tbody tr { transition: background 0.2s; }
+    .rv-table tbody tr:nth-child(even) { background: #f8fafc; }
+    .rv-table tbody tr:hover { background: #f0fdfa !important; }
+    .rv-table .edit-row td { background: #ecfeff !important; padding: 1.25rem; border-top: 2px solid #99f6e4; }
+    .rv-table .edit-row .form-control, .rv-table .edit-row .form-select {
+        border: 2px solid #e2e8f0; border-radius: 10px; padding: 0.5rem 0.75rem;
+    }
+    .rv-table .edit-row .form-control:focus, .rv-table .edit-row .form-select:focus {
+        border-color: #0d9488; box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.15); outline: none;
+    }
+    .btn-rv-edit { background: #0d9488; color: #fff !important; border: none; border-radius: 10px; padding: 0.4rem 0.75rem; transition: background 0.2s, transform 0.2s; }
+    .btn-rv-edit:hover { background: #0f766e; color: #fff !important; transform: scale(1.05); }
+    .btn-rv-delete { background: transparent; color: #dc2626; border: 2px solid #fecaca; border-radius: 10px; padding: 0.4rem 0.75rem; transition: all 0.2s; }
+    .btn-rv-delete:hover { background: #fef2f2; border-color: #dc2626; }
+    .btn-rv-save { background: #0d9488; color: #fff !important; border: none; border-radius: 10px; padding: 0.4rem 0.75rem; }
+    .btn-rv-cancel { background: #64748b; color: #fff !important; border: none; border-radius: 10px; padding: 0.4rem 0.75rem; }
+    .alert-rv { border: none; border-radius: 14px; padding: 1rem 1.25rem; font-weight: 500; }
+    .alert-rv.alert-danger { background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%); color: #991b1b; }
+    .alert-rv.alert-success { background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%); color: #065f46; }
+    .alert-rv.alert-info { background: linear-gradient(135deg, #ecfeff 0%, #cffafe 100%); color: #0e7490; }
+    .badge-rv { padding: 0.35rem 0.65rem; border-radius: 9999px; font-size: 0.8rem; font-weight: 600; }
+    .badge-rv-success { background: #d1fae5; color: #065f46; }
+    .badge-rv-warning { background: #fef3c7; color: #92400e; }
+    .badge-rv-danger { background: #fee2e2; color: #991b1b; }
+</style>
 
-      {% for label, messages in app.flashes %}
-        {% for message in messages %}
-          <div class="alert alert-{{ label == 'error' ? 'danger' : 'success' }}">{{ message }}</div>
-        {% endfor %}
-      {% endfor %}
-
-      {% if rendezvous is empty %}
-        <div class="alert alert-info">Aucun rendez-vous trouvé.</div>
-      {% else %}
-        <div class="table-responsive">
-          <table class="table table-striped">
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>Date & Heure</th>
-                <th>Statut</th>
-                <th>Mode</th>
-                <th>Motif</th>
-                <th>Patient ID</th>
-                <th>Staff ID</th>
-                <th>Créé le</th>
-                <th>Modifier</th>
-                <th>Supprimer</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for r in rendezvous %}
-                <tr>
-                  <td>{{ r.id }}</td>
-                  <td>{{ r.datetime ? r.datetime|date('Y-m-d H:i') : '—' }}</td>
-                  <td>{{ r.statut }}</td>
-                  <td>{{ r.mode }}</td>
-                  <td>{{ r.motif }}</td>
-                  <td>{{ r.idPatient }}</td>
-                  <td>{{ r.idStaff }}</td>
-                  <td>{{ r.createdAt ? r.createdAt|date('Y-m-d H:i') : '—' }}</td>
-                  <td>
-                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="toggleEdit({{ r.id }})">📝</button>
-                  </td>
-                  <td>
-                    <form method="post" action="{{ path('rendezvous_delete', {'id': r.id}) }}" onsubmit="return confirm('Supprimer ce rendez-vous ?');">
-                      <input type="hidden" name="_token" value="{{ csrf_token('delete' ~ r.id) }}">
-                      <button class="btn btn-sm btn-outline-danger" type="submit">🗑️</button>
-                    </form>
-                  </td>
-                </tr>
-                <tr id="edit-row-{{ r.id }}" class="edit-row" style="display:none;">
-                  <td colspan="10">
-                    <form method="post" action="{{ path('rendezvous_edit', {'id': r.id}) }}">
-                      <input type="hidden" name="_token" value="{{ csrf_token('edit' ~ r.id) }}">
-                      <div class="row g-2 align-items-end">
-                        <div class="col-md-3">
-                          <label class="form-label">Date & Heure</label>
-                          <input name="datetime" type="datetime-local" class="form-control" value="{{ r.datetime ? r.datetime|date('Y-m-d\TH:i') : '' }}">
-                        </div>
-                        <div class="col-md-2">
-                          <label class="form-label">Mode</label>
-                          <select name="mode" class="form-select">
-                            <option value="présentiel" {{ r.mode == 'présentiel' ? 'selected' : '' }}>présentiel</option>
-                            <option value="distanciel" {{ r.mode == 'distanciel' ? 'selected' : '' }}>distanciel</option>
-                          </select>
-                        </div>
-                        <div class="col-md-5">
-                          <label class="form-label">Motif</label>
-                          <input name="motif" class="form-control" value="{{ r.motif }}">
-                        </div>
-                        <div class="col-md-2 text-end">
-                          <button class="btn btn-sm btn-success" type="submit">✅</button>
-                          <button type="button" class="btn btn-sm btn-secondary" onclick="toggleEdit({{ r.id }})">✖️</button>
-                        </div>
-                      </div>
-                    </form>
-                  </td>
-                </tr>
-              {% endfor %}
-            </tbody>
-          </table>
+<main class="main rv-list-page">
+    <div class="container py-4">
+        <div class="rv-list-hero">
+            <h1>📋 Liste des rendez-vous</h1>
+            <p>Consultez, modifiez ou supprimez vos rendez-vous.</p>
         </div>
-      {% endif %}
+
+        {% for label, messages in app.flashes %}
+            {% for message in messages %}
+                <div class="alert alert-rv alert-{{ label == 'error' ? 'danger' : 'success' }}">{{ message }}</div>
+            {% endfor %}
+        {% endfor %}
+
+        {% if rendezvous is empty %}
+            <div class="alert alert-rv alert-info">Aucun rendez-vous trouvé.</div>
+        {% else %}
+            <div class="rv-list-card">
+                <div class="table-responsive">
+                    <table class="table rv-table mb-0">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Date & Heure</th>
+                                <th>Statut</th>
+                                <th>Mode</th>
+                                <th>Motif</th>
+                                <th>Patient</th>
+                                <th>Staff</th>
+                                <th>Créé le</th>
+                                <th>Modifier</th>
+                                <th>Supprimer</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for r in rendezvous %}
+                                <tr>
+                                    <td><strong>{{ r.id }}</strong></td>
+                                    <td>{{ r.datetime ? r.datetime|date('Y-m-d H:i') : '—' }}</td>
+                                    <td>
+                                        <span class="badge-rv badge-rv-{% if r.statut == 'approuvé' or r.statut == 'Confirmé' %}success{% elseif r.statut == 'rejeté' %}danger{% else %}warning{% endif %}">{{ r.statut }}</span>
+                                    </td>
+                                    <td>{{ r.mode }}</td>
+                                    <td>{{ r.motif }}</td>
+                                    <td>{{ r.idPatient }}</td>
+                                    <td>{{ r.idStaff }}</td>
+                                    <td>{{ r.createdAt ? r.createdAt|date('Y-m-d H:i') : '—' }}</td>
+                                    <td>
+                                        <button type="button" class="btn btn-rv-edit" onclick="toggleEdit({{ r.id }})">📝</button>
+                                    </td>
+                                    <td>
+                                        <form method="post" action="{{ path('rendezvous_delete', {'id': r.id}) }}" onsubmit="return confirm('Supprimer ce rendez-vous ?');" style="display:inline;">
+                                            <input type="hidden" name="_token" value="{{ csrf_token('delete' ~ r.id) }}">
+                                            <button class="btn btn-rv-delete" type="submit">🗑️</button>
+                                        </form>
+                                    </td>
+                                </tr>
+                                <tr id="edit-row-{{ r.id }}" class="edit-row" style="display:none;">
+                                    <td colspan="10">
+                                        <form method="post" action="{{ path('rendezvous_edit', {'id': r.id}) }}">
+                                            <input type="hidden" name="_token" value="{{ csrf_token('edit' ~ r.id) }}">
+                                            <div class="row g-2 align-items-end">
+                                                <div class="col-md-3">
+                                                    <label class="form-label small fw-bold text-secondary">Date & Heure</label>
+                                                    <input id="datetime-{{ r.id }}" name="datetime" type="datetime-local" class="form-control" value="{{ r.datetime ? r.datetime|date('Y-m-d\\TH:i') : '' }}">
+                                                    <small id="datetime-{{ r.id }}-feedback" class="d-block mt-2" style="font-size:0.85rem;"></small>
+                                                </div>
+                                                <div class="col-md-2">
+                                                    <label class="form-label small fw-bold text-secondary">Mode</label>
+                                                    <select id="mode-{{ r.id }}" name="mode" class="form-select">
+                                                        <option value="Présentiel" {{ r.mode == 'Présentiel' ? 'selected' : '' }}>Présentiel</option>
+                                                        <option value="Distanciel" {{ r.mode == 'Distanciel' ? 'selected' : '' }}>Distanciel</option>
+                                                    </select>
+                                                    <small id="mode-{{ r.id }}-feedback" class="d-block mt-2" style="font-size:0.85rem;"></small>
+                                                </div>
+                                                <div class="col-md-5">
+                                                    <label class="form-label small fw-bold text-secondary">Motif</label>
+                                                    <input id="motif-{{ r.id }}" name="motif" class="form-control" value="{{ r.motif }}">
+                                                    <small id="motif-{{ r.id }}-feedback" class="d-block mt-2" style="font-size:0.85rem;"></small>
+                                                </div>
+                                                <div class="col-md-2 text-end">
+                                                    <button class="btn btn-rv-save" type="submit">✅ Enregistrer</button>
+                                                    <button type="button" class="btn btn-rv-cancel" onclick="toggleEdit({{ r.id }})">✖ Annuler</button>
+                                                </div>
+                                            </div>
+                                        </form>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        {% endif %}
     </div>
-  </main>
+</main>
   
   <script>
     function toggleEdit(id) {
@@ -95,5 +161,79 @@
       // scroll into view when opened
       if (row.style.display !== 'none') row.scrollIntoView({behavior: 'smooth', block: 'center'});
     }
+
+    // Informative client-side validation for inline edit rows
+    (function(){
+      const rules = {
+        datetime: { required: true },
+        mode: { required: true },
+        motif: { minLength: 5, maxLength: 500, required: false }
+      };
+
+      function findEl(key, id) {
+        const byId = document.getElementById(key + '-' + id);
+        if (byId) return byId;
+        return document.querySelector('[name="' + key + '"]');
+      }
+
+      function validateKeyFor(id, key) {
+        const el = findEl(key, id);
+        if (!el) return true;
+        let feedback = document.getElementById((el.id || (el.getAttribute('name')||key)) + '-feedback');
+        if (!feedback) {
+          feedback = document.createElement('small');
+          feedback.className = 'd-block mt-2';
+          feedback.style.fontSize = '0.85rem';
+          el.insertAdjacentElement('afterend', feedback);
+        }
+        const value = (el.value || '').trim();
+        const r = rules[key] || {};
+        let msg = '';
+        let valid = true;
+        if (r.required && value.length === 0) {
+          valid = false; msg = '⚠️ This field is required';
+        } else if (r.minLength && value.length > 0 && value.length < r.minLength) {
+          valid = false; msg = '⚠️ Minimum ' + r.minLength + ' characters required (' + value.length + '/' + r.minLength + ')';
+        } else if (r.maxLength && value.length > r.maxLength) {
+          valid = false; msg = '⚠️ Maximum ' + r.maxLength + ' characters allowed (' + value.length + '/' + r.maxLength + ')';
+        } else if (value.length > 0) {
+          valid = true; msg = '✓ Perfect';
+        }
+
+        feedback.textContent = msg;
+        if (valid && value.length > 0) { feedback.style.color = '#28a745'; el.style.borderColor = '#28a745'; }
+        else if (!valid) { feedback.style.color = '#dc3545'; el.style.borderColor = '#dc3545'; }
+        else { feedback.style.color = ''; el.style.borderColor = ''; feedback.textContent = ''; }
+        return valid;
+      }
+
+      document.addEventListener('DOMContentLoaded', function(){
+        // attach listeners for all existing rows
+        document.querySelectorAll('tr[id^="edit-row-"]').forEach(function(row){
+          const id = row.id.replace('edit-row-','');
+          ['datetime','mode','motif'].forEach(function(k){
+            const el = findEl(k, id);
+            if (!el) return;
+            // set min for datetime inputs
+            if (k === 'datetime') {
+              const now = new Date();
+              const pad = n => String(n).padStart(2,'0');
+              const minVal = now.getFullYear() + '-' + pad(now.getMonth()+1) + '-' + pad(now.getDate()) + 'T' + pad(now.getHours()) + ':' + pad(now.getMinutes());
+              try { el.setAttribute('min', minVal); } catch(e) {}
+            }
+            el.addEventListener('input', function(){ validateKeyFor(id,k); });
+            el.addEventListener('blur', function(){ validateKeyFor(id,k); });
+            el.addEventListener('focus', function(){ if (rules[k].required && (el.value||'').trim().length===0) validateKeyFor(id,k); });
+          });
+        });
+
+        // if redirected with openEdit param, open that row
+        const openId = new URLSearchParams(window.location.search).get('openEdit');
+        if (openId) {
+          const row = document.getElementById('edit-row-' + openId);
+          if (row) { row.style.display = 'table-row'; row.scrollIntoView({behavior:'smooth', block:'center'}); }
+        }
+      });
+    })();
   </script>
 {% endblock %}
