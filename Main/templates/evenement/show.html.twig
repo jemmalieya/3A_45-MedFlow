@@ -1,6 +1,12 @@
+{# templates/evenement/show.html.twig #}
 {% extends 'base.html.twig' %}
 
 {% block title %}Détails Événements - MedFlow{% endblock %}
+
+{% block stylesheets %}
+  {{ parent() }}
+  <link rel="stylesheet" href="{{ asset('assets/css/evenement-show.css') }}">
+{% endblock %}
 
 {% block body %}
 <main class="main">
@@ -18,13 +24,11 @@
             {# Statut badge #}
             {% set statut = evenement.statutEvent|lower %}
             {% if statut == 'publié' or statut == 'publie' %}
-              <span class="badge rounded-pill px-3 py-2"
-                    style="background:#00BFA6; color:#fff;">
+              <span class="badge rounded-pill px-3 py-2" style="background:#00BFA6; color:#fff;">
                 <i class="bi bi-check2-circle me-1"></i>Publié
               </span>
             {% elseif statut == 'annulé' or statut == 'annule' %}
-              <span class="badge rounded-pill px-3 py-2"
-                    style="background:#BC0B09; color:#fff;">
+              <span class="badge rounded-pill px-3 py-2" style="background:#BC0B09; color:#fff;">
                 <i class="bi bi-x-circle me-1"></i>Annulé
               </span>
             {% else %}
@@ -39,7 +43,6 @@
               <i class="bi bi-geo-alt me-1" style="color:#0097B2;"></i>
               {{ evenement.nomLieuEvent }}, {{ evenement.villeEvent }}
             </span>
-
             <span>
               <i class="bi bi-calendar-event me-1" style="color:#0097B2;"></i>
               {{ evenement.dateDebutEvent|date('d/m/Y') }} → {{ evenement.dateFinEvent|date('d/m/Y') }}
@@ -53,58 +56,13 @@
           </a>
         </div>
       </div>
-      {# Flash messages #}
-{% for m in app.flashes('success') %}
-  <div class="alert alert-success">{{ m }}</div>
-{% endfor %}
-{% for m in app.flashes('danger') %}
-  <div class="alert alert-danger">{{ m }}</div>
-{% endfor %}
 
-<div class="card mt-4">
-  <div class="card-body">
-    <h5 class="mb-3">Participer à cet événement</h5>
-
-    {% if not evenement.canReceiveDemandes %}
-      <div class="alert alert-warning mb-0">
-        Les inscriptions sont fermées (date limite / événement terminé / complet / annulé).
-      </div>
-    {% else %}
-      <form method="post" action="{{ path('app_evenement_demander', {id: evenement.id}) }}">
-        <div class="row g-3">
-          <div class="col-md-4">
-            <label class="form-label">Nom</label>
-            <input name="nom" class="form-control" required>
-          </div>
-          <div class="col-md-4">
-            <label class="form-label">Email</label>
-            <input name="email" type="email" class="form-control" required>
-          </div>
-          <div class="col-md-4">
-            <label class="form-label">Téléphone</label>
-            <input name="tel" class="form-control">
-          </div>
-          <div class="col-12">
-            <label class="form-label">Message</label>
-            <textarea name="message" class="form-control" rows="3" placeholder="Pourquoi voulez-vous participer ?"></textarea>
-          </div>
-        </div>
-
-        <button class="btn btn-primary mt-3">
-          Envoyer la demande
-        </button>
-      </form>
-    {% endif %}
-  </div>
-</div>
-
-
-      {# ===== Cover Card ===== #}
-      <div class="card border-0 shadow-sm overflow-hidden mb-4"
-           style="border-radius:18px;">
+      {# ===== Cover Card + Formulaire sous l'image + Contenu ===== #}
+      <div class="card border-0 shadow-sm overflow-hidden mb-4" style="border-radius:18px;">
 
         {% set cover = evenement.imageCouvertureEvent ? evenement.imageCouvertureEvent : asset('assets/img/health/showcase-1.webp') %}
 
+        {# ===== Cover ===== #}
         <div style="
           position:relative;
           height: 320px;
@@ -131,14 +89,98 @@
           </div>
         </div>
 
-        {# ===== Content ===== #}
         <div class="card-body p-4">
+
+          {# Flash messages #}
+          {% for m in app.flashes('success') %}
+            <div class="alert alert-success">{{ m }}</div>
+          {% endfor %}
+          {% for m in app.flashes('danger') %}
+            <div class="alert alert-danger">{{ m }}</div>
+          {% endfor %}
+
+          {# ===== Bloc Participation (sous l'image) ===== #}
+          <div class="event-join-card border rounded-4 p-4 mb-4">
+            <div class="d-flex align-items-start justify-content-between gap-3 flex-wrap">
+              <div>
+                <h5 class="mb-1 fw-bold">
+                  <i class="bi bi-send-check me-2"></i>Participer à cet événement
+                </h5>
+                <div class="text-muted small">
+                  Remplissez une demande de participation. Vous serez contacté(e) via email/téléphone.
+                </div>
+              </div>
+            </div>
+
+            <hr class="my-3"/>
+
+            {% if not evenement.canReceiveDemandes %}
+              <div class="alert alert-warning mb-0">
+                Les inscriptions sont fermées (date limite / événement terminé / complet / annulé).
+              </div>
+            {% else %}
+
+              <div class="mb-3">
+                <div class="fw-semibold mb-2">Souhaitez-vous participer ?</div>
+
+                <div class="d-flex gap-3 flex-wrap">
+                  <div class="form-check form-check-inline">
+                    <input class="form-check-input js-participate-choice" type="radio" name="participer_choice" id="participerOui" value="oui">
+                    <label class="form-check-label" for="participerOui">Oui</label>
+                  </div>
+
+                  <div class="form-check form-check-inline">
+                    <input class="form-check-input js-participate-choice" type="radio" name="participer_choice" id="participerNon" value="non" checked>
+                    <label class="form-check-label" for="participerNon">Non</label>
+                  </div>
+                </div>
+
+                <div class="text-muted small mt-2">
+                  Si vous choisissez <b>Oui</b>, le formulaire s’affichera.
+                </div>
+              </div>
+
+              <div id="participationFormWrapper" class="d-none">
+                <form method="post" action="{{ path('app_evenement_demander', {id: evenement.id}) }}" class="mt-3">
+                  <div class="row g-3">
+                    <div class="col-md-4">
+                      <label class="form-label">Nom</label>
+                      <input name="nom" class="form-control" placeholder="Votre nom" required>
+                    </div>
+                    <div class="col-md-4">
+                      <label class="form-label">Email</label>
+                      <input name="email" type="email" class="form-control" placeholder="ex: nom@email.com" required>
+                    </div>
+                    <div class="col-md-4">
+                      <label class="form-label">Téléphone</label>
+                      <input name="tel" class="form-control" placeholder="+216 ..." required>
+                    </div>
+                    <div class="col-12">
+                      <label class="form-label">Message</label>
+                      <textarea name="message" class="form-control" rows="3" placeholder="Pourquoi voulez-vous participer ?" required></textarea>
+                    </div>
+                  </div>
+
+                  <div class="d-flex gap-2 mt-3">
+                    <button class="btn btn-primary">
+                      <i class="bi bi-send me-1"></i>Envoyer la demande
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary" id="btnCancelParticipation">
+                      Annuler
+                    </button>
+                  </div>
+                </form>
+              </div>
+
+            {% endif %}
+          </div>
+
+          {# ===== Contenu ===== #}
           <div class="row g-4">
 
             {# Left: Description/Objectif #}
             <div class="col-lg-8">
-              <div class="p-4 bg-white border rounded-4"
-                   style="border-color:#e9f3ff !important;">
+              <div class="p-4 bg-white border rounded-4" style="border-color:#e9f3ff !important;">
                 <h5 class="fw-bold mb-2" style="color:#003399;">
                   <i class="bi bi-info-circle me-2" style="color:#0097B2;"></i>
                   Description
@@ -160,8 +202,7 @@
             {# Right: Info card #}
             <div class="col-lg-4">
               <div class="p-4 rounded-4 shadow-sm"
-                   style="background: linear-gradient(180deg, #f7fbff, #ffffff);
-                          border:1px solid #e6f1ff;">
+                   style="background: linear-gradient(180deg, #f7fbff, #ffffff); border:1px solid #e6f1ff;">
                 <h6 class="fw-bold mb-3" style="color:#003399;">
                   Détails rapides
                 </h6>
@@ -205,10 +246,16 @@
             </div>
 
           </div>
+
         </div>
       </div>
 
     </div>
   </section>
 </main>
+{% endblock %}
+
+{% block javascripts %}
+  {{ parent() }}
+  <script src="{{ asset('assets/js/evenement-show.js') }}"></script>
 {% endblock %}

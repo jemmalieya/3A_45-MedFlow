@@ -1,139 +1,259 @@
-{{ form_start(form) }}
+{# templates/evenement/_form.html.twig #}
 
-{# ===================== SECTION 1: INFO EVENT ===================== #}
-<div class="mb-4">
-  <h5 class="fw-semibold text-primary mb-3">
-    <i class="bi bi-calendar-event me-2"></i> Informations de l’événement
-  </h5>
+{{ form_start(form, { attr: { novalidate: 'novalidate' } }) }}
 
-  <div class="row g-3">
-    <div class="col-md-6">
-      {{ form_row(form.titre_event, {'attr': {'class': 'form-control'}}) }}
-    </div>
-
-    <div class="col-md-6">
-      {{ form_row(form.slug_event, {'attr': {'class': 'form-control'}}) }}
-      <small class="text-muted">Ex: conference-sante-publique</small>
-    </div>
-
-    <div class="col-md-6">
-      {{ form_row(form.type_event, {'attr': {'class': 'form-select'}}) }}
-    </div>
-
-    <div class="col-md-6">
-      {{ form_row(form.statut_event, {'attr': {'class': 'form-select'}}) }}
-    </div>
-
-    <div class="col-12">
-      {{ form_row(form.description_event, {'attr': {'class': 'form-control', 'rows': 4}}) }}
-    </div>
-
-    <div class="col-12">
-      {{ form_row(form.objectif_event, {'attr': {'class': 'form-control', 'rows': 3}}) }}
-    </div>
-  </div>
-</div>
-
-<hr class="my-4">
-
-{# ===================== SECTION 2: DATES & LIEU ===================== #}
-<div class="mb-4">
-  <h5 class="fw-semibold text-primary mb-3">
-    <i class="bi bi-geo-alt me-2"></i> Dates & lieu
-  </h5>
-
-  <div class="row g-3">
-    <div class="col-md-6">
-      {{ form_row(form.date_debut_event, {'attr': {'class': 'form-control'}}) }}
-    </div>
-
-    <div class="col-md-6">
-      {{ form_row(form.date_fin_event, {'attr': {'class': 'form-control'}}) }}
-    </div>
-
-    <div class="col-md-4">
-      {{ form_row(form.nom_lieu_event, {'attr': {'class': 'form-control'}}) }}
-    </div>
-
-    <div class="col-md-4">
-      {{ form_row(form.ville_event, {'attr': {'class': 'form-control'}}) }}
-    </div>
-
-    <div class="col-md-4">
-      {{ form_row(form.nb_participants_max_event, {'attr': {'class': 'form-control'}}) }}
-    </div>
-
-    <div class="col-12">
-      {{ form_row(form.adresse_event, {'attr': {'class': 'form-control'}}) }}
-    </div>
-  </div>
-</div>
-
-<hr class="my-4">
-
-{# ===================== SECTION 3: INSCRIPTION & VISIBILITE ===================== #}
-<div class="mb-4">
-  <h5 class="fw-semibold text-primary mb-3">
-    <i class="bi bi-shield-check me-2"></i> Inscription & visibilité
-  </h5>
-
-  <div class="row g-3 align-items-end">
-    <div class="col-md-6">
-      {{ form_row(form.date_limite_inscription_event, {'attr': {'class': 'form-control'}}) }}
-    </div>
-
-    <div class="col-md-6">
-      {{ form_row(form.visibilite_event, {'attr': {'class': 'form-select'}}) }}
-    </div>
-
-    <div class="col-12">
-      <div class="form-check form-switch mt-2">
-        {{ form_widget(form.inscription_obligatoire_event, {'attr': {'class': 'form-check-input'}}) }}
-        {{ form_label(form.inscription_obligatoire_event, null, {'label_attr': {'class': 'form-check-label'}}) }}
-        {{ form_errors(form.inscription_obligatoire_event) }}
+{# ===== HERO ===== #}
+<div class="card shadow-sm border-0 mb-4 res-hero">
+  <div class="card-body d-flex align-items-center justify-content-between flex-wrap gap-2">
+    <div class="d-flex align-items-center">
+      <div class="res-hero-icon mr-3">
+        <i class="fas fa-calendar-plus"></i>
+      </div>
+      <div>
+        <div class="res-hero-title">Nouvel Événement</div>
+        <div class="res-hero-subtitle">Renseigne les infos essentielles, dates, lieu et contact.</div>
       </div>
     </div>
-  </div>
-</div>
 
-<hr class="my-4">
-
-{# ===================== SECTION 4: CONTACT & MEDIA ===================== #}
-<div class="mb-4">
-  <h5 class="fw-semibold text-primary mb-3">
-    <i class="bi bi-envelope me-2"></i> Contact & média
-  </h5>
-
-  <div class="row g-3">
-    <div class="col-md-6">
-      {{ form_row(form.email_contact_event, {'attr': {'class': 'form-control'}}) }}
-    </div>
-
-    <div class="col-md-6">
-      {{ form_row(form.tel_contact_event, {'attr': {'class': 'form-control'}}) }}
-    </div>
-
-    <div class="col-md-6">
-      {{ form_row(form.nom_organisateur_event, {'attr': {'class': 'form-control'}}) }}
-    </div>
-
-    <div class="col-md-6">
-      {{ form_row(form.image_couverture_event, {'attr': {'class': 'form-control'}}) }}
-      <small class="text-muted">Colle un lien direct d’image (finit par .jpg .png .webp)</small>
+    <div class="d-flex align-items-center gap-2">
+      <span class="badge badge-pill res-badge"><i class="fas fa-tag mr-1"></i> Type</span>
+      <span class="badge badge-pill res-badge"><i class="fas fa-calendar-alt mr-1"></i> Dates</span>
+      <span class="badge badge-pill res-badge"><i class="fas fa-envelope mr-1"></i> Contact</span>
     </div>
   </div>
 </div>
 
-{# ===================== ACTIONS ===================== #}
-<div class="d-flex justify-content-end gap-2 mt-4">
-  <a href="{{ path('admin_evenement_index') }}" class="btn btn-outline-secondary">
-    Annuler
-  </a>
-  <button class="btn btn-primary px-4">
-    <i class="bi bi-check-circle me-1"></i> {{ button_label|default('Enregistrer') }}
-  </button>
+{# ===== CARD PRINCIPALE ===== #}
+<div class="card shadow-sm border-0 mb-4">
+
+  <div class="card-header bg-white border-0 pb-0">
+    <h6 class="font-weight-bold text-primary mb-1">
+      <i class="fas fa-info-circle mr-1"></i> Informations de l’événement
+    </h6>
+    <small class="text-muted">Les champs marqués obligatoires doivent être remplis.</small>
+  </div>
+
+  <div class="card-body pt-4">
+
+    {# ==== Titre + Slug ==== #}
+    <div class="row">
+      <div class="col-md-6">
+        <div class="form-group">
+          <label class="res-label"><i class="fas fa-heading mr-1"></i> Titre</label>
+          {% set invalid = form.titre_event.vars.errors|length > 0 %}
+          {{ form_widget(form.titre_event, {'attr': {'class': 'form-control ' ~ (invalid ? 'is-invalid' : ''), 'placeholder':'Ex: Journée de don du sang'}}) }}
+          {{ form_errors(form.titre_event) }}
+        </div>
+      </div>
+
+      <div class="col-md-6">
+        <div class="form-group">
+          <label class="res-label"><i class="fas fa-link mr-1"></i> Slug</label>
+          {% set invalid = form.slug_event.vars.errors|length > 0 %}
+          {{ form_widget(form.slug_event, {'attr': {'class': 'form-control ' ~ (invalid ? 'is-invalid' : ''), 'placeholder':'ex: journee-don-du-sang'}}) }}
+          {{ form_errors(form.slug_event) }}
+          <small class="text-muted">Ex: conference-sante-publique</small>
+        </div>
+      </div>
+    </div>
+
+    {# ==== Type + Statut ==== #}
+    <div class="row">
+      <div class="col-md-6">
+        <div class="form-group">
+          <label class="res-label"><i class="fas fa-tags mr-1"></i> Type</label>
+          {% set invalid = form.type_event.vars.errors|length > 0 %}
+          {{ form_widget(form.type_event, {'attr': {'class': 'form-control ' ~ (invalid ? 'is-invalid' : '')}}) }}
+          {{ form_errors(form.type_event) }}
+        </div>
+      </div>
+
+      <div class="col-md-6">
+        <div class="form-group">
+          <label class="res-label"><i class="fas fa-traffic-light mr-1"></i> Statut</label>
+          {% set invalid = form.statut_event.vars.errors|length > 0 %}
+          {{ form_widget(form.statut_event, {'attr': {'class': 'form-control ' ~ (invalid ? 'is-invalid' : '')}}) }}
+          {{ form_errors(form.statut_event) }}
+        </div>
+      </div>
+    </div>
+
+    {# ==== Description ==== #}
+    <div class="form-group">
+      <label class="res-label"><i class="fas fa-align-left mr-1"></i> Description</label>
+      {% set invalid = form.description_event.vars.errors|length > 0 %}
+      {{ form_widget(form.description_event, {'attr': {'class': 'form-control ' ~ (invalid ? 'is-invalid' : ''), 'rows':4, 'placeholder':'Décrivez l’événement...'}}) }}
+      {{ form_errors(form.description_event) }}
+    </div>
+
+    {# ==== Objectif ==== #}
+    <div class="form-group">
+      <label class="res-label"><i class="fas fa-bullseye mr-1"></i> Objectif</label>
+      {% set invalid = form.objectif_event.vars.errors|length > 0 %}
+      {{ form_widget(form.objectif_event, {'attr': {'class': 'form-control ' ~ (invalid ? 'is-invalid' : ''), 'rows':3, 'placeholder':'Objectif principal...'}}) }}
+      {{ form_errors(form.objectif_event) }}
+    </div>
+
+    <hr class="my-4">
+
+    {# ===== DATES & LIEU ===== #}
+    <h6 class="font-weight-bold text-primary mb-2">
+      <i class="fas fa-map-marked-alt mr-1"></i> Dates & lieu
+    </h6>
+
+    <div class="row">
+      <div class="col-md-6">
+        <div class="form-group">
+          <label class="res-label"><i class="fas fa-calendar-alt mr-1"></i> Date début</label>
+          {% set invalid = form.date_debut_event.vars.errors|length > 0 %}
+          {{ form_widget(form.date_debut_event, {'attr': {'class': 'form-control ' ~ (invalid ? 'is-invalid' : '')}}) }}
+          {{ form_errors(form.date_debut_event) }}
+        </div>
+      </div>
+
+      <div class="col-md-6">
+        <div class="form-group">
+          <label class="res-label"><i class="fas fa-flag-checkered mr-1"></i> Date fin</label>
+          {% set invalid = form.date_fin_event.vars.errors|length > 0 %}
+          {{ form_widget(form.date_fin_event, {'attr': {'class': 'form-control ' ~ (invalid ? 'is-invalid' : '')}}) }}
+          {{ form_errors(form.date_fin_event) }}
+        </div>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="col-md-4">
+        <div class="form-group">
+          <label class="res-label"><i class="fas fa-hospital mr-1"></i> Lieu</label>
+          {% set invalid = form.nom_lieu_event.vars.errors|length > 0 %}
+          {{ form_widget(form.nom_lieu_event, {'attr': {'class': 'form-control ' ~ (invalid ? 'is-invalid' : ''), 'placeholder':'Ex: Hôpital Charles Nicolle'}}) }}
+          {{ form_errors(form.nom_lieu_event) }}
+        </div>
+      </div>
+
+      <div class="col-md-4">
+        <div class="form-group">
+          <label class="res-label"><i class="fas fa-city mr-1"></i> Ville</label>
+          {% set invalid = form.ville_event.vars.errors|length > 0 %}
+          {{ form_widget(form.ville_event, {'attr': {'class': 'form-control ' ~ (invalid ? 'is-invalid' : ''), 'placeholder':'Ex: Tunis'}}) }}
+          {{ form_errors(form.ville_event) }}
+        </div>
+      </div>
+
+      <div class="col-md-4">
+        <div class="form-group">
+          <label class="res-label"><i class="fas fa-users mr-1"></i> Max participants</label>
+          {% set invalid = form.nb_participants_max_event.vars.errors|length > 0 %}
+          {{ form_widget(form.nb_participants_max_event, {'attr': {'class': 'form-control ' ~ (invalid ? 'is-invalid' : ''), 'placeholder':'Ex: 200'}}) }}
+          {{ form_errors(form.nb_participants_max_event) }}
+        </div>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label class="res-label"><i class="fas fa-map-pin mr-1"></i> Adresse</label>
+      {% set invalid = form.adresse_event.vars.errors|length > 0 %}
+      {{ form_widget(form.adresse_event, {'attr': {'class': 'form-control ' ~ (invalid ? 'is-invalid' : ''), 'placeholder':'Rue ...'}}) }}
+      {{ form_errors(form.adresse_event) }}
+    </div>
+
+    <hr class="my-4">
+
+    {# ===== INSCRIPTION & VISIBILITE ===== #}
+    <h6 class="font-weight-bold text-primary mb-2">
+      <i class="fas fa-shield-alt mr-1"></i> Inscription & visibilité
+    </h6>
+
+    <div class="row align-items-end">
+      <div class="col-md-6">
+        <div class="form-group">
+          <label class="res-label"><i class="fas fa-calendar-times mr-1"></i> Date limite inscription</label>
+          {% set invalid = form.date_limite_inscription_event.vars.errors|length > 0 %}
+          {{ form_widget(form.date_limite_inscription_event, {'attr': {'class': 'form-control ' ~ (invalid ? 'is-invalid' : '')}}) }}
+          {{ form_errors(form.date_limite_inscription_event) }}
+        </div>
+      </div>
+
+      <div class="col-md-6">
+        <div class="form-group">
+          <label class="res-label"><i class="fas fa-eye mr-1"></i> Visibilité</label>
+          {% set invalid = form.visibilite_event.vars.errors|length > 0 %}
+          {{ form_widget(form.visibilite_event, {'attr': {'class': 'form-control ' ~ (invalid ? 'is-invalid' : '')}}) }}
+          {{ form_errors(form.visibilite_event) }}
+        </div>
+      </div>
+
+      <div class="col-12">
+        <div class="form-group mt-2">
+          <div class="custom-control custom-switch">
+            {% set invalid = form.inscription_obligatoire_event.vars.errors|length > 0 %}
+            {{ form_widget(form.inscription_obligatoire_event, {'attr': {'class': 'custom-control-input ' ~ (invalid ? 'is-invalid' : '')}}) }}
+            {{ form_label(form.inscription_obligatoire_event, null, {'label_attr': {'class': 'custom-control-label'}}) }}
+          </div>
+          {{ form_errors(form.inscription_obligatoire_event) }}
+        </div>
+      </div>
+    </div>
+
+    <hr class="my-4">
+
+    {# ===== CONTACT & MEDIA ===== #}
+    <h6 class="font-weight-bold text-primary mb-2">
+      <i class="fas fa-address-book mr-1"></i> Contact & média
+    </h6>
+
+    <div class="row">
+      <div class="col-md-6">
+        <div class="form-group">
+          <label class="res-label"><i class="fas fa-envelope mr-1"></i> Email contact</label>
+          {% set invalid = form.email_contact_event.vars.errors|length > 0 %}
+          {{ form_widget(form.email_contact_event, {'attr': {'class': 'form-control ' ~ (invalid ? 'is-invalid' : ''), 'placeholder':'contact@medflow.tn'}}) }}
+          {{ form_errors(form.email_contact_event) }}
+        </div>
+      </div>
+
+      <div class="col-md-6">
+        <div class="form-group">
+          <label class="res-label"><i class="fas fa-phone mr-1"></i> Téléphone contact</label>
+          {% set invalid = form.tel_contact_event.vars.errors|length > 0 %}
+          {{ form_widget(form.tel_contact_event, {'attr': {'class': 'form-control ' ~ (invalid ? 'is-invalid' : ''), 'placeholder':'+216...'}}) }}
+          {{ form_errors(form.tel_contact_event) }}
+        </div>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="col-md-6">
+        <div class="form-group">
+          <label class="res-label"><i class="fas fa-user-tie mr-1"></i> Organisateur</label>
+          {% set invalid = form.nom_organisateur_event.vars.errors|length > 0 %}
+          {{ form_widget(form.nom_organisateur_event, {'attr': {'class': 'form-control ' ~ (invalid ? 'is-invalid' : ''), 'placeholder':'Nom organisateur'}}) }}
+          {{ form_errors(form.nom_organisateur_event) }}
+        </div>
+      </div>
+
+      <div class="col-md-6">
+        <div class="form-group">
+          <label class="res-label"><i class="fas fa-image mr-1"></i> Image (URL)</label>
+          {% set invalid = form.image_couverture_event.vars.errors|length > 0 %}
+          {{ form_widget(form.image_couverture_event, {'attr': {'class': 'form-control ' ~ (invalid ? 'is-invalid' : ''), 'placeholder':'https://...'}}) }}
+          {{ form_errors(form.image_couverture_event) }}
+          <small class="text-muted">Lien direct (jpg/png/webp)</small>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="card-footer bg-white border-0 d-flex justify-content-end">
+    <a href="{{ path('admin_evenement_index') }}" class="btn btn-light mr-2">
+      <i class="fas fa-times mr-1"></i> Annuler
+    </a>
+    <button class="btn btn-primary res-btn">
+      <i class="fas fa-save mr-1"></i> {{ button_label|default('Enregistrer') }}
+    </button>
+  </div>
+
 </div>
 
 {{ form_end(form) }}
-
-

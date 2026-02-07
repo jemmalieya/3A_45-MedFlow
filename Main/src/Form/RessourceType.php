@@ -19,7 +19,7 @@ class RessourceType extends AbstractType
         $builder
         ->add('evenement', EntityType::class, [
     'class' => Evenement::class,
-    'choice_label' => 'titre_event', // ✅ affichage dans la liste
+    'choice_label' => 'titreEvent', // ✅ affichage dans la liste
     'label' => 'Événement',
     'placeholder' => 'Choisir un événement',
   ])

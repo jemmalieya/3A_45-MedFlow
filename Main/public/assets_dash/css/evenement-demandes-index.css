@@ -1,0 +1,155 @@
+.evdemi{
+  --ev-blue:#0b6ea8;
+  --ev-blue2:#2aa9ff;
+  --ev-green:#16a34a;
+  --ev-red:#ef4444;
+  --ev-yellow:#f59e0b;
+  --ev-gray:#6b7280;
+}
+
+/* Top bar */
+.evdemi .evdemi-topbar{
+  display:flex;
+  align-items:flex-end;
+  justify-content:space-between;
+  gap:14px;
+  padding:16px 18px;
+  border-radius:16px;
+  background: linear-gradient(135deg, rgba(179,213,255,.35), rgba(143,213,255,.12));
+  border:1px solid rgba(11,110,168,.12);
+}
+
+.evdemi .evdemi-title{
+  font-weight:900;
+  color:#0b2a3a;
+  letter-spacing:.2px;
+  margin:0;
+  font-size:34px;
+  line-height:1.1;
+}
+
+.evdemi .evdemi-subtitle{
+  color:var(--ev-gray);
+  font-size:13px;
+  margin-top:6px;
+}
+
+.evdemi .evdemi-actions{
+  display:flex;
+  gap:10px;
+  align-items:center;
+  flex-wrap:wrap;
+}
+
+.evdemi .evdemi-search{
+  min-width:360px;
+  max-width:520px;
+}
+
+.evdemi .evdemi-search .input-group-text{
+  background:#fff;
+  border-right:0;
+}
+
+.evdemi .evdemi-search .form-control{
+  border-left:0;
+  background:#fff;
+}
+
+.evdemi .evdemi-filter{
+  border-radius:12px;
+  min-width:180px;
+}
+
+/* Card */
+.evdemi .evdemi-card{
+  border-radius:18px;
+  overflow:hidden;
+}
+
+.evdemi .evdemi-cover{
+  position:relative;
+  height:160px;
+  background:#f3f4f6;
+}
+
+.evdemi .evdemi-cover img{
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  display:block;
+}
+
+.evdemi .evdemi-cover-fallback{
+  width:100%;
+  height:100%;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  color:#9ca3af;
+  font-size:34px;
+}
+
+.evdemi .evdemi-badges{
+  position:absolute;
+  left:12px;
+  bottom:12px;
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+}
+
+.evdemi .evdemi-card-title{
+  font-weight:900;
+  color:#0b2a3a;
+}
+
+.evdemi .evdemi-mini{
+  display:flex;
+  gap:6px;
+}
+
+.evdemi .mini-pill{
+  font-size:12px;
+  padding:6px 10px;
+  border-radius:999px;
+  background:#f3f4f6;
+  color:#111827;
+  white-space:nowrap;
+}
+
+.evdemi .mini-acc{ background:#ecfdf5; color:var(--ev-green); }
+.evdemi .mini-ref{ background:#fef2f2; color:var(--ev-red); }
+
+.evdemi .evdemi-meta-row{
+  display:flex;
+  gap:10px;
+  align-items:center;
+  color:#6b7280;
+  margin:6px 0;
+  font-size:13px;
+}
+
+.evdemi .evdemi-meta-row i{
+  color:var(--ev-blue);
+  width:18px;
+  text-align:center;
+}
+
+/* Progress */
+.evdemi .evdemi-bar{
+  height:9px;
+  border-radius:999px;
+  background:#e5e7eb;
+}
+
+.evdemi .evdemi-bar .progress-bar{
+  background: linear-gradient(90deg, var(--ev-blue2), var(--ev-blue));
+  border-radius:999px;
+}
+
+.evdemi .evdemi-btn{
+  border-radius:12px;
+  padding:.45rem .75rem;
+  font-weight:700;
+}

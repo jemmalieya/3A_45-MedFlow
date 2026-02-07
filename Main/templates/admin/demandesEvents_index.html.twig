@@ -1,70 +1,184 @@
 {% extends 'base_dashboard.html.twig' %}
 {% block title %}Demandes de participation{% endblock %}
 
-{% block body %}
-<div class="container-fluid py-4">
+{% block stylesheets %}
+  {{ parent() }}
+  <link rel="stylesheet" href="{{ asset('assets_dash/css/evenement-demandes-index.css') }}">
+{% endblock %}
 
-  <div class="d-flex justify-content-between align-items-center mb-4">
-    <div>
-      <h1 class="h3 mb-1">Demandes de participation</h1>
-      <p class="text-muted mb-0">Validation des demandes par événement</p>
+{% block body %}
+<div class="container-fluid evdemi">
+
+  {# ===== Header ===== #}
+  <div class="evdemi-topbar mb-4">
+    <div class="evdemi-head">
+      <h1 class="evdemi-title">Demandes de participation</h1>
+      <div class="evdemi-subtitle">Validation des demandes par événement</div>
+    </div>
+
+    <div class="evdemi-actions">
+      <div class="input-group evdemi-search">
+        <div class="input-group-prepend">
+          <span class="input-group-text"><i class="fas fa-search"></i></span>
+        </div>
+        <input id="eventsSearch" type="text" class="form-control"
+               placeholder="Rechercher (titre, ville, lieu...)">
+      </div>
+
+      <select id="statusFilter" class="custom-select evdemi-filter">
+        <option value="all">Tous</option>
+        <option value="pending">Avec pending</option>
+        <option value="ok">Sans pending</option>
+      </select>
     </div>
   </div>
 
-  {% for m in app.flashes('success') %}
-    <div class="alert alert-success">{{ m }}</div>
-  {% endfor %}
-  {% for m in app.flashes('danger') %}
-    <div class="alert alert-danger">{{ m }}</div>
+  {# ===== Flash messages ===== #}
+  {% for label, messages in app.flashes %}
+    {% for message in messages %}
+      <div class="alert alert-{{ label }} alert-dismissible fade show" role="alert">
+        {{ message }}
+        <button type="button" class="close" data-dismiss="alert">&times;</button>
+      </div>
+    {% endfor %}
   {% endfor %}
 
-  <div class="row g-4">
+  {# ===== Cards ===== #}
+  <div class="row">
     {% for ev in events %}
       {% set pending = ev.countDemandesByStatus('pending') %}
       {% set accepted = ev.countDemandesByStatus('accepted') %}
       {% set refused = ev.countDemandesByStatus('refused') %}
+      {% set max = ev.nbParticipantsMaxEvent %}
+      {% set pct = (max is not null and max > 0) ? ((accepted / max) * 100) : null %}
 
-      <div class="col-12 col-md-6 col-lg-4">
-        <div class="card shadow-sm border-0 h-100">
-          {% if ev.imageCouvertureEvent %}
-            <img src="{{ ev.imageCouvertureEvent }}" class="card-img-top" style="height:170px; object-fit:cover;" alt="cover">
-          {% endif %}
+      <div class="col-12 col-md-6 col-xl-4 mb-4 evdemi-item"
+           data-search="{{ (ev.titreEvent ~ ' ' ~ ev.villeEvent ~ ' ' ~ ev.nomLieuEvent)|lower }}"
+           data-has-pending="{{ pending > 0 ? '1' : '0' }}">
+
+        <div class="card border-0 shadow-sm h-100 evdemi-card">
+
+          <div class="evdemi-cover">
+            {% if ev.imageCouvertureEvent %}
+              <img src="{{ ev.imageCouvertureEvent }}" alt="cover">
+            {% else %}
+              <div class="evdemi-cover-fallback">
+                <i class="fas fa-image"></i>
+              </div>
+            {% endif %}
+
+            <div class="evdemi-badges">
+              {% if pending > 0 %}
+                <span class="badge badge-warning text-dark">
+                  <i class="fas fa-hourglass-half mr-1"></i> Pending {{ pending }}
+                </span>
+              {% else %}
+                <span class="badge badge-success">
+                  <i class="fas fa-check mr-1"></i> OK
+                </span>
+              {% endif %}
+
+              {% if max is not null %}
+                <span class="badge badge-dark">Max {{ max }}</span>
+              {% else %}
+                <span class="badge badge-light">Max ∞</span>
+              {% endif %}
+            </div>
+          </div>
 
           <div class="card-body">
+
             <div class="d-flex justify-content-between align-items-start">
-              <h5 class="card-title mb-2">{{ ev.titreEvent }}</h5>
-              {% if pending > 0 %}
-                <span class="badge bg-warning text-dark">Pending {{ pending }}</span>
-              {% else %}
-                <span class="badge bg-success">OK</span>
+              <h5 class="evdemi-card-title mb-2">{{ ev.titreEvent }}</h5>
+
+              <div class="evdemi-mini">
+                <span class="mini-pill mini-acc"><i class="fas fa-check mr-1"></i>{{ accepted }}</span>
+                <span class="mini-pill mini-ref"><i class="fas fa-times mr-1"></i>{{ refused }}</span>
+              </div>
+            </div>
+
+            <div class="evdemi-meta">
+              <div class="evdemi-meta-row">
+                <i class="fas fa-map-marker-alt"></i>
+                <span>{{ ev.villeEvent }}{% if ev.nomLieuEvent %} — {{ ev.nomLieuEvent }}{% endif %}</span>
+              </div>
+
+              <div class="evdemi-meta-row">
+                <i class="fas fa-calendar-alt"></i>
+                <span>{{ ev.dateDebutEvent|date('d/m/Y') }} → {{ ev.dateFinEvent|date('d/m/Y') }}</span>
+              </div>
+            </div>
+
+            <div class="evdemi-progress mt-3">
+              <div class="d-flex justify-content-between small text-muted mb-1">
+                <span>Places</span>
+                <span>
+                  {% if max is not null %}
+                    {{ accepted }}/{{ max }}
+                  {% else %}
+                    {{ accepted }}/∞
+                  {% endif %}
+                </span>
+              </div>
+
+              <div class="progress evdemi-bar">
+                {% if pct is not null %}
+                  <div class="progress-bar" role="progressbar" style="width: {{ pct > 100 ? 100 : pct }}%;"></div>
+                {% else %}
+                  <div class="progress-bar" role="progressbar" style="width: 25%;"></div>
+                {% endif %}
+              </div>
+
+              {% if max is not null %}
+                <div class="small text-muted mt-1">
+                  Restant: {{ (max - accepted) < 0 ? 0 : (max - accepted) }}
+                </div>
               {% endif %}
             </div>
 
-            <div class="text-muted small mb-2">
-              <i class="bi bi-geo-alt"></i> {{ ev.villeEvent }} — {{ ev.nomLieuEvent }}
-            </div>
+          </div>
 
-            <div class="text-muted small mb-3">
-              <i class="bi bi-calendar-event"></i>
-              {{ ev.dateDebutEvent|date('d/m/Y') }} → {{ ev.dateFinEvent|date('d/m/Y') }}
-            </div>
-
-            <div class="d-flex gap-2 flex-wrap mb-3">
-              <span class="badge bg-info text-dark">Acceptés: {{ accepted }}</span>
-              <span class="badge bg-secondary">Refusés: {{ refused }}</span>
-              {% if ev.nbParticipantsMaxEvent is not null %}
-                <span class="badge bg-dark">Max: {{ ev.nbParticipantsMaxEvent }}</span>
-              {% endif %}
-            </div>
-
-            <a href="{{ path('admin_evenement_demandes_show', {id: ev.id}) }}" class="btn btn-primary btn-sm">
-              Gérer les demandes
+          <div class="card-footer bg-white border-0 pt-0 pb-3">
+            <a href="{{ path('admin_evenement_demandes_show', {id: ev.id}) }}"
+               class="btn btn-primary btn-sm evdemi-btn">
+              <i class="fas fa-cog mr-1"></i> Gérer les demandes
             </a>
           </div>
+
         </div>
       </div>
     {% endfor %}
   </div>
 
 </div>
+
+<script>
+  (function () {
+    const input = document.getElementById('eventsSearch');
+    const filter = document.getElementById('statusFilter');
+    const items = document.querySelectorAll('.evdemi-item');
+
+    function apply() {
+      const q = (input?.value || '').toLowerCase().trim();
+      const mode = (filter?.value || 'all');
+
+      items.forEach(card => {
+        const hay = (card.getAttribute('data-search') || '');
+        const hasPending = card.getAttribute('data-has-pending') === '1';
+
+        const matchText = !q || hay.includes(q);
+        const matchFilter =
+          mode === 'all' ||
+          (mode === 'pending' && hasPending) ||
+          (mode === 'ok' && !hasPending);
+
+        card.style.display = (matchText && matchFilter) ? '' : 'none';
+      });
+    }
+
+    if (input) input.addEventListener('input', apply);
+    if (filter) filter.addEventListener('change', apply);
+    apply();
+  })();
+</script>
 {% endblock %}

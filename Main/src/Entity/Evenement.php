@@ -32,9 +32,10 @@ class Evenement
    #[Assert\Length(
     min: 5,
     max: 120,
-    minMessage: "Le titre doit contenir au moins {{ 5 }} caractères.",
-    maxMessage: "Le titre ne doit pas dépasser {{ 5 }} caractères."
-   )]
+    minMessage: "Le titre doit contenir au moins {{ limit }} caractères.",
+    maxMessage: "Le titre ne doit pas dépasser {{ limit }} caractères."
+ )]
+
     private ?string $titre_event = null;
 
 
@@ -58,14 +59,15 @@ private ?string $type_event = null;
 
 
     #[ORM\Column(length: 255)]
-#[Assert\NotBlank(message: "La description est obligatoire.")]
-#[Assert\Length(
+ #[Assert\NotBlank(message: "La description est obligatoire.")]
+ #[Assert\Length(
     min: 20,
     max: 255,
-    minMessage: "La description doit contenir au moins {{ 10 }} caractères.",
-    maxMessage: "La description ne doit pas dépasser {{ 10 }} caractères."
-)]
-private ?string $description_event = null;
+    minMessage: "La description doit contenir au moins {{ limit }} caractères.",
+    maxMessage: "La description ne doit pas dépasser {{ limit }} caractères."
+ )]
+
+  private ?string $description_event = null;
 
 
    #[ORM\Column(length: 255)]
@@ -264,22 +266,23 @@ private ?string $visibilite_event = null;
         return $this->date_debut_event;
     }
 
-    public function setDateDebutEvent(\DateTimeInterface $date_debut_event): static
-    {
-        $this->date_debut_event = $date_debut_event;
-        return $this;
-    }
+    public function setDateDebutEvent(?\DateTimeInterface $date_debut_event): static
+{
+    $this->date_debut_event = $date_debut_event;
+    return $this;
+}
+
 
     public function getDateFinEvent(): ?\DateTimeInterface
     {
         return $this->date_fin_event;
     }
 
-    public function setDateFinEvent(\DateTimeInterface $date_fin_event): static
-    {
-        $this->date_fin_event = $date_fin_event;
-        return $this;
-    }
+    public function setDateFinEvent(?\DateTimeInterface $date_fin_event): static
+{
+    $this->date_fin_event = $date_fin_event;
+    return $this;
+}
 
     public function getNomLieuEvent(): ?string
     {
@@ -330,11 +333,12 @@ private ?string $visibilite_event = null;
         return $this->inscription_obligatoire_event;
     }
 
-    public function setInscriptionObligatoireEvent(bool $inscription_obligatoire_event): static
-    {
-        $this->inscription_obligatoire_event = $inscription_obligatoire_event;
-        return $this;
-    }
+    public function setInscriptionObligatoireEvent(?bool $inscription_obligatoire_event): static
+{
+    $this->inscription_obligatoire_event = $inscription_obligatoire_event;
+    return $this;
+}
+
 
     public function getDateLimiteInscriptionEvent(): ?\DateTimeInterface
     {

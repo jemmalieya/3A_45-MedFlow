@@ -190,6 +190,7 @@ public function demandesShow(Evenement $evenement): Response
     return $this->render('admin/demandesEvents_show.html.twig', [
         'evenement' => $evenement,
         'demandes' => $demandes,
+        
         'acceptedCount' => $evenement->countAcceptedDemandes(),
         'pendingCount' => $evenement->countDemandesByStatus('pending'),
     ]);

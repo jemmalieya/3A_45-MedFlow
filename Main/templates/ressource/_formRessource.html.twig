@@ -1,4 +1,32 @@
-{{ form_start(form) }}
+{# ressource/_formRessource.html.twig #}
+
+{% set submitted = form.vars.submitted %}
+
+{# helper: ajoute is-invalid / is-valid selon erreurs #}
+{% macro input_class(field, base) %}
+  {% set cls = base %}
+  {% if field.vars.submitted %}
+    {% if field.vars.errors|length > 0 %}
+      {% set cls = cls ~ ' is-invalid' %}
+    {% else %}
+      {% set cls = cls ~ ' is-valid' %}
+    {% endif %}
+  {% endif %}
+  {{ cls }}
+{% endmacro %}
+
+{% import _self as ui %}
+
+{{ form_start(form, { attr: { novalidate: 'novalidate' } }) }}
+
+{# ✅ IMPORTANT: erreurs globales (Callback, etc.) #}
+{% if submitted and form.vars.errors|length > 0 %}
+  <div class="alert alert-danger">
+    <i class="fas fa-exclamation-triangle mr-1"></i>
+    Veuillez corriger les erreurs du formulaire.
+    {{ form_errors(form) }}
+  </div>
+{% endif %}
 
 {# ===== Header / Hero ===== #}
 <div class="card shadow-sm border-0 mb-4 res-hero">
@@ -21,10 +49,8 @@
   </div>
 </div>
 
-
 {# ===== Card principale ===== #}
 <div class="card shadow-sm border-0 mb-4">
-
   <div class="card-header bg-white border-0 pb-0">
     <h6 class="font-weight-bold text-primary mb-1">
       <i class="fas fa-info-circle mr-1"></i> Informations générales
@@ -38,16 +64,16 @@
       <div class="col-md-6">
         <div class="form-group">
           <label class="res-label"><i class="fas fa-calendar-alt mr-1"></i> Événement</label>
-          {{ form_widget(form.evenement, {'attr': {'class': 'form-control'}}) }}
-          {{ form_errors(form.evenement) }}
+          {{ form_widget(form.evenement, {'attr': {'class': ui.input_class(form.evenement, 'form-control')}}) }}
+          {% if submitted %}{{ form_errors(form.evenement) }}{% endif %}
         </div>
       </div>
 
       <div class="col-md-6">
         <div class="form-group">
           <label class="res-label"><i class="fas fa-tags mr-1"></i> Type</label>
-          {{ form_widget(form.typeRessource, {'attr': {'class': 'form-control js-type-ressource'}}) }}
-          {{ form_errors(form.typeRessource) }}
+          {{ form_widget(form.typeRessource, {'attr': {'class': ui.input_class(form.typeRessource, 'form-control js-type-ressource')}}) }}
+          {% if submitted %}{{ form_errors(form.typeRessource) }}{% endif %}
           <small class="text-muted">Le formulaire affiche seulement les champs utiles.</small>
         </div>
       </div>
@@ -57,16 +83,16 @@
       <div class="col-md-6">
         <div class="form-group">
           <label class="res-label"><i class="fas fa-pen mr-1"></i> Nom de la ressource</label>
-          {{ form_widget(form.nomRessource, {'attr': {'class': 'form-control', 'placeholder': 'Ex: Agenda PDF / Badge / Projecteur'}}) }}
-          {{ form_errors(form.nomRessource) }}
+          {{ form_widget(form.nomRessource, {'attr': {'class': ui.input_class(form.nomRessource, 'form-control'), 'placeholder': 'Ex: Agenda PDF / Badge / Projecteur'}}) }}
+          {% if submitted %}{{ form_errors(form.nomRessource) }}{% endif %}
         </div>
       </div>
 
       <div class="col-md-6">
         <div class="form-group">
           <label class="res-label"><i class="fas fa-folder-open mr-1"></i> Catégorie</label>
-          {{ form_widget(form.categorieRessource, {'attr': {'class': 'form-control', 'placeholder': 'Ex: Document / Matériel / Stock'}}) }}
-          {{ form_errors(form.categorieRessource) }}
+          {{ form_widget(form.categorieRessource, {'attr': {'class': ui.input_class(form.categorieRessource, 'form-control'), 'placeholder': 'Ex: Document / Matériel / Stock'}}) }}
+          {% if submitted %}{{ form_errors(form.categorieRessource) }}{% endif %}
         </div>
       </div>
     </div>
@@ -94,7 +120,8 @@
         </div>
       </div>
       <div class="form-group">
-        {{ form_row(form.cheminFichierRessource, {'attr': {'class':'form-control', 'placeholder':'Ex: /uploads/agenda.pdf'}}) }}
+        {{ form_widget(form.cheminFichierRessource, {'attr': {'class': ui.input_class(form.cheminFichierRessource, 'form-control'), 'placeholder':'Ex: /uploads/agenda.pdf'}}) }}
+        {% if submitted %}{{ form_errors(form.cheminFichierRessource) }}{% endif %}
       </div>
     </div>
 
@@ -107,7 +134,8 @@
         </div>
       </div>
       <div class="form-group">
-        {{ form_row(form.urlExterneRessource, {'attr': {'class':'form-control', 'placeholder':'https://...'}}) }}
+        {{ form_widget(form.urlExterneRessource, {'attr': {'class': ui.input_class(form.urlExterneRessource, 'form-control'), 'placeholder':'https://...'}}) }}
+        {% if submitted %}{{ form_errors(form.urlExterneRessource) }}{% endif %}
       </div>
     </div>
 
@@ -123,25 +151,29 @@
       <div class="row">
         <div class="col-md-4">
           <div class="form-group">
-            {{ form_row(form.quantiteDisponibleRessource, {'attr': {'class':'form-control', 'placeholder':'Ex: 50', 'min':0}}) }}
+            {{ form_widget(form.quantiteDisponibleRessource, {'attr': {'class': ui.input_class(form.quantiteDisponibleRessource, 'form-control'), 'placeholder':'Ex: 50', 'min':0}}) }}
+            {% if submitted %}{{ form_errors(form.quantiteDisponibleRessource) }}{% endif %}
           </div>
         </div>
 
         <div class="col-md-4">
           <div class="form-group">
-            {{ form_row(form.uniteRessource, {'attr': {'class':'form-control', 'placeholder':'Ex: pcs'}}) }}
+            {{ form_widget(form.uniteRessource, {'attr': {'class': ui.input_class(form.uniteRessource, 'form-control'), 'placeholder':'Ex: pcs'}}) }}
+            {% if submitted %}{{ form_errors(form.uniteRessource) }}{% endif %}
           </div>
         </div>
 
         <div class="col-md-4">
           <div class="form-group">
-            {{ form_row(form.fournisseurRessource, {'attr': {'class':'form-control', 'placeholder':'Ex: Fournisseur X'}}) }}
+            {{ form_widget(form.fournisseurRessource, {'attr': {'class': ui.input_class(form.fournisseurRessource, 'form-control'), 'placeholder':'Ex: Fournisseur X'}}) }}
+            {% if submitted %}{{ form_errors(form.fournisseurRessource) }}{% endif %}
           </div>
         </div>
       </div>
 
       <div class="form-group">
-        {{ form_row(form.coutEstimeRessource, {'attr': {'class':'form-control', 'placeholder':'Ex: 120.500'}}) }}
+        {{ form_widget(form.coutEstimeRessource, {'attr': {'class': ui.input_class(form.coutEstimeRessource, 'form-control'), 'placeholder':'Ex: 120.500'}}) }}
+        {% if submitted %}{{ form_errors(form.coutEstimeRessource) }}{% endif %}
         <small class="text-muted">Optionnel — utile pour le budget de l’événement.</small>
       </div>
     </div>
@@ -152,7 +184,8 @@
       <i class="fas fa-sticky-note mr-1"></i> Notes
     </h6>
     <small class="text-muted d-block mb-2">Optionnel : précise ce qui manque / comment l’obtenir.</small>
-    {{ form_row(form.notesRessource, {'attr': {'class':'form-control', 'rows':4, 'placeholder':'Ex: À imprimer avant le 12/02, demander à …'}}) }}
+    {{ form_widget(form.notesRessource, {'attr': {'class': ui.input_class(form.notesRessource, 'form-control'), 'rows':4, 'placeholder':'Ex: À imprimer avant le 12/02, demander à …'}}) }}
+    {% if submitted %}{{ form_errors(form.notesRessource) }}{% endif %}
 
   </div>
 
@@ -160,12 +193,14 @@
     <a href="{{ path('admin_ressource_index') }}" class="btn btn-light mr-2">
       <i class="fas fa-times mr-1"></i> Annuler
     </a>
-    <button class="btn btn-primary res-btn">
+    <button class="btn btn-primary res-btn" type="submit">
       <i class="fas fa-save mr-1"></i> Enregistrer
     </button>
   </div>
 </div>
 
+{# ✅ render le reste (ex: _token) #}
+{{ form_rest(form) }}
 {{ form_end(form) }}
 
 {# ===== JS (affichage dynamique selon type) ===== #}
