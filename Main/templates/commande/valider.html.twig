@@ -1,115 +1,318 @@
 {% extends 'base.html.twig' %}
-
 {% block title %}Valider ma commande{% endblock %}
 
 {% block body %}
 <div class="container my-5">
-    <div class="row justify-content-center">
-        <div class="col-lg-8">
-            
-            {# En-tête #}
-            <div class="text-center mb-4">
-                <i class="bi bi-cart-check" style="font-size: 4rem; color: #667eea;"></i>
-                <h2 class="mt-3">Confirmer votre commande</h2>
-                <p class="text-muted">Vérifiez les détails avant de valider</p>
-            </div>
+  <div class="row justify-content-center">
+    <div class="col-lg-9">
 
-            {# Récapitulatif des produits #}
-            <div class="card shadow-sm mb-4">
-                <div class="card-header text-white" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
-                    <h5 class="mb-0"><i class="bi bi-list-check"></i> Récapitulatif</h5>
+      <div class="pay-hero mb-4">
+        <div class="pay-hero__icon"><i class="bi bi-bag-check"></i></div>
+        <div>
+          <h2 class="mb-1">Finaliser votre commande</h2>
+          <p class="mb-0 opacity-75">Vérifiez votre panier puis confirmez le paiement sécurisé.</p>
+        </div>
+        <div class="ms-auto text-end d-none d-md-block">
+          <div class="small opacity-75">Total à payer</div>
+          <div class="pay-total">{{ total|number_format(2, '.', '') }} <span class="dt">DT</span></div>
+        </div>
+      </div>
+
+      <div class="card border-0 shadow-sm mb-4 pay-card">
+        <div class="card-header pay-card__header">
+          <div class="d-flex align-items-center gap-2">
+            <i class="bi bi-receipt-cutoff"></i>
+            <strong>Récapitulatif</strong>
+          </div>
+          <span class="badge rounded-pill text-bg-light">Paiement sécurisé</span>
+        </div>
+
+        <div class="card-body p-0">
+          <div class="table-responsive">
+            <table class="table table-hover mb-0 align-middle">
+              <thead class="table-light">
+                <tr>
+                  <th>Produit</th>
+                  <th class="text-center">Qté</th>
+                  <th class="text-end">Prix</th>
+                  <th class="text-end">Sous-total</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for produit in produits %}
+                  <tr>
+                    <td>
+                      <div class="d-flex align-items-center">
+                        <img src="{{ produit.imageProduit }}" alt="{{ produit.nomProduit }}" class="thumb me-3">
+                        <div>
+                          <div class="fw-semibold">{{ produit.nomProduit }}</div>
+                          <div class="text-muted small">Produit authentique • Livraison rapide</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td class="text-center">
+                      <span class="qty-pill">{{ produit.quantite_panier }}</span>
+                    </td>
+                    <td class="text-end">{{ produit.prixProduit|number_format(2, '.', '') }} DT</td>
+                    <td class="text-end fw-bold">
+                      {{ (produit.prixProduit * produit.quantite_panier)|number_format(2, '.', '') }} DT
+                    </td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+              <tfoot class="table-light">
+                <tr>
+                  <td colspan="3" class="text-end fw-bold fs-5">Total :</td>
+                  <td class="text-end fw-bold fs-5 text-success">
+                    {{ total|number_format(2, '.', '') }} DT
+                  </td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div class="card border-0 shadow-sm pay-card">
+        <div class="card-body">
+          <div class="secure-row mb-3">
+            <div class="secure-badge"><i class="bi bi-shield-check"></i></div>
+            <div>
+              <div class="fw-bold">Paiement sécurisé</div>
+              <div class="text-muted small">Vos informations sont protégées. Confirmation en 1 clic.</div>
+            </div>
+          </div>
+
+          <div class="terms-pro mb-3" id="termsBox">
+            <div class="d-flex align-items-start gap-3">
+              <div class="terms-icon"><i class="bi bi-file-earmark-text"></i></div>
+              <div class="w-100">
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                  <div class="fw-semibold">Conditions d’achat</div>
+                  <span class="small text-muted">Obligatoire</span>
                 </div>
-                <div class="card-body p-0">
-                    <div class="table-responsive">
-                        <table class="table table-hover mb-0">
-                            <thead class="table-light">
-                                <tr>
-                                    <th>Produit</th>
-                                    <th class="text-center">Quantité</th>
-                                    <th class="text-end">Prix unitaire</th>
-                                    <th class="text-end">Sous-total</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for produit in produits %}
-                                <tr>
-                                    <td>
-                                        <div class="d-flex align-items-center">
-                                            <img src="{{ produit.imageProduit }}" alt="{{ produit.nomProduit }}" 
-                                                 style="width: 50px; height: 50px; object-fit: cover; border-radius: 8px;" class="me-3">
-                                            <span class="fw-semibold">{{ produit.nomProduit }}</span>
-                                        </div>
-                                    </td>
-                                    <td class="text-center">
-                                        <span class="badge bg-primary rounded-pill">{{ produit.quantite_panier }}</span>
-                                    </td>
-                                    <td class="text-end">{{ produit.prixProduit|number_format(2, '.', '') }} Dt</td>
-                                    <td class="text-end fw-bold">{{ (produit.prixProduit * produit.quantite_panier)|number_format(2, '.', '') }} Dt</td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                            <tfoot class="table-light">
-                                <tr>
-                                    <td colspan="3" class="text-end fw-bold fs-5">Total :</td>
-                                    <td class="text-end fw-bold fs-5 text-success">{{ total|number_format(2, '.', '') }} Dt</td>
-                                </tr>
-                            </tfoot>
-                        </table>
-                    </div>
+
+                <div class="terms-actions mt-2">
+                  <button type="button" class="btn btn-sm btn-outline-dark" id="openTermsBtn">
+                    <i class="bi bi-eye"></i> Lire
+                  </button>
+
+                  <label class="terms-check ms-auto">
+                    <input type="checkbox" id="acceptTerms">
+                    <span class="check-ui">
+                      <i class="bi bi-check2"></i>
+                    </span>
+                    <span>J’ai lu et j’accepte</span>
+                  </label>
                 </div>
+
+                <div class="small text-muted mt-2">
+                  Astuce : vous pouvez lire les conditions avant de continuer.
+                </div>
+              </div>
             </div>
+          </div>
 
-            {# Boutons d'action #}
-            <div class="d-flex gap-3 justify-content-between">
-                <a href="{{ path('front_produit_index') }}" class="btn btn-outline-secondary btn-lg">
-                    <i class="bi bi-arrow-left"></i> Continuer mes achats
-                </a>
-                
-                <button type="button" class="btn btn-success btn-lg" onclick="confirmerCommande()">
-                    <i class="bi bi-check-circle"></i> Confirmer la commande
-                </button>
-            </div>
+          <div class="d-flex gap-3 justify-content-between flex-wrap">
+            <a href="{{ path('front_produit_index') }}" class="btn btn-outline-secondary btn-lg">
+              <i class="bi bi-arrow-left"></i> Continuer mes achats
+            </a>
 
-        </div>
-    </div>
-</div>
-
-{# Modal de confirmation #}
-<div id="confirmModal" class="confirm-modal">
-    <div class="confirm-modal-content">
-        <div class="confirm-modal-header">
-            <i class="bi bi-question-circle-fill text-warning"></i>
-            <h5>Confirmer votre commande</h5>
-        </div>
-        <div class="confirm-modal-body">
-            <p>Voulez-vous vraiment confirmer cette commande d'un montant de <strong>{{ total|number_format(2, '.', '') }} Dt</strong> ?</p>
-            <p class="text-muted mb-0">Cette action est irréversible.</p>
-        </div>
-        <div class="confirm-modal-footer">
-            <button class="btn btn-secondary" onclick="fermerModal()">
-                <i class="bi bi-x-circle"></i> Annuler
+            <button type="button" class="btn btn-pay btn-lg" id="openPayModalBtn" disabled>
+              <i class="bi bi-lock-fill"></i> Confirmer et payer
             </button>
-            <form method="post" action="{{ path('commande_confirmer') }}" id="formConfirm">
-                <button type="submit" class="btn btn-success">
-                    <i class="bi bi-check-circle"></i> Oui, confirmer
-                </button>
-            </form>
+          </div>
         </div>
+      </div>
+
     </div>
+  </div>
 </div>
 
-{% endblock %}
+{# Modal Terms #}
+<div class="modal fade" id="termsModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content modal-soft">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="bi bi-file-earmark-text me-2"></i>Termes et conditions</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="terms-text">
+          <h6>Résumé</h6>
+          <ul>
+            <li>Vous confirmez que vos informations sont correctes.</li>
+            <li>La commande est créée uniquement après paiement confirmé.</li>
+            <li>Les délais de livraison sont indicatifs selon disponibilité.</li>
+            <li>En cas d’annulation, vous pouvez réessayer plus tard.</li>
+          </ul>
+          <hr>
+          <p class="mb-0 small text-muted">Tu peux remplacer ce texte par ton vrai contenu.</p>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-dark" data-bs-dismiss="modal"><i class="bi bi-check2"></i> OK</button>
+      </div>
+    </div>
+  </div>
+</div>
 
+{# Modal confirm paiement #}
+<div class="modal fade" id="payConfirmModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content modal-soft">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="bi bi-question-circle text-warning me-2"></i>Confirmer le paiement</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="confirm-amount">
+          <div class="small text-muted">Montant total</div>
+          <div class="fw-bold fs-3">{{ total|number_format(2, '.', '') }} <span class="dt">DT</span></div>
+          <div class="small text-muted mt-2">Après confirmation, vous serez redirigé vers la page sécurisée de paiement.</div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline-secondary" data-bs-dismiss="modal">Annuler</button>
 
+        <form method="post" action="{{ path('commande_stripe_checkout') }}">
+          <button type="submit" class="btn btn-pay">
+            <i class="bi bi-lock-fill"></i> Oui, continuer
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
 
+<style>
+  .pay-hero{
+    border-radius: 20px;
+    padding: 20px 22px;
+    background: linear-gradient(135deg, rgba(16,185,129,.14), rgba(99,102,241,.12));
+    border: 1px solid rgba(0,0,0,.06);
+    display:flex;
+    align-items:center;
+    gap:14px;
+  }
+  .pay-hero__icon{
+    width:64px;height:64px;border-radius:18px;
+    display:flex;align-items:center;justify-content:center;
+    background: rgba(16,185,129,.16);
+    border:1px solid rgba(16,185,129,.25);
+  }
+  .pay-hero__icon i{font-size:1.9rem;color:#059669;}
+  .pay-total{font-weight:800;font-size:1.55rem;}
+  .dt{opacity:.8;font-weight:700;}
+  .pay-card{border-radius:18px; overflow:hidden;}
+  .pay-card__header{
+    padding: 14px 16px;
+    background: linear-gradient(135deg, #111827, #0f172a);
+    color:#fff; display:flex; justify-content:space-between; align-items:center;
+  }
+  .thumb{
+    width: 58px;height:58px;border-radius:14px;object-fit:cover;
+    border:1px solid rgba(0,0,0,.08);
+  }
+  .qty-pill{
+    display:inline-flex; min-width:38px; justify-content:center;
+    padding: 6px 10px; border-radius:999px;
+    background: rgba(99,102,241,.12);
+    border: 1px solid rgba(99,102,241,.25);
+    font-weight:700;
+  }
+  .secure-row{display:flex;gap:12px;align-items:flex-start;}
+  .secure-badge{
+    width:46px;height:46px;border-radius:16px;
+    display:flex;align-items:center;justify-content:center;
+    background: rgba(16,185,129,.16);
+    border:1px solid rgba(16,185,129,.25);
+    flex:0 0 auto;
+  }
+  .secure-badge i{color:#059669;font-size:1.25rem;}
 
+  .terms-pro{
+    border-radius:18px;
+    border:1px solid rgba(0,0,0,.10);
+    background: linear-gradient(135deg, rgba(0,0,0,.02), rgba(0,0,0,.00));
+    padding: 16px;
+    transition: transform .2s ease, box-shadow .2s ease;
+  }
+  .terms-pro.attention{
+    box-shadow: 0 12px 30px rgba(239,68,68,.18);
+    border-color: rgba(239,68,68,.35);
+    transform: translateY(-1px);
+  }
+  .terms-icon{
+    width:42px;height:42px;border-radius:14px;
+    display:flex;align-items:center;justify-content:center;
+    background: rgba(17,24,39,.08);
+    border:1px solid rgba(17,24,39,.12);
+    flex:0 0 auto;
+  }
+  .terms-actions{display:flex;align-items:center;gap:12px;}
+  .terms-check{display:flex;align-items:center;gap:10px;cursor:pointer;user-select:none;}
+  .terms-check input{display:none;}
+  .check-ui{
+    width:34px;height:34px;border-radius:12px;
+    display:flex;align-items:center;justify-content:center;
+    border:1px solid rgba(0,0,0,.18);
+    background:#fff;
+    transition: .2s;
+  }
+  .check-ui i{opacity:0; transform: scale(.6); transition:.2s;}
+  .terms-check input:checked + .check-ui{
+    background: #059669;
+    border-color:#059669;
+  }
+  .terms-check input:checked + .check-ui i{
+    opacity:1; transform: scale(1); color:#fff;
+  }
 
-{% block stylesheets %}
-  {{ parent() }}
-  <link rel="stylesheet" href="{{ asset('assets/css/commande.css') }}">
-{% endblock %}
+  .btn-pay{
+    background: linear-gradient(135deg, #10b981, #059669);
+    border:0;
+    color:#fff;
+    border-radius:14px;
+    padding: 12px 18px;
+    box-shadow: 0 10px 22px rgba(16,185,129,.22);
+    transition: transform .15s ease, box-shadow .15s ease;
+  }
+  .btn-pay:disabled{opacity:.55; box-shadow:none;}
+  .btn-pay:not(:disabled):hover{transform: translateY(-1px); box-shadow: 0 14px 28px rgba(16,185,129,.28);}
+  .modal-soft{border-radius:18px; overflow:hidden;}
+</style>
 
-{% block javascripts %}
-  {{ parent() }}
-  <script src="{{ asset('assets/js/commande.js') }}"></script>
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  const accept = document.getElementById("acceptTerms");
+  const payBtn = document.getElementById("openPayModalBtn");
+  const payModalEl = document.getElementById("payConfirmModal");
+  const termsBox = document.getElementById("termsBox");
+
+  const termsModalEl = document.getElementById("termsModal");
+  const openTermsBtn = document.getElementById("openTermsBtn");
+
+  if (!accept || !payBtn || !payModalEl) return;
+
+  const payModal = new bootstrap.Modal(payModalEl);
+  const termsModal = new bootstrap.Modal(termsModalEl);
+
+  const refresh = () => { payBtn.disabled = !accept.checked; };
+
+  refresh();
+  accept.addEventListener("change", refresh);
+
+  openTermsBtn.addEventListener("click", () => termsModal.show());
+
+  payBtn.addEventListener("click", () => {
+    if (!accept.checked) {
+      termsBox.classList.add("attention");
+      setTimeout(() => termsBox.classList.remove("attention"), 700);
+      return;
+    }
+    payModal.show();
+  });
+});
+</script>
 {% endblock %}

@@ -51,8 +51,8 @@ class ProduitType extends AbstractType
             ])
             ->add('categorie_produit', ChoiceType::class, [
                 'label' => 'Catégorie',
+                'placeholder' => 'Sélectionner une catégorie',
                 'choices' => [
-                    'Sélectionner une catégorie' => '',
                     'Médicaments' => 'Médicaments',
                     'Vitamines & Compléments' => 'Vitamines & Compléments',
                     'Soins & Hygiène' => 'Soins & Hygiène',
@@ -66,16 +66,21 @@ class ProduitType extends AbstractType
                 ],
                 'attr' => ['class' => 'form-select']
             ])
+
+            // ✅ ICI LA VRAIE CORRECTION
             ->add('status_produit', ChoiceType::class, [
-                'label' => 'Statut',
+                'label' => false,
                 'choices' => [
                     'Disponible' => 'Disponible',
-                    'Rupture de stock' => 'Rupture',
+                    'Rupture' => 'Rupture',
                     'Indisponible' => 'Indisponible',
                 ],
-                'attr' => ['class' => 'form-select d-none'], // ✅ Ajout de d-none
-                'label_attr' => ['class' => 'd-none'] // ✅ Cache aussi le label
+                'expanded' => true,   // ✅ radios
+                'multiple' => false,  // ✅ une seule valeur
+                'data' => $options['data']->getStatusProduit() ?? 'Disponible', // ✅ default
+                'attr' => ['class' => 'status-radio-group'],
             ])
+
             ->add('image_produit', UrlType::class, [
                 'label' => 'URL de l\'image',
                 'attr' => [

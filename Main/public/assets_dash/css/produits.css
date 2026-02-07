@@ -87,6 +87,15 @@
     position: absolute;
     opacity: 0;
 }
+body, 
+.card, 
+.table, 
+.table td, 
+.table th,
+.stat-card,
+.product-row {
+  color: #111827 !important; /* noir élégant */
+}
 
 .status-option label {
     display: block;
