@@ -1,6 +1,7 @@
 <?php
 
 namespace App\Controller;
+use App\Service\AdminBIService;
 
 use App\Entity\Commande;
 use App\Entity\LigneCommande;
@@ -374,5 +375,23 @@ class CommandeController extends AbstractController
                 ),
             ]
         );
+
+
+        
     }
+
+
+#[Route('/admin/bi', name: 'admin_bi_dashboard', methods: ['GET'])]
+public function bi(AdminBIService $bi, Request $request): Response
+{
+    $days = (int)($request->query->get('days', 30));
+    if (!in_array($days, [7, 30, 90], true)) $days = 30;
+
+    $data = $bi->buildDashboard($days);
+
+    return $this->render('admin/bi_dashboard.html.twig', $data);
+}
+
+
+    
 }
