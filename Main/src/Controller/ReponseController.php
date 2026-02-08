@@ -61,7 +61,7 @@ public function index(EntityManagerInterface $em): Response
     /**
      * ✍️ Répondre à une réclamation
      */
-    #[Route('/repondre/{id}', name: 'admin_reponse_new')]
+    #[Route('/repondre/{id}', name: 'admin_reponse_new', methods: ['GET', 'POST'])]
     public function repondre(
         Reclamation $reclamation,
         Request $request,
