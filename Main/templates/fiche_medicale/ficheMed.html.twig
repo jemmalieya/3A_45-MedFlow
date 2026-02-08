@@ -328,6 +328,13 @@
                         <div class="card-header py-3 d-flex justify-content-between align-items-center">
                             <h6 class="m-0 font-weight-bold text-white">Appointments List</h6>
                             <div class="d-flex gap-2" style="gap: 10px;">
+                                <select id="appointmentsSortSelect" class="form-control form-control-sm" style="max-width: 220px;">
+                                    <option value="none">Sort...</option>
+                                    <option value="date_asc">Date ↑ (Oldest)</option>
+                                    <option value="date_desc">Date ↓ (Newest)</option>
+                                    <option value="status_az">Status A-Z</option>
+                                    <option value="status_za">Status Z-A</option>
+                                </select>
                                 <input type="text" id="searchAppointments" class="form-control form-control-sm" style="max-width: 250px; border: 2px solid white;" placeholder="🔍 Search appointments...">
                             </div>
                         </div>
@@ -486,6 +493,13 @@
                         <div class="card-header py-3 d-flex justify-content-between align-items-center">
                             <h6 class="m-0 font-weight-bold text-white">Medical Files List</h6>
                             <div class="d-flex gap-2" style="gap: 10px;">
+                                <select id="medicalFilesSortSelect" class="form-control form-control-sm" style="max-width: 220px;">
+                                    <option value="none">Sort...</option>
+                                    <option value="date_asc">Date ↑ (Oldest)</option>
+                                    <option value="date_desc">Date ↓ (Newest)</option>
+                                    <option value="diagnostic_az">Diagnostic A-Z</option>
+                                    <option value="diagnostic_za">Diagnostic Z-A</option>
+                                </select>
                                 <input type="text" id="searchMedicalFiles" class="form-control form-control-sm" style="max-width: 250px; border: 2px solid white;" placeholder="🔍 Search medical files...">
                             </div>
                         </div>
@@ -760,34 +774,160 @@
             if (prescSearchInput) prescSearchInput.addEventListener('input', renderPrescTable);
         }
 
-        // ---- Generic Table Search (Appointments, Medical Files) ----
-        function setupTableSearchOnlyMain(searchInputId) {
-            var searchInput = document.getElementById(searchInputId);
-            if (!searchInput) return;
-            var card = searchInput.closest('.card');
-            if (!card) return;
-            var table = card.querySelector('.table');
-            if (!table) return;
-            var tbody = table.querySelector('tbody');
+
+        // ---- Appointments Table Sorting & Searching ----
+        // ---- Appointments Table Sorting & Searching (with detail rows) ----
+        (function() {
+            var sortSelect = document.getElementById('appointmentsSortSelect');
+            var searchInput = document.getElementById('searchAppointments');
+            if (!sortSelect && !searchInput) return;
+            var card = (sortSelect || searchInput).closest('.card');
+            var table = card ? card.querySelector('table') : null;
+            var tbody = table ? table.querySelector('tbody') : null;
             if (!tbody) return;
-            var mainRows = Array.from(tbody.querySelectorAll('tr.main-row')).map(function(row) { return row.cloneNode(true); });
+            // Store pairs of [mainRow, detailRow]
+            var rowPairs = [];
+            var trs = Array.from(tbody.querySelectorAll('tr.main-row'));
+            trs.forEach(function(mainRow) {
+                var appointmentId = mainRow.querySelector('.js-toggle-detail')?.getAttribute('data-appointment-id');
+                var detailRow = appointmentId ? tbody.querySelector('tr.detail-row[data-detail-for="' + appointmentId + '"]') : null;
+                rowPairs.push([
+                    mainRow.cloneNode(true),
+                    detailRow ? detailRow.cloneNode(true) : null
+                ]);
+            });
+            // Track open detail rows by appointmentId
+            var openDetails = {};
+            document.addEventListener('click', function(e) {
+                var btn = e.target.closest('.js-toggle-detail');
+                if (!btn) return;
+                var appointmentId = btn.getAttribute('data-appointment-id');
+                openDetails[appointmentId] = !openDetails[appointmentId];
+            });
             function renderTable() {
-                var query = searchInput.value.toLowerCase();
-                var rows = mainRows.map(function(row) { return row.cloneNode(true); });
+                var value = sortSelect ? sortSelect.value : 'none';
+                var query = searchInput ? searchInput.value.toLowerCase() : '';
+                var pairs = rowPairs.map(function(pair) {
+                    return [pair[0].cloneNode(true), pair[1] ? pair[1].cloneNode(true) : null];
+                });
+                // Filter
                 if (query) {
-                    rows = rows.filter(function(row) {
-                        return row.textContent.toLowerCase().includes(query);
+                    pairs = pairs.filter(function(pair) {
+                        return pair[0].textContent.toLowerCase().includes(query);
+                    });
+                }
+                // Sort
+                if (value === 'date_asc' || value === 'date_desc') {
+                    pairs.sort(function(a, b) {
+                        var aDate = a[0].cells[1] ? Date.parse(a[0].cells[1].textContent.replace(/\s/, 'T')) : 0;
+                        var bDate = b[0].cells[1] ? Date.parse(b[0].cells[1].textContent.replace(/\s/, 'T')) : 0;
+                        if (isNaN(aDate) || isNaN(bDate)) return 0;
+                        return value === 'date_asc' ? aDate - bDate : bDate - aDate;
+                    });
+                } else if (value === 'status_az' || value === 'status_za') {
+                    pairs.sort(function(a, b) {
+                        var aStatus = a[0].cells[2] ? a[0].cells[2].textContent.trim().toLowerCase() : '';
+                        var bStatus = b[0].cells[2] ? b[0].cells[2].textContent.trim().toLowerCase() : '';
+                        var cmp = aStatus.localeCompare(bStatus);
+                        return value === 'status_az' ? cmp : -cmp;
                     });
                 }
                 tbody.innerHTML = '';
-                rows.forEach(function(row) { tbody.appendChild(row); });
+                pairs.forEach(function(pair) {
+                    tbody.appendChild(pair[0]);
+                    // Only show detail row if open
+                    var appointmentId = pair[0].querySelector('.js-toggle-detail')?.getAttribute('data-appointment-id');
+                    if (pair[1] && appointmentId && openDetails[appointmentId]) {
+                        pair[1].classList.add('detail-row-open');
+                        tbody.appendChild(pair[1]);
+                    } else if (pair[1]) {
+                        pair[1].classList.remove('detail-row-open');
+                        tbody.appendChild(pair[1]);
+                    }
+                });
             }
-            searchInput.addEventListener('input', renderTable);
-        }
-        // Appointments: only main rows
-        setupTableSearchOnlyMain('searchAppointments');
-        // Medical files: only main rows
-        setupTableSearchOnlyMain('searchMedicalFiles');
+            if (sortSelect) sortSelect.addEventListener('change', renderTable);
+            if (searchInput) searchInput.addEventListener('input', renderTable);
+            // Re-render after DOMContentLoaded to ensure initial state
+            document.addEventListener('DOMContentLoaded', renderTable);
+        })();
+
+        // ---- Medical Files Table Sorting & Searching ----
+        // ---- Medical Files Table Sorting & Searching (with detail rows) ----
+        (function() {
+            var sortSelect = document.getElementById('medicalFilesSortSelect');
+            var searchInput = document.getElementById('searchMedicalFiles');
+            if (!sortSelect && !searchInput) return;
+            var card = (sortSelect || searchInput).closest('.card');
+            var table = card ? card.querySelector('table') : null;
+            var tbody = table ? table.querySelector('tbody') : null;
+            if (!tbody) return;
+            // Store pairs of [mainRow, detailRow]
+            var rowPairs = [];
+            var trs = Array.from(tbody.querySelectorAll('tr.main-row'));
+            trs.forEach(function(mainRow) {
+                var ficheId = mainRow.querySelector('.js-toggle-fiche-prescriptions')?.getAttribute('data-fiche-id');
+                var detailRow = ficheId ? tbody.querySelector('tr.fiche-detail-row[data-fiche-detail-id="' + ficheId + '"]') : null;
+                rowPairs.push([
+                    mainRow.cloneNode(true),
+                    detailRow ? detailRow.cloneNode(true) : null
+                ]);
+            });
+            // Track open detail rows by ficheId
+            var openDetails = {};
+            document.addEventListener('click', function(e) {
+                var btn = e.target.closest('.js-toggle-fiche-prescriptions');
+                if (!btn) return;
+                var ficheId = btn.getAttribute('data-fiche-id');
+                openDetails[ficheId] = !openDetails[ficheId];
+            });
+            function renderTable() {
+                var value = sortSelect ? sortSelect.value : 'none';
+                var query = searchInput ? searchInput.value.toLowerCase() : '';
+                var pairs = rowPairs.map(function(pair) {
+                    return [pair[0].cloneNode(true), pair[1] ? pair[1].cloneNode(true) : null];
+                });
+                // Filter
+                if (query) {
+                    pairs = pairs.filter(function(pair) {
+                        return pair[0].textContent.toLowerCase().includes(query);
+                    });
+                }
+                // Sort
+                if (value === 'date_asc' || value === 'date_desc') {
+                    pairs.sort(function(a, b) {
+                        var aDate = a[0].cells[8] ? Date.parse(a[0].cells[8].textContent.replace(/\s/, 'T')) : 0;
+                        var bDate = b[0].cells[8] ? Date.parse(b[0].cells[8].textContent.replace(/\s/, 'T')) : 0;
+                        if (isNaN(aDate) || isNaN(bDate)) return 0;
+                        return value === 'date_asc' ? aDate - bDate : bDate - aDate;
+                    });
+                } else if (value === 'diagnostic_az' || value === 'diagnostic_za') {
+                    pairs.sort(function(a, b) {
+                        var aDiag = a[0].cells[2] ? a[0].cells[2].textContent.trim().toLowerCase() : '';
+                        var bDiag = b[0].cells[2] ? b[0].cells[2].textContent.trim().toLowerCase() : '';
+                        var cmp = aDiag.localeCompare(bDiag);
+                        return value === 'diagnostic_az' ? cmp : -cmp;
+                    });
+                }
+                tbody.innerHTML = '';
+                pairs.forEach(function(pair) {
+                    tbody.appendChild(pair[0]);
+                    // Only show detail row if open
+                    var ficheId = pair[0].querySelector('.js-toggle-fiche-prescriptions')?.getAttribute('data-fiche-id');
+                    if (pair[1] && ficheId && openDetails[ficheId]) {
+                        pair[1].classList.add('detail-row-open');
+                        tbody.appendChild(pair[1]);
+                    } else if (pair[1]) {
+                        pair[1].classList.remove('detail-row-open');
+                        tbody.appendChild(pair[1]);
+                    }
+                });
+            }
+            if (sortSelect) sortSelect.addEventListener('change', renderTable);
+            if (searchInput) searchInput.addEventListener('input', renderTable);
+            // Re-render after DOMContentLoaded to ensure initial state
+            document.addEventListener('DOMContentLoaded', renderTable);
+        })();
 (function() {
     'use strict';
 
@@ -803,45 +943,43 @@
 
     document.addEventListener('DOMContentLoaded', function() {
 
-        // ---- Custom collapse: toggle detail row (no Bootstrap collapse) ----
+        // ---- Custom collapse: toggle detail row (appointments) ----
         document.addEventListener('click', function(e) {
             var btn = e.target.closest('.js-toggle-detail');
             if (!btn) return;
             e.preventDefault();
             var id = btn.getAttribute('data-appointment-id');
+            var mainRow = btn.closest('tr.main-row');
             var row = document.querySelector('.detail-row[data-detail-for="' + id + '"]');
             var icon = btn.querySelector('i.fas');
-            if (!row || !icon) return;
+            if (!row || !icon || !mainRow) return;
+            // Move the detail row after the main row if not already
+            if (mainRow.nextSibling !== row) {
+                mainRow.parentNode.insertBefore(row, mainRow.nextSibling);
+            }
             var isOpen = row.classList.toggle('detail-row-open');
             btn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
             icon.classList.toggle('fa-chevron-down', !isOpen);
             icon.classList.toggle('fa-chevron-up', isOpen);
         });
 
-        // ---- Toggle fiche prescriptions detail row (works even after search) ----
+        // ---- Toggle fiche prescriptions detail row (medical files) ----
         document.addEventListener('click', function(e) {
             var btn = e.target.closest('.js-toggle-fiche-prescriptions');
             if (!btn) return;
             e.preventDefault();
             var ficheId = btn.getAttribute('data-fiche-id');
-            // Always find the detail row in the DOM, not just in the filtered table
+            var mainRow = btn.closest('tr.main-row');
             var row = document.querySelector('.fiche-detail-row[data-fiche-detail-id="' + ficheId + '"]');
             var icon = btn.querySelector('i.fas');
-            if (!row || !icon) return;
-            // Toggle visibility
+            if (!row || !icon || !mainRow) return;
+            // Move the detail row after the main row if not already
+            if (mainRow.nextSibling !== row) {
+                mainRow.parentNode.insertBefore(row, mainRow.nextSibling);
+            }
             var isOpen = row.classList.toggle('detail-row-open');
             icon.classList.toggle('fa-chevron-down', !isOpen);
             icon.classList.toggle('fa-chevron-up', isOpen);
-            // If the row is hidden by search, force it to be visible (move it after the main row)
-            if (isOpen) {
-                var mainRow = document.querySelector('tr.main-row td:first-child')?.parentElement;
-                if (mainRow && mainRow.parentNode) {
-                    var thisMainRow = btn.closest('tr.main-row');
-                    if (thisMainRow && thisMainRow.parentNode) {
-                        thisMainRow.parentNode.insertBefore(row, thisMainRow.nextSibling);
-                    }
-                }
-            }
         });
 
         // ---- Single edit modal: open and populate from FICHES_EDIT ----
