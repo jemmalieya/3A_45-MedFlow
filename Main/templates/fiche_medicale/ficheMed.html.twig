@@ -325,8 +325,11 @@
 
                     <!-- RendezVous Table -->
                     <div class="card shadow mb-4">
-                        <div class="card-header py-3">
+                        <div class="card-header py-3 d-flex justify-content-between align-items-center">
                             <h6 class="m-0 font-weight-bold text-white">Appointments List</h6>
+                            <div class="d-flex gap-2" style="gap: 10px;">
+                                <input type="text" id="searchAppointments" class="form-control form-control-sm" style="max-width: 250px; border: 2px solid white;" placeholder="🔍 Search appointments...">
+                            </div>
                         </div>
                         <div class="card-body">
                             <div class="table-responsive">
@@ -347,7 +350,7 @@
                                     <tbody>
                                         {% if rendezvous is not empty %}
                                             {% for appointment in rendezvous %}
-                                                <tr>
+                                                <tr class="main-row">
                                                     <td>{{ appointment.id }}</td>
                                                     <td>{{ appointment.datetime|date('Y-m-d H:i') }}</td>
                                                     <td>
@@ -480,8 +483,11 @@
 
                     <!-- FicheMedicale Table -->
                     <div class="card shadow mb-4">
-                        <div class="card-header py-3">
+                        <div class="card-header py-3 d-flex justify-content-between align-items-center">
                             <h6 class="m-0 font-weight-bold text-white">Medical Files List</h6>
+                            <div class="d-flex gap-2" style="gap: 10px;">
+                                <input type="text" id="searchMedicalFiles" class="form-control form-control-sm" style="max-width: 250px; border: 2px solid white;" placeholder="🔍 Search medical files...">
+                            </div>
                         </div>
                         <div class="card-body">
                             <div class="table-responsive">
@@ -505,7 +511,7 @@
                                     <tbody>
                                         {% if fiches is not empty %}
                                             {% for fiche in fiches %}
-                                                <tr>
+                                                <tr class="main-row">
                                                     <td>{{ fiche.id }}</td>
                                                     <td>{{ fiche.rendezVous.id }}</td>
                                                     <td>{{ fiche.diagnostic }}</td>
@@ -585,8 +591,18 @@
 
                             <!-- Prescription Table -->
                             <div class="card shadow mb-4">
-                                <div class="card-header py-3">
+                                <div class="card-header py-3 d-flex justify-content-between align-items-center">
                                     <h6 class="m-0 font-weight-bold text-white">Prescriptions List</h6>
+                                    <div class="d-flex gap-2" style="gap: 10px;">
+                                        <select id="prescriptionsSortSelect" class="form-control form-control-sm" style="max-width: 220px;">
+                                            <option value="none">Sort...</option>
+                                            <option value="date_asc">Date ↑ (Oldest)</option>
+                                            <option value="date_desc">Date ↓ (Newest)</option>
+                                            <option value="medicament_az">Médicament A-Z</option>
+                                            <option value="medicament_za">Médicament Z-A</option>
+                                        </select>
+                                        <input type="text" id="searchPrescriptions" class="form-control form-control-sm" style="max-width: 250px; border: 2px solid white;" placeholder="🔍 Search prescriptions...">
+                                    </div>
                                 </div>
                                 <div class="card-body">
                                     <div class="table-responsive">
@@ -697,6 +713,91 @@
     {% endif %}
 </script>
 <script>
+        // ---- Prescriptions Table Sorting & Searching ----
+        var prescSortSelect = document.getElementById('prescriptionsSortSelect');
+        var prescSearchInput = document.getElementById('searchPrescriptions');
+        if (prescSortSelect || prescSearchInput) {
+            var prescCard = prescSortSelect ? prescSortSelect.closest('.card') : (prescSearchInput ? prescSearchInput.closest('.card') : null);
+            var prescTable = prescCard ? prescCard.querySelector('table') : null;
+            var prescTbody = prescTable ? prescTable.querySelector('tbody') : null;
+            var prescOriginalRows = [];
+            if (prescTbody) {
+                var allRows = Array.from(prescTbody.querySelectorAll('tr'));
+                allRows.forEach(function(row) {
+                    prescOriginalRows.push(row.cloneNode(true));
+                });
+            }
+            function renderPrescTable() {
+                var value = prescSortSelect ? prescSortSelect.value : 'none';
+                var searchQuery = prescSearchInput ? prescSearchInput.value.toLowerCase() : '';
+                var rows = prescOriginalRows.map(function(row) { return row.cloneNode(true); });
+                // Filter by search
+                if (searchQuery) {
+                    rows = rows.filter(function(row) {
+                        return row.textContent.toLowerCase().includes(searchQuery);
+                    });
+                }
+                // Sort
+                if (value === 'date_asc' || value === 'date_desc') {
+                    rows.sort(function(a, b) {
+                        var aDate = a.cells[7] ? Date.parse(a.cells[7].textContent.replace(/\s/, 'T')) : 0;
+                        var bDate = b.cells[7] ? Date.parse(b.cells[7].textContent.replace(/\s/, 'T')) : 0;
+                        if (isNaN(aDate) || isNaN(bDate)) return 0;
+                        return value === 'date_asc' ? aDate - bDate : bDate - aDate;
+                    });
+                } else if (value === 'medicament_az' || value === 'medicament_za') {
+                    rows.sort(function(a, b) {
+                        var aNom = a.cells[2] ? a.cells[2].textContent.trim().toLowerCase() : '';
+                        var bNom = b.cells[2] ? b.cells[2].textContent.trim().toLowerCase() : '';
+                        var cmp = aNom.localeCompare(bNom);
+                        return value === 'medicament_az' ? cmp : -cmp;
+                    });
+                }
+                prescTbody.innerHTML = '';
+                rows.forEach(function(row) { prescTbody.appendChild(row); });
+            }
+            if (prescSortSelect) prescSortSelect.addEventListener('change', renderPrescTable);
+            if (prescSearchInput) prescSearchInput.addEventListener('input', renderPrescTable);
+        }
+
+        // ---- Generic Table Search (Appointments, Medical Files) ----
+        function setupTableSearchOnlyMain(searchInputId) {
+            var searchInput = document.getElementById(searchInputId);
+            if (!searchInput) return;
+            var card = searchInput.closest('.card');
+            if (!card) return;
+            var table = card.querySelector('.table');
+            if (!table) return;
+            var tbody = table.querySelector('tbody');
+            if (!tbody) return;
+            var mainRows = Array.from(tbody.querySelectorAll('tr.main-row')).map(function(row) { return row.cloneNode(true); });
+            function renderTable() {
+                var query = searchInput.value.toLowerCase();
+                var rows = mainRows.map(function(row) { return row.cloneNode(true); });
+                if (query) {
+                    rows = rows.filter(function(row) {
+                        return row.textContent.toLowerCase().includes(query);
+                    });
+                }
+                tbody.innerHTML = '';
+                rows.forEach(function(row) { tbody.appendChild(row); });
+            }
+            searchInput.addEventListener('input', renderTable);
+        }
+        // Appointments: only main rows
+        setupTableSearchOnlyMain('searchAppointments');
+        // Medical files: only main rows
+        setupTableSearchOnlyMain('searchMedicalFiles');
+(function() {
+    'use strict';
+
+    document.addEventListener('DOMContentLoaded', function() {
+        // ...existing code...
+
+        // ---- Appointments Table Sorting/Filtering ----
+        // ...existing code...
+    });
+})();
 (function() {
     'use strict';
 
@@ -717,18 +818,30 @@
             icon.classList.toggle('fa-chevron-up', isOpen);
         });
 
-        // ---- Toggle fiche prescriptions detail row ----
+        // ---- Toggle fiche prescriptions detail row (works even after search) ----
         document.addEventListener('click', function(e) {
             var btn = e.target.closest('.js-toggle-fiche-prescriptions');
             if (!btn) return;
             e.preventDefault();
             var ficheId = btn.getAttribute('data-fiche-id');
+            // Always find the detail row in the DOM, not just in the filtered table
             var row = document.querySelector('.fiche-detail-row[data-fiche-detail-id="' + ficheId + '"]');
             var icon = btn.querySelector('i.fas');
             if (!row || !icon) return;
+            // Toggle visibility
             var isOpen = row.classList.toggle('detail-row-open');
             icon.classList.toggle('fa-chevron-down', !isOpen);
             icon.classList.toggle('fa-chevron-up', isOpen);
+            // If the row is hidden by search, force it to be visible (move it after the main row)
+            if (isOpen) {
+                var mainRow = document.querySelector('tr.main-row td:first-child')?.parentElement;
+                if (mainRow && mainRow.parentNode) {
+                    var thisMainRow = btn.closest('tr.main-row');
+                    if (thisMainRow && thisMainRow.parentNode) {
+                        thisMainRow.parentNode.insertBefore(row, thisMainRow.nextSibling);
+                    }
+                }
+            }
         });
 
         // ---- Single edit modal: open and populate from FICHES_EDIT ----
@@ -832,6 +945,13 @@
                 // informational only: do not prevent submit here
             });
         }
+
+       
+
+        // Initialize search for each table
+        setupTableSearch('searchAppointments');
+        setupTableSearch('searchMedicalFiles');
+        setupTableSearch('searchPrescriptions');
 
         // ---- Validation for edit modal fields ----
         var rules = {

@@ -22,7 +22,7 @@ class RendezVous
     private ?\DateTime $datetime = null;
 
     #[ORM\Column(length: 50)]
-    private ?string $statut = 'demande';
+    private ?string $statut = 'Demande';
 
     #[ORM\Column(length: 50)]
     private ?string $mode = null;
