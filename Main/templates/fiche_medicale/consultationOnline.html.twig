@@ -1,0 +1,535 @@
+{% extends 'base_dashboard.html.twig' %}
+{% block body %}
+<style>
+    .page-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 40px 30px;
+        border-radius: 10px;
+        margin-bottom: 30px;
+        box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+    }
+    .page-header h1 {
+        font-size: 2.5rem;
+        font-weight: 700;
+        margin-bottom: 10px;
+        letter-spacing: -0.5px;
+    }
+    .page-header p {
+        font-size: 1.1rem;
+        opacity: 0.95;
+        margin: 0;
+    }
+    .card {
+        border: none;
+        border-radius: 12px;
+        box-shadow: 0 5px 20px rgba(0, 0, 0, 0.08);
+        transition: all 0.3s ease;
+        overflow: hidden;
+    }
+    .card:hover {
+        box-shadow: 0 10px 35px rgba(0, 0, 0, 0.15);
+        transform: translateY(-2px);
+    }
+    .card-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        padding: 20px 24px;
+    }
+    .card-header h6 {
+        font-size: 1.1rem;
+        font-weight: 600;
+        letter-spacing: 0.3px;
+    }
+    .card-body {
+        padding: 25px;
+    }
+    .btn-primary {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border: none;
+        border-radius: 8px;
+        padding: 8px 16px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+    .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+        color: white;
+    }
+    .btn-secondary {
+        background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);
+        border: none;
+        color: white;
+        border-radius: 8px;
+        transition: all 0.3s ease;
+    }
+    .btn-secondary:hover:not(:disabled) {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 15px rgba(107, 114, 128, 0.3);
+    }
+    .alert {
+        border: none;
+        border-radius: 10px;
+        border-left: 4px solid;
+        margin-bottom: 20px;
+        animation: slideIn 0.4s ease;
+    }
+    .alert-danger {
+        background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+        border-left-color: #dc2626;
+        color: #7f1d1d;
+    }
+    .alert-success {
+        background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
+        border-left-color: #16a34a;
+        color: #15803d;
+    }
+    @keyframes slideIn {
+        from { opacity: 0; transform: translateY(-10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    .form-control {
+        border: 2px solid #e2e8f0;
+        border-radius: 8px;
+        padding: 10px 14px;
+        font-size: 0.95rem;
+        transition: all 0.3s ease;
+    }
+    .form-control:focus {
+        border-color: #667eea;
+        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+    .form-group label {
+        font-weight: 600;
+        color: #2d3748;
+        margin-bottom: 8px;
+    }
+    .text-danger { color: #dc2626 !important; }
+</style>
+
+<div class="container-fluid">
+
+                    <!-- Page Heading -->
+                    <div class="page-header">
+                        <h1>🩺 Consultation en ligne</h1>
+                        <p>Fiche médicale – consultation à distance</p>
+                    </div>
+
+                    <!-- Error/Success Messages from Server Validation -->
+                    {% if app.flashes('error') %}
+                            <div class="alert alert-danger alert-dismissible fade show m-3" role="alert">
+                                <strong>❌ Validation Error:</strong>
+                                {% for message in app.flashes('error') %}
+                                    <div>{{ message }}</div>
+                                {% endfor %}
+                                <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                                    <span aria-hidden="true">&times;</span>
+                                </button>
+                            </div>
+                    {% endif %}
+                    {% if app.flashes('success') %}
+                        <div class="alert alert-success alert-dismissible fade show m-3" role="alert">
+                            <strong>✅ Success:</strong>
+                            {% for message in app.flashes('success') %}
+                                <div>{{ message }}</div>
+                            {% endfor %}
+                            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                        </div>
+                    {% endif %}
+
+                    <form method="POST" action="{{ path('consultation_view') }}" id="consultationForm">
+                        <!-- Section 1: Fiche médicale -->
+                        <div class="card shadow mb-4">
+                            <div class="card-header py-3">
+                                <h6 class="m-0 font-weight-bold text-white">Fiche médicale</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="form-group">
+                                    <label for="diagnostic"><strong>Diagnostic</strong></label>
+                                    <textarea class="form-control" id="diagnostic" name="diagnostic" rows="4" placeholder="Enter the patient's diagnostic..." required></textarea>
+                                    <small id="diagnostic-feedback" class="d-block mt-2" style="font-size: 0.85rem;"></small>
+                                </div>
+                                <div class="form-group">
+                                    <label for="observations"><strong>Observations</strong></label>
+                                    <textarea class="form-control" id="observations" name="observations" rows="4" placeholder="Enter any observations..."></textarea>
+                                    <small id="observations-feedback" class="d-block mt-2" style="font-size: 0.85rem;"></small>
+                                </div>
+                                <div class="form-group">
+                                    <label for="resultatsExamens"><strong>Exam Results</strong></label>
+                                    <textarea class="form-control" id="resultatsExamens" name="resultatsExamens" rows="4" placeholder="Enter exam results..."></textarea>
+                                    <small id="resultatsExamens-feedback" class="d-block mt-2" style="font-size: 0.85rem;"></small>
+                                </div>
+                                {% if fiche is defined and fiche %}
+                                    <input type="hidden" name="fiche_id" value="{{ fiche.id }}">
+                                    <input type="hidden" id="startTime" name="startTime" value="{{ fiche.startTime ? fiche.startTime|date('Y-m-d H:i:s') : '' }}">
+                                {% else %}
+                                    <input type="hidden" name="rendezvous_id" value="{{ rendezvousId }}">
+                                    <input type="hidden" id="startTime" name="startTime" value="{{ startParam }}">
+                                {% endif %}
+                                <input type="hidden" name="type" value="Distanciel">
+                                <div class="form-group">
+                                    <label for="dureeMinutes"><strong>Duration</strong></label>
+                                    <input type="text" class="form-control" id="dureeMinutes" name="dureeMinutes" placeholder="HH:MM:SS" readonly>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Section 2: Prescription(s) -->
+                        <div class="card shadow mb-4">
+                            <div class="card-header py-3 d-flex justify-content-between align-items-center">
+                                <h6 class="m-0 font-weight-bold text-white">Prescription(s)</h6>
+                                <button type="button" class="btn btn-sm btn-light" id="addPrescriptionBtn">+ Add prescription</button>
+                            </div>
+                            <div class="card-body">
+                                <p class="text-muted small mb-3">You can add none, one or several prescriptions linked to this consultation. Leave a row empty to skip it.</p>
+                                <div id="prescriptionRows"></div>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <button type="submit" name="save" class="btn btn-primary">Save consultation (fiche + prescriptions)</button>
+                            <button type="button" class="btn btn-secondary" onclick="window.location.href='{{ path('app_fiche_by_staff', {'idStaff': idStaff}) }}'">Cancel</button>
+                        </div>
+                    </form>
+
+                    <!-- Jitsi Video Call Section -->
+                    <div class="card shadow mb-4">
+                        <div class="card-header py-3">
+                            <h6 class="m-0 font-weight-bold text-white">Video Call</h6>
+                        </div>
+                        <div class="card-body">
+                            <div id="jitsi-container" style="height: 600px; width: 100%; border: 1px solid #ddd; border-radius: 4px;"></div>
+                        </div>
+                    </div>
+
+                </div>
+                <!-- /.container-fluid -->
+                <!-- Bootstrap & jQuery from CDN -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- Jitsi Meet External API -->
+    <script src="https://meet.jit.si/external_api.js"></script>
+
+    <script>
+        // Real-time field validation
+        const validationRules = {
+            diagnostic: {
+                minLength: 5,
+                maxLength: 500,
+                required: true
+            },
+            observations: {
+                minLength: 5,
+                maxLength: 500,
+                required: false
+            },
+            resultatsExamens: {
+                minLength: 5,
+                maxLength: 500,
+                required: false
+            }
+        };
+
+        // Validation function
+        function validateField(fieldId) {
+            const field = document.getElementById(fieldId);
+            const feedback = document.getElementById(fieldId + '-feedback');
+            const value = field.value.trim();
+            const rules = validationRules[fieldId];
+
+            let isValid = true;
+            let message = '';
+
+            // Check if required field is empty
+            if (rules.required && value.length === 0) {
+                isValid = false;
+                message = '⚠️ This field is required';
+            }
+            // Check minimum length
+            else if (value.length > 0 && value.length < rules.minLength) {
+                isValid = false;
+                message = `⚠️ Minimum ${rules.minLength} characters required (${value.length}/${rules.minLength})`;
+            }
+            // Check maximum length
+            else if (value.length > rules.maxLength) {
+                isValid = false;
+                message = `⚠️ Maximum ${rules.maxLength} characters allowed (${value.length}/${rules.maxLength})`;
+            }
+            // Field is valid and has content
+            else if (value.length > 0) {
+                isValid = true;
+                message = '✓ Perfect';
+            }
+
+            // Update feedback styling
+            feedback.textContent = message;
+            if (isValid && value.length > 0) {
+                feedback.style.color = '#28a745'; // Green
+                field.style.borderColor = '#28a745';
+            } else if (!isValid) {
+                feedback.style.color = '#dc3545'; // Red
+                field.style.borderColor = '#dc3545';
+            } else {
+                feedback.style.color = '';
+                field.style.borderColor = '';
+                feedback.textContent = '';
+            }
+
+            return isValid;
+        }
+
+        // Attach event listeners for real-time validation
+        document.addEventListener('DOMContentLoaded', function() {
+            const fieldsToValidate = ['diagnostic', 'observations', 'resultatsExamens'];
+
+            fieldsToValidate.forEach(fieldId => {
+                const field = document.getElementById(fieldId);
+                if (field) {
+                    // Validate on input (as user types)
+                    field.addEventListener('input', function() {
+                        validateField(fieldId);
+                    });
+
+                    // Validate on blur
+                    field.addEventListener('blur', function() {
+                        validateField(fieldId);
+                    });
+
+                    // Validate on focus for required fields
+                    field.addEventListener('focus', function() {
+                        const rules = validationRules[fieldId];
+                        if (rules.required && field.value.trim().length === 0) {
+                            validateField(fieldId);
+                        }
+                    });
+                }
+            });
+
+            // Form submission - JavaScript is informative only, PHP handles actual validation
+            const form = document.getElementById('consultationForm');
+            if (form) {
+                form.addEventListener('submit', function(e) {
+                    const fieldsToValidate = ['diagnostic', 'observations', 'resultatsExamens'];
+                    fieldsToValidate.forEach(fieldId => {
+                        validateField(fieldId);
+                    });
+                    // No preventDefault - let PHP handle validation on server
+                });
+            }
+        });
+
+        // Live duration updater (reads hidden startTime and updates dureeMinutes)
+        (function(){
+            const startInput = document.getElementById('startTime');
+            const durationInput = document.getElementById('dureeMinutes');
+            if (!startInput || !durationInput) return;
+            const startVal = startInput.value;
+            if (!startVal) return;
+            // Convert 'YYYY-MM-DD HH:mm:ss' to ISO
+            const iso = startVal.replace(' ', 'T');
+            const startDate = new Date(iso);
+            if (isNaN(startDate)) return;
+
+            function update() {
+                const now = new Date();
+                const diffSec = Math.floor((now - startDate) / 1000);
+                const hrs = Math.floor(diffSec / 3600);
+                const mins = Math.floor((diffSec % 3600) / 60);
+                const secs = diffSec % 60;
+                const hh = String(hrs).padStart(2, '0');
+                const mm = String(mins).padStart(2, '0');
+                const ss = String(secs).padStart(2, '0');
+                durationInput.value = `${hh}:${mm}:${ss}`;
+            }
+
+            update();
+            setInterval(update, 1000);
+        })();
+
+        // Prescription rows: add/remove and validation
+        const prescriptionRules = {
+            nomMedicament: { minLength: 1, maxLength: 255, required: true },
+            dose: { minLength: 1, maxLength: 255, required: true },
+            frequence: { minLength: 1, maxLength: 255, required: true },
+            duree: { required: true, min: 1, integer: true },
+            instructions: { required: false }
+        };
+        let prescriptionIndex = 0;
+        const container = document.getElementById('prescriptionRows');
+        const addBtn = document.getElementById('addPrescriptionBtn');
+
+        function prescriptionRowHtml(index) {
+            // Use index-less [] names so PHP receives arrays; we'll reindex when rows are removed
+            return '<div class="prescription-row border rounded p-3 mb-3 bg-light" data-index="' + index + '">' +
+                '<div class="row">' +
+                '<div class="col-md-4 form-group"><label class="small font-weight-bold">Médicament</label><input type="text" class="form-control form-control-sm prescription-field" name="prescription_rows[][nomMedicament]" placeholder="Nom du médicament" maxlength="255"><small class="prescription-feedback d-block mt-1" data-field="nomMedicament"></small></div>' +
+                '<div class="col-md-2 form-group"><label class="small font-weight-bold">Dose</label><input type="text" class="form-control form-control-sm prescription-field" name="prescription_rows[][dose]" placeholder="ex: 500mg" maxlength="255"><small class="prescription-feedback d-block mt-1" data-field="dose"></small></div>' +
+                '<div class="col-md-2 form-group"><label class="small font-weight-bold">Fréquence</label><input type="text" class="form-control form-control-sm prescription-field" name="prescription_rows[][frequence]" placeholder="ex: 2x/jour" maxlength="255"><small class="prescription-feedback d-block mt-1" data-field="frequence"></small></div>' +
+                '<div class="col-md-1 form-group"><label class="small font-weight-bold">Durée (j)</label><input type="number" min="1" class="form-control form-control-sm prescription-field" name="prescription_rows[][duree]" placeholder="Jours"><small class="prescription-feedback d-block mt-1" data-field="duree"></small></div>' +
+                '<div class="col-md-2 form-group"><label class="small font-weight-bold">Instructions</label><input type="text" class="form-control form-control-sm prescription-field" name="prescription_rows[][instructions]" placeholder="Optionnel"><small class="prescription-feedback d-block mt-1" data-field="instructions"></small></div>' +
+                '<div class="col-md-1 form-group d-flex align-items-end"><button type="button" class="btn btn-sm btn-outline-danger remove-prescription">✖</button></div>' +
+                '</div></div>';
+        }
+
+        function validatePrescriptionField(row, fieldName, value) {
+            const rules = prescriptionRules[fieldName];
+            if (!rules) return true;
+            let valid = true, msg = '';
+            if (rules.required && (value === undefined || String(value).trim() === '')) {
+                valid = false;
+                msg = 'Requis';
+            } else if (fieldName === 'duree' && value !== '') {
+                const n = parseInt(value, 10);
+                if (isNaN(n) || n < 1) { valid = false; msg = 'Entier ≥ 1'; }
+            } else if (rules.maxLength && value.length > rules.maxLength) {
+                valid = false;
+                msg = 'Max ' + rules.maxLength + ' car.';
+            }
+            const feedback = row.querySelector('.prescription-feedback[data-field="' + fieldName + '"]');
+            if (feedback) { feedback.textContent = msg; feedback.style.color = valid ? '' : '#dc3545'; }
+            const input = row.querySelector('[name*="[' + fieldName + ']"]');
+            if (input) input.style.borderColor = valid ? '' : '#dc3545';
+            return valid;
+        }
+
+        function validatePrescriptionRow(row) {
+            let allValid = true;
+            ['nomMedicament', 'dose', 'frequence', 'duree', 'instructions'].forEach(function(f) {
+                const input = row.querySelector('[name*="[' + f + ']"]');
+                const val = input ? input.value : '';
+                if (f !== 'instructions' && (val === undefined || String(val).trim() === '')) {
+                    const isEmpty = Array.from(row.querySelectorAll('.prescription-field')).every(function(inp) { return !inp.value.trim(); });
+                    if (!isEmpty) allValid = validatePrescriptionField(row, f, val) && allValid;
+                } else {
+                    allValid = validatePrescriptionField(row, f, val) && allValid;
+                }
+            });
+            return allValid;
+        }
+
+        function bindPrescriptionRow(row) {
+            row.querySelectorAll('.prescription-field').forEach(function(input) {
+                input.addEventListener('input', function() { validatePrescriptionRow(row); });
+                input.addEventListener('blur', function() { validatePrescriptionRow(row); });
+            });
+            row.querySelector('.remove-prescription').addEventListener('click', function() {
+                row.remove();
+                reindexPrescriptionRows();
+            });
+        }
+
+        function reindexPrescriptionRows() {
+            if (!container) return;
+            container.querySelectorAll('.prescription-row').forEach(function(row, i) {
+                row.setAttribute('data-index', i);
+                row.querySelectorAll('[name^="prescription_rows["]').forEach(function(inp) {
+                    const name = inp.getAttribute('name');
+                    // support both prescription_rows[][field] and prescription_rows[n][field]
+                    const match = name.match(/prescription_rows\[(?:\d*)\]\[(\w+)\]/);
+                    if (match) inp.setAttribute('name', 'prescription_rows[' + i + '][' + match[1] + ']');
+                });
+            });
+            prescriptionIndex = container ? container.querySelectorAll('.prescription-row').length : 0;
+        }
+
+        if (addBtn && container) {
+            addBtn.addEventListener('click', function() {
+                const div = document.createElement('div');
+                div.innerHTML = prescriptionRowHtml(prescriptionIndex).trim();
+                const row = div.firstChild;
+                container.appendChild(row);
+                bindPrescriptionRow(row);
+                prescriptionIndex++;
+            });
+        }
+
+        const formEl = document.getElementById('consultationForm');
+        if (formEl) {
+            formEl.addEventListener('submit', function() {
+                if (container) container.querySelectorAll('.prescription-row').forEach(function(row) {
+                    validatePrescriptionRow(row);
+                });
+            });
+        }
+
+        // Initialize Jitsi Meet with simplified approach
+        function initJitsi() {
+            const container = document.getElementById('jitsi-container');
+            if (!container) {
+                console.error('❌ Jitsi container not found');
+                return;
+            }
+
+            try {
+                // Generate a unique room name
+                const roomName = 'medflow-' + Date.now() + '-' + Math.floor(Math.random() * 10000);
+                console.log('🎥 Initializing Jitsi with room:', roomName);
+
+                // Jitsi Meet configuration
+                const options = {
+                    roomName: roomName,
+                    width: '100%',
+                    height: 600,
+                    parentNode: container,
+                    configOverwrite: {
+                        startWithAudioMuted: false,
+                        startWithVideoMuted: false,
+                        disableAudioLevels: false,
+                        enableWelcomePage: false
+                    },
+                    interfaceConfigOverwrite: {
+                        MOBILE_APP_PROMO: false,
+                        SHOW_JITSI_WATERMARK: false,
+                        SHOW_WATERMARK_FOR_GUESTS: false,
+                        DEFAULT_BACKGROUND: '#f8f9fa'
+                    }
+                };
+
+                const api = new JitsiMeetExternalAPI('meet.jit.si', options);
+                console.log('✅ Jitsi instance created');
+
+                // Event listeners
+                api.addEventListener('videoConferenceJoined', function(data) {
+                    console.log('✓ Video conference joined', data);
+                });
+
+                api.addEventListener('videoConferenceFailed', function(error) {
+                    console.error('✗ Video conference failed', error);
+                });
+
+                api.addEventListener('videoConferenceLeft', function() {
+                    console.log('✓ Video conference left');
+                });
+
+                api.addEventListener('participantJoined', function(data) {
+                    console.log('👤 Participant joined:', data);
+                });
+
+                api.addEventListener('participantLeft', function(data) {
+                    console.log('👤 Participant left:', data);
+                });
+
+                // Store API for later use
+                window.jitsiApi = api;
+                console.log('✅ Jitsi initialized successfully');
+            } catch (error) {
+                console.error('❌ Error initializing Jitsi:', error);
+            }
+        }
+
+        // Initialize Jitsi when DOM is ready
+        document.addEventListener('DOMContentLoaded', function() {
+            if (typeof JitsiMeetExternalAPI !== 'undefined') {
+                initJitsi();
+            } else {
+                console.warn('⚠️ JitsiMeetExternalAPI not available, retrying...');
+                setTimeout(initJitsi, 500);
+            }
+        });
+    </script>
+{% endblock %} 

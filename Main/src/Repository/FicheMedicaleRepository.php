@@ -15,6 +15,21 @@ class FicheMedicaleRepository extends ServiceEntityRepository
     {
         parent::__construct($registry, FicheMedicale::class);
     }
+    /**
+     * Find all FicheMedicales related to RendezVous of a specific staff member
+     */
+    public function findFichesByStaffId(int $idStaff): array
+    {
+        return $this->createQueryBuilder('f')
+            ->innerJoin('f.rendezVous', 'r')
+            ->andWhere('r.idStaff = :idStaff')
+            ->setParameter('idStaff', $idStaff)
+            ->orderBy('f.createdAt', 'DESC')
+            ->getQuery()
+            ->getResult()
+        ;
+    }
+
 
     //    /**
     //     * @return FicheMedicale[] Returns an array of FicheMedicale objects

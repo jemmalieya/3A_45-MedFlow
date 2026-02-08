@@ -12,8 +12,8 @@ class Commande
 {
     #[ORM\Id]
     #[ORM\GeneratedValue]
-    #[ORM\Column]
-    private ?int $id_commande  = null;
+    #[ORM\Column(name: "id_commande")]
+    private ?int $id_commande = null;
 
     #[ORM\Column]
     private ?int $id_user = null;
@@ -27,10 +27,22 @@ class Commande
     #[ORM\Column]
     private ?float $montant_total = null;
 
+    // ✅ Stripe
+    #[ORM\Column(length: 255, nullable: true)]
+    private ?string $stripe_session_id = null;
+
+    #[ORM\Column(nullable: true)]
+    private ?\DateTimeImmutable $paid_at = null;
+
     /**
      * @var Collection<int, LigneCommande>
      */
-    #[ORM\OneToMany(targetEntity: LigneCommande::class, mappedBy: 'commande', cascade: ['remove'], orphanRemoval: true)]
+    #[ORM\OneToMany(
+        targetEntity: LigneCommande::class,
+        mappedBy: 'commande',
+        cascade: ['persist', 'remove'], // ✅ IMPORTANT (persist ajouté)
+        orphanRemoval: true
+    )]
     private Collection $ligne_commandes;
 
     public function __construct()
@@ -38,9 +50,13 @@ class Commande
         $this->ligne_commandes = new ArrayCollection();
     }
 
+    // =========================
+    //         GETTERS/SETTERS
+    // =========================
+
     public function getIdCommande(): ?int
     {
-        return $this->id_commande ;
+        return $this->id_commande;
     }
 
     public function getIdUser(): ?int
@@ -51,7 +67,6 @@ class Commande
     public function setIdUser(int $id_user): static
     {
         $this->id_user = $id_user;
-
         return $this;
     }
 
@@ -63,7 +78,6 @@ class Commande
     public function setDateCreationCommande(\DateTimeImmutable $date_creation_commande): static
     {
         $this->date_creation_commande = $date_creation_commande;
-
         return $this;
     }
 
@@ -75,7 +89,6 @@ class Commande
     public function setStatutCommande(string $statut_commande): static
     {
         $this->statut_commande = $statut_commande;
-
         return $this;
     }
 
@@ -87,7 +100,29 @@ class Commande
     public function setMontantTotal(float $montant_total): static
     {
         $this->montant_total = $montant_total;
+        return $this;
+    }
 
+    // ✅ Stripe
+    public function getStripeSessionId(): ?string
+    {
+        return $this->stripe_session_id;
+    }
+
+    public function setStripeSessionId(?string $stripe_session_id): static
+    {
+        $this->stripe_session_id = $stripe_session_id;
+        return $this;
+    }
+
+    public function getPaidAt(): ?\DateTimeImmutable
+    {
+        return $this->paid_at;
+    }
+
+    public function setPaidAt(?\DateTimeImmutable $paid_at): static
+    {
+        $this->paid_at = $paid_at;
         return $this;
     }
 
@@ -103,7 +138,7 @@ class Commande
     {
         if (!$this->ligne_commandes->contains($ligneCommande)) {
             $this->ligne_commandes->add($ligneCommande);
-            $ligneCommande->setCommande($this);
+            $ligneCommande->setCommande($this); // ✅ lien obligatoire
         }
 
         return $this;
@@ -112,7 +147,6 @@ class Commande
     public function removeLigneCommande(LigneCommande $ligneCommande): static
     {
         if ($this->ligne_commandes->removeElement($ligneCommande)) {
-            // set the owning side to null (unless already changed)
             if ($ligneCommande->getCommande() === $this) {
                 $ligneCommande->setCommande(null);
             }

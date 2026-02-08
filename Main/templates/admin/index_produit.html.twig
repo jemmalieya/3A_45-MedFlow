@@ -1,0 +1,523 @@
+{% extends 'base_dashboard.html.twig' %}
+
+{% block title %}Liste des Produits{% endblock %}
+
+{% block body %}
+<section class="section py-5">
+  <div class="container-fluid">
+
+    <!-- Header avec navigation -->
+    <div class="row mb-4">
+      <div class="col-12">
+        <div class="card border-0 shadow-sm bg-gradient-primary text-white">
+          <div class="card-body p-4">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+              <div>
+                <h2 class="mb-1 fw-bold">
+                  <i class="bi bi-box-seam me-2"></i>Gestion des Produits
+                </h2>
+                <p class="mb-0 opacity-75">{{ produits|length }} produit(s) dans votre inventaire</p>
+              </div>
+              <div class="d-flex gap-2">
+                <a href="{{ path('admin_produit_new') }}" class="btn btn-warning btn-lg shadow-sm">
+                  <i class="bi bi-plus-circle me-2"></i>Nouveau Produit
+                </a>
+                <a href="{{ path('admin_commandes_index') }}" class="btn btn-light btn-lg shadow-sm">
+                  <i class="bi bi-receipt-cutoff me-2"></i>Voir les Commandes
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ✅ Messages Flash animés (auto-disparaissent après 3 secondes) -->
+    <div id="flash-messages-container">
+      {% for message in app.flashes('success') %}
+        <div class="alert alert-success alert-dismissible fade show flash-message shadow-sm" role="alert">
+          <i class="bi bi-check-circle-fill me-2"></i>{{ message }}
+          <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+      {% endfor %}
+
+      {% for message in app.flashes('error') %}
+        <div class="alert alert-danger alert-dismissible fade show flash-message shadow-sm" role="alert">
+          <i class="bi bi-x-circle-fill me-2"></i>{{ message }}
+          <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+      {% endfor %}
+    </div>
+
+    <!-- Statistiques rapides -->
+    <div class="row g-3 mb-4">
+      <div class="col-md-3">
+        <div class="card border-0 shadow-sm h-100 stat-card">
+          <div class="card-body text-center">
+            <i class="bi bi-box text-primary" style="font-size: 2.5rem;"></i>
+            <h3 class="mt-3 mb-0 fw-bold">{{ produits|length }}</h3>
+            <small class="text-muted">Total Produits</small>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-md-3">
+        <div class="card border-0 shadow-sm h-100 stat-card">
+          <div class="card-body text-center">
+            <i class="bi bi-check-circle text-success" style="font-size: 2.5rem;"></i>
+            <h3 class="mt-3 mb-0 fw-bold">
+              {% set disponibles = 0 %}
+              {% for p in produits %}
+                {% if p.statusProduit == 'Disponible' %}
+                  {% set disponibles = disponibles + 1 %}
+                {% endif %}
+              {% endfor %}
+              {{ disponibles }}
+            </h3>
+            <small class="text-muted">Disponibles</small>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-md-3">
+        <div class="card border-0 shadow-sm h-100 stat-card">
+          <div class="card-body text-center">
+            <i class="bi bi-exclamation-triangle text-warning" style="font-size: 2.5rem;"></i>
+            <h3 class="mt-3 mb-0 fw-bold">
+              {% set ruptures = 0 %}
+              {% for p in produits %}
+                {% if p.statusProduit == 'Rupture' %}
+                  {% set ruptures = ruptures + 1 %}
+                {% endif %}
+              {% endfor %}
+              {{ ruptures }}
+            </h3>
+            <small class="text-muted">En Rupture</small>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-md-3">
+        <div class="card border-0 shadow-sm h-100 stat-card">
+          <div class="card-body text-center">
+            <i class="bi bi-x-circle text-danger" style="font-size: 2.5rem;"></i>
+            <h3 class="mt-3 mb-0 fw-bold">
+              {% set indisponibles = 0 %}
+              {% for p in produits %}
+                {% if p.statusProduit == 'Indisponible' %}
+                  {% set indisponibles = indisponibles + 1 %}
+                {% endif %}
+              {% endfor %}
+              {{ indisponibles }}
+            </h3>
+            <small class="text-muted">Indisponibles</small>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tableau des produits -->
+    <div class="card border-0 shadow-sm">
+      <div class="card-header bg-white border-0 py-3">
+        <div class="d-flex justify-content-between align-items-center">
+          <h5 class="mb-0 fw-bold">
+            <i class="bi bi-list-ul me-2"></i>Liste des Produits
+          </h5>
+          <div class="input-group" style="max-width: 350px;">
+            <span class="input-group-text bg-light border-0">
+              <i class="bi bi-search"></i>
+            </span>
+            <input type="text" class="form-control border-0 bg-light" placeholder="Rechercher un produit..." id="searchInput">
+          </div>
+        </div>
+      </div>
+
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-hover align-middle mb-0" id="produitsTable">
+            <thead class="table-light">
+              <tr>
+                <th class="px-4 py-3">Image</th>
+                <th class="px-4 py-3">Nom</th>
+                <th class="px-4 py-3">Prix</th>
+                <th class="px-4 py-3 text-center">Quantité</th>
+                <th class="px-4 py-3">Catégorie</th>
+                <th class="px-4 py-3 text-center">Statut</th>
+                <th class="px-4 py-3">Description</th>
+                <th class="px-4 py-3 text-center">Actions</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {% for produit in produits %}
+                <tr class="product-row">
+                  <td class="px-4">
+                    <img src="{{ produit.imageProduit }}"
+                         alt="{{ produit.nomProduit }}"
+                         class="rounded shadow-sm product-img"
+                         style="width: 70px; height: 70px; object-fit: cover;">
+                  </td>
+
+                  <td class="px-4">
+                    <div class="fw-bold text-dark">{{ produit.nomProduit }}</div>
+                  </td>
+
+                  <td class="px-4">
+                    <span class="fw-bold text-success fs-6">{{ produit.prixProduit|number_format(2, '.', '') }} DT</span>
+                  </td>
+
+                  <td class="px-4 text-center">
+                    <span class="badge rounded-pill {% if produit.quantiteProduit < 10 %}bg-danger{% else %}bg-primary{% endif %} px-3 py-2">
+                      {{ produit.quantiteProduit }}
+                    </span>
+                  </td>
+
+                  <td class="px-4">
+                    <span class="badge bg-light text-dark border px-3 py-2">{{ produit.categorieProduit }}</span>
+                  </td>
+
+                  <td class="px-4 text-center">
+                    {% if produit.statusProduit == 'Disponible' %}
+                      <span class="badge bg-success px-3 py-2">
+                        <i class="bi bi-check-circle me-1"></i>{{ produit.statusProduit }}
+                      </span>
+                    {% elseif produit.statusProduit == 'Rupture' %}
+                      <span class="badge bg-warning px-3 py-2">
+                        <i class="bi bi-exclamation-triangle me-1"></i>{{ produit.statusProduit }}
+                      </span>
+                    {% else %}
+                      <span class="badge bg-danger px-3 py-2">
+                        <i class="bi bi-x-circle me-1"></i>{{ produit.statusProduit }}
+                      </span>
+                    {% endif %}
+                  </td>
+
+                  <td class="px-4">
+                    <small class="text-muted">{{ produit.descriptionProduit|slice(0, 60) }}...</small>
+                  </td>
+
+                  <td class="px-4 text-center">
+                    <div class="d-flex gap-2 justify-content-center">
+                      {# ✅ Bouton Modifier avec icône stylo #}
+                      <a href="{{ path('admin_produit_edit', {'id': produit.id_produit}) }}"
+                         class="btn btn-sm btn-primary btn-action"
+                         data-bs-toggle="tooltip"
+                         title="Modifier">
+                        <i class="bi bi-pencil-fill"></i>
+                      </a>
+
+                      {# ✅ Bouton Supprimer avec icône X #}
+                      <form method="post"
+                            action="{{ path('admin_produit_delete', {'id': produit.id_produit}) }}"
+                            class="d-inline delete-form">
+                        <input type="hidden" name="_token" value="{{ csrf_token('delete' ~ produit.id_produit) }}">
+
+                        <button type="button"
+                                class="btn btn-sm btn-danger btn-action btn-open-delete"
+                                data-nom="{{ produit.nomProduit|e('html_attr') }}"
+                                data-bs-toggle="tooltip"
+                                title="Supprimer">
+                          <i class="bi bi-x-lg"></i>
+                        </button>
+                      </form>
+                    </div>
+                  </td>
+                </tr>
+              {% else %}
+                <tr>
+                  <td colspan="8" class="text-center py-5">
+                    <i class="bi bi-inbox text-muted" style="font-size: 4rem;"></i>
+                    <p class="text-muted mt-3 mb-0">Aucun produit trouvé</p>
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+{# ✅ Modal de confirmation de suppression #}
+<div id="adminConfirmOverlay" class="confirm-overlay d-none">
+  <div class="confirm-box">
+    <div class="confirm-icon">
+      <i class="bi bi-exclamation-triangle-fill text-danger"></i>
+    </div>
+    <h4 class="mt-3 fw-bold">Confirmer la suppression</h4>
+    <p id="adminConfirmMessage" class="text-muted"></p>
+
+    <div class="confirm-buttons mt-4">
+      <button class="btn btn-outline-secondary px-4" id="adminConfirmNo" type="button">
+        <i class="bi bi-x-circle me-2"></i>Annuler
+      </button>
+      <button class="btn btn-danger px-4" id="adminConfirmYes" type="button">
+        <i class="bi bi-trash-fill me-2"></i>Supprimer
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Custom Styles -->
+<style>
+
+/* Cards statistiques avec hover */
+.stat-card {
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.stat-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 30px rgba(0,0,0,0.15) !important;
+}
+
+/* Messages flash avec animation */
+.flash-message {
+  animation: slideInDown 0.4s ease;
+  border-left: 4px solid;
+}
+
+.alert-success {
+  border-left-color: #10b981;
+  background-color: #d1fae5;
+  color: #065f46;
+}
+
+.alert-danger {
+  border-left-color: #ef4444;
+  background-color: #fee2e2;
+  color: #991b1b;
+}
+
+@keyframes slideInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideOutUp {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-30px);
+  }
+}
+
+.flash-message.slide-out {
+  animation: slideOutUp 0.4s ease forwards;
+}
+
+/* Table avec hover effect */
+.product-row {
+  transition: all 0.2s ease;
+}
+
+.product-row:hover {
+  background-color: #f8f9fa;
+  transform: scale(1.005);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+
+.product-img {
+  transition: transform 0.3s ease;
+}
+
+.product-row:hover .product-img {
+  transform: scale(1.1);
+}
+
+/* Boutons d'action améliorés */
+.btn-action {
+  width: 38px;
+  height: 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+  font-size: 14px;
+}
+
+.btn-action:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+}
+
+.btn-action i {
+  margin: 0 !important;
+}
+
+/* Modal de confirmation */
+.confirm-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(5px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 3000;
+  animation: fadeIn 0.2s ease;
+}
+
+.confirm-box {
+  background: #fff;
+  padding: 2.5rem;
+  border-radius: 20px;
+  width: 90%;
+  max-width: 500px;
+  text-align: center;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+  animation: popIn 0.3s ease;
+}
+
+.confirm-icon i {
+  font-size: 4rem;
+}
+
+.confirm-buttons {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+}
+
+.confirm-buttons .btn {
+  min-width: 130px;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.confirm-buttons .btn:hover {
+  transform: translateY(-2px);
+}
+
+@keyframes popIn {
+  from {
+    transform: scale(0.8) translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.d-none {
+  display: none !important;
+}
+
+/* Input de recherche amélioré */
+#searchInput {
+  transition: all 0.3s ease;
+}
+
+#searchInput:focus {
+  box-shadow: 0 0 0 0.25rem rgba(102, 126, 234, 0.25);
+}
+
+/* Badges améliorés */
+.badge {
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+</style>
+
+<!-- JavaScript -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+
+  // ✅ Auto-disparition des messages flash après 3 secondes
+  const flashMessages = document.querySelectorAll('.flash-message');
+  flashMessages.forEach(msg => {
+    setTimeout(() => {
+      msg.classList.add('slide-out');
+      setTimeout(() => msg.remove(), 400);
+    }, 3000);
+  });
+
+  // Recherche dans le tableau
+  const searchInput = document.getElementById('searchInput');
+  const table = document.getElementById('produitsTable');
+  const rows = table ? table.getElementsByTagName('tbody')[0].getElementsByTagName('tr') : [];
+
+  if (searchInput) {
+    searchInput.addEventListener('keyup', function() {
+      const filter = this.value.toLowerCase();
+
+      for (let i = 0; i < rows.length; i++) {
+        const row = rows[i];
+        const text = row.textContent.toLowerCase();
+        row.style.display = text.includes(filter) ? '' : 'none';
+      }
+    });
+  }
+
+  // Tooltips Bootstrap
+  const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+  tooltipTriggerList.map(function (tooltipTriggerEl) {
+    return new bootstrap.Tooltip(tooltipTriggerEl);
+  });
+
+  // ✅ Modal de confirmation de suppression
+  const overlay = document.getElementById('adminConfirmOverlay');
+  const msg = document.getElementById('adminConfirmMessage');
+  const btnNo = document.getElementById('adminConfirmNo');
+  const btnYes = document.getElementById('adminConfirmYes');
+
+  let formToSubmit = null;
+
+  document.querySelectorAll('.btn-open-delete').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const nom = btn.dataset.nom || 'ce produit';
+      formToSubmit = btn.closest('form');
+
+      msg.textContent = `Êtes-vous sûr de vouloir supprimer "${nom}" ? Cette action est irréversible.`;
+      overlay.classList.remove('d-none');
+    });
+  });
+
+  btnNo.addEventListener('click', () => {
+    overlay.classList.add('d-none');
+    formToSubmit = null;
+  });
+
+  btnYes.addEventListener('click', () => {
+    overlay.classList.add('d-none');
+    if (formToSubmit) formToSubmit.submit();
+  });
+
+  // Fermer avec Escape
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !overlay.classList.contains('d-none')) {
+      overlay.classList.add('d-none');
+      formToSubmit = null;
+    }
+  });
+});
+</script>
+
+{% endblock %}

@@ -79,7 +79,7 @@
             <ul>
               <li><a href="#">Department Details</a></li>
               <li><a href="#">Service Details</a></li>
-              <li><a href="#">Appointment</a></li>
+              <li><a href="{{ path('rendezvous_list') }}">Mes Appointments</a></li>
               <li><a href="#">Testimonials</a></li>
               <li><a href="#">FAQ</a></li>
               <li><a href="#">Gallery</a></li>
@@ -88,13 +88,30 @@
               <li><a href="#">404</a></li>
             </ul>
           </li>
+              <li>
+      <a href="{{ path('front_produit_index') }}" 
+         class="{{ app.request.attributes.get('_route') starts with 'front_produit' ? 'active' : '' }}">
+         Pharmacie
+      </a>
+    </li>
+
+    <li>
+      <a href="{{ path('panier_index') }}" 
+         class="{{ app.request.attributes.get('_route') == 'panier_index' ? 'active' : '' }} position-relative">
+        <i class="bi bi-cart-fill fs-4"></i>
+        <span id="cart-count" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+          {{ app.session.get('panier') ? app.session.get('panier')|length : 0 }}
+        </span>
+      </a>
+    </li>
+
 
           <li><a href="#">Contact</a></li>
         </ul>
         <i class="mobile-nav-toggle d-xl-none bi bi-list"></i>
       </nav>
 
-      <a class="btn-getstarted" href="#">Appointment</a>
+      <a class="btn-getstarted" href="{{ path('app_dashboard') }}">Dashboard</a>
     </div>
   </header>
 
@@ -187,8 +204,7 @@
     <i class="bi bi-arrow-up-short"></i>
   </a>
 
-  <!-- Preloader -->
-  <div id="preloader"></div>
+  <!-- Preloader  <div id="preloader"></div> -->
 
   <!-- Vendor JS Files -->
   <script src="{{ asset('assets/vendor/bootstrap/js/bootstrap.bundle.min.js') }}"></script>
@@ -207,4 +223,3 @@
             {% block importmap %}{{ importmap('app') }}{% endblock %}
 </body>
 </html>
-

@@ -15,14 +15,14 @@ class RendezVous
     #[ORM\GeneratedValue]
     #[ORM\Column]
     private ?int $id = null;
-
+    
     #[ORM\Column]
     #[Assert\NotBlank(message: 'La date et l\'heure sont obligatoires')]
     #[Assert\GreaterThan('now', message: 'La date et l\'heure doivent être dans le futur')]
     private ?\DateTime $datetime = null;
 
     #[ORM\Column(length: 50)]
-    private ?string $statut = 'demande';
+    private ?string $statut = 'Demande';
 
     #[ORM\Column(length: 50)]
     private ?string $mode = null;
