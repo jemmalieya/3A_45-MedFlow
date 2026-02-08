@@ -1,11 +1,14 @@
 <?php
 
 namespace App\Controller;
+
 use App\Service\AdminBIService;
+use App\Service\TwilioSmsService;
 
 use App\Entity\Commande;
 use App\Entity\LigneCommande;
 use App\Entity\Produit;
+
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
@@ -148,8 +151,8 @@ class CommandeController extends AbstractController
         // 1) Créer commande (en base) + lignes (en base)
         $commande = new Commande();
         $commande->setDateCreationCommande(new \DateTimeImmutable());
-        $commande->setStatutCommande('En attente'); // paiement en attente
-        $commande->setIdUser(1); // TODO: user connecté
+        $commande->setStatutCommande('En attente');
+        $commande->setIdUser(1); // TODO: user connecté (plus tard)
 
         $em->persist($commande);
 
@@ -197,13 +200,12 @@ class CommandeController extends AbstractController
             return $this->redirectToRoute('commande_valider');
         }
 
-        // montant total en base
         $commande->setMontantTotal($totalDt);
 
-        // flush pour avoir l'id_commande
+        // flush pour avoir id_commande
         $em->flush();
 
-        // 2) Créer Stripe session avec metadata commande_id
+        // 2) Stripe session
         Stripe::setApiKey($stripeSecret);
 
         $checkout = StripeCheckoutSession::create([
@@ -217,7 +219,7 @@ class CommandeController extends AbstractController
             'cancel_url'  => $appUrl . '/commande/paiement/cancel?commande_id=' . $commande->getIdCommande(),
         ]);
 
-        // 3) Sauver stripe_session_id sur la commande (si ton entity Stripe existe)
+        // 3) Sauver stripe_session_id si l’entity a le champ
         if (method_exists($commande, 'setStripeSessionId')) {
             $commande->setStripeSessionId($checkout->id);
             if (method_exists($commande, 'setPaidAt')) {
@@ -231,12 +233,16 @@ class CommandeController extends AbstractController
 
     /**
      * ✅ Success Stripe
-     * ✅ Retrouve la commande via metadata commande_id (ou stripe_session_id)
-     * ✅ Met paid_at + décrémente stock + statut
+     * ✅ met paid_at + décrémente stock + statut
+     * ✅ envoie SMS Twilio (sans ajouter champ)
      */
     #[Route('/commande/paiement/success', name: 'commande_paiement_success', methods: ['GET'])]
-    public function paiementSuccess(Request $request, SessionInterface $session, EntityManagerInterface $em): Response
-    {
+    public function paiementSuccess(
+        Request $request,
+        SessionInterface $session,
+        EntityManagerInterface $em,
+        TwilioSmsService $sms
+    ): Response {
         $stripeSecret = $_ENV['STRIPE_SECRET_KEY'] ?? null;
         if (!$stripeSecret) {
             $this->addFlash('error', 'STRIPE_SECRET_KEY introuvable.');
@@ -270,13 +276,13 @@ class CommandeController extends AbstractController
             return $this->redirectToRoute('front_produit_index');
         }
 
-        // Anti-doublon: déjà payé ?
+        // ✅ Anti-doublon : si déjà payé => ne pas renvoyer SMS
         if (method_exists($commande, 'getPaidAt') && $commande->getPaidAt() !== null) {
             $this->addFlash('success', 'Paiement déjà confirmé ✅');
             return $this->redirectToRoute('commande_details', ['id' => $commande->getIdCommande()]);
         }
 
-        // Décrémenter stock selon lignes
+        // Décrémenter stock
         foreach ($commande->getLigneCommandes() as $ligne) {
             $produit = $ligne->getProduit();
             $qty = (int)$ligne->getQuantite_commandee();
@@ -298,6 +304,7 @@ class CommandeController extends AbstractController
 
         // Mettre commande payée
         $commande->setStatutCommande('En cours');
+
         if (method_exists($commande, 'setStripeSessionId')) {
             $commande->setStripeSessionId($sessionId);
         }
@@ -306,6 +313,29 @@ class CommandeController extends AbstractController
         }
 
         $em->flush();
+
+        // ✅ SMS Twilio après flush (paiement confirmé)
+        try {
+            $to = $_ENV['TWILIO_TO'] ?? '+21654430709';
+
+            $items = [];
+            foreach ($commande->getLigneCommandes() as $ligne) {
+                $p = $ligne->getProduit();
+                if (!$p) continue;
+                $items[] = $p->getNomProduit() . ' x' . (int)$ligne->getQuantite_commandee();
+            }
+
+            $message =
+                "✅ Merci pour votre commande MedFlow !\n" .
+                "Commande #" . $commande->getIdCommande() . "\n" .
+                "Payé: " . number_format((float)$commande->getMontantTotal(), 2, ',', ' ') . " DT\n" .
+                "Articles: " . implode(', ', $items) . "\n" .
+                "Statut: " . $commande->getStatutCommande();
+
+           $sms->send($to, $message);
+        } catch (\Throwable $e) {
+            // on ne casse pas le flow si SMS échoue
+        }
 
         // vider panier
         $session->remove('panier');
@@ -317,12 +347,11 @@ class CommandeController extends AbstractController
     #[Route('/commande/paiement/cancel', name: 'commande_paiement_cancel', methods: ['GET'])]
     public function paiementCancel(Request $request, EntityManagerInterface $em): Response
     {
-        // Option: supprimer la commande "En attente" si paiement annulé
         $commandeId = (int)$request->query->get('commande_id');
+
         if ($commandeId > 0) {
             $commande = $em->getRepository(Commande::class)->find($commandeId);
             if ($commande && $commande->getStatutCommande() === 'En attente') {
-                // supprime lignes + commande
                 foreach ($commande->getLigneCommandes() as $ligne) {
                     $em->remove($ligne);
                 }
@@ -375,11 +404,11 @@ class CommandeController extends AbstractController
                 ),
             ]
         );
-
-
-        
     }
 
+    /* =========================
+     *         BI DASHBOARD
+     * ========================= */
 
     #[Route('/admin/bi', name: 'admin_bi_dashboard')]
     public function dashboard(Request $request, AdminBIService $bi): Response
@@ -392,14 +421,12 @@ class CommandeController extends AbstractController
         $data = $bi->buildDashboard($days, $from, $to, $cat);
 
         return $this->render('admin/bi_dashboard.html.twig', [
-            // période
             'days' => $data['period']['days'],
             'from' => $data['period']['from'],
             'to'   => $data['period']['to'],
             'cat'  => $data['period']['cat'],
             'categories' => $data['period']['categories'],
 
-            // données
             'kpi' => $data['kpi'],
             'charts' => $data['charts'],
             'topProduits' => $data['topProduits'],
@@ -408,6 +435,4 @@ class CommandeController extends AbstractController
             'tips' => $data['tips'],
         ]);
     }
-
-    
 }
