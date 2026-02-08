@@ -26,18 +26,38 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 
 class EvenementController extends AbstractController
 {
-    // ✅ FRONT LIST
-    #[Route('/evenements', name: 'app_evenements', methods: ['GET'])]
-    public function index(EvenementRepository $repo): Response
-    {
-        $evenements = $repo->findBy([], ['date_debut_event' => 'DESC']);
+    
+#[Route('/evenements', name: 'app_evenements', methods: ['GET'])]
+public function index(EvenementRepository $repo): Response
+{
+    // ✅ Ta liste reste triée par date de début (comme avant)
+    $evenements = $repo->findBy([], ['date_debut_event' => 'DESC']);
 
-        return $this->render('evenement/index.html.twig', [
-            'evenements' => $evenements,
-        ]);
+    // ✅ Dernier événement AJOUTÉ (tri par date_creation_event)
+    $latestCreated = $repo->findOneBy([], ['date_creation_event' => 'DESC']);
+
+    $hasNew = false;
+    $latestNewTitle = null;
+
+    if ($latestCreated && $latestCreated->getDateCreationEvent()) {
+        $limit = new \DateTime('-2 days');
+
+        if ($latestCreated->getDateCreationEvent() > $limit) {
+            $hasNew = true;
+            $latestNewTitle = $latestCreated->getTitreEvent();
+        }
     }
 
-    // ✅ FRONT SHOW
+    return $this->render('evenement/index.html.twig', [
+        'evenements' => $evenements,
+        'hasNew' => $hasNew,
+        'latestNewTitle' => $latestNewTitle,
+    ]);
+}
+
+
+
+   
     #[Route('/evenements/{id}', name: 'app_evenement_show', requirements: ['id' => '\d+'], methods: ['GET'])]
     public function show(Evenement $evenement): Response
     {
@@ -46,8 +66,7 @@ class EvenementController extends AbstractController
         ]);
     }
 
-    // ✅ ADMIN LIST TABLE
-    // ✅ ADMIN LIST TABLE + TRI
+    
 #[Route('/admin/evenements', name: 'admin_evenement_index', methods: ['GET'])]
 public function adminIndex(Request $request, EvenementRepository $repo): Response
 {
@@ -94,11 +113,12 @@ public function adminIndex(Request $request, EvenementRepository $repo): Respons
 }
 
 
-    // ✅ ADMIN ADD
+    
     #[Route('/admin/evenements/new', name: 'admin_evenement_new', methods: ['GET', 'POST'])]
     public function new(Request $request, EntityManagerInterface $em): Response
     {
         $evenement = new Evenement();
+        
         $evenement->setDateCreationEvent(new \DateTime());
         $evenement->setDateMiseAJourEvent(new \DateTime());
 
@@ -119,7 +139,7 @@ public function adminIndex(Request $request, EvenementRepository $repo): Respons
         ]);
     }
 
-    // ✅ ADMIN EDIT
+   
     #[Route('/admin/evenements/{id}/edit', name: 'admin_evenement_edit', requirements: ['id' => '\d+'], methods: ['GET', 'POST'])]
     public function edit(Request $request, Evenement $evenement, EntityManagerInterface $em): Response
     {
@@ -140,7 +160,6 @@ public function adminIndex(Request $request, EvenementRepository $repo): Respons
         ]);
     }
 
-    // ✅ ADMIN DELETE
     #[Route('/admin/evenements/{id}/delete', name: 'admin_evenement_delete', requirements: ['id' => '\d+'], methods: ['POST'])]
     public function delete(Request $request, Evenement $evenement, EntityManagerInterface $em): Response
     {
@@ -153,7 +172,7 @@ public function adminIndex(Request $request, EvenementRepository $repo): Respons
         return $this->redirectToRoute('admin_evenement_index');
     }
 
-    // ✅ ADMIN CARDS (SB Admin2)
+  
     #[Route('/admin/evenements/cards', name: 'admin_evenement_cards', methods: ['GET'])]
     public function adminCards(EvenementRepository $repo): Response
     {
@@ -162,7 +181,7 @@ public function adminIndex(Request $request, EvenementRepository $repo): Respons
                     'evenements' => $evenements,
                     ]);
     }
-    // ✅ ADMIN SHOW (SB Admin2)
+   
     #[Route('/admin/evenements/{id}', name: 'admin_evenement_show', requirements: ['id' => '\d+'], methods: ['GET'])]
     public function adminShow(Evenement $evenement): Response
     {
@@ -203,13 +222,12 @@ public function demanderParticipation(Request $request, Evenement $evenement, En
     return $this->redirectToRoute('app_evenement_show', ['id' => $evenement->getId()]);
 }
 
-// ✅ Admin: liste des événements avec badge demandes
 #[Route('/admin/evenements/demandes', name: 'admin_evenement_demandes_index', methods: ['GET'])]
 public function demandesIndex(EvenementRepository $repo): Response
 {
     $events = $repo->findBy([], ['date_debut_event' => 'DESC']);
 
-    // total pending (pour badge sidebar si tu veux l’afficher)
+    
     $totalPending = 0;
     foreach ($events as $ev) {
         $totalPending += $ev->countDemandesByStatus('pending');
@@ -221,13 +239,13 @@ public function demandesIndex(EvenementRepository $repo): Response
     ]);
 }
 
-// ✅ Admin: voir demandes d’un événement
+
 #[Route('/admin/evenements/{id}/demandes', name: 'admin_evenement_demandes_show', requirements: ['id' => '\d+'], methods: ['GET'])]
 public function demandesShow(Evenement $evenement): Response
 {
     $demandes = $evenement->getDemandesJson();
 
-    // tri: pending d’abord, puis plus récent
+   
     usort($demandes, function($a, $b) {
         $sa = $a['status'] ?? 'pending';
         $sb = $b['status'] ?? 'pending';
@@ -244,7 +262,7 @@ public function demandesShow(Evenement $evenement): Response
     ]);
 }
 
-// ✅ Admin: accepter/refuser
+
 #[Route('/admin/evenements/{id}/demandes/{demandeId}/decide', name: 'admin_evenement_demandes_decide', requirements: ['id' => '\d+'], methods: ['POST'])]
 public function decideDemande(
 
@@ -254,10 +272,10 @@ public function decideDemande(
     EntityManagerInterface $em,
     MailerInterface $mailer
 ): Response {
-    $status = $request->request->get('status'); // accepted / refused
+    $status = $request->request->get('status'); 
     $note = $request->request->get('note');
 
-    // 1) récupérer la demande depuis le JSON (pour connaitre email/nom)
+   
     $demandes = $evenement->getDemandesJson();
     $demandeFound = null;
 
@@ -282,12 +300,12 @@ public function decideDemande(
     }
 
     try {
-        // 2) décision + save
+       
         $evenement->decideDemande($demandeId, $status, 'admin', $note);
         $evenement->setDateMiseAJourEvent(new \DateTime());
         $em->flush();
 
-        // 3) Email + QR si accepté
+       
         $eventTitre = $evenement->getTitreEvent();
         $dates = $evenement->getDateDebutEvent()->format('d/m/Y') . " → " . $evenement->getDateFinEvent()->format('d/m/Y');
 
@@ -329,7 +347,7 @@ public function decideDemande(
 }
 elseif ($status === 'refused') {
 
-            // ====== Email REFUSÉ ======
+          
             $reason = $note ? "<p><b>Note admin :</b> $note</p>" : "";
 
             $email = (new Email())
@@ -411,7 +429,6 @@ public function statsData(EvenementRepository $repo): JsonResponse
         }
     }
 
-    // ✅ Calcul % (safe si total=0)
     $total = max(1, $demandes['total']);
 
     $demandesPercent = [
@@ -425,7 +442,7 @@ public function statsData(EvenementRepository $repo): JsonResponse
         'byVille' => $byVille,
         'byStatut' => $byStatut,
         'demandes' => $demandes,
-        'demandesPercent' => $demandesPercent, // ✅ nouveau
+        'demandesPercent' => $demandesPercent, 
     ]);
 }   
 
@@ -433,20 +450,18 @@ public function statsData(EvenementRepository $repo): JsonResponse
     #[Route('/admin/evenements/{id}/pdf', name: 'admin_evenement_pdf', requirements: ['id' => '\d+'], methods: ['GET'])]
 public function exportEvenementPdf(Evenement $evenement): Response
 {
-    // ✅ 1) Générer un lien (front show) pour QR
-    // (si tu veux autre route, change ici)
+   
     $frontUrl = $this->generateUrl(
         'app_evenement_show',
         ['id' => $evenement->getId()],
         UrlGeneratorInterface::ABSOLUTE_URL
     );
 
-    // ✅ 2) QR base64 (comme tu fais déjà)
+    
     $qrUrl = 'https://chart.googleapis.com/chart?chs=250x250&cht=qr&chl=' . urlencode($frontUrl);
     $qrImage = @file_get_contents($qrUrl);
     $qrBase64 = $qrImage ? 'data:image/png;base64,' . base64_encode($qrImage) : null;
 
-    // ✅ 3) HTML du PDF (Twig)
     $html = $this->renderView('admin/evenement_fiche.html.twig', [
         'evenement' => $evenement,
         'qrBase64' => $qrBase64,
@@ -454,10 +469,10 @@ public function exportEvenementPdf(Evenement $evenement): Response
         'generatedAt' => new \DateTime(),
     ]);
 
-    // ✅ 4) Dompdf config
+
     $options = new Options();
     $options->set('defaultFont', 'DejaVu Sans');
-    $options->setIsRemoteEnabled(true); // utile si tu utilises des images externes
+    $options->setIsRemoteEnabled(true);
 
     $dompdf = new Dompdf($options);
     $dompdf->loadHtml($html);
@@ -477,6 +492,19 @@ public function exportEvenementPdf(Evenement $evenement): Response
 }
 
     
+  #[Route('/test-email', name: 'test_email')]
+public function testEmail(MailerInterface $mailer): Response
+{
+    $email = (new Email())
+        ->from('mayssemmanai175@gmail.com')   // doit être autorisé dans Brevo
+        ->to('mayssemmanai175@gmail.com')          // mets ton vrai email
+        ->subject('✅ Test Email Brevo Symfony')
+        ->text('Si tu reçois cet email, Brevo + Symfony fonctionnent 🎉');
+
+    $mailer->send($email);
+
+    return new Response('Email envoyé ✅ Vérifie ta boîte mail');
+}
 
                
 }
