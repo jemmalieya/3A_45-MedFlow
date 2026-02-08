@@ -42,8 +42,25 @@
             <!-- Nav Item - Dashboard -->
             <li class="nav-item active">
                 <a class="nav-link" href="{{ path('app_dashboard') }}"
+                <a class="nav-link" href="{{ path('app_admin') }}"
                     <i class="fas fa-fw fa-tachometer-alt"></i>
                     <span>Dashboard</span></a>
+            </li>
+<!-- Nav Item - Réclamations -->
+<li class="nav-item {{ app.request.attributes.get('_route') == 'admin_reclamations' ? 'active' : '' }}">
+  <a class="nav-link" href="{{ path('admin_reclamations') }}">
+    <i class="fas fa-fw fa-exclamation-circle"></i>
+    <span>Réclamations</span>
+  </a>
+</li>
+
+             <!-- Divider -->
+            <hr class="sidebar-divider">
+
+            <li class="nav-item active">
+                <a class="nav-link" href="{{ path('app_home') }}"
+                    <i class="fas fa-fw fa-tachometer-alt"></i>
+                    <span>FrontOffice</span></a>
             </li>
 
              <!-- Divider -->

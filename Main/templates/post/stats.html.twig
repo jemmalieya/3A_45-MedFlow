@@ -1,0 +1,150 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Stats Posts{% endblock %}
+
+{% block body %}
+<div class="container py-5">
+
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h2 class="mb-1">Blog Insights</h2>
+      <p class="text-muted mb-0">Analyse d’engagement & tendances</p>
+    </div>
+
+    <a href="{{ path('post_index') }}" class="btn btn-outline-secondary">
+      Retour
+    </a>
+  </div>
+
+  {# ✅ KPI cards #}
+  <div class="row g-3 mb-4">
+    <div class="col-12 col-md-3">
+      <div class="card border-0 shadow-sm rounded-4">
+        <div class="card-body">
+          <div class="text-muted small">Total posts</div>
+          <div class="fs-3 fw-bold">{{ kpis.totalPosts }}</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-12 col-md-3">
+      <div class="card border-0 shadow-sm rounded-4">
+        <div class="card-body">
+          <div class="text-muted small">Total réactions</div>
+          <div class="fs-3 fw-bold">{{ kpis.totalReactions }}</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-12 col-md-3">
+      <div class="card border-0 shadow-sm rounded-4">
+        <div class="card-body">
+          <div class="text-muted small">Total commentaires</div>
+          <div class="fs-3 fw-bold">{{ kpis.totalComments }}</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-12 col-md-3">
+      <div class="card border-0 shadow-sm rounded-4">
+        <div class="card-body">
+          <div class="text-muted small">Score d’engagement</div>
+          <div class="fs-3 fw-bold">{{ kpis.engagement|number_format(1, '.', ' ') }}</div>
+          <div class="text-muted small">(réactions + com) / post</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-4">
+
+    {# ✅ Top catégories (barres) #}
+    <div class="col-12 col-lg-6">
+      <div class="card border-0 shadow-sm rounded-4 h-100">
+        <div class="card-body">
+          <h5 class="mb-3">Top catégories</h5>
+
+          {% for row in byCategorie %}
+            {% set pct = (maxCat > 0) ? (row.total / maxCat * 100) : 0 %}
+            <div class="mb-3">
+              <div class="d-flex justify-content-between small">
+                <span class="fw-semibold">{{ row.label }}</span>
+                <span class="text-muted">{{ row.total }}</span>
+              </div>
+              <div class="progress" style="height:10px;">
+                <div class="progress-bar" role="progressbar" style="width: {{ pct }}%"></div>
+              </div>
+            </div>
+          {% else %}
+            <div class="text-muted">Aucune donnée.</div>
+          {% endfor %}
+
+        </div>
+      </div>
+    </div>
+
+    {# ✅ Mood analytics (innovant) #}
+    <div class="col-12 col-lg-6">
+      <div class="card border-0 shadow-sm rounded-4 h-100">
+        <div class="card-body">
+          <h5 class="mb-3">Mood analytics (Humeur)</h5>
+
+          {% for row in byHumeur %}
+            {% set pct = (maxMood > 0) ? (row.total / maxMood * 100) : 0 %}
+            <div class="mb-3">
+              <div class="d-flex justify-content-between small">
+                <span class="fw-semibold">{{ row.label }}</span>
+                <span class="text-muted">{{ row.total }}</span>
+              </div>
+              <div class="progress" style="height:10px;">
+                <div class="progress-bar bg-success" role="progressbar" style="width: {{ pct }}%"></div>
+              </div>
+            </div>
+          {% else %}
+            <div class="text-muted">Aucune donnée.</div>
+          {% endfor %}
+
+          <div class="alert alert-info mt-3 mb-0">
+            <b>Touche innovante :</b> cette section aide à comprendre l’état émotionnel dominant des publications.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {# ✅ Top posts #}
+    <div class="col-12">
+      <div class="card border-0 shadow-sm rounded-4">
+        <div class="card-body">
+          <h5 class="mb-3">Top posts (réactions)</h5>
+
+          <div class="table-responsive">
+            <table class="table align-middle">
+              <thead>
+                <tr class="text-muted small">
+                  <th>Titre</th>
+                  <th>Catégorie</th>
+                  <th>Date</th>
+                  <th class="text-end">Réactions</th>
+                  <th class="text-end">Commentaires</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for p in topPosts %}
+                  <tr>
+                    <td class="fw-semibold">{{ p.titre }}</td>
+                    <td><span class="badge bg-primary-subtle text-primary">{{ p.categorie }}</span></td>
+                    <td class="text-muted small">{{ p.dateCreation|date('d/m/Y H:i') }}</td>
+                    <td class="text-end fw-semibold">{{ p.nbrReactions }}</td>
+                    <td class="text-end fw-semibold">{{ p.nbrCommentaires }}</td>
+                  </tr>
+                {% else %}
+                  <tr><td colspan="5" class="text-muted">Aucun post.</td></tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+{% endblock %}

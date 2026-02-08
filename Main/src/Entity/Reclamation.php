@@ -250,19 +250,25 @@ class Reclamation
         return $this;
     }
 
-    #[ORM\PrePersist]
+#[ORM\PrePersist]
 public function setDatesAutomatiquement(): void
 {
     // Date de création
     if ($this->date_creation_r === null) {
         $this->date_creation_r = new \DateTimeImmutable();
     }
-
-    // Date limite = +1 mois
-    if ($this->date_limite  === null) {
-        $this->date_limite  = $this->date_creation_r->modify('+1 month');
+     if (
+        $this->statutReclamation === 'TRAITEE'
+        && $this->date_cloture_r === null
+    ) {
+        $this->date_cloture_r = new \DateTimeImmutable();
+    }
+    // ✅ Date limite = +48h (2 jours)
+    if ($this->date_limite === null) {
+        $this->date_limite = $this->date_creation_r->modify('+48 hours');
     }
 }
+
 public function isUrgente(): bool
 {
     if ($this->date_limite === null) {
@@ -274,6 +280,12 @@ public function isUrgente(): bool
 
     // date dépassée OU ≤ 3 jours
     return $interval->invert === 1 || $interval->days <= 3;
+}
+
+#[ORM\PreUpdate]
+public function onUpdate(): void
+{
+    $this->date_modification_r = new \DateTimeImmutable();
 }
 
 
