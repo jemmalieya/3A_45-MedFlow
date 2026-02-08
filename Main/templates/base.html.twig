@@ -66,7 +66,15 @@
       <nav id="navmenu" class="navmenu">
         <ul>
           <li><a href="{{ path('app_home') }}" class="{{ app.request.attributes.get('_route') == 'app_home' ? 'active' : '' }}">Home</a></li>
-          <li>Réclamations</li>
+             <li><a href="{{ path('reclamation_index') }}">Réclamations</a></li>
+          <li><a href="{{ path('post_index') }}">Blog</a></li>
+
+          <li class="dropdown"><a href="#"><span>Consultations</span> <i class="bi bi-chevron-down toggle-dropdown"></i></a>
+            <ul>
+              <li><a href="{{ path('rendezvous_home') }}">Rendez Vous</a></li>
+              <li><a href="{{ path('rendezvous_list') }}">Mes Appointments</a></li>
+            </ul>
+          </li>
            <li><a href="{{ path('app_evenements') }}" class="{% if app.request.attributes.get('_route') == 'app_evenements' %}active{% endif %}">Événements</a></li>
 
 
