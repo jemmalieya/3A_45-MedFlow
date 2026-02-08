@@ -1,0 +1,142 @@
+/* ===== Produits Admin ===== */
+
+.bg-gradient-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  }
+  
+  .bg-success-soft { background-color: #d1fae5; }
+  .bg-warning-soft { background-color: #fef3c7; }
+  .bg-danger-soft  { background-color: #fee2e2; }
+  
+  .card { transition: all 0.3s ease; }
+  .card:hover { transform: translateY(-2px); }
+  
+  .table tbody tr { transition: all 0.2s ease; }
+  .table tbody tr:hover {
+    background-color: #f8f9fa;
+    transform: scale(1.01);
+  }
+  
+  .btn-group .btn { transition: all 0.2s ease; }
+  .btn-group .btn:hover { transform: scale(1.1); }
+  
+  /* ===== Overlay Confirmation (Admin Delete) ===== */
+  
+  .confirm-overlay{
+    position: fixed;
+    top:0; left:0;
+    width:100%; height:100%;
+    background: rgba(0,0,0,.6);
+    backdrop-filter: blur(4px);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    z-index: 3000;
+    animation: fadeIn .2s ease;
+  }
+  
+  .confirm-box{
+    background:#fff;
+    padding: 2rem;
+    border-radius: 20px;
+    width: 90%;
+    max-width: 450px;
+    text-align:center;
+    box-shadow: 0 10px 40px rgba(0,0,0,.3);
+    animation: adminPop .25s ease;
+  }
+  
+  .confirm-icon i{ font-size: 3.5rem; }
+  
+  .confirm-buttons{
+    display:flex;
+    gap: 1rem;
+    justify-content:center;
+  }
+  
+  @keyframes adminPop{
+    from{ transform: translateY(20px); opacity:0; }
+    to{ transform: translateY(0); opacity:1; }
+  }
+  
+  @keyframes fadeIn{
+    from{ opacity:0; }
+    to{ opacity:1; }
+  }
+  
+  /* ✅ Si ton projet n'a pas bootstrap display none (au cas où) */
+  .d-none{ display:none !important; }
+  
+
+
+.bg-gradient-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.status-options {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.status-option {
+    position: relative;
+}
+
+.status-option input[type="radio"] {
+    position: absolute;
+    opacity: 0;
+}
+body, 
+.card, 
+.table, 
+.table td, 
+.table th,
+.stat-card,
+.product-row {
+  color: #111827 !important; /* noir élégant */
+}
+
+.status-option label {
+    display: block;
+    padding: 16px;
+    border: 2px solid #e9ecef;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    background: white;
+}
+
+.status-option label:hover {
+    border-color: #667eea;
+    background: #f8f9fa;
+    transform: translateX(5px);
+}
+
+.status-option input:checked + label {
+    border-color: #667eea;
+    background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+}
+
+.status-option i {
+    font-size: 1.5rem;
+    margin-right: 8px;
+}
+
+.card {
+    animation: fadeInUp 0.5s ease;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+

@@ -1,0 +1,260 @@
+{# templates/admin/showEvents_adm.html.twig #}
+{% extends 'base_dashboard.html.twig' %}
+
+{% block title %}Demandes - {{ evenement.titreEvent }}{% endblock %}
+
+{% block stylesheets %}
+  {{ parent() }}
+  <link rel="stylesheet" href="{{ asset('assets_dash/css/evenement-demandes.css') }}">
+{% endblock %}
+
+{% block body %}
+<div class="container-fluid evdem">
+
+  {# ===== Top header ===== #}
+  <div class="evdem-topbar mb-4">
+    <div class="evdem-head">
+      <h1 class="evdem-title">
+        <i class="fas fa-user-check mr-2"></i>Demandes — {{ evenement.titreEvent }}
+      </h1>
+      <div class="evdem-subtitle">
+        Gérez les inscriptions : validation, refus, suivi des statuts.
+      </div>
+    </div>
+
+    <div class="evdem-actions">
+      <div class="input-group evdem-search">
+        <div class="input-group-prepend">
+          <span class="input-group-text"><i class="fas fa-search"></i></span>
+        </div>
+        <input id="demandesSearch" type="text" class="form-control"
+               placeholder="Rechercher (nom, email, tel, statut...)">
+      </div>
+
+      <a href="{{ path('admin_evenement_demandes_index') }}" class="btn btn-outline-secondary evdem-btn-back">
+        <i class="fas fa-arrow-left mr-1"></i> Retour
+      </a>
+        <a href="{{ path('admin_evenement_pdf', {id: evenement.id}) }}"
+        class="btn btn-danger evdem-btn-pdf"
+         target="_blank">
+        <i class="fas fa-file-pdf mr-1"></i> Fiche PDF
+         </a>
+
+         <a href="{{ path('admin_evenement_demandes_index') }}" class="btn btn-outline-secondary evdem-btn-back">
+    <i class="fas fa-arrow-left mr-1"></i> Retour
+  </a>
+
+      
+    </div>
+  </div>
+
+  {# ===== Flash messages ===== #}
+  {% for label, messages in app.flashes %}
+    {% for message in messages %}
+      <div class="alert alert-{{ label }} alert-dismissible fade show" role="alert">
+        {{ message }}
+        <button type="button" class="close" data-dismiss="alert">&times;</button>
+      </div>
+    {% endfor %}
+  {% endfor %}
+
+  {# ===== KPI row (NO controller vars needed) ===== #}
+  {% set demandes = demandes|default([]) %}
+  {% set max = evenement.nbParticipantsMaxEvent %}
+
+  {% set acceptedCount = 0 %}
+  {% set pendingCount  = 0 %}
+  {% set refusedCount  = 0 %}
+
+  {% for d in demandes %}
+    {% if d.status == 'accepted' %}
+      {% set acceptedCount = acceptedCount + 1 %}
+    {% elseif d.status == 'pending' %}
+      {% set pendingCount = pendingCount + 1 %}
+    {% elseif d.status == 'refused' %}
+      {% set refusedCount = refusedCount + 1 %}
+    {% endif %}
+  {% endfor %}
+
+  {% set rest = (max is not null) ? (max - acceptedCount) : null %}
+
+  <div class="row mb-4">
+    <div class="col-md-4 mb-3">
+      <div class="card border-0 shadow-sm evdem-kpi">
+        <div class="card-body d-flex align-items-center justify-content-between">
+          <div>
+            <div class="evdem-kpi-label">Pending</div>
+            <div class="evdem-kpi-value">{{ pendingCount }}</div>
+          </div>
+          <div class="evdem-kpi-icon kpi-warning"><i class="fas fa-hourglass-half"></i></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-4 mb-3">
+      <div class="card border-0 shadow-sm evdem-kpi">
+        <div class="card-body d-flex align-items-center justify-content-between">
+          <div>
+            <div class="evdem-kpi-label">Acceptés</div>
+            <div class="evdem-kpi-value">{{ acceptedCount }}</div>
+            <div class="evdem-kpi-sub">
+              {% if max is not null %} / {{ max }}{% endif %}
+            </div>
+          </div>
+          <div class="evdem-kpi-icon kpi-success"><i class="fas fa-check-circle"></i></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-4 mb-3">
+      <div class="card border-0 shadow-sm evdem-kpi">
+        <div class="card-body d-flex align-items-center justify-content-between">
+          <div>
+            <div class="evdem-kpi-label">Places restantes</div>
+            <div class="evdem-kpi-value">
+              {% if rest is not null %}
+                {{ rest < 0 ? 0 : rest }}
+              {% else %}
+                ∞
+              {% endif %}
+            </div>
+          </div>
+          <div class="evdem-kpi-icon kpi-primary"><i class="fas fa-users"></i></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {# ===== Table ===== #}
+  <div class="card border-0 shadow-sm evdem-card">
+    <div class="card-header bg-white border-0 evdem-card-head">
+      <div>
+        <div class="evdem-card-title">Liste des demandes</div>
+        <div class="text-muted small">Clique sur “Accepter” ou “Refuser” pour décider.</div>
+      </div>
+
+      <div class="evdem-legend">
+        <span class="evdem-dot dot-pending"></span> Pending
+        <span class="evdem-dot dot-accepted ml-3"></span> Acceptée
+        <span class="evdem-dot dot-refused ml-3"></span> Refusée
+      </div>
+    </div>
+     
+    <div class="card-body">
+
+      {% if demandes is empty %}
+        <div class="alert alert-info mb-0">Aucune demande pour cet événement.</div>
+      {% else %}
+        <div class="table-responsive">
+          <table class="table align-middle evdem-table">
+            <thead>
+              <tr>
+                <th>Nom</th>
+                <th>Email</th>
+                <th>Tél</th>
+                <th>Message</th>
+                <th>Statut</th>
+                <th>Créée</th>
+                <th class="text-end">Actions</th>
+              </tr>
+            </thead>
+
+            <tbody id="demandesBody">
+              {% for d in demandes %}
+                {% set statusText =
+                  d.status == 'pending' ? 'pending' :
+                  (d.status == 'accepted' ? 'accepted' : 'refused')
+                %}
+
+                <tr class="evdem-row"
+                    data-search="{{ (d.nom ~ ' ' ~ d.email ~ ' ' ~ d.tel ~ ' ' ~ statusText)|lower }}">
+
+                  <td class="font-weight-bold">{{ d.nom }}</td>
+                  <td>{{ d.email }}</td>
+                  <td>{{ d.tel }}</td>
+
+                  <td style="max-width:340px;">
+                    <div class="evdem-message text-truncate" title="{{ d.message }}">
+                      {{ d.message }}
+                    </div>
+                  </td>
+
+                  <td>
+                    {% if d.status == 'pending' %}
+                      <span class="badge evdem-badge evdem-badge-pending">
+                        <i class="fas fa-hourglass-half mr-1"></i> Pending
+                      </span>
+                    {% elseif d.status == 'accepted' %}
+                      <span class="badge evdem-badge evdem-badge-accepted">
+                        <i class="fas fa-check mr-1"></i> Acceptée
+                      </span>
+                    {% else %}
+                      <span class="badge evdem-badge evdem-badge-refused">
+                        <i class="fas fa-times mr-1"></i> Refusée
+                      </span>
+                    {% endif %}
+                  </td>
+
+                  <td>
+                    {{ d.created_at ? d.created_at|date('d/m/Y H:i') : '-' }}
+                  </td>
+
+                  <td class="text-end">
+                    {% if d.status == 'pending' %}
+                      <div class="d-inline-flex flex-wrap justify-content-end evdem-actions-cell">
+
+                        <form method="post"
+                              action="{{ path('admin_evenement_demandes_decide', {id: evenement.id, demandeId: d.id}) }}"
+                              class="d-inline">
+                          <input type="hidden" name="status" value="accepted">
+                          <button class="btn btn-sm evdem-btn evdem-btn-accept" type="submit">
+                            <i class="fas fa-check"></i> Accepter
+                          </button>
+                        </form>
+
+                        <form method="post"
+                              action="{{ path('admin_evenement_demandes_decide', {id: evenement.id, demandeId: d.id}) }}"
+                              class="d-inline">
+                          <input type="hidden" name="status" value="refused">
+                          <button class="btn btn-sm evdem-btn evdem-btn-refuse" type="submit">
+                            <i class="fas fa-times"></i> Refuser
+                          </button>
+                        </form>
+
+                      </div>
+                    {% else %}
+                      <span class="text-muted small">
+                        Décision: {{ d.decision_at ? d.decision_at|date('d/m/Y H:i') : '-' }}
+                      </span>
+                    {% endif %}
+                  </td>
+
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% endif %}
+
+    </div>
+  </div>
+
+</div>
+
+{# ===== JS Search ===== #}
+<script>
+  (function () {
+    const input = document.getElementById('demandesSearch');
+    const rows = document.querySelectorAll('.evdem-row');
+    if (!input || !rows.length) return;
+
+    input.addEventListener('input', function () {
+      const q = (this.value || '').toLowerCase().trim();
+      rows.forEach(r => {
+        const hay = (r.getAttribute('data-search') || '');
+        r.style.display = hay.includes(q) ? '' : 'none';
+      });
+    });
+  })();
+</script>
+{% endblock %}

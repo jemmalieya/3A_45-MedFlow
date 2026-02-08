@@ -1,0 +1,247 @@
+{% extends 'base_dashboard.html.twig' %}
+{% block title %}Statistiques Ressources{% endblock %}
+
+{% block body %}
+<div class="container-fluid">
+
+  <div class="d-flex align-items-center justify-content-between flex-wrap mb-4 gap-2">
+    <div>
+      <h1 class="h3 mb-1 text-gray-800">Statistiques — Ressources</h1>
+      <div class="text-muted small">Analyse des ressources (type, catégories, événements).</div>
+    </div>
+   <a href="{{ path('admin_ressource_stats_pdf') }}" class="btn btn-danger ml-2">
+  <i class="fas fa-file-pdf mr-1"></i> Export PDF
+</a>
+
+
+
+    
+    <a href="{{ path('admin_ressource_index') }}" class="btn btn-outline-secondary">
+      <i class="fas fa-arrow-left mr-1"></i> Retour
+    </a>
+  </div>
+
+  {# ===== KPI ===== #}
+  <div class="row" id="kpiRow">
+
+    <div class="col-md-3 mb-3">
+      <div class="card border-left-primary shadow-sm h-100">
+        <div class="card-body py-3">
+          <div class="text-muted small">Total</div>
+          <div class="h4 mb-0 font-weight-bold text-gray-800" id="kpiTotal">—</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-3 mb-3">
+      <div class="card border-left-info shadow-sm h-100">
+        <div class="card-body py-3">
+          <div class="text-muted small">Fichiers</div>
+          <div class="h4 mb-0 font-weight-bold text-gray-800" id="kpiFiles">—</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-3 mb-3">
+      <div class="card border-left-success shadow-sm h-100">
+        <div class="card-body py-3">
+          <div class="text-muted small">Liens</div>
+          <div class="h4 mb-0 font-weight-bold text-gray-800" id="kpiLinks">—</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-3 mb-3">
+      <div class="card border-left-warning shadow-sm h-100">
+        <div class="card-body py-3">
+          <div class="text-muted small">Stock</div>
+          <div class="h4 mb-0 font-weight-bold text-gray-800" id="kpiStock">—</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-3 mb-3">
+      <div class="card border-left-primary shadow-sm h-100">
+        <div class="card-body py-3">
+          <div class="text-muted small">Publiques</div>
+          <div class="h4 mb-0 font-weight-bold text-gray-800" id="kpiPub">—</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-3 mb-3">
+      <div class="card border-left-danger shadow-sm h-100">
+        <div class="card-body py-3">
+          <div class="text-muted small">Privées</div>
+          <div class="h4 mb-0 font-weight-bold text-gray-800" id="kpiPriv">—</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  {# ===== Charts ===== #}
+  <div class="row mt-2">
+
+    <div class="col-lg-6 mb-4">
+      <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white border-0 font-weight-bold">
+          Ressources par Type
+        </div>
+        <div class="card-body">
+          <canvas id="chartByType" height="140"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-6 mb-4">
+      <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white border-0 font-weight-bold">
+          Ressources par Catégorie
+        </div>
+        <div class="card-body">
+          <canvas id="chartByCategorie" height="140"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-12 mb-4">
+      <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white border-0 font-weight-bold">
+          Top Événements (plus de ressources)
+        </div>
+        <div class="card-body">
+          <canvas id="chartTopEvents" height="90"></canvas>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+{# ✅ Chart.js (CDN) #}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+  (async function () {
+
+    const res = await fetch("{{ path('admin_ressource_stats_data') }}");
+    const data = await res.json();
+
+    // ===== KPI =====
+    const k = data.kpi || {};
+    document.getElementById('kpiTotal').innerText = k.total ?? 0;
+    document.getElementById('kpiFiles').innerText = k.files ?? 0;
+    document.getElementById('kpiLinks').innerText = k.links ?? 0;
+    document.getElementById('kpiStock').innerText = k.stock ?? 0;
+    document.getElementById('kpiPub').innerText = k.publiques ?? 0;
+    document.getElementById('kpiPriv').innerText = k.privees ?? 0;
+
+    // Helper: attend [{label, value}] et produit labels/values
+    function build(list) {
+      const safe = Array.isArray(list) ? list : [];
+      const labels = safe.map(x => x.label);
+      const values = safe.map(x => Number(x.value));
+      return { labels, values };
+    }
+
+    // Palette (SB Admin 2 vibes)
+    const palette = [
+      '#4e73df', // primary
+      '#1cc88a', // success
+      '#36b9cc', // info
+      '#f6c23e', // warning
+      '#e74a3b', // danger
+      '#858796', // secondary
+      '#5a5c69', // dark
+      '#20c997'  // teal
+    ];
+
+    function colorForLabels(labels) {
+      return labels.map((_, i) => palette[i % palette.length]);
+    }
+
+    // ===== byType (donut) =====
+    const t = build(data.byType || []);
+    new Chart(document.getElementById('chartByType'), {
+      type: 'doughnut',
+      data: {
+        labels: t.labels,
+        datasets: [{
+          data: t.values,
+          backgroundColor: colorForLabels(t.labels),
+          borderWidth: 2,
+          borderColor: '#ffffff',
+          hoverOffset: 6
+        }]
+      },
+      options: {
+        responsive: true,
+        cutout: '65%',
+        plugins: {
+          legend: { position: 'bottom' },
+          tooltip: {
+            callbacks: {
+              label: function(ctx){
+                const label = ctx.label || '';
+                const val = ctx.parsed ?? 0;
+                return `${label}: ${val}`;
+              }
+            }
+          }
+        }
+      }
+    });
+
+    // ===== byCategorie (bar) =====
+    const c = build(data.byCategorie || []);
+    new Chart(document.getElementById('chartByCategorie'), {
+      type: 'bar',
+      data: {
+        labels: c.labels,
+        datasets: [{
+          label: 'Ressources',
+          data: c.values,
+          backgroundColor: colorForLabels(c.labels),
+          borderRadius: 8,
+          maxBarThickness: 48
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { ticks: { maxRotation: 0 } },
+          y: { beginAtZero: true, ticks: { stepSize: 1 } }
+        }
+      }
+    });
+
+    // ===== topEvenements (horizontal bar) =====
+    const e = build(data.topEvenements || []);
+    new Chart(document.getElementById('chartTopEvents'), {
+      type: 'bar',
+      data: {
+        labels: e.labels,
+        datasets: [{
+          label: 'Ressources',
+          data: e.values,
+          backgroundColor: '#4e73df',
+          borderRadius: 10,
+          maxBarThickness: 28
+        }]
+      },
+      options: {
+        indexAxis: 'y',
+        responsive: true,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { beginAtZero: true, ticks: { stepSize: 1 } }
+        }
+      }
+    });
+
+  })();
+</script>
+{% endblock %}

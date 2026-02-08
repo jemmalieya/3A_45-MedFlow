@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Stats Ressources</title>
+  <style>
+    body { font-family: DejaVu Sans, sans-serif; font-size: 12px; color:#111; }
+    .header { padding: 10px 0; border-bottom: 2px solid #1f4fbf; margin-bottom: 14px; }
+    h1 { margin:0; font-size: 18px; }
+    .muted { color:#666; font-size: 11px; margin-top: 4px; }
+    .kpi-grid { width:100%; margin: 10px 0 16px; }
+    .kpi { display:inline-block; width: 31%; margin: 1%; padding: 10px; border:1px solid #e6e6e6; border-radius: 8px; }
+    .kpi .label { color:#666; font-size: 11px; }
+    .kpi .value { font-size: 20px; font-weight: bold; margin-top: 3px; color:#1f4fbf; }
+
+    h2 { font-size: 14px; margin: 14px 0 8px; color:#1f4fbf; }
+    table { width: 100%; border-collapse: collapse; margin-bottom: 10px; }
+    th, td { border:1px solid #e6e6e6; padding: 7px; }
+    th { background:#f4f7ff; text-align:left; }
+
+    .bar-wrap { background:#f1f1f1; border-radius: 8px; height: 10px; overflow:hidden; }
+    .bar { height: 10px; border-radius: 8px; }
+    .bar.type { background:#1f4fbf; }
+    .bar.cat  { background:#16a34a; }
+    .bar.evt  { background:#f59e0b; }
+
+    .footer { margin-top: 18px; border-top:1px solid #eee; padding-top:10px; font-size: 10px; color:#666; }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <h1>Rapport — Statistiques Ressources</h1>
+    <div class="muted">
+      Généré le {{ generatedAt|date('d/m/Y H:i') }} — MedFlow (Admin)
+    </div>
+  </div>
+
+  {# ===== KPI ===== #}
+  <div class="kpi-grid">
+    <div class="kpi">
+      <div class="label">Total</div>
+      <div class="value">{{ kpi.total|default(0) }}</div>
+    </div>
+    <div class="kpi">
+      <div class="label">Fichiers</div>
+      <div class="value">{{ kpi.files|default(0) }}</div>
+    </div>
+    <div class="kpi">
+      <div class="label">Liens</div>
+      <div class="value">{{ kpi.links|default(0) }}</div>
+    </div>
+    <div class="kpi">
+      <div class="label">Stock</div>
+      <div class="value">{{ kpi.stock|default(0) }}</div>
+    </div>
+    <div class="kpi">
+      <div class="label">Publiques</div>
+      <div class="value">{{ kpi.publiques|default(0) }}</div>
+    </div>
+    <div class="kpi">
+      <div class="label">Privées</div>
+      <div class="value">{{ kpi.privees|default(0) }}</div>
+    </div>
+  </div>
+
+  {# ===== PAR TYPE ===== #}
+  <h2>Ressources par Type</h2>
+  {% set maxType = 1 %}
+  {% for x in byType %}{% set maxType = max(maxType, x.value|default(0)) %}{% endfor %}
+
+  <table>
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th style="width:80px;">Nombre</th>
+        <th style="width:55%;">Répartition</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for x in byType %}
+        {% set val = x.value|default(0) %}
+        {% set pct = (val / maxType) * 100 %}
+        <tr>
+          <td>{{ x.label }}</td>
+          <td>{{ val }}</td>
+          <td>
+            <div class="bar-wrap">
+              <div class="bar type" style="width: {{ pct }}%;"></div>
+            </div>
+          </td>
+        </tr>
+      {% else %}
+        <tr><td colspan="3">Aucune donnée</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  {# ===== PAR CATEGORIE ===== #}
+  <h2>Ressources par Catégorie</h2>
+  {% set maxCat = 1 %}
+  {% for x in byCategorie %}{% set maxCat = max(maxCat, x.value|default(0)) %}{% endfor %}
+
+  <table>
+    <thead>
+      <tr>
+        <th>Catégorie</th>
+        <th style="width:80px;">Nombre</th>
+        <th style="width:55%;">Répartition</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for x in byCategorie %}
+        {% set val = x.value|default(0) %}
+        {% set pct = (val / maxCat) * 100 %}
+        <tr>
+          <td>{{ x.label }}</td>
+          <td>{{ val }}</td>
+          <td>
+            <div class="bar-wrap">
+              <div class="bar cat" style="width: {{ pct }}%;"></div>
+            </div>
+          </td>
+        </tr>
+      {% else %}
+        <tr><td colspan="3">Aucune donnée</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  {# ===== TOP EVENTS ===== #}
+  <h2>Top Événements (plus de ressources)</h2>
+  {% set maxEvt = 1 %}
+  {% for x in topEvents %}{% set maxEvt = max(maxEvt, x.value|default(0)) %}{% endfor %}
+
+  <table>
+    <thead>
+      <tr>
+        <th>Événement</th>
+        <th style="width:80px;">Ressources</th>
+        <th style="width:55%;">Poids</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for x in topEvents %}
+        {% set val = x.value|default(0) %}
+        {% set pct = (val / maxEvt) * 100 %}
+        <tr>
+          <td>{{ x.label }}</td>
+          <td>{{ val }}</td>
+          <td>
+            <div class="bar-wrap">
+              <div class="bar evt" style="width: {{ pct }}%;"></div>
+            </div>
+          </td>
+        </tr>
+      {% else %}
+        <tr><td colspan="3">Aucune donnée</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <div class="footer">
+    Ce rapport est généré automatiquement à partir des données en base (Ressource, Evenement).
+  </div>
+
+</body>
+</html>

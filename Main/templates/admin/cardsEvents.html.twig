@@ -1,0 +1,171 @@
+{% extends 'base_dashboard.html.twig' %}
+
+{% block title %}Dashboard Admin - Événements (Cards){% endblock %}
+
+{% block stylesheets %}
+  {{ parent() }}
+  <link rel="stylesheet" href="{{ asset('assets_dash/css/evenement-cards-lite.css') }}">
+{% endblock %}
+
+{% block body %}
+<div class="container-fluid evlite">
+
+  {# ===== Header ===== #}
+  <div class="evlite-topbar mb-4">
+    <div class="evlite-head">
+      <h1 class="evlite-title">Événements</h1>
+      
+    </div>
+
+    <div class="evlite-actions">
+      <div class="input-group evlite-search">
+        <div class="input-group-prepend">
+          <span class="input-group-text"><i class="fas fa-search"></i></span>
+        </div>
+        <input id="eventSearch" type="text" class="form-control"
+               placeholder="Rechercher (titre, type, ville, statut...)">
+      </div>
+
+      <a href="{{ path('admin_evenement_new') }}" class="btn btn-primary evlite-btn-add">
+        <i class="fas fa-plus mr-1"></i> Ajouter
+      </a>
+    </div>
+  </div>
+
+  {# ===== Flash messages ===== #}
+  {% for label, messages in app.flashes %}
+    {% for message in messages %}
+      <div class="alert alert-{{ label }} alert-dismissible fade show" role="alert">
+        {{ message }}
+        <button type="button" class="close" data-dismiss="alert">&times;</button>
+      </div>
+    {% endfor %}
+  {% endfor %}
+
+  {% if evenements is empty %}
+    <div class="card border-0 shadow-sm">
+      <div class="card-body text-center py-5">
+        <div class="evlite-empty-icon mb-2"><i class="fas fa-inbox"></i></div>
+        <div class="text-muted">Aucun événement trouvé.</div>
+        <a class="btn btn-primary btn-sm mt-3" href="{{ path('admin_evenement_new') }}">
+          <i class="fas fa-plus mr-1"></i> Créer un événement
+        </a>
+      </div>
+    </div>
+  {% else %}
+
+    <div class="row" id="eventsGrid">
+      {% for e in evenements %}
+
+        {% set status = e.statutEvent %}
+        {% set badgeClass =
+          status == 'Publié' ? 'evlite-badge evlite-badge-success' :
+          (status == 'Annulé' ? 'evlite-badge evlite-badge-danger' :
+          (status == 'En cours' ? 'evlite-badge evlite-badge-warning' : 'evlite-badge evlite-badge-secondary'))
+        %}
+
+        <div class="col-12 col-md-6 col-lg-4 mb-4 evlite-item"
+             data-search="{{ (e.titreEvent ~ ' ' ~ e.typeEvent ~ ' ' ~ e.villeEvent ~ ' ' ~ e.statutEvent)|lower }}">
+
+          <div class="card evlite-card border-0 shadow-sm h-100">
+            <div class="card-body d-flex flex-column">
+
+              {# Title + badge #}
+              <div class="d-flex justify-content-between align-items-start mb-2">
+                <div class="evlite-card-title">
+                <span class="evlite-ico"><i class="fas fa-calendar-alt"></i></span>
+                <span>{{ e.titreEvent }}</span>
+              </div>
+
+
+                <span class="{{ badgeClass }}">
+                  {% if status == 'Publié' %}
+                    <i class="fas fa-check mr-1"></i> Publié
+                  {% elseif status == 'Annulé' %}
+                    <i class="fas fa-times mr-1"></i> Annulé
+                  {% elseif status == 'En cours' %}
+                    <i class="fas fa-bolt mr-1"></i> En cours
+                  {% else %}
+                    <i class="fas fa-pen mr-1"></i> Brouillon
+                  {% endif %}
+                </span>
+              </div>
+
+              {# Meta #}
+              <div class="evlite-meta">
+                <div class="evlite-meta-item">
+                  <span class="evlite-meta-ico"><i class="fas fa-tag"></i></span>
+                  <span class="evlite-meta-txt">{{ e.typeEvent ?: '-' }}</span>
+                </div>
+
+                <div class="evlite-meta-item">
+                  <span class="evlite-meta-ico"><i class="fas fa-map-marker-alt"></i></span>
+                  <span class="evlite-meta-txt">{{ e.villeEvent ?: '-' }}</span>
+                </div>
+
+                <div class="evlite-meta-item">
+                  <span class="evlite-meta-ico"><i class="far fa-calendar-alt"></i></span>
+                  <span class="evlite-meta-txt">
+                    {{ e.dateDebutEvent ? e.dateDebutEvent|date('d/m/Y') : '-' }}
+                    → {{ e.dateFinEvent ? e.dateFinEvent|date('d/m/Y') : '-' }}
+                  </span>
+                </div>
+              </div>
+
+              {# Description #}
+              {% if e.descriptionEvent %}
+                <div class="evlite-desc mt-2">
+                  {{ e.descriptionEvent|striptags|slice(0, 110) }}{% if e.descriptionEvent|length > 110 %}...{% endif %}
+                </div>
+              {% endif %}
+
+              {# Actions #}
+              <div class="mt-auto pt-3 evlite-footer">
+                <a href="{{ path('admin_evenement_show', {id: e.id}) }}"
+                   class="btn btn-sm evlite-btn evlite-btn-view">
+                  <i class="far fa-eye"></i> Voir
+                </a>
+
+                <a href="{{ path('admin_evenement_edit', {id: e.id}) }}"
+                   class="btn btn-sm evlite-btn evlite-btn-edit">
+                  <i class="far fa-edit"></i> Modifier
+                </a>
+
+                <form method="post"
+                      action="{{ path('admin_evenement_delete', {id: e.id}) }}"
+                      onsubmit="return confirm('Supprimer cet événement ?');"
+                      class="d-inline">
+                  <input type="hidden" name="_token" value="{{ csrf_token('delete_evenement_' ~ e.id) }}">
+                  <button class="btn btn-sm evlite-btn evlite-btn-del" type="submit">
+                    <i class="far fa-trash-alt"></i> Supprimer
+                  </button>
+                </form>
+              </div>
+
+            </div>
+          </div>
+
+        </div>
+      {% endfor %}
+    </div>
+
+  {% endif %}
+</div>
+
+{# ===== JS Search ===== #}
+<script>
+  (function () {
+    const input = document.getElementById('eventSearch');
+    const items = document.querySelectorAll('.evlite-item');
+    if (!input || !items.length) return;
+
+    input.addEventListener('input', function () {
+      const q = (this.value || '').toLowerCase().trim();
+      items.forEach(el => {
+        const hay = (el.getAttribute('data-search') || '');
+        el.style.display = hay.includes(q) ? '' : 'none';
+      });
+    });
+  })();
+</script>
+{% endblock %}

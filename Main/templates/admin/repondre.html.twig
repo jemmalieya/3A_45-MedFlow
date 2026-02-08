@@ -1,0 +1,57 @@
+{% extends 'base_dashboard.html.twig' %}
+
+{% block title %}Répondre à une réclamation{% endblock %}
+
+{% block body %}
+<div class="container-fluid py-4">
+
+  <h2 class="mb-4 fw-bold">
+    Répondre à la réclamation
+    <span class="text-muted">#{{ reclamation.referenceReclamation }}</span>
+  </h2>
+
+  <div class="card shadow-sm border-0 mb-4">
+    <div class="card-body">
+      <h5 class="fw-bold mb-2">Détails de la réclamation</h5>
+      <p><strong>Contenu :</strong> {{ reclamation.contenu }}</p>
+      <p><strong>Description :</strong> {{ reclamation.description }}</p>
+      <p>
+        <strong>Statut :</strong>
+        <span class="badge bg-warning text-dark">{{ reclamation.statutReclamation }}</span>
+      </p>
+    </div>
+  </div>
+
+  <div class="card shadow-sm border-0">
+    <div class="card-body">
+
+      {{ form_start(form) }}
+
+      <div class="mb-3">
+        {{ form_label(form.typeReponse) }}
+        {{ form_widget(form.typeReponse, {'attr': {'class': 'form-select'}}) }}
+        {{ form_errors(form.typeReponse) }}
+      </div>
+
+      <div class="mb-3">
+        {{ form_label(form.message) }}
+        {{ form_widget(form.message, {'attr': {'class': 'form-control', 'rows': 6}}) }}
+        {{ form_errors(form.message) }}
+      </div>
+
+      <div class="d-flex justify-content-end gap-2">
+        <a href="{{ path('admin_reclamations') }}" class="btn btn-secondary">
+          Annuler
+        </a>
+        <button class="btn btn-primary">
+          Envoyer la réponse
+        </button>
+      </div>
+
+      {{ form_end(form) }}
+
+    </div>
+  </div>
+
+</div>
+{% endblock %}

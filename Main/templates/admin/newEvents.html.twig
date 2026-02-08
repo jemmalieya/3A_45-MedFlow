@@ -1,0 +1,37 @@
+{% extends 'base_dashboard.html.twig' %}
+
+{% block title %}Ajouter Événement{% endblock %}
+
+{% block stylesheets %}
+  {{ parent() }}
+  <link rel="stylesheet" href="{{ asset('assets/css/events.css') }}">
+{% endblock %}
+
+{% block body %}
+
+{# ===== Header ===== #}
+<div class="d-flex align-items-center justify-content-between flex-wrap mb-4 gap-2">
+  <div>
+    <h1 class="h3 mb-1 text-gray-800">Événements</h1>
+    <div class="text-muted small">Créer un nouvel événement et définir ses infos + dates + contact.</div>
+  </div>
+
+  <a href="{{ path('admin_evenement_index') }}" class="btn btn-light">
+    <i class="fas fa-arrow-left mr-1"></i> Retour
+  </a>
+</div>
+
+{# ===== Flash messages ===== #}
+{% for label, messages in app.flashes %}
+  {% for message in messages %}
+    <div class="alert alert-{{ label }} alert-dismissible fade show" role="alert">
+      {{ message }}
+      <button type="button" class="close" data-dismiss="alert">&times;</button>
+    </div>
+  {% endfor %}
+{% endfor %}
+
+{# ===== Form ===== #}
+{% include 'evenement/_form.html.twig' with { form: form, button_label: 'Enregistrer' } %}
+
+{% endblock %}

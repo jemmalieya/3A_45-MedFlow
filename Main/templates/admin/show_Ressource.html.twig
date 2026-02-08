@@ -1,0 +1,29 @@
+{% extends 'base_dashboard.html.twig' %}
+{% block title %}Détails ressource{% endblock %}
+
+{% block body %}
+<div class="card shadow mb-4">
+  <div class="card-header py-3 d-flex justify-content-between align-items-center">
+    <h6 class="m-0 font-weight-bold text-primary">Détails</h6>
+    <div>
+      <a class="btn btn-sm btn-warning" href="{{ path('admin_ressource_edit', {id: ressource.id}) }}">Edit</a>
+      <a class="btn btn-sm btn-secondary" href="{{ path('admin_ressource_index') }}">Retour</a>
+    </div>
+  </div>
+
+  <div class="card-body">
+    <p><b>Nom:</b> {{ ressource.nomRessource }}</p>
+    <p><b>Catégorie:</b> {{ ressource.categorieRessource }}</p>
+    <p><b>Type:</b> {{ ressource.typeRessource }}</p>
+    <p><b>Événement:</b> {{ ressource.evenement }}</p>
+    <p><b>Quantité:</b> {{ ressource.quantiteDisponibleRessource ?? '-' }} {{ ressource.uniteRessource ?? '' }}</p>
+    <p><b>Notes:</b> {{ ressource.notesRessource ?? '-' }}</p>
+
+    <form method="post" action="{{ path('admin_ressource_delete', {id: ressource.id}) }}"
+          onsubmit="return confirm('Supprimer cette ressource ?');">
+      <input type="hidden" name="_token" value="{{ csrf_token('delete' ~ ressource.id) }}">
+      <button class="btn btn-danger btn-sm"><i class="fas fa-trash"></i> Supprimer</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

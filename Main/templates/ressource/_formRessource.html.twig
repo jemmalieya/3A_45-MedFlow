@@ -1,0 +1,252 @@
+{# ressource/_formRessource.html.twig #}
+
+{% set submitted = form.vars.submitted %}
+
+{# helper: ajoute is-invalid / is-valid selon erreurs #}
+{% macro input_class(field, base) %}
+  {% set cls = base %}
+  {% if field.vars.submitted %}
+    {% if field.vars.errors|length > 0 %}
+      {% set cls = cls ~ ' is-invalid' %}
+    {% else %}
+      {% set cls = cls ~ ' is-valid' %}
+    {% endif %}
+  {% endif %}
+  {{ cls }}
+{% endmacro %}
+
+{% import _self as ui %}
+
+{{ form_start(form, { attr: { novalidate: 'novalidate' } }) }}
+
+{# ✅ IMPORTANT: erreurs globales (Callback, etc.) #}
+{% if submitted and form.vars.errors|length > 0 %}
+  <div class="alert alert-danger">
+    <i class="fas fa-exclamation-triangle mr-1"></i>
+    Veuillez corriger les erreurs du formulaire.
+    {{ form_errors(form) }}
+  </div>
+{% endif %}
+
+{# ===== Header / Hero ===== #}
+<div class="card shadow-sm border-0 mb-4 res-hero">
+  <div class="card-body d-flex align-items-center justify-content-between flex-wrap gap-2">
+    <div class="d-flex align-items-center">
+      <div class="res-hero-icon mr-3">
+        <i class="fas fa-layer-group"></i>
+      </div>
+      <div>
+        <div class="res-hero-title">Nouvelle Ressource</div>
+        <div class="res-hero-subtitle">Déclare rapidement ce qui est nécessaire : fichier, lien ou stock.</div>
+      </div>
+    </div>
+
+    <div class="d-flex align-items-center gap-2">
+      <span class="badge badge-pill res-badge"><i class="fas fa-file mr-1"></i> Fichier</span>
+      <span class="badge badge-pill res-badge"><i class="fas fa-link mr-1"></i> Lien</span>
+      <span class="badge badge-pill res-badge"><i class="fas fa-box mr-1"></i> Stock</span>
+    </div>
+  </div>
+</div>
+
+{# ===== Card principale ===== #}
+<div class="card shadow-sm border-0 mb-4">
+  <div class="card-header bg-white border-0 pb-0">
+    <h6 class="font-weight-bold text-primary mb-1">
+      <i class="fas fa-info-circle mr-1"></i> Informations générales
+    </h6>
+    <small class="text-muted">Choisis l’événement + décris la ressource en 2 secondes.</small>
+  </div>
+
+  <div class="card-body pt-4">
+
+    <div class="row">
+      <div class="col-md-6">
+        <div class="form-group">
+          <label class="res-label"><i class="fas fa-calendar-alt mr-1"></i> Événement</label>
+          {{ form_widget(form.evenement, {'attr': {'class': ui.input_class(form.evenement, 'form-control')}}) }}
+          {% if submitted %}{{ form_errors(form.evenement) }}{% endif %}
+        </div>
+      </div>
+
+      <div class="col-md-6">
+        <div class="form-group">
+          <label class="res-label"><i class="fas fa-tags mr-1"></i> Type</label>
+          {{ form_widget(form.typeRessource, {'attr': {'class': ui.input_class(form.typeRessource, 'form-control js-type-ressource')}}) }}
+          {% if submitted %}{{ form_errors(form.typeRessource) }}{% endif %}
+          <small class="text-muted">Le formulaire affiche seulement les champs utiles.</small>
+        </div>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="col-md-6">
+        <div class="form-group">
+          <label class="res-label"><i class="fas fa-pen mr-1"></i> Nom de la ressource</label>
+          {{ form_widget(form.nomRessource, {'attr': {'class': ui.input_class(form.nomRessource, 'form-control'), 'placeholder': 'Ex: Agenda PDF / Badge / Projecteur'}}) }}
+          {% if submitted %}{{ form_errors(form.nomRessource) }}{% endif %}
+        </div>
+      </div>
+
+      <div class="col-md-6">
+        <div class="form-group">
+          <label class="res-label"><i class="fas fa-folder-open mr-1"></i> Catégorie</label>
+          {{ form_widget(form.categorieRessource, {'attr': {'class': ui.input_class(form.categorieRessource, 'form-control'), 'placeholder': 'Ex: Document / Matériel / Stock'}}) }}
+          {% if submitted %}{{ form_errors(form.categorieRessource) }}{% endif %}
+        </div>
+      </div>
+    </div>
+
+    <hr class="my-4">
+
+    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-2">
+      <h6 class="font-weight-bold mb-0 text-primary">
+        <i class="fas fa-sliders-h mr-1"></i> Détails selon le type
+      </h6>
+      <small class="text-muted">Astuce : utilise “Stock” si tu veux gérer une quantité.</small>
+    </div>
+
+    {# ===== Zone informative dynamique ===== #}
+    <div id="typeHint" class="alert alert-primary res-hint mb-4" role="alert">
+      <i class="fas fa-bolt mr-1"></i> Sélectionne un type pour afficher les champs correspondants.
+    </div>
+
+    {# ===== Champs FILE ===== #}
+    <div class="js-field-file d-none">
+      <div class="card border-0 res-soft mb-3">
+        <div class="card-body py-3">
+          <div class="res-soft-title"><i class="fas fa-file mr-1"></i> Mode Fichier</div>
+          <small class="text-muted">Indique le chemin (upload possible plus tard).</small>
+        </div>
+      </div>
+      <div class="form-group">
+        {{ form_widget(form.cheminFichierRessource, {'attr': {'class': ui.input_class(form.cheminFichierRessource, 'form-control'), 'placeholder':'Ex: /uploads/agenda.pdf'}}) }}
+        {% if submitted %}{{ form_errors(form.cheminFichierRessource) }}{% endif %}
+      </div>
+    </div>
+
+    {# ===== Champs LINK ===== #}
+    <div class="js-field-link d-none">
+      <div class="card border-0 res-soft mb-3">
+        <div class="card-body py-3">
+          <div class="res-soft-title"><i class="fas fa-link mr-1"></i> Mode Lien externe</div>
+          <small class="text-muted">Colle une URL valide (Drive, Docs, site…).</small>
+        </div>
+      </div>
+      <div class="form-group">
+        {{ form_widget(form.urlExterneRessource, {'attr': {'class': ui.input_class(form.urlExterneRessource, 'form-control'), 'placeholder':'https://...'}}) }}
+        {% if submitted %}{{ form_errors(form.urlExterneRessource) }}{% endif %}
+      </div>
+    </div>
+
+    {# ===== Champs STOCK ===== #}
+    <div class="js-field-stock d-none">
+      <div class="card border-0 res-soft mb-3">
+        <div class="card-body py-3">
+          <div class="res-soft-title"><i class="fas fa-box mr-1"></i> Mode Stock / Matériel</div>
+          <small class="text-muted">Quantité + unité (pcs, kg, boîte…).</small>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="col-md-4">
+          <div class="form-group">
+            {{ form_widget(form.quantiteDisponibleRessource, {'attr': {'class': ui.input_class(form.quantiteDisponibleRessource, 'form-control'), 'placeholder':'Ex: 50', 'min':0}}) }}
+            {% if submitted %}{{ form_errors(form.quantiteDisponibleRessource) }}{% endif %}
+          </div>
+        </div>
+
+        <div class="col-md-4">
+          <div class="form-group">
+            {{ form_widget(form.uniteRessource, {'attr': {'class': ui.input_class(form.uniteRessource, 'form-control'), 'placeholder':'Ex: pcs'}}) }}
+            {% if submitted %}{{ form_errors(form.uniteRessource) }}{% endif %}
+          </div>
+        </div>
+
+        <div class="col-md-4">
+          <div class="form-group">
+            {{ form_widget(form.fournisseurRessource, {'attr': {'class': ui.input_class(form.fournisseurRessource, 'form-control'), 'placeholder':'Ex: Fournisseur X'}}) }}
+            {% if submitted %}{{ form_errors(form.fournisseurRessource) }}{% endif %}
+          </div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        {{ form_widget(form.coutEstimeRessource, {'attr': {'class': ui.input_class(form.coutEstimeRessource, 'form-control'), 'placeholder':'Ex: 120.500'}}) }}
+        {% if submitted %}{{ form_errors(form.coutEstimeRessource) }}{% endif %}
+        <small class="text-muted">Optionnel — utile pour le budget de l’événement.</small>
+      </div>
+    </div>
+
+    <hr class="my-4">
+
+    <h6 class="font-weight-bold text-primary">
+      <i class="fas fa-sticky-note mr-1"></i> Notes
+    </h6>
+    <small class="text-muted d-block mb-2">Optionnel : précise ce qui manque / comment l’obtenir.</small>
+    {{ form_widget(form.notesRessource, {'attr': {'class': ui.input_class(form.notesRessource, 'form-control'), 'rows':4, 'placeholder':'Ex: À imprimer avant le 12/02, demander à …'}}) }}
+    {% if submitted %}{{ form_errors(form.notesRessource) }}{% endif %}
+
+  </div>
+
+  <div class="card-footer bg-white border-0 d-flex justify-content-end">
+    <a href="{{ path('admin_ressource_index') }}" class="btn btn-light mr-2">
+      <i class="fas fa-times mr-1"></i> Annuler
+    </a>
+    <button class="btn btn-primary res-btn" type="submit">
+      <i class="fas fa-save mr-1"></i> Enregistrer
+    </button>
+  </div>
+</div>
+
+{# ✅ render le reste (ex: _token) #}
+{{ form_rest(form) }}
+{{ form_end(form) }}
+
+{# ===== JS (affichage dynamique selon type) ===== #}
+<script>
+  (function () {
+    const select = document.querySelector('.js-type-ressource');
+    const fileBox = document.querySelector('.js-field-file');
+    const linkBox = document.querySelector('.js-field-link');
+    const stockBox = document.querySelector('.js-field-stock');
+    const hint = document.getElementById('typeHint');
+
+    function hideAll() {
+      fileBox.classList.add('d-none');
+      linkBox.classList.add('d-none');
+      stockBox.classList.add('d-none');
+    }
+
+    function setHint(type) {
+      if (!hint) return;
+      if (type === 'file') {
+        hint.className = 'alert alert-primary res-hint mb-4';
+        hint.innerHTML = '<i class="fas fa-file mr-1"></i> Mode Fichier : indique le chemin du fichier (upload possible plus tard).';
+      } else if (type === 'external_link') {
+        hint.className = 'alert alert-info res-hint mb-4';
+        hint.innerHTML = '<i class="fas fa-link mr-1"></i> Mode Lien : colle une URL valide (Drive / Docs / site).';
+      } else if (type === 'stock_item') {
+        hint.className = 'alert alert-success res-hint mb-4';
+        hint.innerHTML = '<i class="fas fa-box mr-1"></i> Mode Stock : renseigne quantité + unité pour éviter les manques.';
+      } else {
+        hint.className = 'alert alert-primary res-hint mb-4';
+        hint.innerHTML = '<i class="fas fa-bolt mr-1"></i> Sélectionne un type pour afficher les champs correspondants.';
+      }
+    }
+
+    function refresh() {
+      const v = select ? select.value : '';
+      hideAll();
+      setHint(v);
+      if (v === 'file') fileBox.classList.remove('d-none');
+      if (v === 'external_link') linkBox.classList.remove('d-none');
+      if (v === 'stock_item') stockBox.classList.remove('d-none');
+    }
+
+    if (select) {
+      select.addEventListener('change', refresh);
+      refresh();
+    }
+  })();
+</script>

@@ -1,20 +1,137 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}Hello EvenementController!{% endblock %}
+{% block title %}Événements - MedFlow{% endblock %}
 
 {% block body %}
-<style>
-    .example-wrapper { margin: 1em auto; max-width: 800px; width: 95%; font: 18px/1.5 sans-serif; }
-    .example-wrapper code { background: #F5F5F5; padding: 2px 6px; }
-</style>
+<main class="main">
 
-<div class="example-wrapper">
-    <h1>Hello {{ controller_name }}! ✅</h1>
+  <section class="section" style="padding-top: 120px;">
+    <div class="container">
 
-    This friendly message is coming from:
-    <ul>
-        <li>Your controller at <code>C:/Users/lenovo/MedFlow/3A_45-MedFlow/Main/src/Controller/EvenementController.php</code></li>
-        <li>Your template at <code>C:/Users/lenovo/MedFlow/3A_45-MedFlow/Main/templates/evenement/index.html.twig</code></li>
-    </ul>
-</div>
+      {# HEADER #}
+      <div class="events-header mb-4">
+        <div>
+          <h1 class="events-title mb-1">Événements</h1>
+          <p class="events-subtitle mb-0">Liste des événements disponibles</p>
+        </div>
+      </div>
+
+
+         {# 🔔 Notification bandeau #}
+{% if hasNew %}
+  <div class="alert alert-info d-flex justify-content-between align-items-center mt-4" role="alert">
+    <div>
+      <strong>🎉 Nouvel événement ajouté !</strong>
+      {% if latestNewTitle %}
+        <span class="ms-2">Dernier : <b>{{ latestNewTitle }}</b></span>
+      {% endif %}
+    </div>
+    <a href="#events-list" class="btn btn-sm btn-outline-primary">
+      Voir ↓
+    </a>
+  </div>
+{% endif %}
+
+      
+
+      {# FLASH #}
+      {% for message in app.flashes('success') %}
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+          {{ message }}
+          <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+      {% endfor %}
+
+      {% if evenements is empty %}
+        <div class="alert alert-info">
+          Aucun événement pour le moment.
+        </div>
+      {% else %}
+
+        {# GRID #}
+        <div id="events-list"></div>
+        <div class="row g-4 mt-4">
+          {% for e in evenements %}
+            <div class="col-lg-4 col-md-6">
+
+              <div class="event-card h-100 position-relative">
+
+
+                {# IMAGE #}
+                <div class="event-cover">
+                {% set cover = e.imageCouvertureEvent %}
+                {% if cover and cover starts with 'http' %}
+                <img src="{{ cover }}" alt="cover">
+                 {% else %}
+                  <img src="{{ asset('assets/img/health/showcase-1.webp') }}" alt="cover">
+                {% endif %}
+
+
+                  {# BADGE STATUT #}
+                  {% set statut = e.statutEvent|lower %}
+                  <span class="event-badge
+                    {% if 'pub' in statut %}badge-public
+                    {% elseif 'annul' in statut %}badge-cancel
+                    {% else %}badge-default{% endif %}">
+                    {{ e.statutEvent }}
+                  </span>
+
+                  {# ✅ BADGE NEW si créé < 2 jours #}
+{% if e.dateCreationEvent is not null and e.dateCreationEvent > date('-2 days') %}
+  <span class="badge bg-success position-absolute"
+        style="top: 15px; right: 15px; z-index: 10;">
+    NEW
+  </span>
+{% endif %}
+
+
+                  {# PILL DATE #}
+                  <span class="event-pill">
+                    {{ e.dateDebutEvent|date('d M') }} → {{ e.dateFinEvent|date('d M') }}
+                  </span>
+                </div>
+
+                {# BODY #}
+                <div class="event-body">
+                  <h5 class="event-name">{{ e.titreEvent }}</h5>
+
+                  <div class="event-meta">
+                    <div class="meta-item">
+                      <i class="bi bi-geo-alt"></i>
+                      <span>{{ e.nomLieuEvent }}, {{ e.villeEvent }}</span>
+                    </div>
+                    <div class="meta-item">
+                      <i class="bi bi-calendar-event"></i>
+                      <span>{{ e.dateDebutEvent|date('d/m/Y') }}</span>
+                    </div>
+                  </div>
+
+                  <p class="event-desc">
+                    {{ e.descriptionEvent|slice(0, 110) }}{% if e.descriptionEvent|length > 110 %}...{% endif %}
+                  </p>
+                </div>
+
+                {# FOOTER #}
+                <div class="event-footer">
+                  <a class="btn btn-primary btn-sm px-3" href="{{ path('app_evenement_show', {id: e.id}) }}">
+                    Details <i class="bi bi-arrow-right ms-1"></i>
+                  </a>
+
+                  <span class="event-chip">
+                    <i class="bi bi-tag me-1"></i>{{ e.typeEvent }}
+                  </span>
+                </div>
+
+              </div>
+
+            </div>
+          {% endfor %}
+        </div>
+
+      {% endif %}
+
+    </div>
+  </section>
+
+</main>
 {% endblock %}

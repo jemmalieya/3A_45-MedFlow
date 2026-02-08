@@ -1,0 +1,228 @@
+{% extends 'base_dashboard.html.twig' %}
+
+{% block title %}Dashboard Admin - Événements{% endblock %}
+
+{% block stylesheets %}
+  {{ parent() }}
+  <link rel="stylesheet" href="{{ asset('assets_dash/css/evenement-index.css') }}">
+{% endblock %}
+
+{% block body %}
+<div class="container-fluid evind">
+
+  {# ===== Header ===== #}
+  <div class="evind-topbar mb-4">
+    <div>
+      <h1 class="evind-title">Liste des Événements</h1>
+    
+    </div>
+
+    <div class="evind-actions">
+      <div class="input-group evind-search">
+        <div class="input-group-prepend">
+          <span class="input-group-text"><i class="fas fa-search"></i></span>
+        </div>
+        <input id="evSearch" type="text" class="form-control"
+               placeholder="Rechercher (titre, type, ville, statut...)">
+      </div>
+
+      
+  {# Sort (INLINE + SIMPLE) #}
+  <form method="get" action="{{ path('admin_evenement_index') }}" class="evind-sort">
+    <div class="input-group">
+      <div class="input-group-prepend">
+        <span class="input-group-text"><i class="fas fa-sort"></i></span>
+      </div>
+      <select name="sort" class="form-control" onchange="this.form.submit()">
+        <option value="date_desc" {{ sort == 'date_desc' ? 'selected' : '' }}>Date : récent → ancien</option>
+        <option value="date_asc"  {{ sort == 'date_asc' ? 'selected' : '' }}>Date : ancien → récent</option>
+        <option value="titre_asc"  {{ sort == 'titre_asc' ? 'selected' : '' }}>Titre : A → Z</option>
+        <option value="titre_desc" {{ sort == 'titre_desc' ? 'selected' : '' }}>Titre : Z → A</option>
+        <option value="ville_asc" {{ sort == 'ville_asc' ? 'selected' : '' }}>Ville : A → Z</option>
+        <option value="type_asc"  {{ sort == 'type_asc' ? 'selected' : '' }}>Type : A → Z</option>
+        <option value="statut_custom" {{ sort == 'statut_custom' ? 'selected' : '' }}>Statut : Publié d’abord</option>
+      </select>
+    </div>
+  </form>
+       <a href="{{ path('admin_evenements_stats') }}" class="btn btn-info evind-btn-stats">
+       <i class="fas fa-chart-pie mr-1"></i> Stats
+       </a>
+
+
+      <a href="{{ path('admin_evenement_new') }}" class="btn btn-primary evind-btn-add">
+        <i class="fas fa-plus mr-1"></i> Ajouter
+      </a>
+    </div>
+  </div>
+
+  
+
+  {# ===== Flash messages ===== #}
+  {% for label, messages in app.flashes %}
+    {% for message in messages %}
+      <div class="alert alert-{{ label }} alert-dismissible fade show" role="alert">
+        {{ message }}
+        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+    {% endfor %}
+  {% endfor %}
+
+  {# ===== KPI Cards (comme Ressources) ===== #}
+  {% set total = evenements|length %}
+  {% set published = 0 %}
+  {% set canceled = 0 %}
+
+  {% for e in evenements %}
+    {% if e.statutEvent == 'Publié' %}{% set published = published + 1 %}{% endif %}
+    {% if e.statutEvent == 'Annulé' %}{% set canceled = canceled + 1 %}{% endif %}
+  {% endfor %}
+
+  <div class="row mb-4">
+    <div class="col-md-4 mb-3">
+      <div class="card border-0 shadow-sm evind-kpi">
+        <div class="card-body d-flex align-items-center justify-content-between">
+          <div>
+            <div class="evind-kpi-label">Total événements</div>
+            <div class="evind-kpi-value">{{ total }}</div>
+          </div>
+          <div class="evind-kpi-icon kpi-primary"><i class="fas fa-calendar-alt"></i></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-4 mb-3">
+      <div class="card border-0 shadow-sm evind-kpi">
+        <div class="card-body d-flex align-items-center justify-content-between">
+          <div>
+            <div class="evind-kpi-label">Publiés</div>
+            <div class="evind-kpi-value">{{ published }}</div>
+          </div>
+          <div class="evind-kpi-icon kpi-success"><i class="fas fa-check-circle"></i></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-4 mb-3">
+      <div class="card border-0 shadow-sm evind-kpi">
+        <div class="card-body d-flex align-items-center justify-content-between">
+          <div>
+            <div class="evind-kpi-label">Annulés</div>
+            <div class="evind-kpi-value">{{ canceled }}</div>
+          </div>
+          <div class="evind-kpi-icon kpi-danger"><i class="fas fa-times-circle"></i></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {# ===== Table ===== #}
+  <div class="card border-0 shadow-sm evind-card">
+    <div class="card-header bg-white border-0 evind-card-head">
+      <div>
+        <div class="evind-card-title">
+          <i class="fas fa-list mr-2"></i> Liste des événements
+        </div>
+        <div class="text-muted small">Clique sur “Voir” pour le détail.</div>
+      </div>
+    </div>
+ 
+    <div class="card-body">
+    
+
+      {% if evenements is empty %}
+        <div class="alert alert-info mb-0">Aucun événement trouvé.</div>
+      {% else %}
+        <div class="table-responsive">
+          <table class="table align-middle evind-table" id="evTable">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Titre</th>
+                <th>Type</th>
+                <th>Statut</th>
+                <th>Date début</th>
+                <th>Date fin</th>
+                <th>Ville</th>
+                <th class="text-end">Actions</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {% for e in evenements %}
+                {% set s = e.statutEvent %}
+                {% set badgeClass =
+                  s == 'Publié' ? 'evind-badge evind-badge-success' :
+                  (s == 'Annulé' ? 'evind-badge evind-badge-danger' :
+                  (s == 'En cours' ? 'evind-badge evind-badge-warning' : 'evind-badge evind-badge-secondary'))
+                %}
+
+                <tr class="ev-row"
+                    data-search="{{ (e.id ~ ' ' ~ e.titreEvent ~ ' ' ~ e.typeEvent ~ ' ' ~ e.villeEvent ~ ' ' ~ e.statutEvent)|lower }}">
+                  <td>{{ e.id }}</td>
+                  <td class="font-weight-bold">{{ e.titreEvent }}</td>
+                  <td>{{ e.typeEvent }}</td>
+                  <td>
+                    <span class="{{ badgeClass }}">
+                      {% if s == 'Publié' %}<i class="fas fa-check"></i> Publié
+                      {% elseif s == 'Annulé' %}<i class="fas fa-times"></i> Annulé
+                      {% elseif s == 'En cours' %}<i class="fas fa-bolt"></i> En cours
+                      {% else %}<i class="fas fa-pen"></i> Brouillon
+                      {% endif %}
+                    </span>
+                  </td>
+                  <td>{{ e.dateDebutEvent ? e.dateDebutEvent|date('d/m/Y') : '-' }}</td>
+                  <td>{{ e.dateFinEvent ? e.dateFinEvent|date('d/m/Y') : '-' }}</td>
+                  <td>{{ e.villeEvent ?: '-' }}</td>
+
+                  <td class="text-end">
+                    <a href="{{ path('admin_evenement_show', {id: e.id}) }}"
+                       class="btn btn-sm evind-btn evind-btn-view">
+                      <i class="far fa-eye"></i> Voir
+                    </a>
+
+                    <a href="{{ path('admin_evenement_edit', {id: e.id}) }}"
+                       class="btn btn-sm evind-btn evind-btn-edit">
+                      <i class="far fa-edit"></i> Edit
+                    </a>
+
+                    <form method="post"
+                          action="{{ path('admin_evenement_delete', {id: e.id}) }}"
+                          class="d-inline"
+                          onsubmit="return confirm('Supprimer cet événement ?');">
+                      <input type="hidden" name="_token" value="{{ csrf_token('delete_evenement_' ~ e.id) }}">
+                      <button class="btn btn-sm evind-btn evind-btn-del" type="submit">
+                        <i class="far fa-trash-alt"></i> Delete
+                      </button>
+                    </form>
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% endif %}
+
+    </div>
+  </div>
+
+</div>
+
+{# ===== JS Search (comme ressources) ===== #}
+<script>
+  (function () {
+    const input = document.getElementById('evSearch');
+    const rows = document.querySelectorAll('.ev-row');
+    if (!input || !rows.length) return;
+
+    input.addEventListener('input', function () {
+      const q = (this.value || '').toLowerCase().trim();
+      rows.forEach(r => {
+        const hay = (r.getAttribute('data-search') || '');
+        r.style.display = hay.includes(q) ? '' : 'none';
+      });
+    });
+  })();
+</script>
+{% endblock %}
