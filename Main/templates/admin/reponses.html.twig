@@ -1,0 +1,182 @@
+{% extends 'base_dashboard.html.twig' %}
+
+{% block title %}
+  {% if reclamation %}
+    Réponses – {{ reclamation.referenceReclamation }}
+  {% else %}
+    Toutes les réponses
+  {% endif %}
+{% endblock %}
+
+{% block body %}
+<section class="section py-4">
+  <div class="container-fluid">
+
+    {# ===== HEADER ===== #}
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+      <div>
+        <h2 class="fw-bold mb-1">
+          <i class="fas fa-comments me-2"></i>
+          {% if reclamation %}
+            Réponses à la réclamation
+          {% else %}
+            Liste des réponses
+          {% endif %}
+        </h2>
+
+        <p class="text-muted mb-0">
+          {% if reclamation %}
+            Réf : <strong>#{{ reclamation.referenceReclamation }}</strong> —
+          {% endif %}
+          {{ reponses|length }} réponse(s)
+        </p>
+      </div>
+
+      <div class="d-flex gap-2">
+        {% if reclamation %}
+          <a href="{{ path('admin_reclamations') }}" class="btn btn-secondary btn-sm">
+            <i class="fas fa-arrow-left me-1"></i> Retour
+          </a>
+
+          <a href="{{ path('admin_reponse_new', { id: reclamation.idReclamation }) }}"
+             class="btn btn-primary btn-sm">
+            <i class="fas fa-reply me-1"></i> Répondre
+          </a>
+        {% endif %}
+      </div>
+    </div>
+
+    {# ===== DÉTAILS RÉCLAMATION (uniquement si reclamation existe) ===== #}
+    {% if reclamation %}
+      <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <strong>Contenu :</strong>
+              <div>{{ reclamation.contenu }}</div>
+            </div>
+            <div class="col-md-6">
+              <strong>Description :</strong>
+              <div class="text-muted">{{ reclamation.description }}</div>
+            </div>
+
+            <div class="col-md-3">
+              <strong>Statut :</strong><br>
+              {% if reclamation.statutReclamation == 'TRAITEE' %}
+                <span class="badge bg-success">Traitée</span>
+              {% else %}
+                <span class="badge bg-danger">En attente</span>
+              {% endif %}
+            </div>
+
+            <div class="col-md-3">
+              <strong>Priorité :</strong><br>
+              <span class="badge bg-secondary">{{ reclamation.priorite }}</span>
+            </div>
+
+            <div class="col-md-3">
+              <strong>Créée le :</strong><br>
+              {{ reclamation.dateCreationR ? reclamation.dateCreationR|date('d/m/Y') : '-' }}
+            </div>
+
+            <div class="col-md-3">
+              <strong>Date limite :</strong><br>
+              {{ reclamation.dateLimite ? reclamation.dateLimite|date('d/m/Y') : '-' }}
+            </div>
+          </div>
+        </div>
+      </div>
+    {% endif %}
+
+    {# ===== FIL DES RÉPONSES ===== #}
+    <style>
+      .bubble {
+        border-radius: 16px;
+        padding: 14px 18px;
+        max-width: 900px;
+        margin-bottom: 16px;
+        box-shadow: 0 10px 20px rgba(0,0,0,.08);
+      }
+      .bubble-admin {
+        background: #f8f9fc;
+        border-left: 4px solid #4e73df;
+      }
+      .bubble-header {
+        font-size: .85rem;
+        font-weight: 700;
+        margin-bottom: 6px;
+      }
+      .bubble-date {
+        font-size: .75rem;
+        color: #6c757d;
+      }
+    </style>
+
+    {% if reponses|length == 0 %}
+      <div class="text-center text-muted py-5">
+        <i class="fas fa-comment-slash fa-2x mb-3"></i>
+        <div class="fw-bold">
+          {% if reclamation %}
+            Aucune réponse pour cette réclamation
+          {% else %}
+            Aucune réponse trouvée
+          {% endif %}
+        </div>
+        {% if reclamation %}
+          <div class="small">Clique sur “Répondre” pour envoyer la première réponse.</div>
+        {% endif %}
+      </div>
+    {% else %}
+      {% for rep in reponses %}
+        <div class="bubble bubble-admin">
+
+          <div class="d-flex justify-content-between align-items-center mb-1 flex-wrap gap-2">
+            <div class="bubble-header">
+              <i class="fas fa-user-shield me-1"></i>
+              Admin —
+              <span class="badge bg-info ms-1">{{ rep.typeReponse }}</span>
+
+              {# ✅ si mode "toutes les réponses", afficher la ref reclamation #}
+              {% if not reclamation and rep.reclamation %}
+                <span class="ms-2 text-muted">
+                  (Réf: #{{ rep.reclamation.referenceReclamation }})
+                </span>
+              {% endif %}
+            </div>
+
+            <div class="bubble-date">
+              {{ rep.dateCreationRep ? rep.dateCreationRep|date('d/m/Y H:i') : '-' }}
+            </div>
+          </div>
+
+          <div class="mt-2">
+            {{ rep.message }}
+          </div>
+
+          <div class="text-end mt-3 d-flex justify-content-end gap-2">
+
+  <a href="{{ path('admin_reponse_edit', { id: rep.idReponse }) }}"
+     class="btn btn-sm btn-warning">
+    <i class="fas fa-edit me-1"></i> Modifier
+  </a>
+
+  <form method="post"
+        action="{{ path('admin_reponse_delete', { id: rep.idReponse }) }}"
+        onsubmit="return confirm('Supprimer cette réponse ? Cette action est irréversible.');"
+        class="d-inline">
+    <input type="hidden" name="_token" value="{{ csrf_token('delete_reponse_' ~ rep.idReponse) }}">
+    <button class="btn btn-sm btn-danger">
+      <i class="fas fa-trash me-1"></i> Supprimer
+    </button>
+  </form>
+
+</div>
+
+
+        </div>
+      {% endfor %}
+    {% endif %}
+
+  </div>
+</section>
+{% endblock %}

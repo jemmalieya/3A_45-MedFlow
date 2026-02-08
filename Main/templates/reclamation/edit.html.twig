@@ -1,0 +1,69 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Modifier une réclamation{% endblock %}
+
+{% block body %}
+<section class="section" style="padding-top:120px;">
+  <div class="container">
+
+    <div class="row justify-content-center">
+      <div class="col-lg-8">
+
+        <div class="card shadow-sm">
+          <div class="card-body p-4">
+
+            <h3 class="mb-4 text-primary">
+              Modifier la réclamation
+            </h3>
+
+            {% for message in app.flashes('success') %}
+              <div class="alert alert-success alert-dismissible fade show">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+              </div>
+            {% endfor %}
+
+            {{ form_start(form) }}
+
+              <div class="mb-3">
+                {{ form_label(form.contenu) }}
+                {{ form_widget(form.contenu, {
+                  'attr': {'class': 'form-control', 'placeholder': 'Ex: Problème de rendez-vous...'}
+                }) }}
+              </div>
+
+              <div class="mb-3">
+                {{ form_label(form.description) }}
+                {{ form_widget(form.description, {
+                  'attr': {'class': 'form-control', 'rows': 5, 'placeholder': 'Décrivez votre réclamation en détail...'}
+                }) }}
+              </div>
+
+              <div class="mb-4">
+                {{ form_label(form.type) }}
+                {{ form_widget(form.type, {
+                  'attr': {'class': 'form-control', 'placeholder': 'Ex: Service, Paiement, RDV...'}
+                }) }}
+              </div>
+
+              <div class="d-flex justify-content-between">
+                <button class="btn btn-primary">
+                  Modifier la réclamation
+                </button>
+
+                <a href="{{ path('reclamation_list') }}" class="btn btn-outline-secondary">
+                  Annuler
+                </a>
+              </div>
+
+            {{ form_end(form) }}
+
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+</section>
+{% endblock %}

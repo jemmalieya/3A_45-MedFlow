@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <style>
+    @page { margin: 18mm 14mm; }
+    body { font-family: DejaVu Sans, Arial, sans-serif; color:#0b1220; font-size: 12px; }
+    .muted { color:#667085; }
+    .h1 { font-size: 20px; margin: 0 0 6px; }
+    .h2 { font-size: 14px; margin: 16px 0 10px; }
+    .card { border:1px solid #e5e7eb; border-radius: 12px; padding: 12px; margin-bottom: 12px; }
+    .kpis { width:100%; border-collapse: collapse; margin: 10px 0 0; }
+    .kpis td { border:1px solid #e5e7eb; padding:10px; vertical-align: top; }
+    .badge { display:inline-block; padding: 3px 8px; border-radius: 999px; font-size: 11px; border:1px solid #d0d5dd; }
+    .b-blue { background:#eef2ff; border-color:#c7d2fe; }
+    .b-gray { background:#f2f4f7; }
+    .row { display:flex; gap:10px; align-items:flex-start; }
+    .col { flex:1; }
+    .bar { height: 10px; background:#f2f4f7; border-radius: 999px; overflow:hidden; border:1px solid #e5e7eb; }
+    .bar > span { display:block; height:100%; background:#2563eb; }
+    .small { font-size: 11px; }
+    .page-break { page-break-after: always; }
+    .post-title { font-size: 14px; margin: 0 0 6px; }
+    .meta { margin: 0 0 8px; }
+  </style>
+</head>
+<body>
+
+  {# ✅ PAGE 1: DASHBOARD #}
+  <div>
+    <div class="h1">Rapport Global des Posts — MedFlow</div>
+    <div class="muted small">
+      Généré le {{ generatedAt|date('d/m/Y H:i') }}
+      {% if q %} · Recherche: “{{ q }}”{% endif %}
+      {% if sort %} · Tri: {{ sort }}{% endif %}
+    </div>
+
+    <table class="kpis">
+      <tr>
+        <td>
+          <b>Total posts</b><br>
+          <span style="font-size:18px;">{{ totalPosts }}</span>
+        </td>
+        <td>
+          <b>Total réactions</b><br>
+          <span style="font-size:18px;">{{ totalReactions }}</span>
+        </td>
+        <td>
+          <b>Total commentaires</b><br>
+          <span style="font-size:18px;">{{ totalComments }}</span>
+        </td>
+        <td>
+          <b>Score d’engagement</b><br>
+          {% set score = totalPosts > 0 ? ((totalReactions + totalComments) / totalPosts) : 0 %}
+          <span style="font-size:18px;">{{ score|number_format(1, '.', ' ') }}</span>
+          <div class="muted small">moyenne / post</div>
+        </td>
+      </tr>
+    </table>
+
+    <div class="row" style="margin-top:14px;">
+      <div class="col card">
+        <div class="h2" style="margin:0 0 10px;">Top catégories</div>
+
+        {% set maxCat = 0 %}
+        {% for name,count in topCategories %}
+          {% set maxCat = max(maxCat, count) %}
+        {% endfor %}
+
+        {% for name,count in topCategories %}
+          {% set pct = maxCat > 0 ? (count / maxCat * 100) : 0 %}
+          <div style="margin-bottom:10px;">
+            <div class="small"><b>{{ name }}</b> — {{ count }} post(s)</div>
+            <div class="bar"><span style="width: {{ pct }}%;"></span></div>
+          </div>
+        {% else %}
+          <div class="muted">Aucune catégorie.</div>
+        {% endfor %}
+      </div>
+
+      <div class="col card">
+        <div class="h2" style="margin:0 0 10px;">Top posts (réactions)</div>
+
+        {% for p in topPosts %}
+          <div style="margin-bottom:8px;">
+            <div><b>{{ p.titre }}</b></div>
+            <div class="muted small">
+              {{ p.categorie }} · {{ p.dateCreation|date('d/m/Y') }} · ❤️ {{ p.nbrReactions }} · 💬 {{ p.nbrCommentaires }}
+            </div>
+          </div>
+        {% else %}
+          <div class="muted">Aucun post.</div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="muted small" style="margin-top:10px;">
+      Astuce: ce rapport peut être utilisé comme archive mensuelle / preuve d’activité.
+    </div>
+  </div>
+
+  <div class="page-break"></div>
+
+  {# ✅ PAGES SUIVANTES: CATALOGUE #}
+  <div class="h1">Catalogue des posts</div>
+  <div class="muted small" style="margin-bottom:12px;">
+    Liste complète — format imprimable.
+  </div>
+
+  {% for post in posts %}
+    <div class="card">
+      <div class="post-title"><b>{{ post.titre }}</b></div>
+
+      <p class="meta muted small">
+        {{ post.dateCreation|date('d/m/Y H:i') }}
+        {% if post.localisation %} · {{ post.localisation }}{% endif %}
+      </p>
+
+      <div style="margin-bottom:8px;">
+        <span class="badge b-blue">{{ post.categorie }}</span>
+        <span class="badge b-gray">Humeur: {{ post.humeur }}</span>
+        <span class="badge b-gray">Visibilité: {{ post.visibilite }}</span>
+      </div>
+
+      <div class="small">
+        ❤️ <b>{{ post.nbrReactions }}</b> réactions
+        &nbsp;&nbsp;💬 <b>{{ post.nbrCommentaires }}</b> commentaires
+      </div>
+
+      <div style="margin-top:10px;">
+        {{ post.contenu }}
+      </div>
+
+      {% if post.hashtags %}
+        <div class="muted small" style="margin-top:8px;">
+          Tags : {{ post.hashtags }}
+        </div>
+      {% endif %}
+    </div>
+  {% else %}
+    <div class="card">
+      <div class="muted">Aucun post à exporter.</div>
+    </div>
+  {% endfor %}
+
+</body>
+</html>

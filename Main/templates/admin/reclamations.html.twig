@@ -1,0 +1,186 @@
+{% extends 'base_dashboard.html.twig' %}
+
+{% block title %}Réclamations{% endblock %}
+
+{% block body %}
+<section class="section py-4">
+  <div class="container-fluid">
+
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+      <div>
+        <h2 class="mb-1 fw-bold">
+          <i class="bi bi-exclamation-triangle me-2"></i>Gestion des Réclamations
+        </h2>
+        <p class="text-muted mb-0">{{ reclamations|length }} réclamation(s)</p>
+      </div>
+    </div>
+
+    <style>
+      .btn-action {
+        border-radius: 999px;
+        padding: .45rem .85rem;
+        font-weight: 600;
+        transition: transform .15s ease, box-shadow .15s ease;
+      }
+      .btn-action:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 10px 20px rgba(0,0,0,.08);
+      }
+      .btn-eye .count-badge {
+        margin-left: .4rem;
+        border-radius: 999px;
+        font-weight: 700;
+      }
+      .tr-urgent {
+        box-shadow: inset 4px 0 0 rgba(220,53,69,.8);
+      }
+
+      /* Statut visible */
+      .status-pill{
+        display: inline-flex;
+        align-items: center;
+        gap: .4rem;
+        padding: .35rem .7rem;
+        border-radius: 999px;
+        font-weight: 800;
+        font-size: .78rem;
+        letter-spacing: .2px;
+      }
+      .status-ok{
+        background: rgba(25,135,84,.15);
+        color: #198754;
+        border: 1px solid rgba(25,135,84,.35);
+      }
+      .status-bad{
+        background: rgba(220,53,69,.12);
+        color: #dc3545;
+        border: 1px solid rgba(220,53,69,.35);
+      }
+    </style>
+
+    <div class="card border-0 shadow-sm">
+      <div class="card-body">
+
+        <div class="table-responsive">
+          <table class="table align-middle table-hover">
+            <thead class="table-light">
+              <tr>
+                <th>Réf</th>
+                <th>Contenu</th>
+                <th>Type</th>
+                <th>Statut</th>
+                <th>Priorité</th>
+                <th>Création</th>
+                <th>Limite</th>
+                <th>Pièce jointe</th>
+                <th>Modif</th>
+                <th>Clôture</th>
+                <th class="text-end">Action</th>
+              </tr>
+            </thead>
+
+            <tbody>
+            {% for r in reclamations %}
+              {# ✅ DESIGN: plus de couleur orange et plus de style urgent #}
+              <tr>
+
+                <td class="fw-bold">
+                  #{{ r.referenceReclamation }}
+                </td>
+
+                <td style="max-width: 320px;">
+                  <div class="fw-semibold">{{ r.contenu }}</div>
+                  <div class="text-dark small text-truncate">{{ r.description }}</div>
+                </td>
+
+                <td class="fw-semibold text-dark">
+                  {{ r.type }}
+                </td>
+
+                <td>
+                  {% if r.statutReclamation == 'TRAITEE' %}
+                    <span class="status-pill status-ok">
+                      <i class="bi bi-check-circle-fill"></i> Traitée
+                    </span>
+                  {% else %}
+                    <span class="status-pill status-bad">
+                      <i class="bi bi-x-circle-fill"></i> {{ r.statutReclamation }}
+                    </span>
+                  {% endif %}
+                </td>
+
+                <td class="fw-semibold text-dark">
+                  {{ r.priorite }}
+                </td>
+
+                <td class="small text-dark">
+                  {{ r.dateCreationR ? r.dateCreationR|date('d/m/Y H:i') : '-' }}
+                </td>
+
+                <td class="small text-dark">
+                  {{ r.dateLimite ? r.dateLimite|date('d/m/Y H:i') : '-' }}
+                </td>
+
+                {# ✅ Pièce jointe #}
+                <td class="small text-dark">
+                  {% if r.pieceJointePath %}
+                    <a class="btn btn-sm btn-outline-secondary"
+                       href="{{ asset(r.pieceJointePath) }}" target="_blank">
+                      <i class="bi bi-paperclip me-1"></i>Voir
+                    </a>
+                  {% else %}
+                    <span class="text-muted">-</span>
+                  {% endif %}
+                </td>
+
+                {# ✅ Date modification #}
+                <td class="small text-dark">
+                  {{ r.dateModificationR ? r.dateModificationR|date('d/m/Y H:i') : '-' }}
+                </td>
+
+                {# ✅ Date clôture #}
+                <td class="small text-dark">
+                  {{ r.dateClotureR ? r.dateClotureR|date('d/m/Y H:i') : '-' }}
+                </td>
+
+                <td class="text-end text-nowrap">
+                  <div class="d-inline-flex align-items-center gap-2">
+
+                    <a href="{{ path('admin_reponse_new', { id: r.idReclamation }) }}"
+                       class="btn btn-sm btn-primary btn-action">
+                      <i class="bi bi-reply-fill me-1"></i>Répondre
+                    </a>
+
+                    <a href="{{ path('admin_reponses_by_reclamation', { id: r.idReclamation }) }}"
+                       class="btn btn-sm btn-outline-primary btn-action btn-eye
+                              {% if r.reponses|length == 0 %}disabled{% endif %}"
+                       {% if r.reponses|length == 0 %}aria-disabled="true"{% endif %}>
+                      <i class="fas fa-eye me-1"></i>
+                      Voir réponses
+                      <span class="badge bg-primary text-white count-badge">
+                        {{ r.reponses|length }}
+                      </span>
+                    </a>
+
+                  </div>
+                </td>
+
+              </tr>
+            {% else %}
+              <tr>
+                <td colspan="11" class="text-center text-muted py-4">
+                  Aucune réclamation trouvée.
+                </td>
+              </tr>
+            {% endfor %}
+            </tbody>
+
+          </table>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+</section>
+{% endblock %}
