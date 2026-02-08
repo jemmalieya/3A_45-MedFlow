@@ -3,6 +3,32 @@
 {% block title %}Ajouter un produit{% endblock %}
 
 {% block body %}
+
+{# =========================
+   Helpers (Twig)
+   - addClass(field, base) : ajoute is-valid / is-invalid
+   - okText(field) : affiche "✅ C’est bon" si champ valide après submit
+   ========================= #}
+{% macro addClass(field, base) %}
+  {% set cls = base %}
+  {% if field.vars.submitted %}
+    {% if field.vars.valid %}
+      {% set cls = cls ~ ' is-valid' %}
+    {% else %}
+      {% set cls = cls ~ ' is-invalid' %}
+    {% endif %}
+  {% endif %}
+  {{ cls }}
+{% endmacro %}
+
+{% macro okText(field) %}
+  {% if field.vars.submitted and field.vars.valid %}
+    <div class="valid-feedback d-block">✅ C’est bon</div>
+  {% endif %}
+{% endmacro %}
+
+{% import _self as ui %}
+
 <div class="container-fluid py-4 add-produit-page">
   <div class="row justify-content-center">
     <div class="col-xl-10">
@@ -21,7 +47,7 @@
         </a>
       </div>
 
-      {# ====== FLASH (auto hide 3s) ====== #}
+      {# ====== FLASH ====== #}
       <div id="flash-messages-container">
         {% for message in app.flashes('success') %}
           <div class="alert alert-success alert-dismissible fade show flash-message shadow-sm" role="alert">
@@ -43,7 +69,7 @@
 
       <div class="row g-4">
 
-        {# ====== LEFT (infos) ====== #}
+        {# ====== LEFT ====== #}
         <div class="col-lg-8">
           <div class="card border-0 shadow-sm">
             <div class="card-header bg-gradient-primary text-white py-3">
@@ -54,71 +80,105 @@
 
             <div class="card-body p-4">
 
+              {# NOM #}
               <div class="mb-4">
                 <label class="form-label fw-bold text-dark">
                   <i class="bi bi-tag me-2"></i>Nom du produit <span class="text-danger">*</span>
                 </label>
-                {{ form_widget(form.nom_produit, {'attr': {'class': 'form-control form-control-lg'}}) }}
-                <div class="text-danger small mt-1">{{ form_errors(form.nom_produit) }}</div>
+                {{ form_widget(form.nom_produit, {'attr': {'class': ui.addClass(form.nom_produit, 'form-control form-control-lg')}}) }}
+
+                {% if form.nom_produit.vars.submitted and not form.nom_produit.vars.valid %}
+                  <div class="invalid-feedback d-block">{{ form_errors(form.nom_produit) }}</div>
+                {% endif %}
+                {{ ui.okText(form.nom_produit) }}
               </div>
 
+              {# DESCRIPTION #}
               <div class="mb-4">
                 <label class="form-label fw-bold text-dark">
                   <i class="bi bi-card-text me-2"></i>Description <span class="text-danger">*</span>
                 </label>
-                {{ form_widget(form.description_produit, {'attr': {'class': 'form-control', 'rows': 5}}) }}
-                <div class="text-danger small mt-1">{{ form_errors(form.description_produit) }}</div>
+                {{ form_widget(form.description_produit, {'attr': {'class': ui.addClass(form.description_produit, 'form-control'), 'rows': 5}}) }}
+
+                {% if form.description_produit.vars.submitted and not form.description_produit.vars.valid %}
+                  <div class="invalid-feedback d-block">{{ form_errors(form.description_produit) }}</div>
+                {% endif %}
+                {{ ui.okText(form.description_produit) }}
               </div>
 
               <div class="row">
+                {# PRIX #}
                 <div class="col-md-6 mb-4">
                   <label class="form-label fw-bold text-dark">
                     <i class="bi bi-currency-dollar me-2"></i>Prix (DT) <span class="text-danger">*</span>
                   </label>
+
                   <div class="input-group input-group-lg">
-                    {{ form_widget(form.prix_produit, {'attr': {'class': 'form-control'}}) }}
+                    {{ form_widget(form.prix_produit, {'attr': {'class': ui.addClass(form.prix_produit, 'form-control')}}) }}
                     <span class="input-group-text bg-success text-white">
                       <i class="bi bi-cash-coin me-1"></i>DT
                     </span>
                   </div>
-                  <div class="text-danger small mt-1">{{ form_errors(form.prix_produit) }}</div>
+
+                  {% if form.prix_produit.vars.submitted and not form.prix_produit.vars.valid %}
+                    <div class="invalid-feedback d-block">{{ form_errors(form.prix_produit) }}</div>
+                  {% endif %}
+                  {{ ui.okText(form.prix_produit) }}
                 </div>
 
+                {# QUANTITE #}
                 <div class="col-md-6 mb-4">
                   <label class="form-label fw-bold text-dark">
                     <i class="bi bi-box-seam me-2"></i>Quantité <span class="text-danger">*</span>
                   </label>
-                  {{ form_widget(form.quantite_produit, {'attr': {'class': 'form-control form-control-lg'}}) }}
-                  <div class="text-danger small mt-1">{{ form_errors(form.quantite_produit) }}</div>
+
+                  {{ form_widget(form.quantite_produit, {'attr': {'class': ui.addClass(form.quantite_produit, 'form-control form-control-lg')}}) }}
+
+                  {% if form.quantite_produit.vars.submitted and not form.quantite_produit.vars.valid %}
+                    <div class="invalid-feedback d-block">{{ form_errors(form.quantite_produit) }}</div>
+                  {% endif %}
+                  {{ ui.okText(form.quantite_produit) }}
                 </div>
               </div>
 
+              {# CATEGORIE #}
               <div class="mb-4">
                 <label class="form-label fw-bold text-dark">
                   <i class="bi bi-grid me-2"></i>Catégorie <span class="text-danger">*</span>
                 </label>
-                {{ form_widget(form.categorie_produit, {'attr': {'class': 'form-select form-select-lg'}}) }}
-                <div class="text-danger small mt-1">{{ form_errors(form.categorie_produit) }}</div>
+
+                {{ form_widget(form.categorie_produit, {'attr': {'class': ui.addClass(form.categorie_produit, 'form-select form-select-lg')}}) }}
+
+                {% if form.categorie_produit.vars.submitted and not form.categorie_produit.vars.valid %}
+                  <div class="invalid-feedback d-block">{{ form_errors(form.categorie_produit) }}</div>
+                {% endif %}
+                {{ ui.okText(form.categorie_produit) }}
               </div>
 
+              {# IMAGE #}
               <div class="mb-0">
                 <label class="form-label fw-bold text-dark">
                   <i class="bi bi-image me-2"></i>URL de l'image <span class="text-danger">*</span>
                 </label>
+
                 <div class="input-group input-group-lg">
                   <span class="input-group-text bg-light">
                     <i class="bi bi-link-45deg"></i>
                   </span>
-                  {{ form_widget(form.image_produit, {'attr': {'class': 'form-control'}}) }}
+                  {{ form_widget(form.image_produit, {'attr': {'class': ui.addClass(form.image_produit, 'form-control')}}) }}
                 </div>
-                <div class="text-danger small mt-1">{{ form_errors(form.image_produit) }}</div>
+
+                {% if form.image_produit.vars.submitted and not form.image_produit.vars.valid %}
+                  <div class="invalid-feedback d-block">{{ form_errors(form.image_produit) }}</div>
+                {% endif %}
+                {{ ui.okText(form.image_produit) }}
               </div>
 
             </div>
           </div>
         </div>
 
-        {# ====== RIGHT (status radios - Symfony) ====== #}
+        {# ====== RIGHT (status radios) ====== #}
         <div class="col-lg-4">
           <div class="card border-0 shadow-sm">
             <div class="card-header bg-light border-0 py-3">
@@ -131,7 +191,11 @@
               <div class="status-radio-group">
                 {{ form_widget(form.status_produit) }}
               </div>
-              <div class="text-danger small mt-2">{{ form_errors(form.status_produit) }}</div>
+
+              {% if form.status_produit.vars.submitted and not form.status_produit.vars.valid %}
+                <div class="invalid-feedback d-block">{{ form_errors(form.status_produit) }}</div>
+              {% endif %}
+              {{ ui.okText(form.status_produit) }}
 
               <div class="mt-3 small text-muted">
                 <i class="bi bi-info-circle me-1"></i>
@@ -170,44 +234,26 @@
     </div>
   </div>
 </div>
+
 {% endblock %}
 
 {# ====== STYLES ====== #}
 {% block stylesheets %}
   {{ parent() }}
   <style>
-    .add-produit-page, .add-produit-page *{
-      color:#111827;
-    }
+    .add-produit-page, .add-produit-page *{ color:#111827; }
     .text-dark-50{ color:#6b7280 !important; }
-
     .bg-gradient-primary{
       background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     }
 
-    /* ===== Flash auto animation ===== */
-    .flash-message{
-      border-left: 4px solid;
-      animation: slideInDown .35s ease;
-    }
-    .flash-message.slide-out{
-      animation: slideOutUp .35s ease forwards;
-    }
-    @keyframes slideInDown{
-      from{ opacity:0; transform: translateY(-25px); }
-      to{ opacity:1; transform: translateY(0); }
-    }
-    @keyframes slideOutUp{
-      from{ opacity:1; transform: translateY(0); }
-      to{ opacity:0; transform: translateY(-25px); }
-    }
+    /* Bootstrap already styles is-valid/is-invalid
+       We just make feedback visible */
+    .invalid-feedback{ font-weight:600; }
+    .valid-feedback{ font-weight:600; }
 
-    /* ===== Status radios Symfony => Cards =====
-       Symfony génère: input + label, donc on style label.
-    */
-    .status-radio-group input[type="radio"]{
-      display:none;
-    }
+    /* Status radios cards */
+    .status-radio-group input[type="radio"]{ display:none; }
 
     .status-radio-group label{
       border:1px solid #e5e7eb;
@@ -227,14 +273,12 @@
       box-shadow: 0 8px 20px rgba(0,0,0,.08);
     }
 
-    /* ✅ Checked style */
     .status-radio-group input[type="radio"]:checked + label{
       border-color:#667eea;
       box-shadow: 0 0 0 4px rgba(102,126,234,.18);
       background: #f5f7ff;
     }
 
-    /* Pour que les labels aient des petits détails */
     .status-radio-group label::after{
       content:"";
       float:right;
@@ -243,18 +287,18 @@
       background:#d1d5db;
       margin-top:6px;
     }
+
     .status-radio-group input[type="radio"]:checked + label::after{
       background:#667eea;
     }
   </style>
 {% endblock %}
 
-{# ====== JS ====== #}
+{# ====== JS (just flash hide) ====== #}
 {% block javascripts %}
   {{ parent() }}
   <script>
     document.addEventListener('DOMContentLoaded', function() {
-      // ✅ Auto-disparition des flash après 3 sec
       document.querySelectorAll('.flash-message').forEach(msg => {
         setTimeout(() => {
           msg.classList.add('slide-out');
