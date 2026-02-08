@@ -381,17 +381,33 @@ class CommandeController extends AbstractController
     }
 
 
-#[Route('/admin/bi', name: 'admin_bi_dashboard', methods: ['GET'])]
-public function bi(AdminBIService $bi, Request $request): Response
-{
-    $days = (int)($request->query->get('days', 30));
-    if (!in_array($days, [7, 30, 90], true)) $days = 30;
+    #[Route('/admin/bi', name: 'admin_bi_dashboard')]
+    public function dashboard(Request $request, AdminBIService $bi): Response
+    {
+        $days = (int) $request->query->get('days', 30);
+        $from = $request->query->get('from');
+        $to   = $request->query->get('to');
+        $cat  = $request->query->get('cat');
 
-    $data = $bi->buildDashboard($days);
+        $data = $bi->buildDashboard($days, $from, $to, $cat);
 
-    return $this->render('admin/bi_dashboard.html.twig', $data);
-}
+        return $this->render('admin/bi_dashboard.html.twig', [
+            // période
+            'days' => $data['period']['days'],
+            'from' => $data['period']['from'],
+            'to'   => $data['period']['to'],
+            'cat'  => $data['period']['cat'],
+            'categories' => $data['period']['categories'],
 
+            // données
+            'kpi' => $data['kpi'],
+            'charts' => $data['charts'],
+            'topProduits' => $data['topProduits'],
+            'stocksBas' => $data['stocksBas'],
+            'alerts' => $data['alerts'],
+            'tips' => $data['tips'],
+        ]);
+    }
 
     
 }
