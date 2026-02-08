@@ -9,7 +9,7 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
-
+use Symfony\Component\HttpFoundation\File\UploadedFile;
 use App\Repository\ReclamationRepository;
 use App\Repository\ReponseReclamationRepository;
 use Symfony\Component\HttpFoundation\File\Exception\FileException;
@@ -17,7 +17,7 @@ use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 
 class ReclamationController extends AbstractController
 {
-   #[Route('/reclamation', name: 'reclamation_index')]
+   #[Route('/reclamation', name: 'reclamation_index', methods: ['GET', 'POST'])]
 public function index(Request $request, EntityManagerInterface $em): Response
 {
     $reclamation = new Reclamation();
