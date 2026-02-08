@@ -1,0 +1,46 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Réponses - {{ reclamation.referenceReclamation }}{% endblock %}
+
+{% block body %}
+<section class="section" style="padding-top: 120px;">
+  <div class="container">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <div>
+        <h2>Réponses</h2>
+        <p class="text-muted mb-0">
+          Réclamation : <strong>#{{ reclamation.referenceReclamation }}</strong>
+        </p>
+      </div>
+
+      <a href="{{ path('reclamation_list') }}" class="btn btn-outline-secondary">
+        Retour
+      </a>
+    </div>
+
+    {% if reponses is empty %}
+      <div class="alert alert-info">
+        Aucune réponse pour le moment.
+      </div>
+    {% else %}
+      <div class="card border-0 shadow-sm">
+        <div class="card-body">
+          {% for rep in reponses %}
+            <div class="border rounded p-3 mb-3">
+              <div class="d-flex justify-content-between">
+                <strong>{{ rep.typeReponse }}</strong>
+                <small class="text-muted">{{ rep.dateCreationRep|date('d/m/Y H:i') }}</small>
+              </div>
+              <div class="mt-2">
+                {{ rep.message }}
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+    {% endif %}
+
+  </div>
+</section>
+{% endblock %}

@@ -1,20 +1,138 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}Hello ReclamationController!{% endblock %}
+{% block title %}Réclamations{% endblock %}
 
 {% block body %}
-<style>
-    .example-wrapper { margin: 1em auto; max-width: 800px; width: 95%; font: 18px/1.5 sans-serif; }
-    .example-wrapper code { background: #F5F5F5; padding: 2px 6px; }
-</style>
+<section class="section" style="padding-top: 120px;">
+  <div class="container">
 
-<div class="example-wrapper">
-    <h1>Hello {{ controller_name }}! ✅</h1>
+    <div class="row justify-content-center">
+      <div class="col-lg-8">
 
-    This friendly message is coming from:
-    <ul>
-        <li>Your controller at <code>C:/Users/lenovo/MedFlow/3A_45-MedFlow/Main/src/Controller/ReclamationController.php</code></li>
-        <li>Your template at <code>C:/Users/lenovo/MedFlow/3A_45-MedFlow/Main/templates/reclamation/index.html.twig</code></li>
-    </ul>
-</div>
+        <div class="section-title mb-4 d-flex justify-content-between align-items-center">
+          <div>
+            <h2>Ajouter une réclamation</h2>
+            <p>Décrivez votre problème, nous vous répondrons rapidement.</p>
+          </div>
+
+          <a href="{{ path('reclamation_list') }}"
+             class="btn btn-outline-primary"
+             title="Voir mes réclamations">
+            <i class="bi bi-inbox"></i>
+          </a>
+        </div>
+
+        {# ===== Messages succès ===== #}
+        {% for message in app.flashes('success') %}
+          <div class="alert alert-success alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+          </div>
+        {% endfor %}
+
+        {# (optionnel) afficher erreurs globales du form #}
+        {% if form_errors(form) %}
+          <div class="alert alert-danger">
+            {{ form_errors(form) }}
+          </div>
+        {% endif %}
+
+        <div class="card shadow-sm border-0">
+          <div class="card-body p-4">
+
+            {{ form_start(form, {
+              attr: {
+                class: 'row g-3',
+                novalidate: 'novalidate'
+              }
+            }) }}
+
+              {# ===== CONTENU ===== #}
+              <div class="col-12">
+                {{ form_label(form.contenu, 'Contenu', {'label_attr': {'class': 'form-label'}}) }}
+                {{ form_widget(form.contenu, {
+                  attr: {
+                    class: 'form-control ' ~ (form_errors(form.contenu) ? 'is-invalid' : ''),
+                    placeholder: 'Ex: Problème de rendez-vous...'
+                  }
+                }) }}
+                {% if form_errors(form.contenu) %}
+                  <div class="invalid-feedback d-block">
+                    {{ form_errors(form.contenu) }}
+                  </div>
+                {% endif %}
+              </div>
+
+              {# ===== DESCRIPTION ===== #}
+              <div class="col-12">
+                {{ form_label(form.description, 'Description', {'label_attr': {'class': 'form-label'}}) }}
+                {{ form_widget(form.description, {
+                  attr: {
+                    class: 'form-control ' ~ (form_errors(form.description) ? 'is-invalid' : ''),
+                    rows: 5,
+                    placeholder: 'Décrivez votre réclamation en détail...'
+                  }
+                }) }}
+                {% if form_errors(form.description) %}
+                  <div class="invalid-feedback d-block">
+                    {{ form_errors(form.description) }}
+                  </div>
+                {% endif %}
+              </div>
+
+              {# ===== TYPE (select) ===== #}
+              <div class="col-md-6">
+                {{ form_label(form.type, 'Type', {'label_attr': {'class': 'form-label'}}) }}
+                {{ form_widget(form.type, {
+                  attr: {
+                    class: 'form-select ' ~ (form_errors(form.type) ? 'is-invalid' : '')
+                  }
+                }) }}
+                {% if form_errors(form.type) %}
+                  <div class="invalid-feedback d-block">
+                    {{ form_errors(form.type) }}
+                  </div>
+                {% endif %}
+              </div>
+
+              {# ===== PIÈCE JOINTE (AVANT BOUTON) ===== #}
+              <div class="col-12">
+                {{ form_label(form.pieceJointePath, 'Pièce jointe (optionnelle)', {'label_attr': {'class': 'form-label'}}) }}
+                {{ form_widget(form.pieceJointePath, {
+                  attr: {
+                    class: 'form-control ' ~ (form_errors(form.pieceJointePath) ? 'is-invalid' : '')
+                  }
+                }) }}
+                {% if form_errors(form.pieceJointePath) %}
+                  <div class="invalid-feedback d-block">
+                    {{ form_errors(form.pieceJointePath) }}
+                  </div>
+                {% endif %}
+
+                <div class="form-text">
+                  Formats conseillés : PDF, JPG, PNG. (Taille limitée selon config)
+                </div>
+              </div>
+
+              {# ===== ACTIONS ===== #}
+              <div class="col-12 d-flex gap-2 mt-2">
+                <button type="submit" class="btn btn-primary px-4">
+                  Envoyer la réclamation
+                </button>
+                <button type="reset" class="btn btn-outline-secondary px-4">
+                  Annuler
+                </button>
+              </div>
+
+            {# ✅ IMPORTANT: garder render_rest pour CSRF (_token) #}
+            {{ form_end(form) }}
+
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+</section>
 {% endblock %}

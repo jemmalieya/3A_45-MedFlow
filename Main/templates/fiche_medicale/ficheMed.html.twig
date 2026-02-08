@@ -1,0 +1,1147 @@
+{% extends 'base_dashboard.html.twig' %}
+{% block body %}
+<style>
+    .page-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 40px 30px;
+        border-radius: 10px;
+        margin-bottom: 30px;
+        box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+    }
+    
+    .page-header h1 {
+        font-size: 2.5rem;
+        font-weight: 700;
+        margin-bottom: 10px;
+        letter-spacing: -0.5px;
+    }
+    
+    .page-header p {
+        font-size: 1.1rem;
+        opacity: 0.95;
+        margin: 0;
+    }
+    
+    .card {
+        border: none;
+        border-radius: 12px;
+        box-shadow: 0 5px 20px rgba(0, 0, 0, 0.08);
+        transition: all 0.3s ease;
+        overflow: hidden;
+    }
+    
+    .card:hover {
+        box-shadow: 0 10px 35px rgba(0, 0, 0, 0.15);
+        transform: translateY(-2px);
+    }
+    
+    .card-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        padding: 20px 24px;
+    }
+    
+    .card-header h6 {
+        font-size: 1.1rem;
+        font-weight: 600;
+        letter-spacing: 0.3px;
+    }
+    
+    .card-body {
+        padding: 25px;
+    }
+    
+    .table {
+        margin-bottom: 0;
+    }
+    
+    .table thead th {
+        background: linear-gradient(135deg, #f5f7fa 0%, #f9fafb 100%);
+        color: #2d3748;
+        font-weight: 600;
+        border-bottom: 2px solid #e2e8f0;
+        padding: 15px;
+        font-size: 0.9rem;
+        text-transform: uppercase;
+        letter-spacing: 0.4px;
+    }
+    
+    .table tbody td {
+        padding: 15px;
+        vertical-align: middle;
+        border-color: #e2e8f0;
+    }
+    
+    .table tbody tr {
+        transition: all 0.3s ease;
+    }
+    
+    .table tbody tr:not(.detail-row):hover {
+        background-color: #f8f9fc;
+        box-shadow: inset 0 0 0 1px #e2e8f0;
+    }
+    
+    .badge {
+        padding: 8px 12px;
+        border-radius: 20px;
+        font-weight: 600;
+        font-size: 0.85rem;
+        letter-spacing: 0.3px;
+    }
+    
+    .badge-success {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        color: white;
+    }
+    
+    .badge-danger {
+        background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+        color: white;
+    }
+    
+    .badge-warning {
+        background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+        color: white;
+    }
+    
+    .btn-primary {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border: none;
+        border-radius: 8px;
+        padding: 8px 16px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+    
+    .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+        color: white;
+    }
+    
+    .btn-info {
+        background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+        border: none;
+        color: white;
+        border-radius: 6px;
+        transition: all 0.3s ease;
+    }
+    
+    .btn-info:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 15px rgba(59, 130, 246, 0.4);
+    }
+    
+    .btn-secondary {
+        background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);
+        border: none;
+        color: white;
+        border-radius: 8px;
+        transition: all 0.3s ease;
+    }
+    
+    .btn-secondary:hover:not(:disabled) {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 15px rgba(107, 114, 128, 0.3);
+    }
+    
+    .btn-link {
+        font-size: 1.2rem;
+        transition: all 0.3s ease;
+    }
+    
+    .btn-link:hover {
+        transform: scale(1.2);
+    }
+    
+    .btn-sm {
+        padding: 6px 12px;
+        font-size: 0.85rem;
+    }
+    
+    .alert {
+        border: none;
+        border-radius: 10px;
+        border-left: 4px solid;
+        margin-bottom: 20px;
+        animation: slideIn 0.4s ease;
+    }
+    
+    .alert-danger {
+        background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+        border-left-color: #dc2626;
+        color: #7f1d1d;
+    }
+    
+    .alert-success {
+        background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
+        border-left-color: #16a34a;
+        color: #15803d;
+    }
+    
+    @keyframes slideIn {
+        from {
+            opacity: 0;
+            transform: translateY(-10px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    
+    /* Custom detail row: hidden by default, shown when .detail-row-open */
+    .detail-row {
+        display: none;
+    }
+    .detail-row.detail-row-open {
+        display: table-row;
+    }
+    .detail-row td {
+        vertical-align: top;
+    }
+
+    /* Fiche prescriptions detail row */
+    .fiche-detail-row {
+        display: none;
+    }
+    .fiche-detail-row.detail-row-open {
+        display: table-row;
+    }
+    .fiche-detail-row td {
+        vertical-align: top;
+    }
+    
+    .modal-content {
+        border: none;
+        border-radius: 12px;
+        box-shadow: 0 25px 50px rgba(0, 0, 0, 0.2);
+    }
+    
+    .modal-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        padding: 20px 24px;
+    }
+    
+    .modal-header .close {
+        color: white;
+        opacity: 0.8;
+    }
+    
+    .modal-header .close:hover {
+        opacity: 1;
+    }
+    
+    .form-control {
+        border: 2px solid #e2e8f0;
+        border-radius: 8px;
+        padding: 10px 14px;
+        font-size: 0.95rem;
+        transition: all 0.3s ease;
+    }
+    
+    .form-control:focus {
+        border-color: #667eea;
+        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+    
+    .form-group label {
+        font-weight: 600;
+        color: #2d3748;
+        margin-bottom: 8px;
+    }
+    
+    .text-danger {
+        color: #dc2626 !important;
+    }
+    
+    .bg-light {
+        background: #f8f9fc !important;
+    }
+    
+    .collapse-details {
+        padding: 20px;
+        background: linear-gradient(135deg, #f8f9fc 0%, #f5f6fa 100%);
+        border-radius: 8px;
+        margin: 10px 0;
+    }
+    
+    .collapse-details .table-sm {
+        background: white;
+        border-radius: 6px;
+        overflow: hidden;
+    }
+    
+    .collapse-details .table-sm thead th {
+        background: #f5f7fa;
+        font-size: 0.8rem;
+    }
+    
+    .collapse-details .table-sm tbody td {
+        padding: 10px;
+        font-size: 0.9rem;
+    }
+    
+    .collapse-details .table-sm tbody tr:hover {
+        background-color: #fafbfc;
+    }
+</style>
+
+<div class="container-fluid">
+
+                    <!-- Page Heading -->
+                    <div class="page-header">
+                        <h1>👨‍⚕️ Appointments by Doctor</h1>
+                        <p>Showing all appointments for Doctor ID: <strong>{{ idStaff }}</strong></p>
+                    </div>
+
+                    <!-- Error/Success Messages from Server Validation -->
+                    {% if app.flashes('error') %}
+                        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                            <strong>❌ Validation Error:</strong>
+                            {% for message in app.flashes('error') %}
+                                <div>{{ message }}</div>
+                            {% endfor %}
+                            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                        </div>
+                    {% endif %}
+                    {% if app.flashes('success') %}
+                        <div class="alert alert-success alert-dismissible fade show" role="alert">
+                            <strong>✅ Success:</strong>
+                            {% for message in app.flashes('success') %}
+                                <div>{{ message }}</div>
+                            {% endfor %}
+                            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                        </div>
+                    {% endif %}
+
+                    <!-- RendezVous Table -->
+                    <div class="card shadow mb-4">
+                        <div class="card-header py-3 d-flex justify-content-between align-items-center">
+                            <h6 class="m-0 font-weight-bold text-white">Appointments List</h6>
+                            <div class="d-flex gap-2" style="gap: 10px;">
+                                <select id="appointmentsSortSelect" class="form-control form-control-sm" style="max-width: 220px;">
+                                    <option value="none">Sort...</option>
+                                    <option value="date_asc">Date ↑ (Oldest)</option>
+                                    <option value="date_desc">Date ↓ (Newest)</option>
+                                    <option value="status_az">Status A-Z</option>
+                                    <option value="status_za">Status Z-A</option>
+                                </select>
+                                <input type="text" id="searchAppointments" class="form-control form-control-sm" style="max-width: 250px; border: 2px solid white;" placeholder="🔍 Search appointments...">
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-bordered" width="100%" cellspacing="0">
+                                    <thead>
+                                        <tr>
+                                            <th>ID</th>
+                                            <th>Date & Time</th>
+                                            <th>Status</th>
+                                            <th>Mode</th>
+                                            <th>Reason</th>
+                                            <th>Patient ID</th>
+                                            <th>Doctor ID</th>
+                                            <th>Created</th>
+                                            <th>Start Consultation</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% if rendezvous is not empty %}
+                                            {% for appointment in rendezvous %}
+                                                <tr class="main-row">
+                                                    <td>{{ appointment.id }}</td>
+                                                    <td>{{ appointment.datetime|date('Y-m-d H:i') }}</td>
+                                                    <td>
+                                                        <span class="badge badge-{% if appointment.statut == 'approuvé' %}success{% elseif appointment.statut == 'rejeté' %}danger{% else %}warning{% endif %}">
+                                                            {{ appointment.statut }}
+                                                        </span>
+                                                    </td>
+                                                    <td>{{ appointment.mode }}</td>
+                                                    <td>{{ appointment.motif }}</td>
+                                                    <td>{{ appointment.idPatient }}</td>
+                                                    <td>{{ appointment.idStaff }}</td>
+                                                    <td>{{ appointment.createdAt|date('Y-m-d H:i') }}</td>
+                                                    <td>
+                                                        <div class="d-flex gap-2" style="gap: 8px;">
+                                                            <button class="btn btn-sm btn-info js-toggle-detail" type="button" data-appointment-id="{{ appointment.id }}" aria-expanded="false" title="View Details">
+                                                                <i class="fas fa-chevron-down"></i>
+                                                            </button>
+                                                            {% if appointment.statut == 'Confirmé' %}
+                                                                <button class="btn btn-sm btn-secondary" disabled title="This consultation is completed">
+                                                                    <i class="fas fa-check-circle"></i> Completed
+                                                                </button>
+                                                            {% else %}
+                                                                <a href="{{ path('start_consultation', {'id': appointment.id}) }}" class="btn btn-sm btn-primary" title="Start a new consultation">
+                                                                    <i class="fas fa-play-circle"></i> Start
+                                                                </a>
+                                                            {% endif %}
+                                                        </div>
+                                                    </td>
+                                                </tr>
+
+                                                <tr class="detail-row" data-detail-for="{{ appointment.id }}">
+                                                    <td colspan="9" class="p-0 border-0">
+                                                        <div class="collapse-details">
+                                                                <table class="table table-sm table-bordered mb-0">
+                                                                    <thead>
+                                                                        <tr>
+                                                                            <th>Fiche ID</th>
+                                                                            <th>Diagnostic</th>
+                                                                            <th>Observations</th>
+                                                                            <th>Exam Results</th>
+                                                                            <th>Start</th>
+                                                                            <th>End</th>
+                                                                            <th>Duration (min)</th>
+                                                                            <th>Created At</th>
+                                                                        </tr>
+                                                                    </thead>
+                                                                    <tbody>
+                                                                        {% set hasFiche = false %}
+                                                                        {% for fiche in fiches %}
+                                                                            {% if fiche.rendezVous.id == appointment.id %}
+                                                                                {% set hasFiche = true %}
+                                                                                <tr>
+                                                                                    <td>{{ fiche.id }}</td>
+                                                                                    <td>{{ fiche.diagnostic }}</td>
+                                                                                    <td>{{ fiche.observations ?? 'N/A' }}</td>
+                                                                                    <td>{{ fiche.resultatsExamens ?? 'N/A' }}</td>
+                                                                                    <td>{{ fiche.startTime ? fiche.startTime|date('Y-m-d H:i:s') : 'N/A' }}</td>
+                                                                                    <td>{{ fiche.endTime ? fiche.endTime|date('Y-m-d H:i:s') : 'N/A' }}</td>
+                                                                                    <td>{{ fiche.dureeMinutes ?? 'N/A' }}</td>
+                                                                                    <td>{{ fiche.createdAt|date('Y-m-d H:i:s') }}</td>
+                                                                                </tr>
+                                                                            {% endif %}
+                                                                        {% endfor %}
+                                                                        {% if not hasFiche %}
+                                                                            <tr>
+                                                                                <td colspan="8" class="text-center">No medical files for this appointment.</td>
+                                                                            </tr>
+                                                                        {% endif %}
+                                                                    </tbody>
+                                                                </table>
+                                                            </div>
+                                                    </td>
+                                                </tr>
+                                            {% endfor %}
+                                        {% else %}
+                                            <tr>
+                                                <td colspan="9" class="text-center">No appointments found for this doctor.</td>
+                                            </tr>
+                                        {% endif %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                                        <!-- Edit Prescription Modal -->
+                                        <div class="modal fade" id="editPrescriptionModal" tabindex="-1" role="dialog" aria-labelledby="editPrescriptionModalLabel" aria-hidden="true" style="z-index: 1060;">
+                                            <div class="modal-dialog modal-md modal-dialog-centered" role="document">
+                                                <div class="modal-content">
+                                                    <form method="post" id="editPrescriptionForm">
+                                                        <div class="modal-header">
+                                                            <h5 class="modal-title" id="editPrescriptionModalLabel"><i class="fas fa-edit mr-2"></i>Edit Prescription</h5>
+                                                            <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                                                        </div>
+                                                        <div class="modal-body">
+                                                            <input type="hidden" name="_token" id="editPrescriptionToken" value="">
+                                                            <div class="form-group">
+                                                                <label for="editNomMedicament">Médicament</label>
+                                                                <input id="editNomMedicament" name="nomMedicament" class="form-control" />
+                                                                <small id="editNomMedicamentFeedback" class="d-block mt-2" style="font-size:0.85rem;"></small>
+                                                            </div>
+                                                            <div class="form-group">
+                                                                <label for="editDose">Dose</label>
+                                                                <input id="editDose" name="dose" class="form-control" />
+                                                                <small id="editDoseFeedback" class="d-block mt-2" style="font-size:0.85rem;"></small>
+                                                            </div>
+                                                            <div class="form-group">
+                                                                <label for="editFrequence">Fréquence</label>
+                                                                <input id="editFrequence" name="frequence" class="form-control" />
+                                                                <small id="editFrequenceFeedback" class="d-block mt-2" style="font-size:0.85rem;"></small>
+                                                            </div>
+                                                            <div class="form-group">
+                                                                <label for="editDuree">Durée (jours)</label>
+                                                                <input id="editDuree" name="duree" type="number" min="1" class="form-control" />
+                                                                <small id="editDureeFeedback" class="d-block mt-2" style="font-size:0.85rem;"></small>
+                                                            </div>
+                                                            <div class="form-group">
+                                                                <label for="editInstructions">Instructions</label>
+                                                                <input id="editInstructions" name="instructions" class="form-control" />
+                                                                <small id="editInstructionsFeedback" class="d-block mt-2" style="font-size:0.85rem;"></small>
+                                                            </div>
+                                                        </div>
+                                                        <div class="modal-footer">
+                                                            <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Cancel</button>
+                                                            <button type="submit" class="btn btn-primary btn-sm">Save Changes</button>
+                                                        </div>
+                                                    </form>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                    <!-- FicheMedicale Table -->
+                    <div class="card shadow mb-4">
+                        <div class="card-header py-3 d-flex justify-content-between align-items-center">
+                            <h6 class="m-0 font-weight-bold text-white">Medical Files List</h6>
+                            <div class="d-flex gap-2" style="gap: 10px;">
+                                <select id="medicalFilesSortSelect" class="form-control form-control-sm" style="max-width: 220px;">
+                                    <option value="none">Sort...</option>
+                                    <option value="date_asc">Date ↑ (Oldest)</option>
+                                    <option value="date_desc">Date ↓ (Newest)</option>
+                                    <option value="diagnostic_az">Diagnostic A-Z</option>
+                                    <option value="diagnostic_za">Diagnostic Z-A</option>
+                                </select>
+                                <input type="text" id="searchMedicalFiles" class="form-control form-control-sm" style="max-width: 250px; border: 2px solid white;" placeholder="🔍 Search medical files...">
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-bordered" width="100%" cellspacing="0">
+                                    <thead>
+                                        <tr>
+                                            <th>ID</th>
+                                            <th>Rendezvous ID</th>
+                                            <th>Diagnostic</th>
+                                            <th>Observations</th>
+                                            <th>Exam Results</th>
+                                            <th>Start Time</th>
+                                            <th>End Time</th>
+                                            <th>Duration (minutes)</th>
+                                            <th>Created At</th>
+                                            <th>Prescriptions Related</th>
+                                            <th>Modify</th>
+                                            <th>Delete</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% if fiches is not empty %}
+                                            {% for fiche in fiches %}
+                                                <tr class="main-row">
+                                                    <td>{{ fiche.id }}</td>
+                                                    <td>{{ fiche.rendezVous.id }}</td>
+                                                    <td>{{ fiche.diagnostic }}</td>
+                                                    <td>{{ fiche.observations ?? 'N/A' }}</td>
+                                                    <td>{{ fiche.resultatsExamens ?? 'N/A' }}</td>
+                                                    <td>{{ fiche.startTime ? fiche.startTime|date('Y-m-d H:i:s') : 'N/A' }}</td>
+                                                    <td>{{ fiche.endTime ? fiche.endTime|date('Y-m-d H:i:s') : 'N/A' }}</td>
+                                                    <td>{{ fiche.dureeMinutes ?? 'N/A' }}</td>
+                                                    <td>{{ fiche.createdAt|date('Y-m-d H:i:s') }}</td>
+                                                    <td class="text-center">
+                                                        <button class="btn btn-sm btn-info js-toggle-fiche-prescriptions" type="button" data-fiche-id="{{ fiche.id }}" title="View prescriptions" style="font-size: 1rem;">
+                                                            <i class="fas fa-chevron-down"></i>
+                                                        </button>
+                                                    </td>
+                                                    <td class="text-center">
+                                                        <button type="button" class="btn btn-sm btn-link js-open-edit-fiche" data-fiche-id="{{ fiche.id }}" title="Edit this medical file">✏️</button>
+                                                    </td>
+                                                    <td class="text-center">
+                                                        <form method="post" action="{{ path('app_fiche_delete', {'id': fiche.id}) }}" onsubmit="return confirm('Are you sure you want to delete this medical file? This action cannot be undone.');" style="display: inline;">
+                                                            <input type="hidden" name="_token" value="{{ csrf_token('delete' ~ fiche.id) }}">
+                                                            <button class="btn btn-sm btn-link text-danger" type="submit" title="Delete this medical file" style="font-size: 1.2rem;">🗑️</button>
+                                                        </form>
+                                                    </td>
+                                                </tr>
+                                                <tr class="fiche-detail-row" data-fiche-detail-id="{{ fiche.id }}">
+                                                    <td colspan="12" class="p-0 border-0">
+                                                        <div class="collapse-details">
+                                                            <table class="table table-sm table-bordered mb-0">
+                                                                <thead>
+                                                                    <tr>
+                                                                        <th>Prescription ID</th>
+                                                                        <th>Médicament</th>
+                                                                        <th>Dose</th>
+                                                                        <th>Fréquence</th>
+                                                                        <th>Durée (j)</th>
+                                                                        <th>Instructions</th>
+                                                                        <th>Created At</th>
+                                                                    </tr>
+                                                                </thead>
+                                                                <tbody>
+                                                                    {% set hasPrescriptions = false %}
+                                                                    {% for p in prescriptions %}
+                                                                        {% if p.ficheMedicale.id == fiche.id %}
+                                                                            {% set hasPrescriptions = true %}
+                                                                            <tr>
+                                                                                <td>{{ p.id }}</td>
+                                                                                <td>{{ p.nomMedicament }}</td>
+                                                                                <td>{{ p.dose }}</td>
+                                                                                <td>{{ p.frequence }}</td>
+                                                                                <td>{{ p.duree }}</td>
+                                                                                <td>{{ p.instructions ?? '—' }}</td>
+                                                                                <td>{{ p.createdAt ? p.createdAt|date('Y-m-d H:i:s') : 'N/A' }}</td>
+                                                                            </tr>
+                                                                        {% endif %}
+                                                                    {% endfor %}
+                                                                    {% if not hasPrescriptions %}
+                                                                        <tr>
+                                                                            <td colspan="7" class="text-center">No prescriptions for this medical file.</td>
+                                                                        </tr>
+                                                                    {% endif %}
+                                                                </tbody>
+                                                            </table>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            {% endfor %}
+                                        {% else %}
+                                            <tr>
+                                                <td colspan="12" class="text-center">No medical files found for this doctor.</td>
+                                            </tr>
+                                        {% endif %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                            <!-- Prescription Table -->
+                            <div class="card shadow mb-4">
+                                <div class="card-header py-3 d-flex justify-content-between align-items-center">
+                                    <h6 class="m-0 font-weight-bold text-white">Prescriptions List</h6>
+                                    <div class="d-flex gap-2" style="gap: 10px;">
+                                        <select id="prescriptionsSortSelect" class="form-control form-control-sm" style="max-width: 220px;">
+                                            <option value="none">Sort...</option>
+                                            <option value="date_asc">Date ↑ (Oldest)</option>
+                                            <option value="date_desc">Date ↓ (Newest)</option>
+                                            <option value="medicament_az">Médicament A-Z</option>
+                                            <option value="medicament_za">Médicament Z-A</option>
+                                        </select>
+                                        <input type="text" id="searchPrescriptions" class="form-control form-control-sm" style="max-width: 250px; border: 2px solid white;" placeholder="🔍 Search prescriptions...">
+                                    </div>
+                                </div>
+                                <div class="card-body">
+                                    <div class="table-responsive">
+                                        <table class="table table-bordered" width="100%" cellspacing="0">
+                                            <thead>
+                                                <tr>
+                                                    <th>ID</th>
+                                                    <th>Fiche ID</th>
+                                                    <th>Médicament</th>
+                                                    <th>Dose</th>
+                                                    <th>Fréquence</th>
+                                                    <th>Durée (j)</th>
+                                                    <th>Instructions</th>
+                                                    <th>Created At</th>
+                                                    <th>Modify</th>
+                                                    <th>Delete</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {% if prescriptions is not empty %}
+                                                    {% for p in prescriptions %}
+                                                        <tr>
+                                                            <td>{{ p.id }}</td>
+                                                            <td>{{ p.ficheMedicale.id }}</td>
+                                                            <td>{{ p.nomMedicament }}</td>
+                                                            <td>{{ p.dose }}</td>
+                                                            <td>{{ p.frequence }}</td>
+                                                            <td>{{ p.duree }}</td>
+                                                            <td>{{ p.instructions ?? '—' }}</td>
+                                                            <td>{{ p.createdAt ? p.createdAt|date('Y-m-d H:i:s') : 'N/A' }}</td>
+                                                            <td class="text-center">
+                                                                <button type="button" class="btn btn-sm btn-link js-open-edit-prescription" data-prescription-id="{{ p.id }}" title="Edit this prescription">✏️</button>
+                                                            </td>
+                                                            <td class="text-center">
+                                                                <form method="post" action="{{ path('app_prescription_delete', {'id': p.id}) }}" onsubmit="return confirm('Delete this prescription?');" style="display:inline-block;">
+                                                                    <input type="hidden" name="_token" value="{{ csrf_token('delete_prescription' ~ p.id) }}">
+                                                                    <button class="btn btn-sm btn-link text-danger" type="submit" title="Delete this prescription" style="font-size: 1.2rem;">🗑️</button>
+                                                                </form>
+                                                            </td>
+                                                        </tr>
+                                                    {% endfor %}
+                                                {% else %}
+                                                    <tr>
+                                                        <td colspan="10" class="text-center">No prescriptions found for this doctor.</td>
+                                                    </tr>
+                                                {% endif %}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+
+                    <!-- Single edit modal (outside table to avoid focus/layout bugs) -->
+                    <div class="modal fade" id="editFicheModal" tabindex="-1" role="dialog" aria-labelledby="editFicheModalLabel" aria-hidden="true" style="z-index: 1050;">
+                        <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+                            <div class="modal-content">
+                                <form method="post" action="{{ path('consultation_view') }}" id="editFicheForm">
+                                    <div class="modal-header">
+                                        <h5 class="modal-title" id="editFicheModalLabel"><i class="fas fa-edit mr-2"></i>Edit Medical File</h5>
+                                        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                                    </div>
+                                    <div class="modal-body">
+                                        <input type="hidden" name="fiche_id" id="editFicheId" value="">
+                                        <div class="form-group">
+                                            <label for="editDiagnostic"><i class="fas fa-stethoscope mr-2"></i>Diagnostic</label>
+                                            <textarea id="editDiagnostic" name="diagnostic" class="form-control modal-field" rows="3" required></textarea>
+                                            <small id="editDiagnosticFeedback" class="d-block mt-2" style="font-size: 0.85rem;"></small>
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="editObservations"><i class="fas fa-clipboard-list mr-2"></i>Observations</label>
+                                            <textarea id="editObservations" name="observations" class="form-control modal-field" rows="2"></textarea>
+                                            <small id="editObservationsFeedback" class="d-block mt-2" style="font-size: 0.85rem;"></small>
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="editResultats"><i class="fas fa-flask mr-2"></i>Exam Results</label>
+                                            <textarea id="editResultats" name="resultatsExamens" class="form-control modal-field" rows="2"></textarea>
+                                            <small id="editResultatsFeedback" class="d-block mt-2" style="font-size: 0.85rem;"></small>
+                                        </div>
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Cancel</button>
+                                        <button type="submit" name="save" class="btn btn-primary btn-sm"><i class="fas fa-save mr-2"></i>Save Changes</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- /.container-fluid -->
+
+<!-- Bootstrap & jQuery from CDN (ensure they're loaded) -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/js/bootstrap.bundle.min.js"></script>
+<script type="text/javascript">
+    window.FICHES_EDIT = {};
+    {% if fiches is not empty %}
+    {% for f in fiches %}
+    window.FICHES_EDIT["{{ f.id }}"] = {{ {'diagnostic': f.diagnostic, 'observations': f.observations ?? '', 'resultatsExamens': f.resultatsExamens ?? ''}|json_encode|raw }};
+    {% endfor %}
+    {% endif %}
+</script>
+<script type="text/javascript">
+    window.PRESCRIPTIONS_EDIT = {};
+    {% if prescriptions is not empty %}
+    {% for p in prescriptions %}
+    window.PRESCRIPTIONS_EDIT["{{ p.id }}"] = {{ {'nomMedicament': p.nomMedicament, 'dose': p.dose, 'frequence': p.frequence, 'duree': p.duree, 'instructions': p.instructions ?? '', 'token': (csrf_token('edit_prescription' ~ p.id))}|json_encode|raw }};
+    {% endfor %}
+    {% endif %}
+</script>
+<script>
+        // ---- Prescriptions Table Sorting & Searching ----
+        var prescSortSelect = document.getElementById('prescriptionsSortSelect');
+        var prescSearchInput = document.getElementById('searchPrescriptions');
+        if (prescSortSelect || prescSearchInput) {
+            var prescCard = prescSortSelect ? prescSortSelect.closest('.card') : (prescSearchInput ? prescSearchInput.closest('.card') : null);
+            var prescTable = prescCard ? prescCard.querySelector('table') : null;
+            var prescTbody = prescTable ? prescTable.querySelector('tbody') : null;
+            var prescOriginalRows = [];
+            if (prescTbody) {
+                var allRows = Array.from(prescTbody.querySelectorAll('tr'));
+                allRows.forEach(function(row) {
+                    prescOriginalRows.push(row.cloneNode(true));
+                });
+            }
+            function renderPrescTable() {
+                var value = prescSortSelect ? prescSortSelect.value : 'none';
+                var searchQuery = prescSearchInput ? prescSearchInput.value.toLowerCase() : '';
+                var rows = prescOriginalRows.map(function(row) { return row.cloneNode(true); });
+                // Filter by search
+                if (searchQuery) {
+                    rows = rows.filter(function(row) {
+                        return row.textContent.toLowerCase().includes(searchQuery);
+                    });
+                }
+                // Sort
+                if (value === 'date_asc' || value === 'date_desc') {
+                    rows.sort(function(a, b) {
+                        var aDate = a.cells[7] ? Date.parse(a.cells[7].textContent.replace(/\s/, 'T')) : 0;
+                        var bDate = b.cells[7] ? Date.parse(b.cells[7].textContent.replace(/\s/, 'T')) : 0;
+                        if (isNaN(aDate) || isNaN(bDate)) return 0;
+                        return value === 'date_asc' ? aDate - bDate : bDate - aDate;
+                    });
+                } else if (value === 'medicament_az' || value === 'medicament_za') {
+                    rows.sort(function(a, b) {
+                        var aNom = a.cells[2] ? a.cells[2].textContent.trim().toLowerCase() : '';
+                        var bNom = b.cells[2] ? b.cells[2].textContent.trim().toLowerCase() : '';
+                        var cmp = aNom.localeCompare(bNom);
+                        return value === 'medicament_az' ? cmp : -cmp;
+                    });
+                }
+                prescTbody.innerHTML = '';
+                rows.forEach(function(row) { prescTbody.appendChild(row); });
+            }
+            if (prescSortSelect) prescSortSelect.addEventListener('change', renderPrescTable);
+            if (prescSearchInput) prescSearchInput.addEventListener('input', renderPrescTable);
+        }
+
+
+        // ---- Appointments Table Sorting & Searching ----
+        // ---- Appointments Table Sorting & Searching (with detail rows) ----
+        (function() {
+            var sortSelect = document.getElementById('appointmentsSortSelect');
+            var searchInput = document.getElementById('searchAppointments');
+            if (!sortSelect && !searchInput) return;
+            var card = (sortSelect || searchInput).closest('.card');
+            var table = card ? card.querySelector('table') : null;
+            var tbody = table ? table.querySelector('tbody') : null;
+            if (!tbody) return;
+            // Store pairs of [mainRow, detailRow]
+            var rowPairs = [];
+            var trs = Array.from(tbody.querySelectorAll('tr.main-row'));
+            trs.forEach(function(mainRow) {
+                var appointmentId = mainRow.querySelector('.js-toggle-detail')?.getAttribute('data-appointment-id');
+                var detailRow = appointmentId ? tbody.querySelector('tr.detail-row[data-detail-for="' + appointmentId + '"]') : null;
+                rowPairs.push([
+                    mainRow.cloneNode(true),
+                    detailRow ? detailRow.cloneNode(true) : null
+                ]);
+            });
+            // Track open detail rows by appointmentId
+            var openDetails = {};
+            document.addEventListener('click', function(e) {
+                var btn = e.target.closest('.js-toggle-detail');
+                if (!btn) return;
+                var appointmentId = btn.getAttribute('data-appointment-id');
+                openDetails[appointmentId] = !openDetails[appointmentId];
+            });
+            function renderTable() {
+                var value = sortSelect ? sortSelect.value : 'none';
+                var query = searchInput ? searchInput.value.toLowerCase() : '';
+                var pairs = rowPairs.map(function(pair) {
+                    return [pair[0].cloneNode(true), pair[1] ? pair[1].cloneNode(true) : null];
+                });
+                // Filter
+                if (query) {
+                    pairs = pairs.filter(function(pair) {
+                        return pair[0].textContent.toLowerCase().includes(query);
+                    });
+                }
+                // Sort
+                if (value === 'date_asc' || value === 'date_desc') {
+                    pairs.sort(function(a, b) {
+                        var aDate = a[0].cells[1] ? Date.parse(a[0].cells[1].textContent.replace(/\s/, 'T')) : 0;
+                        var bDate = b[0].cells[1] ? Date.parse(b[0].cells[1].textContent.replace(/\s/, 'T')) : 0;
+                        if (isNaN(aDate) || isNaN(bDate)) return 0;
+                        return value === 'date_asc' ? aDate - bDate : bDate - aDate;
+                    });
+                } else if (value === 'status_az' || value === 'status_za') {
+                    pairs.sort(function(a, b) {
+                        var aStatus = a[0].cells[2] ? a[0].cells[2].textContent.trim().toLowerCase() : '';
+                        var bStatus = b[0].cells[2] ? b[0].cells[2].textContent.trim().toLowerCase() : '';
+                        var cmp = aStatus.localeCompare(bStatus);
+                        return value === 'status_az' ? cmp : -cmp;
+                    });
+                }
+                tbody.innerHTML = '';
+                pairs.forEach(function(pair) {
+                    tbody.appendChild(pair[0]);
+                    // Only show detail row if open
+                    var appointmentId = pair[0].querySelector('.js-toggle-detail')?.getAttribute('data-appointment-id');
+                    if (pair[1] && appointmentId && openDetails[appointmentId]) {
+                        pair[1].classList.add('detail-row-open');
+                        tbody.appendChild(pair[1]);
+                    } else if (pair[1]) {
+                        pair[1].classList.remove('detail-row-open');
+                        tbody.appendChild(pair[1]);
+                    }
+                });
+            }
+            if (sortSelect) sortSelect.addEventListener('change', renderTable);
+            if (searchInput) searchInput.addEventListener('input', renderTable);
+            // Re-render after DOMContentLoaded to ensure initial state
+            document.addEventListener('DOMContentLoaded', renderTable);
+        })();
+
+        // ---- Medical Files Table Sorting & Searching ----
+        // ---- Medical Files Table Sorting & Searching (with detail rows) ----
+        (function() {
+            var sortSelect = document.getElementById('medicalFilesSortSelect');
+            var searchInput = document.getElementById('searchMedicalFiles');
+            if (!sortSelect && !searchInput) return;
+            var card = (sortSelect || searchInput).closest('.card');
+            var table = card ? card.querySelector('table') : null;
+            var tbody = table ? table.querySelector('tbody') : null;
+            if (!tbody) return;
+            // Store pairs of [mainRow, detailRow]
+            var rowPairs = [];
+            var trs = Array.from(tbody.querySelectorAll('tr.main-row'));
+            trs.forEach(function(mainRow) {
+                var ficheId = mainRow.querySelector('.js-toggle-fiche-prescriptions')?.getAttribute('data-fiche-id');
+                var detailRow = ficheId ? tbody.querySelector('tr.fiche-detail-row[data-fiche-detail-id="' + ficheId + '"]') : null;
+                rowPairs.push([
+                    mainRow.cloneNode(true),
+                    detailRow ? detailRow.cloneNode(true) : null
+                ]);
+            });
+            // Track open detail rows by ficheId
+            var openDetails = {};
+            document.addEventListener('click', function(e) {
+                var btn = e.target.closest('.js-toggle-fiche-prescriptions');
+                if (!btn) return;
+                var ficheId = btn.getAttribute('data-fiche-id');
+                openDetails[ficheId] = !openDetails[ficheId];
+            });
+            function renderTable() {
+                var value = sortSelect ? sortSelect.value : 'none';
+                var query = searchInput ? searchInput.value.toLowerCase() : '';
+                var pairs = rowPairs.map(function(pair) {
+                    return [pair[0].cloneNode(true), pair[1] ? pair[1].cloneNode(true) : null];
+                });
+                // Filter
+                if (query) {
+                    pairs = pairs.filter(function(pair) {
+                        return pair[0].textContent.toLowerCase().includes(query);
+                    });
+                }
+                // Sort
+                if (value === 'date_asc' || value === 'date_desc') {
+                    pairs.sort(function(a, b) {
+                        var aDate = a[0].cells[8] ? Date.parse(a[0].cells[8].textContent.replace(/\s/, 'T')) : 0;
+                        var bDate = b[0].cells[8] ? Date.parse(b[0].cells[8].textContent.replace(/\s/, 'T')) : 0;
+                        if (isNaN(aDate) || isNaN(bDate)) return 0;
+                        return value === 'date_asc' ? aDate - bDate : bDate - aDate;
+                    });
+                } else if (value === 'diagnostic_az' || value === 'diagnostic_za') {
+                    pairs.sort(function(a, b) {
+                        var aDiag = a[0].cells[2] ? a[0].cells[2].textContent.trim().toLowerCase() : '';
+                        var bDiag = b[0].cells[2] ? b[0].cells[2].textContent.trim().toLowerCase() : '';
+                        var cmp = aDiag.localeCompare(bDiag);
+                        return value === 'diagnostic_az' ? cmp : -cmp;
+                    });
+                }
+                tbody.innerHTML = '';
+                pairs.forEach(function(pair) {
+                    tbody.appendChild(pair[0]);
+                    // Only show detail row if open
+                    var ficheId = pair[0].querySelector('.js-toggle-fiche-prescriptions')?.getAttribute('data-fiche-id');
+                    if (pair[1] && ficheId && openDetails[ficheId]) {
+                        pair[1].classList.add('detail-row-open');
+                        tbody.appendChild(pair[1]);
+                    } else if (pair[1]) {
+                        pair[1].classList.remove('detail-row-open');
+                        tbody.appendChild(pair[1]);
+                    }
+                });
+            }
+            if (sortSelect) sortSelect.addEventListener('change', renderTable);
+            if (searchInput) searchInput.addEventListener('input', renderTable);
+            // Re-render after DOMContentLoaded to ensure initial state
+            document.addEventListener('DOMContentLoaded', renderTable);
+        })();
+(function() {
+    'use strict';
+
+    document.addEventListener('DOMContentLoaded', function() {
+        // ...existing code...
+
+        // ---- Appointments Table Sorting/Filtering ----
+        // ...existing code...
+    });
+})();
+(function() {
+    'use strict';
+
+    document.addEventListener('DOMContentLoaded', function() {
+
+        // ---- Custom collapse: toggle detail row (appointments) ----
+        document.addEventListener('click', function(e) {
+            var btn = e.target.closest('.js-toggle-detail');
+            if (!btn) return;
+            e.preventDefault();
+            var id = btn.getAttribute('data-appointment-id');
+            var mainRow = btn.closest('tr.main-row');
+            var row = document.querySelector('.detail-row[data-detail-for="' + id + '"]');
+            var icon = btn.querySelector('i.fas');
+            if (!row || !icon || !mainRow) return;
+            // Move the detail row after the main row if not already
+            if (mainRow.nextSibling !== row) {
+                mainRow.parentNode.insertBefore(row, mainRow.nextSibling);
+            }
+            var isOpen = row.classList.toggle('detail-row-open');
+            btn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+            icon.classList.toggle('fa-chevron-down', !isOpen);
+            icon.classList.toggle('fa-chevron-up', isOpen);
+        });
+
+        // ---- Toggle fiche prescriptions detail row (medical files) ----
+        document.addEventListener('click', function(e) {
+            var btn = e.target.closest('.js-toggle-fiche-prescriptions');
+            if (!btn) return;
+            e.preventDefault();
+            var ficheId = btn.getAttribute('data-fiche-id');
+            var mainRow = btn.closest('tr.main-row');
+            var row = document.querySelector('.fiche-detail-row[data-fiche-detail-id="' + ficheId + '"]');
+            var icon = btn.querySelector('i.fas');
+            if (!row || !icon || !mainRow) return;
+            // Move the detail row after the main row if not already
+            if (mainRow.nextSibling !== row) {
+                mainRow.parentNode.insertBefore(row, mainRow.nextSibling);
+            }
+            var isOpen = row.classList.toggle('detail-row-open');
+            icon.classList.toggle('fa-chevron-down', !isOpen);
+            icon.classList.toggle('fa-chevron-up', isOpen);
+        });
+
+        // ---- Single edit modal: open and populate from FICHES_EDIT ----
+        var editModalEl = document.getElementById('editFicheModal');
+        var editFicheIdEl = document.getElementById('editFicheId');
+        var editDiagnosticEl = document.getElementById('editDiagnostic');
+        var editObservationsEl = document.getElementById('editObservations');
+        var editResultatsEl = document.getElementById('editResultats');
+        var modalTitleEl = document.querySelector('#editFicheModal .modal-title');
+
+        document.addEventListener('click', function(e) {
+            var btn = e.target.closest('.js-open-edit-fiche');
+            if (!btn) return;
+            e.preventDefault();
+            var ficheId = btn.getAttribute('data-fiche-id');
+            var data = window.FICHES_EDIT && window.FICHES_EDIT[ficheId];
+            if (!data || !editModalEl) return;
+            editFicheIdEl.value = ficheId;
+            editDiagnosticEl.value = data.diagnostic || '';
+            editObservationsEl.value = data.observations || '';
+            editResultatsEl.value = data.resultatsExamens || '';
+            if (modalTitleEl) modalTitleEl.innerHTML = '<i class="fas fa-edit mr-2"></i>Edit Medical File #' + ficheId;
+            ['editDiagnosticFeedback', 'editObservationsFeedback', 'editResultatsFeedback'].forEach(function(id) {
+                var el = document.getElementById(id);
+                if (el) { el.textContent = ''; el.style.color = ''; }
+            });
+            [editDiagnosticEl, editObservationsEl, editResultatsEl].forEach(function(el) {
+                if (el) el.style.borderColor = '';
+            });
+            $(editModalEl).modal('show');
+        });
+
+        // ---- Edit prescription modal: open and populate from PRESCRIPTIONS_EDIT ----
+        document.addEventListener('click', function(e) {
+            var btn = e.target.closest('.js-open-edit-prescription');
+            if (!btn) return;
+            e.preventDefault();
+            var prescId = btn.getAttribute('data-prescription-id');
+            var data = window.PRESCRIPTIONS_EDIT && window.PRESCRIPTIONS_EDIT[prescId];
+            var modalEl = document.getElementById('editPrescriptionModal');
+            var form = document.getElementById('editPrescriptionForm');
+            if (!data || !modalEl || !form) return;
+            // set action
+            form.setAttribute('action', '/prescription/' + prescId + '/edit');
+            document.getElementById('editPrescriptionToken').value = data.token || '';
+            document.getElementById('editNomMedicament').value = data.nomMedicament || '';
+            document.getElementById('editDose').value = data.dose || '';
+            document.getElementById('editFrequence').value = data.frequence || '';
+            document.getElementById('editDuree').value = data.duree || '';
+            document.getElementById('editInstructions').value = data.instructions || '';
+            $(modalEl).modal('show');
+        });
+
+        // ---- Client-side validation for edit prescription modal (informational only) ----
+        var prescEditRules = {
+            nomMedicament: { minLength: 1, maxLength: 255, required: true },
+            dose: { minLength: 1, maxLength: 255, required: true },
+            frequence: { minLength: 1, maxLength: 255, required: true },
+            duree: { required: true, min: 1, integer: true },
+            instructions: { required: false }
+        };
+
+        function validateEditPrescField(fieldId) {
+            var el = document.getElementById(fieldId);
+            var fb = document.getElementById(fieldId + 'Feedback');
+            if (!el || !fb) return true;
+            var val = (el.value || '').trim();
+            var ruleKey = fieldId.replace(/^edit/, '').replace(/^./, function(c){ return c.toLowerCase(); });
+            var rules = prescEditRules[ruleKey] || {};
+            var valid = true;
+            var msg = '';
+            if (rules.required && val.length === 0) {
+                valid = false; msg = 'Requis';
+            } else if (rules.minLength && val.length > 0 && val.length < rules.minLength) {
+                valid = false; msg = 'Min ' + rules.minLength + ' caractères';
+            } else if (rules.maxLength && val.length > rules.maxLength) {
+                valid = false; msg = 'Max ' + rules.maxLength + ' caractères';
+            } else if (ruleKey === 'duree' && val !== '') {
+                var n = parseInt(val, 10);
+                if (isNaN(n) || n < (rules.min || 1)) { valid = false; msg = 'Entier ≥ 1'; }
+            }
+            fb.textContent = msg;
+            fb.style.color = valid ? '#28a745' : '#dc3545';
+            el.style.borderColor = valid ? '' : '#dc3545';
+            return valid;
+        }
+
+        ['editNomMedicament','editDose','editFrequence','editDuree','editInstructions'].forEach(function(id) {
+            var e = document.getElementById(id);
+            if (!e) return;
+            e.addEventListener('input', function(){ validateEditPrescField(id); });
+            e.addEventListener('blur', function(){ validateEditPrescField(id); });
+        });
+
+        var editPrescForm = document.getElementById('editPrescriptionForm');
+        if (editPrescForm) {
+            editPrescForm.addEventListener('submit', function() {
+                ['editNomMedicament','editDose','editFrequence','editDuree','editInstructions'].forEach(function(id){
+                    validateEditPrescField(id);
+                });
+                // informational only: do not prevent submit here
+            });
+        }
+
+       
+
+        // Initialize search for each table
+        setupTableSearch('searchAppointments');
+        setupTableSearch('searchMedicalFiles');
+        setupTableSearch('searchPrescriptions');
+
+        // ---- Validation for edit modal fields ----
+        var rules = {
+            diagnostic: { minLength: 5, maxLength: 500, required: true },
+            observations: { minLength: 5, maxLength: 500, required: false },
+            resultatsExamens: { minLength: 5, maxLength: 500, required: false }
+        };
+        var fieldToRule = { editDiagnostic: 'diagnostic', editObservations: 'observations', editResultats: 'resultatsExamens' };
+
+        function validateEditField(inputId) {
+            var input = document.getElementById(inputId);
+            var feedbackId = inputId + 'Feedback';
+            var feedback = document.getElementById(feedbackId);
+            if (!input || !feedback) return true;
+            var rule = rules[fieldToRule[inputId]];
+            var value = (input.value || '').trim();
+            var valid = true;
+            var msg = '';
+            if (rule.required && value.length === 0) {
+                valid = false;
+                msg = 'This field is required';
+            } else if (value.length > 0 && value.length < rule.minLength) {
+                valid = false;
+                msg = 'Min ' + rule.minLength + ' characters';
+            } else if (value.length > rule.maxLength) {
+                valid = false;
+                msg = 'Max ' + rule.maxLength + ' characters';
+            } else if (value.length > 0) {
+                msg = '\u2713';
+            }
+            feedback.textContent = msg;
+            feedback.style.color = valid ? '#28a745' : '#dc3545';
+            input.style.borderColor = valid ? '' : '#dc3545';
+            return valid;
+        }
+
+        function onEditModalInput(ev) {
+            var t = ev.target;
+            if (t && t.id && fieldToRule[t.id]) validateEditField(t.id);
+        }
+        var editForm = document.getElementById('editFicheForm');
+        if (editForm) {
+            editForm.addEventListener('input', onEditModalInput);
+            editForm.addEventListener('blur', onEditModalInput, true);
+        }
+        if (editForm) {
+            editForm.addEventListener('submit', function(e) {
+                var ok = validateEditField('editDiagnostic') && validateEditField('editObservations') && validateEditField('editResultats');
+                if (!ok) e.preventDefault();
+            });
+        }
+    });
+})();
+</script>
+{% endblock %}
