@@ -1,0 +1,12 @@
+{% extends 'base_dashboard.html.twig' %}
+
+{% block title %}Dashboard Staff{% endblock %}
+
+{% block body %}
+<div class="container-fluid py-4">
+  <h1 class="h3 mb-2">Dashboard Staff</h1>
+  <p class="text-muted mb-0">
+    Bienvenue {{ app.user.prenom }} ({{ app.user.typeStaff ?? 'STAFF' }})
+  </p>
+</div>
+{% endblock %}
