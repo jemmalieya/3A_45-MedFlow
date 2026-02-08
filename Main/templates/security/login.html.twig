@@ -15,7 +15,6 @@
         #0b1220;
       min-height: 100vh;
     }
-
     .glass-card{
       background: rgba(15, 23, 42, 0.85);
       border: 1px solid rgba(255,255,255,.12);
@@ -23,10 +22,8 @@
       backdrop-filter: blur(10px);
       border-radius: 18px;
     }
-
     .text-muted, p{ color: rgba(255,255,255,.75) !important; }
     .form-label{ color: rgba(255,255,255,.92) !important; }
-
     .form-control{
       background: rgba(255,255,255,.08) !important;
       border: 1px solid rgba(255,255,255,.18) !important;
@@ -42,10 +39,8 @@
       background: rgba(255,255,255,.12) !important;
       color: #fff !important;
     }
-
     .small-link{ color: rgba(255,255,255,.80); }
     .small-link:hover{ color: #fff; text-decoration: underline; }
-
     .btn-glow{
       border-radius: 12px;
       padding: .85rem 1rem;
@@ -75,7 +70,7 @@
           </a>
         </div>
 
-        {# ✅ Flash messages (ex: compte créé, email envoyé, etc.) #}
+        {# ✅ Flash messages #}
         {% for message in app.flashes('success') %}
           <div class="alert alert-success">{{ message }}</div>
         {% endfor %}
@@ -92,18 +87,22 @@
             {{ error.messageKey|trans(error.messageData, 'security') }}
           </div>
         {% endif %}
-        {% if error and 'vérifier votre email' in error.messageKey %}
-        <form method="post" action="{{ path('app_resend_verification') }}">
-    <input type="email" name="email" required placeholder="Votre email">
-    <button class="btn btn-warning">Renvoyer l’email</button>
-</form>
 
+        {# ✅ Resend verification only when you show that specific error #}
+        {% if error and 'vérifier votre email' in error.messageKey %}
+          <form method="post" action="{{ path('app_resend_verification') }}" class="mb-3">
+            <div class="input-group">
+              <input type="email" name="email" class="form-control" required placeholder="Votre email">
+              <button class="btn btn-warning">Renvoyer l’email</button>
+            </div>
+          </form>
         {% endif %}
 
         <p class="text-muted mb-4">
           Connectez-vous pour accéder à votre espace.
         </p>
 
+        {# ✅ ONE SINGLE FORM (Symfony Security form_login expects these names) #}
         <form method="post" novalidate>
           <div class="mb-3">
             <label class="form-label">Adresse e-mail</label>
@@ -136,13 +135,12 @@
             </button>
           </div>
 
-          {# Optionnel: futur bouton "Renvoyer email" (route à coder plus tard)
+          {# ✅ Google button (no second form!) #}
           <div class="d-grid mt-3">
-            <a class="btn btn-outline-light" href="{{ path('app_resend_verification') }}">
-              Renvoyer l’e-mail de vérification
+            <a href="{{ path('google_login') }}" class="btn btn-outline-light">
+              <i class="bi bi-google me-2"></i> Se connecter avec Google
             </a>
           </div>
-          #}
         </form>
 
         <div class="text-center mt-4">

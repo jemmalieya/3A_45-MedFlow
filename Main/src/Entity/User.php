@@ -7,12 +7,19 @@ use Doctrine\ORM\Mapping as ORM;
 use Symfony\Bridge\Doctrine\Validator\Constraints\UniqueEntity;
 use Symfony\Component\Security\Core\User\UserInterface;
 use Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface;
+use Symfony\Component\Validator\Constraints as Assert;
+
 
 #[UniqueEntity(fields: ['emailUser'], message: 'Cet email est déjà utilisé.')]
 #[ORM\Entity(repositoryClass: UserRepository::class)]
 class User implements UserInterface, PasswordAuthenticatedUserInterface
 {
+    #[Assert\NotBlank(message: "Le mot de passe est obligatoire.", groups: ["registration"])]
+    #[Assert\Length(min: 6, minMessage: "Le mot de passe doit contenir au moins {{ limit }} caractères.", groups: ["registration"])]
     private ?string $plainPassword = null;
+
+    #[ORM\Column(length: 255, nullable: true)]
+private ?string $googleId = null;
 
     #[ORM\Id]
     #[ORM\GeneratedValue]
@@ -20,29 +27,48 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     private ?int $id = null;
 
     #[ORM\Column(length: 8)]
+    #[Assert\NotBlank(message: "Le CIN est obligatoire.")]
+    #[Assert\Regex(pattern: "/^\d{8}$/", message: "Le CIN doit contenir exactement 8 chiffres.")]
     private ?string $cin = null;
 
     #[ORM\Column(length: 255, nullable: true)]
     private ?string $profilePicture = null;
 
-    #[ORM\Column(length: 100)]
+   #[ORM\Column(length: 100)]
+    #[Assert\NotBlank(message: "Le nom est obligatoire.")]
+    #[Assert\Length(max: 100, maxMessage: "Le nom ne doit pas dépasser {{ limit }} caractères.")]
+    #[Assert\Regex(pattern: "/^[a-zA-ZÀ-ÿ\s'-]+$/", message: "Le nom ne doit contenir que des lettres.")]
     private ?string $nom = null;
 
     #[ORM\Column(length: 100)]
+    #[Assert\NotBlank(message: "Le prénom est obligatoire.")]
+    #[Assert\Length(max: 100, maxMessage: "Le prénom ne doit pas dépasser {{ limit }} caractères.")]
+    #[Assert\Regex(pattern: "/^[a-zA-ZÀ-ÿ\s'-]+$/", message: "Le prénom ne doit contenir que des lettres.")]
     private ?string $prenom = null;
 
     #[ORM\Column(type: Types::DATE_MUTABLE)]
+    #[Assert\NotBlank(message: "La date de naissance est obligatoire.")]
+    #[Assert\LessThan("today", message: "La date de naissance doit être dans le passé.")]
     private ?\DateTimeInterface $dateNaissance = null;
 
-    #[ORM\Column(length: 20)]
+
+   #[ORM\Column(length: 20)]
+    #[Assert\NotBlank(message: "Le téléphone est obligatoire.")]
+    #[Assert\Regex(
+        pattern: "/^\+?\d{8,15}$/",
+        message: "Téléphone invalide (ex: 54430709 ou +21654430709)."
+    )]
     private ?string $telephoneUser = null;
 
+
     #[ORM\Column(length: 180, unique: true)]
+    #[Assert\NotBlank(message: "L'email est obligatoire.")]
+    #[Assert\Email(message: "Email invalide.")]
     private ?string $emailUser = null;
 
-    #[ORM\Column(length: 180, nullable: true)]
+   #[ORM\Column(length: 180, nullable: true)]
+    #[Assert\Length(max: 180, maxMessage: "L'adresse ne doit pas dépasser {{ limit }} caractères.")]
     private ?string $adresseUser = null;
-
     #[ORM\Column(length: 255)]
     private ?string $password = null;
 
@@ -381,5 +407,14 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         $this->staffReviewedBy = $staffReviewedBy;
         return $this;
     }
+    public function getGoogleId(): ?string
+{
+    return $this->googleId;
+}
 
+public function setGoogleId(?string $googleId): self
+{
+    $this->googleId = $googleId;
+    return $this;
+}
 }

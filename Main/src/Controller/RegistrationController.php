@@ -4,6 +4,7 @@ namespace App\Controller;
 
 use App\Entity\User;
 use App\Form\RegisterUserType;
+use App\Repository\UserRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -19,53 +20,105 @@ class RegistrationController extends AbstractController
         Request $request,
         EntityManagerInterface $em,
         UserPasswordHasherInterface $hasher,
-        LoggerInterface $logger
+        LoggerInterface $logger,
+        UserRepository $userRepo
     ): Response {
-        $user = new User();
+        $session = $request->getSession();
+        $session->start();
+
+        $google = $session->get('google_oauth');
+
+        // ✅ 1) Si Google a déjà donné un email, on utilise soit un user existant, soit new user
+        if ($google && !empty($google['email'])) {
+            $user = $userRepo->findOneBy(['emailUser' => $google['email']]) ?? new User();
+
+            // Pré-remplir email/nom/prénom (sans casser ce que l’utilisateur a déjà)
+            if (method_exists($user, 'setEmailUser') && !$user->getEmailUser()) {
+                $user->setEmailUser($google['email']);
+            }
+
+            $name = trim((string) ($google['name'] ?? ''));
+            if ($name && (!$user->getPrenom() || !$user->getNom())) {
+                $parts = preg_split('/\s+/', $name);
+                $prenom = $parts[0] ?? '';
+                $nom = $parts[count($parts) - 1] ?? '';
+
+                if (!$user->getPrenom() && $prenom) $user->setPrenom($prenom);
+                if (!$user->getNom() && $nom) $user->setNom($nom);
+            }
+
+            // Si tu as googleId dans ton entity (optionnel)
+            if (method_exists($user, 'setGoogleId') && !empty($google['googleId'])) {
+                $user->setGoogleId($google['googleId']);
+            }
+        } else {
+            $user = new User();
+        }
+
+        $isNew = ($user->getId() === null);
+
         $form = $this->createForm(RegisterUserType::class, $user);
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
 
-            // 1) HASH PASSWORD
-            if ($user->getPlainPassword()) {
-                $user->setPassword(
-                    $hasher->hashPassword($user, $user->getPlainPassword())
-                );
-                $user->setPlainPassword(null);
+            // ✅ 2) dateNaissance est mapped=false dans RegisterUserType => on la set ici
+            $dateNaissance = $form->get('dateNaissance')->getData();
+            $user->setDateNaissance($dateNaissance);
+
+            // ✅ 3) Password
+            $plainPassword = $form->get('plainPassword')->getData();
+            if ($plainPassword) {
+                $user->setPassword($hasher->hashPassword($user, $plainPassword));
             }
 
-            // 2) FORCE LOGIQUE METIER
-            $user->setRoleSysteme('PATIENT');
-            $user->setIsVerified(false);
+            // ✅ 4) Logique métier (garde ta logique actuelle)
+            if ($isNew) {
+                $user->setRoleSysteme('PATIENT');
+                $user->setIsVerified(false);
+            } else {
+                // si user existe déjà, on ne reset pas verified si déjà true
+                // mais si tu veux FORCER re-verification même pour existant, mets false ici.
+                if ($user->IsVerified() === null) {
+                    $user->setIsVerified(false);
+                }
+            }
 
-            // 3) TOKEN + EXPIRATION
-            $token = bin2hex(random_bytes(32));
-            $user->setVerificationToken($token);
-            $user->setTokenExpiresAt((new \DateTime())->modify('+24 hours'));
+            // ✅ 5) Token + expiration (si nouveau ou pas encore vérifié)
+            if ($isNew || $user->IsVerified() === false) {
+                $token = bin2hex(random_bytes(32));
+                $user->setVerificationToken($token);
+                $user->setTokenExpiresAt((new \DateTime())->modify('+24 hours'));
+            }
 
-            // 4) SAVE USER
+            // ✅ 6) Save
             $em->persist($user);
             $em->flush();
 
-            // 5) SEND EMAIL VIA BREVO API (ne doit pas casser l'inscription)
-            try {
-                $brevoResponse = $this->sendVerificationEmail($user);
-                $logger->info('Brevo email sent', [
-                    'user' => $user->getEmailUser(),
-                    'response' => $brevoResponse,
-                ]);
+            // ✅ 7) Envoi email Brevo (si pas vérifié)
+            if ($user->IsVerified() === false) {
+                try {
+                    $brevoResponse = $this->sendVerificationEmail($user);
+                    $logger->info('Brevo email sent', [
+                        'user' => $user->getEmailUser(),
+                        'response' => $brevoResponse,
+                    ]);
 
-                $this->addFlash('success', 'Compte créé ! Vérifiez votre email pour activer votre compte.');
-            } catch (\Throwable $e) {
-                // On ne bloque pas l'inscription
-                $logger->error('Brevo email failed', [
-                    'user' => $user->getEmailUser(),
-                    'error' => $e->getMessage(),
-                ]);
+                    $this->addFlash('success', 'Compte créé ! Vérifiez votre email pour activer votre compte.');
+                } catch (\Throwable $e) {
+                    $logger->error('Brevo email failed', [
+                        'user' => $user->getEmailUser(),
+                        'error' => $e->getMessage(),
+                    ]);
 
-                $this->addFlash('warning', "Compte créé, mais l'email de vérification n'a pas pu être envoyé. Réessayez plus tard.");
+                    $this->addFlash('warning', "Compte créé, mais l'email de vérification n'a pas pu être envoyé. Réessayez plus tard.");
+                }
+            } else {
+                $this->addFlash('success', 'Profil mis à jour.');
             }
+
+            // ✅ 8) Clear google session
+            $session->remove('google_oauth');
 
             return $this->redirectToRoute('app_login');
         }

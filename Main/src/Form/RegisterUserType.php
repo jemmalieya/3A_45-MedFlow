@@ -12,11 +12,8 @@ use Symfony\Component\Form\Extension\Core\Type\EmailType;
 use Symfony\Component\Form\Extension\Core\Type\DateType;
 use Symfony\Component\Form\Extension\Core\Type\PasswordType;
 use Symfony\Component\Form\Extension\Core\Type\FileType;
-
 use Symfony\Component\Validator\Constraints\NotBlank;
-use Symfony\Component\Validator\Constraints\Length;
 use Symfony\Component\Validator\Constraints\Regex;
-use Symfony\Component\Validator\Constraints\Email;
 
 class RegisterUserType extends AbstractType
 {
@@ -28,14 +25,9 @@ class RegisterUserType extends AbstractType
                 'attr' => ['placeholder' => 'CIN (8 chiffres)'],
                 'constraints' => [
                     new NotBlank(['message' => 'Le CIN est obligatoire.']),
-                    new Length([
-                        'min' => 8,
-                        'max' => 8,
-                        'exactMessage' => 'Le CIN doit contenir exactement {{ limit }} chiffres.',
-                    ]),
                     new Regex([
                         'pattern' => '/^\d{8}$/',
-                        'message' => 'Le CIN doit contenir uniquement 8 chiffres.',
+                        'message' => 'Le CIN doit contenir exactement 8 chiffres.'
                     ]),
                 ],
             ])
@@ -45,7 +37,6 @@ class RegisterUserType extends AbstractType
                 'attr' => ['placeholder' => 'Nom'],
                 'constraints' => [
                     new NotBlank(['message' => 'Le nom est obligatoire.']),
-                    new Length(['max' => 100]),
                 ],
             ])
 
@@ -54,13 +45,13 @@ class RegisterUserType extends AbstractType
                 'attr' => ['placeholder' => 'Prénom'],
                 'constraints' => [
                     new NotBlank(['message' => 'Le prénom est obligatoire.']),
-                    new Length(['max' => 100]),
                 ],
             ])
 
             ->add('dateNaissance', DateType::class, [
-                'required' => true,
                 'widget' => 'single_text',
+                
+                'required' => true,
                 'constraints' => [
                     new NotBlank(['message' => 'La date de naissance est obligatoire.']),
                 ],
@@ -71,7 +62,6 @@ class RegisterUserType extends AbstractType
                 'attr' => ['placeholder' => 'Téléphone (+216...)'],
                 'constraints' => [
                     new NotBlank(['message' => 'Le téléphone est obligatoire.']),
-                    new Length(['max' => 20]),
                 ],
             ])
 
@@ -80,7 +70,6 @@ class RegisterUserType extends AbstractType
                 'attr' => ['placeholder' => 'Email'],
                 'constraints' => [
                     new NotBlank(['message' => 'L’email est obligatoire.']),
-                    new Email(['message' => 'Email invalide.']),
                 ],
             ])
 
@@ -91,16 +80,8 @@ class RegisterUserType extends AbstractType
 
             ->add('plainPassword', PasswordType::class, [
                 'required' => true,
-                'mapped' => true,
+                'mapped' => false,
                 'attr' => ['placeholder' => 'Mot de passe'],
-                'constraints' => [
-                    new NotBlank(['message' => 'Le mot de passe est obligatoire.']),
-                    new Length([
-                        'min' => 6,
-                        'minMessage' => 'Le mot de passe doit contenir au moins {{ limit }} caractères.',
-                        'max' => 255
-                    ]),
-                ],
             ])
 
             ->add('profilePictureFile', FileType::class, [

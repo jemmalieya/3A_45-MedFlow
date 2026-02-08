@@ -1,6 +1,6 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}{{ title }}{% endblock %}
+{% block title %}{{ title|default('Inscription') }}{% endblock %}
 
 {% block stylesheets %}
   {{ parent() }}
@@ -48,7 +48,7 @@
     }
 
     /* Inputs */
-    .form-control{
+    .form-control, .form-select{
       background: rgba(255,255,255,.08) !important;
       border: 1px solid rgba(255,255,255,.18) !important;
       color: #fff !important;
@@ -59,7 +59,7 @@
     .form-control::placeholder{
       color: rgba(255,255,255,.45);
     }
-    .form-control:focus{
+    .form-control:focus, .form-select:focus{
       box-shadow: 0 0 0 .2rem rgba(13,110,253,.25);
       border-color: rgba(13,110,253,.60) !important;
       background: rgba(255,255,255,.12) !important;
@@ -91,6 +91,19 @@
       font-size: .9rem;
       margin-top:.35rem;
     }
+
+    /* Bootstrap invalid */
+    .form-control.is-invalid, .form-select.is-invalid{
+      border-color: rgba(220, 53, 69, .9) !important;
+      box-shadow: 0 0 0 .15rem rgba(220, 53, 69, .15);
+    }
+
+    .alert-glass{
+      background: rgba(220, 53, 69, .12);
+      border: 1px solid rgba(220, 53, 69, .35);
+      color: rgba(255,255,255,.92);
+      border-radius: 14px;
+    }
   </style>
 {% endblock %}
 
@@ -108,68 +121,135 @@
         </div>
 
         <h2 class="fw-bold mb-1">Créer un compte</h2>
-        <p class="help-text mb-4">Validation côté serveur uniquement (pas de validation HTML5).</p>
+        <p class="help-text mb-4">Validation côté serveur uniquement (pas de validation HTML5 / JS).</p>
 
-        {{ form_start(form, { attr: { novalidate: 'novalidate' }, 'enctype': 'multipart/form-data' }) }}
+        {# ✅ ERREURS GLOBALES (ex: email déjà utilisé, CSRF, etc.) #}
+        {% if form.vars.errors|length > 0 %}
+          <div class="alert alert-glass mb-4">
+            <div class="fw-bold mb-1"><i class="bi bi-exclamation-triangle me-2"></i>Veuillez corriger les erreurs :</div>
+            {{ form_errors(form) }}
+          </div>
+        {% endif %}
+
+        {{ form_start(form, { attr: { novalidate: 'novalidate' }, enctype: 'multipart/form-data' }) }}
 
         <div class="row g-3">
+
           <div class="col-md-6">
-            <label class="form-label">CIN</label>
-            {{ form_widget(form.cin, { attr: { class: 'form-control', placeholder: '8 chiffres' } }) }}
-            <div class="err">{{ form_errors(form.cin) }}</div>
+            {{ form_label(form.cin, 'CIN', { label_attr: { class: 'form-label' } }) }}
+            {{ form_widget(form.cin, {
+              attr: {
+                class: 'form-control ' ~ (form.cin.vars.errors|length ? 'is-invalid' : ''),
+                placeholder: '8 chiffres'
+              }
+            }) }}
+            {% if form.cin.vars.errors|length %}
+              <div class="err">{{ form_errors(form.cin) }}</div>
+            {% endif %}
           </div>
 
           <div class="col-md-6">
-            <label class="form-label">Photo de profil (optionnel)</label>
-            {{ form_widget(form.profilePictureFile, { attr: { class: 'form-control' } }) }}
-            <div class="err">{{ form_errors(form.profilePictureFile) }}</div>
+            {{ form_label(form.profilePictureFile, 'Photo de profil (optionnel)', { label_attr: { class: 'form-label' } }) }}
+            {{ form_widget(form.profilePictureFile, {
+              attr: { class: 'form-control ' ~ (form.profilePictureFile.vars.errors|length ? 'is-invalid' : '') }
+            }) }}
+            {% if form.profilePictureFile.vars.errors|length %}
+              <div class="err">{{ form_errors(form.profilePictureFile) }}</div>
+            {% endif %}
           </div>
 
           <div class="col-md-6">
-            <label class="form-label">Nom</label>
-            {{ form_widget(form.nom, { attr: { class: 'form-control', placeholder: 'Votre nom' } }) }}
-            <div class="err">{{ form_errors(form.nom) }}</div>
+            {{ form_label(form.nom, 'Nom', { label_attr: { class: 'form-label' } }) }}
+            {{ form_widget(form.nom, {
+              attr: {
+                class: 'form-control ' ~ (form.nom.vars.errors|length ? 'is-invalid' : ''),
+                placeholder: 'Votre nom'
+              }
+            }) }}
+            {% if form.nom.vars.errors|length %}
+              <div class="err">{{ form_errors(form.nom) }}</div>
+            {% endif %}
           </div>
 
           <div class="col-md-6">
-            <label class="form-label">Prénom</label>
-            {{ form_widget(form.prenom, { attr: { class: 'form-control', placeholder: 'Votre prénom' } }) }}
-            <div class="err">{{ form_errors(form.prenom) }}</div>
+            {{ form_label(form.prenom, 'Prénom', { label_attr: { class: 'form-label' } }) }}
+            {{ form_widget(form.prenom, {
+              attr: {
+                class: 'form-control ' ~ (form.prenom.vars.errors|length ? 'is-invalid' : ''),
+                placeholder: 'Votre prénom'
+              }
+            }) }}
+            {% if form.prenom.vars.errors|length %}
+              <div class="err">{{ form_errors(form.prenom) }}</div>
+            {% endif %}
           </div>
 
           <div class="col-md-6">
-            <label class="form-label">Date de naissance</label>
-            {{ form_widget(form.dateNaissance, { attr: { class: 'form-control' } }) }}
-            <div class="err">{{ form_errors(form.dateNaissance) }}</div>
+            {{ form_label(form.dateNaissance, 'Date de naissance', { label_attr: { class: 'form-label' } }) }}
+            {{ form_widget(form.dateNaissance, {
+              attr: { class: 'form-control ' ~ (form.dateNaissance.vars.errors|length ? 'is-invalid' : '') }
+            }) }}
+            {% if form.dateNaissance.vars.errors|length %}
+              <div class="err">{{ form_errors(form.dateNaissance) }}</div>
+            {% endif %}
           </div>
 
           <div class="col-md-6">
-            <label class="form-label">Téléphone</label>
-            {{ form_widget(form.telephoneUser, { attr: { class: 'form-control', placeholder: '+216 .. .. .. ..' } }) }}
-            <div class="err">{{ form_errors(form.telephoneUser) }}</div>
+            {{ form_label(form.telephoneUser, 'Téléphone', { label_attr: { class: 'form-label' } }) }}
+            {{ form_widget(form.telephoneUser, {
+              attr: {
+                class: 'form-control ' ~ (form.telephoneUser.vars.errors|length ? 'is-invalid' : ''),
+                placeholder: '54430709 ou +21654430709'
+              }
+            }) }}
+            {% if form.telephoneUser.vars.errors|length %}
+              <div class="err">{{ form_errors(form.telephoneUser) }}</div>
+            {% endif %}
           </div>
 
           <div class="col-md-6">
-            <label class="form-label">Adresse e-mail</label>
-            {{ form_widget(form.emailUser, { attr: { class: 'form-control', placeholder: 'exemple@email.com' } }) }}
-            <div class="err">{{ form_errors(form.emailUser) }}</div>
+            {{ form_label(form.emailUser, 'Adresse e-mail', { label_attr: { class: 'form-label' } }) }}
+            {{ form_widget(form.emailUser, {
+              attr: {
+                class: 'form-control ' ~ (form.emailUser.vars.errors|length ? 'is-invalid' : ''),
+                placeholder: 'exemple@email.com'
+              }
+            }) }}
+            {% if form.emailUser.vars.errors|length %}
+              <div class="err">{{ form_errors(form.emailUser) }}</div>
+            {% endif %}
           </div>
 
           <div class="col-md-6">
-            <label class="form-label">Adresse (optionnel)</label>
-            {{ form_widget(form.adresseUser, { attr: { class: 'form-control', placeholder: 'Votre adresse' } }) }}
-            <div class="err">{{ form_errors(form.adresseUser) }}</div>
+            {{ form_label(form.adresseUser, 'Adresse (optionnel)', { label_attr: { class: 'form-label' } }) }}
+            {{ form_widget(form.adresseUser, {
+              attr: {
+                class: 'form-control ' ~ (form.adresseUser.vars.errors|length ? 'is-invalid' : ''),
+                placeholder: 'Votre adresse'
+              }
+            }) }}
+            {% if form.adresseUser.vars.errors|length %}
+              <div class="err">{{ form_errors(form.adresseUser) }}</div>
+            {% endif %}
           </div>
 
           <div class="col-md-6">
-            <label class="form-label">Mot de passe</label>
-            {{ form_widget(form.plainPassword, { attr: { class: 'form-control', placeholder: '••••••••' } }) }}
-            <div class="err">{{ form_errors(form.plainPassword) }}</div>
+            {{ form_label(form.plainPassword, 'Mot de passe', { label_attr: { class: 'form-label' } }) }}
+            {{ form_widget(form.plainPassword, {
+              attr: {
+                class: 'form-control ' ~ (form.plainPassword.vars.errors|length ? 'is-invalid' : ''),
+                placeholder: '••••••••'
+              }
+            }) }}
+            {% if form.plainPassword.vars.errors|length %}
+              <div class="err">{{ form_errors(form.plainPassword) }}</div>
+            {% endif %}
           </div>
+
         </div>
 
         <div class="d-grid mt-4">
-          <button class="btn btn-primary btn-glow">
+          <button class="btn btn-primary btn-glow" type="submit">
             <i class="bi bi-person-plus"></i> S’inscrire
           </button>
         </div>
