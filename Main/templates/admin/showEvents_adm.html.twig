@@ -34,6 +34,17 @@
       <a href="{{ path('admin_evenement_demandes_index') }}" class="btn btn-outline-secondary evdem-btn-back">
         <i class="fas fa-arrow-left mr-1"></i> Retour
       </a>
+        <a href="{{ path('admin_evenement_pdf', {id: evenement.id}) }}"
+        class="btn btn-danger evdem-btn-pdf"
+         target="_blank">
+        <i class="fas fa-file-pdf mr-1"></i> Fiche PDF
+         </a>
+
+         <a href="{{ path('admin_evenement_demandes_index') }}" class="btn btn-outline-secondary evdem-btn-back">
+    <i class="fas fa-arrow-left mr-1"></i> Retour
+  </a>
+
+      
     </div>
   </div>
 
@@ -128,7 +139,7 @@
         <span class="evdem-dot dot-refused ml-3"></span> Refusée
       </div>
     </div>
-
+     
     <div class="card-body">
 
       {% if demandes is empty %}

@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Fiche Événement</title>
+  <style>
+    body { font-family: DejaVu Sans, sans-serif; font-size: 12px; color: #1f2937; }
+    .page { padding: 22px; }
+
+    .header {
+      background: #1d4ed8;
+      color: white;
+      padding: 16px 18px;
+      border-radius: 10px;
+    }
+    .header h1 { margin: 0; font-size: 20px; }
+    .header .sub { margin-top: 6px; font-size: 12px; opacity: .95; }
+
+    .badge {
+      display: inline-block; padding: 6px 10px; border-radius: 999px;
+      font-size: 11px; font-weight: bold;
+      border: 1px solid rgba(0,0,0,.08);
+    }
+    .b-green { background: #dcfce7; color: #166534; }
+    .b-red { background: #fee2e2; color: #991b1b; }
+    .b-yellow { background: #fef9c3; color: #854d0e; }
+    .b-gray { background: #f3f4f6; color: #374151; }
+
+    .grid { margin-top: 14px; }
+    .card {
+      border: 1px solid #e5e7eb;
+      border-radius: 10px;
+      padding: 14px;
+      margin-top: 12px;
+    }
+    .card h2 { margin: 0 0 10px 0; font-size: 14px; }
+
+    .row { display: block; margin-bottom: 8px; }
+    .label { display: inline-block; width: 150px; color: #6b7280; }
+    .value { font-weight: 600; }
+
+    .two-cols { width: 100%; }
+    .left, .right { vertical-align: top; }
+    .left { width: 62%; }
+    .right { width: 38%; }
+
+    .qrBox {
+      border: 1px dashed #cbd5e1;
+      border-radius: 10px;
+      padding: 12px;
+      text-align: center;
+    }
+    .qrBox img { margin-top: 10px; }
+    .small { font-size: 10px; color: #6b7280; word-break: break-all; }
+
+    .footer {
+      margin-top: 16px;
+      font-size: 10px;
+      color: #6b7280;
+      text-align: center;
+    }
+
+    .desc {
+      white-space: pre-wrap;
+      line-height: 1.5;
+      color: #111827;
+    }
+  </style>
+</head>
+<body>
+<div class="page">
+
+  {# ===== Header ===== #}
+  <div class="header">
+    <h1>Fiche Événement</h1>
+    <div class="sub">
+      Générée le {{ generatedAt|date('d/m/Y H:i') }} — MedFlow Admin
+    </div>
+  </div>
+
+  {# ===== Status Badge ===== #}
+  {% set s = evenement.statutEvent ?? 'N/A' %}
+  {% set badge =
+    s == 'Publié' ? 'b-green' :
+    (s == 'Annulé' ? 'b-red' :
+    (s == 'En cours' ? 'b-yellow' : 'b-gray'))
+  %}
+
+  <div class="card">
+    <h2>Informations principales</h2>
+
+    <div class="row">
+      <span class="label">Statut :</span>
+      <span class="badge {{ badge }}">{{ s }}</span>
+    </div>
+
+    <div class="row">
+      <span class="label">Titre :</span>
+      <span class="value">{{ evenement.titreEvent ?? '-' }}</span>
+    </div>
+
+    <div class="row">
+      <span class="label">Type :</span>
+      <span class="value">{{ evenement.typeEvent ?? '-' }}</span>
+    </div>
+
+    <div class="row">
+      <span class="label">Ville :</span>
+      <span class="value">{{ evenement.villeEvent ?? '-' }}</span>
+    </div>
+
+    <div class="row">
+      <span class="label">Date début :</span>
+      <span class="value">
+        {{ evenement.dateDebutEvent ? evenement.dateDebutEvent|date('d/m/Y') : '-' }}
+      </span>
+    </div>
+
+    <div class="row">
+      <span class="label">Date fin :</span>
+      <span class="value">
+        {{ evenement.dateFinEvent ? evenement.dateFinEvent|date('d/m/Y') : '-' }}
+      </span>
+    </div>
+
+    {# ✅ optionnel : capacité (si champ existe) #}
+    {# Si tu as "capaciteEvent" dans l'entité, dé-commente : #}
+    {#
+    <div class="row">
+      <span class="label">Capacité :</span>
+      <span class="value">{{ evenement.capaciteEvent ?? '-' }}</span>
+    </div>
+    #}
+
+    {# ✅ optionnel : organisateur (si champ existe) #}
+    {# Si tu as "organisateurEvent" dans l'entité, dé-commente : #}
+    {#
+    <div class="row">
+      <span class="label">Organisateur :</span>
+      <span class="value">{{ evenement.organisateurEvent ?? '-' }}</span>
+    </div>
+    #}
+  </div>
+
+  <table class="two-cols" cellspacing="0" cellpadding="0">
+    <tr>
+      <td class="left">
+
+        <div class="card">
+          <h2>Description</h2>
+          <div class="desc">
+            {{ evenement.descriptionEvent ?? 'Aucune description.' }}
+          </div>
+        </div>
+
+        {# ✅ optionnel : image (si tu stockes un lien ou filename) #}
+        {# Exemple si tu as "imageEvent" (filename) dans public/uploads : #}
+        {#
+        <div class="card">
+          <h2>Image</h2>
+          <div class="small">Image associée à l’événement</div>
+          <img src="{{ absolute_url(asset('uploads/' ~ evenement.imageEvent)) }}" style="width: 100%; max-width: 420px; border-radius: 10px; margin-top: 10px;">
+        </div>
+        #}
+
+      </td>
+
+      <td class="right" style="padding-left: 12px;">
+        <div class="card">
+          <h2>QR Code</h2>
+
+          <div class="qrBox">
+            <div><b>Accès rapide (front)</b></div>
+            <div class="small">{{ frontUrl }}</div>
+
+            {% if qrBase64 %}
+              <img src="{{ qrBase64 }}" width="170" alt="QR Code">
+            {% else %}
+              <div style="margin-top: 10px; color: #b91c1c;">
+                QR code indisponible.
+              </div>
+            {% endif %}
+          </div>
+
+        </div>
+      </td>
+    </tr>
+  </table>
+
+  <div class="footer">
+    Document généré automatiquement — MedFlow © {{ "now"|date("Y") }}
+  </div>
+
+</div>
+</body>
+</html>

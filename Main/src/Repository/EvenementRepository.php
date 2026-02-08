@@ -40,4 +40,24 @@ class EvenementRepository extends ServiceEntityRepository
     //            ->getOneOrNullResult()
     //        ;
     //    }
+
+    public function findAllSortedByStatutCustom(): array
+{
+    // ordre métier: Publié -> En cours -> Brouillon -> Annulé
+    return $this->createQueryBuilder('e')
+        ->addSelect("
+            CASE
+                WHEN e.statutEvent = 'Publié' THEN 1
+                WHEN e.statutEvent = 'En cours' THEN 2
+                WHEN e.statutEvent = 'Brouillon' THEN 3
+                WHEN e.statutEvent = 'Annulé' THEN 4
+                ELSE 5
+            END AS HIDDEN statutOrder
+        ")
+        ->orderBy('statutOrder', 'ASC')
+        ->addOrderBy('e.dateDebutEvent', 'DESC')
+        ->getQuery()
+        ->getResult();
+}
+
 }

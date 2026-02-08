@@ -10,17 +10,44 @@
     <div class="text-muted small">Gère fichiers, liens et matériel associés aux événements.</div>
   </div>
 
-  <div class="d-flex align-items-center gap-2">
-    <div class="input-group res-search">
+  <div class="d-flex align-items-center gap-2 flex-wrap">
+
+    {# ✅ Recherche JS (pas de submit) #}
+    <div class="input-group res-search" style="min-width:320px;">
       <div class="input-group-prepend">
         <span class="input-group-text"><i class="fas fa-search"></i></span>
       </div>
-      <input id="ressourceSearch" type="text" class="form-control" placeholder="Rechercher (nom, catégorie, événement...)">
+      <input id="ressourceSearch"
+             type="text"
+             class="form-control"
+             placeholder="Rechercher (nom, catégorie, événement...)">
     </div>
+
+    {# ✅ Tri SERVEUR (GET) #}
+    <form method="get" action="{{ path('admin_ressource_index') }}" class="d-flex align-items-center gap-2">
+      <select name="sort" class="form-control" style="max-width:220px;" onchange="this.form.submit()">
+        {% set currentSort = sort|default('date_desc') %}
+        <option value="date_desc" {{ currentSort == 'date_desc' ? 'selected' : '' }}>Date (récent)</option>
+        <option value="date_asc"  {{ currentSort == 'date_asc'  ? 'selected' : '' }}>Date (ancien)</option>
+        <option value="nom_asc"   {{ currentSort == 'nom_asc'   ? 'selected' : '' }}>Nom (A-Z)</option>
+        <option value="nom_desc"  {{ currentSort == 'nom_desc'  ? 'selected' : '' }}>Nom (Z-A)</option>
+        <option value="cat_asc"   {{ currentSort == 'cat_asc'   ? 'selected' : '' }}>Catégorie (A-Z)</option>
+        <option value="type_asc"  {{ currentSort == 'type_asc'  ? 'selected' : '' }}>Type (A-Z)</option>
+      </select>
+    </form>
+
+    {# ✅ Reset JS (vide la recherche) #}
+    <button type="button" id="btnResetSearch" class="btn btn-outline-secondary">
+      <i class="fas fa-times mr-1"></i> Reset
+    </button>
 
     <a href="{{ path('admin_ressource_new') }}" class="btn btn-primary res-btn-add">
       <i class="fas fa-plus mr-1"></i> Ajouter
     </a>
+
+    <a href="{{ path('admin_ressource_stats') }}" class="btn btn-outline-primary">
+  <i class="fas fa-chart-pie mr-1"></i> Stats
+</a>
   </div>
 </div>
 
@@ -97,7 +124,7 @@
 
         <tbody>
         {% for r in ressources %}
-          <tr>
+          <tr class="ress-row">
             <td class="text-muted">{{ r.id }}</td>
 
             <td class="font-weight-bold">
@@ -118,10 +145,7 @@
               {% endif %}
             </td>
 
-            <td>
-              {# IMPORTANT: pour éviter l’erreur "could not be converted to string", affiche un champ texte #}
-              {{ r.evenement ? r.evenement.titreEvent : '-' }}
-            </td>
+            <td>{{ r.evenement ? r.evenement.titreEvent : '-' }}</td>
 
             <td>
               {% if r.quantiteDisponibleRessource is not null %}
@@ -133,37 +157,36 @@
             </td>
 
             <td class="text-right">
-  <div class="res-actions">
+              <div class="res-actions">
 
-    <a href="{{ path('admin_ressource_show', {id: r.id}) }}"
-       class="btn res-btn res-btn-view">
-      <i class="far fa-eye"></i>
-      <span>Voir</span>
-    </a>
+                <a href="{{ path('admin_ressource_show', {id: r.id}) }}"
+                   class="btn res-btn res-btn-view">
+                  <i class="far fa-eye"></i>
+                  <span>Voir</span>
+                </a>
 
-    <a href="{{ path('admin_ressource_edit', {id: r.id}) }}"
-       class="btn res-btn res-btn-edit">
-      <i class="far fa-edit"></i>
-      <span>Edit</span>
-    </a>
+                <a href="{{ path('admin_ressource_edit', {id: r.id}) }}"
+                   class="btn res-btn res-btn-edit">
+                  <i class="far fa-edit"></i>
+                  <span>Edit</span>
+                </a>
 
-    <form method="post"
-          action="{{ path('admin_ressource_delete', {id: r.id}) }}"
-          onsubmit="return confirm('Confirmer la suppression ?');"
-          class="d-inline">
-      <input type="hidden" name="_token" value="{{ csrf_token('delete' ~ r.id) }}">
-      <button type="submit" class="btn res-btn res-btn-delete">
-        <i class="far fa-trash-alt"></i>
-        <span>Delete</span>
-      </button>
-    </form>
+                <form method="post"
+                      action="{{ path('admin_ressource_delete', {id: r.id}) }}"
+                      onsubmit="return confirm('Confirmer la suppression ?');"
+                      class="d-inline">
+                  <input type="hidden" name="_token" value="{{ csrf_token('delete' ~ r.id) }}">
+                  <button type="submit" class="btn res-btn res-btn-delete">
+                    <i class="far fa-trash-alt"></i>
+                    <span>Delete</span>
+                  </button>
+                </form>
 
-  </div>
-</td>
-
+              </div>
+            </td>
           </tr>
         {% else %}
-          <tr>
+          <tr class="ress-empty-db">
             <td colspan="7" class="text-center text-muted py-4">
               <i class="fas fa-inbox fa-2x mb-2"></i>
               <div>Aucune ressource pour le moment.</div>
@@ -173,31 +196,60 @@
             </td>
           </tr>
         {% endfor %}
+
+        {# ✅ Ligne "Aucun résultat" (pour la recherche JS) #}
+        <tr id="ressourceNoResult" style="display:none;">
+          <td colspan="7" class="text-center text-muted py-4">
+            <i class="fas fa-search fa-2x mb-2"></i>
+            <div>Aucun résultat pour votre recherche.</div>
+          </td>
+        </tr>
+
         </tbody>
       </table>
     </div>
   </div>
 </div>
 
-{# ===== JS Search (optionnel) ===== #}
+{# ===== JS Search (instant) ===== #}
 <script>
-  (function(){
+  (function () {
     const input = document.getElementById('ressourceSearch');
+    const resetBtn = document.getElementById('btnResetSearch');
     const table = document.getElementById('ressourceTable');
-    if(!input || !table) return;
+    const noResultRow = document.getElementById('ressourceNoResult');
 
-    input.addEventListener('input', function(){
-      const q = this.value.toLowerCase().trim();
-      const rows = table.querySelectorAll('tbody tr');
+    if (!input || !table) return;
+
+    function filterRows() {
+      const q = (input.value || '').toLowerCase().trim();
+      const rows = table.querySelectorAll('tbody tr.ress-row');
+
+      let visibleCount = 0;
 
       rows.forEach(tr => {
-        // ignore "empty state" row
-        if(tr.querySelector('td[colspan]')) return;
-
         const text = tr.innerText.toLowerCase();
-        tr.style.display = text.includes(q) ? '' : 'none';
+        const show = text.includes(q);
+        tr.style.display = show ? '' : 'none';
+        if (show) visibleCount++;
       });
-    });
+
+      // Afficher "aucun résultat" seulement si DB non vide
+      const hasDbRows = rows.length > 0;
+      if (noResultRow) {
+        noResultRow.style.display = (hasDbRows && visibleCount === 0) ? '' : 'none';
+      }
+    }
+
+    input.addEventListener('input', filterRows);
+
+    if (resetBtn) {
+      resetBtn.addEventListener('click', function () {
+        input.value = '';
+        filterRows();
+        input.focus();
+      });
+    }
   })();
 </script>
 

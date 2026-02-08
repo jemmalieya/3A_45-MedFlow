@@ -26,11 +26,36 @@
                placeholder="Rechercher (titre, type, ville, statut...)">
       </div>
 
+      
+  {# Sort (INLINE + SIMPLE) #}
+  <form method="get" action="{{ path('admin_evenement_index') }}" class="evind-sort">
+    <div class="input-group">
+      <div class="input-group-prepend">
+        <span class="input-group-text"><i class="fas fa-sort"></i></span>
+      </div>
+      <select name="sort" class="form-control" onchange="this.form.submit()">
+        <option value="date_desc" {{ sort == 'date_desc' ? 'selected' : '' }}>Date : récent → ancien</option>
+        <option value="date_asc"  {{ sort == 'date_asc' ? 'selected' : '' }}>Date : ancien → récent</option>
+        <option value="titre_asc"  {{ sort == 'titre_asc' ? 'selected' : '' }}>Titre : A → Z</option>
+        <option value="titre_desc" {{ sort == 'titre_desc' ? 'selected' : '' }}>Titre : Z → A</option>
+        <option value="ville_asc" {{ sort == 'ville_asc' ? 'selected' : '' }}>Ville : A → Z</option>
+        <option value="type_asc"  {{ sort == 'type_asc' ? 'selected' : '' }}>Type : A → Z</option>
+        <option value="statut_custom" {{ sort == 'statut_custom' ? 'selected' : '' }}>Statut : Publié d’abord</option>
+      </select>
+    </div>
+  </form>
+       <a href="{{ path('admin_evenements_stats') }}" class="btn btn-info evind-btn-stats">
+       <i class="fas fa-chart-pie mr-1"></i> Stats
+       </a>
+
+
       <a href="{{ path('admin_evenement_new') }}" class="btn btn-primary evind-btn-add">
         <i class="fas fa-plus mr-1"></i> Ajouter
       </a>
     </div>
   </div>
+
+  
 
   {# ===== Flash messages ===== #}
   {% for label, messages in app.flashes %}
@@ -102,8 +127,9 @@
         <div class="text-muted small">Clique sur “Voir” pour le détail.</div>
       </div>
     </div>
-
+ 
     <div class="card-body">
+    
 
       {% if evenements is empty %}
         <div class="alert alert-info mb-0">Aucun événement trouvé.</div>

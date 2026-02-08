@@ -11,18 +11,56 @@ use App\Form\RessourceType;
 use App\Repository\RessourceRepository;
 use Symfony\Component\HttpFoundation\Request;
 
+
+use Dompdf\Dompdf;
+use Dompdf\Options;
+use Symfony\Component\HttpFoundation\JsonResponse;
 #[Route('/admin/ressource')]
 final class RessourceController extends AbstractController
 
 {
    
     #[Route('/', name: 'admin_ressource_index', methods: ['GET'])]
-    public function index(RessourceRepository $repo): Response
-    {
-        return $this->render('ressource/index.html.twig', [
-            'ressources' => $repo->findAll(),
-        ]);
+public function index(Request $request, RessourceRepository $repo): Response
+{
+    $search = trim((string) $request->query->get('search', ''));
+    $sort = (string) $request->query->get('sort', 'date_desc');
+
+    // ordre
+    $orderBy = ['date_creation_ressource' => 'DESC'];
+
+    switch ($sort) {
+        case 'date_asc':
+            $orderBy = ['date_creation_ressource' => 'ASC'];
+            break;
+        case 'nom_asc':
+            $orderBy = ['nom_ressource' => 'ASC'];
+            break;
+        case 'nom_desc':
+            $orderBy = ['nom_ressource' => 'DESC'];
+            break;
+        case 'cat_asc':
+            $orderBy = ['categorie_ressource' => 'ASC'];
+            break;
+        case 'type_asc':
+            $orderBy = ['type_ressource' => 'ASC'];
+            break;
     }
+
+    // recherche
+    if ($search !== '') {
+        $ressources = $repo->searchAdmin($search, $orderBy);
+    } else {
+        $ressources = $repo->findBy([], $orderBy);
+    }
+
+    return $this->render('ressource/index.html.twig', [
+        'ressources' => $ressources,
+        'search' => $search,
+        'sort' => $sort,
+    ]);
+}
+
 
     
     #[Route('/new', name: 'admin_ressource_new', methods: ['GET', 'POST'])]
@@ -46,17 +84,17 @@ final class RessourceController extends AbstractController
         ]);
     }
 
-   
-    #[Route('/{id}', name: 'admin_ressource_show', methods: ['GET'])]
-    public function show(Ressource $ressource): Response
-    {
-        return $this->render('admin/show_Ressource.html.twig', [
-            'ressource' => $ressource,
-        ]);
-    }
+   #[Route('/{id}', name: 'admin_ressource_show', requirements: ['id' => '\d+'], methods: ['GET'])]
+public function show(Ressource $ressource): Response
+{
+    return $this->render('admin/show_Ressource.html.twig', [
+        'ressource' => $ressource,
+    ]);
+}
+
 
    
-    #[Route('/{id}/edit', name: 'admin_ressource_edit', methods: ['GET', 'POST'])]
+    #[Route('/{id}/edit', name: 'admin_ressource_edit', requirements: ['id' => '\d+'], methods: ['GET', 'POST'])]
     public function edit(Request $request, Ressource $ressource, EntityManagerInterface $em): Response
     {
         $form = $this->createForm(RessourceType::class, $ressource);
@@ -76,8 +114,7 @@ final class RessourceController extends AbstractController
         ]);
     }
 
-    
-    #[Route('/{id}/delete', name: 'admin_ressource_delete', methods: ['POST'])]
+    #[Route('/{id}/delete', name: 'admin_ressource_delete', requirements: ['id' => '\d+'], methods: ['POST'])]
     public function delete(Request $request, Ressource $ressource, EntityManagerInterface $em): Response
     {
         if ($this->isCsrfTokenValid('delete'.$ressource->getId(), $request->request->get('_token'))) {
@@ -91,7 +128,66 @@ final class RessourceController extends AbstractController
     }
     
 
-   
+
+
+
+#[Route('/stats', name: 'admin_ressource_stats', methods: ['GET'])]
+public function statsPage(): Response
+{
+    return $this->render('admin/ressources_stats.html.twig');
+}
+
+#[Route('/stats/data', name: 'admin_ressource_stats_data', methods: ['GET'])]
+public function statsData(RessourceRepository $repo): JsonResponse
+{
+    return $this->json([
+        'kpi' => $repo->getKpiStats(),
+        'byType' => $repo->countByType(),
+        'byCategorie' => $repo->countByCategorie(),
+        'topEvenements' => $repo->topEvenementsByRessources(5),
+    ]);
+}
+
+
+
+    #[Route('/stats/pdf', name: 'admin_ressource_stats_pdf', methods: ['GET'])]
+public function exportStatsPdf(RessourceRepository $repo): Response
+{
+    $kpi = $repo->getKpiStats();
+    $byType = $repo->countByType();
+    $byCategorie = $repo->countByCategorie();
+    $topEvents = $repo->topEvenementsByRessources(10);
+
+    // HTML via Twig
+    $html = $this->renderView('admin/ressources_stats_pdf.html.twig', [
+        'kpi' => $kpi,
+        'byType' => $byType,
+        'byCategorie' => $byCategorie,
+        'topEvents' => $topEvents,
+        'generatedAt' => new \DateTime(),
+    ]);
+
+    // Dompdf config
+    $options = new Options();
+    $options->set('defaultFont', 'DejaVu Sans');
+    $options->setIsRemoteEnabled(true);
+
+    $dompdf = new Dompdf($options);
+    $dompdf->loadHtml($html);
+    $dompdf->setPaper('A4', 'portrait');
+    $dompdf->render();
+
+    $filename = 'stats_ressources.pdf';
+
+    return new Response(
+        $dompdf->output(),
+        200,
+        [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'attachment; filename="'.$filename.'"'
+        ]
+    );
+}
 
 
 
