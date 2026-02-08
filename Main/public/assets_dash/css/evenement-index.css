@@ -1,0 +1,160 @@
+/* Scoped (safe for SB Admin) */
+.evind{
+  --ev-blue:#003399;
+  --ev-turq:#0097B2;
+  --ev-green:#00BFA6;
+  --ev-red:#BC0B09;
+  --ev-gray:#5b6b7a;
+}
+
+/* Header */
+.evind .evind-topbar{
+  display:flex;
+  align-items:flex-end;
+  justify-content:space-between;
+  gap:14px;
+  flex-wrap:wrap;
+  padding-top: 10px;
+}
+
+.evind .evind-title{
+  font-weight:900;
+  color:#0b2a3a;
+  font-size: 34px;
+  line-height:1.1;
+  margin: 0;
+}
+
+.evind .evind-subtitle{
+  color: var(--ev-gray);
+  font-size: 13px;
+  margin-top: 6px;
+}
+
+.evind .evind-actions{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  flex-wrap:nowrap;
+}
+
+.evind .evind-search{
+  width: 420px;
+  max-width: 52vw;
+}
+
+.evind .evind-btn-add{
+  border-radius: 12px;
+  font-weight: 800;
+  padding: 10px 14px;
+  white-space: nowrap;
+}
+
+/* KPI cards */
+.evind .evind-kpi{
+  border-radius: 16px;
+}
+
+.evind .evind-kpi-label{
+  color: var(--ev-gray);
+  font-size: 13px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .4px;
+}
+
+.evind .evind-kpi-value{
+  font-size: 26px;
+  font-weight: 900;
+  color:#0b2a3a;
+  line-height: 1;
+}
+
+.evind .evind-kpi-icon{
+  width: 46px;
+  height: 46px;
+  border-radius: 14px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size: 18px;
+}
+
+.evind .kpi-primary{ background: rgba(0,51,153,.12); color: var(--ev-blue); }
+.evind .kpi-success{ background: rgba(0,191,166,.14); color: #007e6c; }
+.evind .kpi-danger{  background: rgba(188,11,9,.12); color: var(--ev-red); }
+
+/* Table card */
+.evind .evind-card{
+  border-radius: 18px;
+  overflow:hidden;
+  border: 1px solid rgba(0,0,0,.05);
+}
+
+.evind .evind-card-head{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:12px;
+  padding: 16px 18px;
+}
+
+.evind .evind-card-title{
+  font-weight: 900;
+  color:#0b2a3a;
+}
+
+/* Table */
+.evind .evind-table thead th{
+  background: rgba(179,213,255,.18);
+  border-bottom: 1px solid rgba(0,151,178,.12);
+  color:#0b2a3a;
+  font-weight: 900;
+  font-size: 13px;
+}
+
+.evind .evind-table tbody tr{
+  transition: background .15s ease;
+}
+.evind .evind-table tbody tr:hover{
+  background: rgba(179,213,255,.12);
+}
+
+/* Badges */
+.evind .evind-badge{
+  border-radius: 999px;
+  padding: 7px 12px;
+  font-weight: 900;
+  font-size: 12px;
+  border: 1px solid rgba(0,0,0,.06);
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+}
+
+.evind .evind-badge-success{ background: rgba(0,191,166,.14); color:#007e6c; }
+.evind .evind-badge-danger{  background: rgba(188,11,9,.12); color: var(--ev-red); }
+.evind .evind-badge-warning{ background: rgba(255,193,7,.18); color:#7a5b00; }
+.evind .evind-badge-secondary{ background: rgba(0,151,178,.12); color: var(--ev-turq); }
+
+/* Action buttons like “ressources” */
+.evind .evind-btn{
+  border-radius: 10px;
+  font-weight: 800;
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  padding: 7px 12px;
+  border: 1px solid rgba(0,0,0,.10);
+  background:#fff;
+}
+
+.evind .evind-btn-view{ color: var(--ev-blue); border-color: rgba(0,51,153,.25); }
+.evind .evind-btn-edit{ color:#7a5b00; border-color: rgba(255,193,7,.35); }
+.evind .evind-btn-del{  color: var(--ev-red); border-color: rgba(188,11,9,.25); }
+
+/* Responsive */
+@media (max-width: 992px){
+  .evind .evind-actions{ flex-wrap:wrap; }
+  .evind .evind-search{ width:100%; max-width:100%; }
+}

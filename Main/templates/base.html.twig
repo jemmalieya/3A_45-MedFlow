@@ -24,7 +24,9 @@
   <link href="{{ asset('assets/vendor/fontawesome-free/css/all.min.css') }}" rel="stylesheet">
   <link href="{{ asset('assets/vendor/swiper/swiper-bundle.min.css') }}" rel="stylesheet">
   <link href="{{ asset('assets/vendor/glightbox/css/glightbox.min.css') }}" rel="stylesheet">
-
+  <!-- css events -->
+  <link rel="stylesheet" href="{{ asset('assets/css/events.css') }}">
+   <script src="{{ asset('assets/js/evenement-show.js') }}"></script>
   <!-- Main CSS File -->
   <link href="{{ asset('assets/css/main.css') }}" rel="stylesheet">
 
@@ -64,15 +66,9 @@
       <nav id="navmenu" class="navmenu">
         <ul>
           <li><a href="{{ path('app_home') }}" class="{{ app.request.attributes.get('_route') == 'app_home' ? 'active' : '' }}">Home</a></li>
-          <li><a href="{{ path('reclamation_index') }}">Réclamations</a></li>
-          <li><a href="{{ path('post_index') }}">Blog</a></li>
+          <li>Réclamations</li>
+           <li><a href="{{ path('app_evenements') }}" class="{% if app.request.attributes.get('_route') == 'app_evenements' %}active{% endif %}">Événements</a></li>
 
-          <li class="dropdown"><a href="#"><span>Consultations</span> <i class="bi bi-chevron-down toggle-dropdown"></i></a>
-            <ul>
-              <li><a href="{{ path('rendezvous_home') }}">Rendez Vous</a></li>
-              <li><a href="{{ path('rendezvous_list') }}">Mes Appointments</a></li>
-            </ul>
-          </li>
 
           {# Liens template laissés en statique pour l’instant #}
           <li><a href="#">About</a></li>
@@ -208,12 +204,7 @@
     <i class="bi bi-arrow-up-short"></i>
   </a>
 
-<<<<<<< HEAD
   <!-- Preloader  <div id="preloader"></div> -->
-=======
-  <!-- Preloader -->
- {# <div id="preloader"></div> #}
->>>>>>> ebf57c76bfaf0eb9b8e773cc9e5713a427398cc9
 
   <!-- Vendor JS Files -->
   <script src="{{ asset('assets/vendor/bootstrap/js/bootstrap.bundle.min.js') }}"></script>

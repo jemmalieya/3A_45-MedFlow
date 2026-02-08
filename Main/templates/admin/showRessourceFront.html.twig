@@ -1,0 +1,55 @@
+{% extends 'base_front.html.twig' %}
+
+{% block title %}Ressources{% endblock %}
+
+{% block body %}
+<div class="container py-5">
+
+  <div class="d-flex align-items-center justify-content-between mb-4">
+    <div>
+      <h2 class="mb-1">Ressources</h2>
+      <p class="text-muted mb-0">Fichiers, liens et matériel disponibles pour vos événements.</p>
+    </div>
+  </div>
+
+  <div class="row">
+    {% for r in ressources %}
+      <div class="col-md-4 mb-4">
+        <div class="card shadow-sm h-100">
+          <div class="card-body">
+            <div class="d-flex justify-content-between align-items-start">
+              <h5 class="mb-2">{{ r.nomRessource }}</h5>
+              <span class="badge badge-info">{{ r.typeRessource }}</span>
+            </div>
+
+            <p class="text-muted mb-2">{{ r.categorieRessource }}</p>
+
+            <div class="small text-muted mb-3">
+              Événement : <b>{{ r.evenement.titreEvent }}</b>
+            </div>
+
+            {% if r.typeRessource == 'external_link' and r.urlExterneRessource %}
+              <a href="{{ r.urlExterneRessource }}" target="_blank" class="btn btn-sm btn-outline-primary">
+                Ouvrir le lien
+              </a>
+            {% elseif r.typeRessource == 'file' and r.cheminFichierRessource %}
+              <span class="badge badge-light">Fichier : {{ r.cheminFichierRessource }}</span>
+            {% elseif r.typeRessource == 'stock_item' %}
+              <span class="badge badge-light">
+                Stock : {{ r.quantiteDisponibleRessource ?? 0 }} {{ r.uniteRessource ?? '' }}
+              </span>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    {% else %}
+      <div class="col-12">
+        <div class="alert alert-info">
+          Aucune ressource publique disponible.
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+
+</div>
+{% endblock %}

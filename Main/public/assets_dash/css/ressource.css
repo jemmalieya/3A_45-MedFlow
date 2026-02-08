@@ -1,0 +1,303 @@
+:root{
+  --res-blue: #003399;
+  --res-cyan: #0097B2;
+  --res-turq: #00BFA6;
+  --res-red: #BC0B09;
+
+  --res-bg: #f6f9ff;
+  --res-text: #1f2a37;
+  --res-muted: #6b7280;
+
+  --res-radius: 16px;
+  --res-shadow: 0 10px 30px rgba(0,0,0,.08);
+  --res-shadow-soft: 0 10px 24px rgba(0,0,0,.06);
+}
+
+/* page background feel */
+body{
+  background: var(--res-bg);
+}
+
+/* ===== HERO ===== */
+.res-hero{
+  border-radius: var(--res-radius);
+  overflow: hidden;
+  box-shadow: var(--res-shadow);
+  background: linear-gradient(135deg, rgba(0,51,153,.95), rgba(0,151,178,.92));
+}
+.res-hero .card-body{
+  padding: 22px 24px;
+}
+
+.res-hero-icon{
+  width: 54px;
+  height: 54px;
+  border-radius: 14px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background: rgba(255,255,255,.15);
+  color:#fff;
+  font-size: 22px;
+  box-shadow: 0 8px 18px rgba(0,0,0,.12);
+}
+
+.res-hero-title{
+  color:#fff;
+  font-weight: 800;
+  font-size: 18px;
+  letter-spacing: .2px;
+}
+.res-hero-subtitle{
+  color: rgba(255,255,255,.85);
+  font-size: 13px;
+}
+
+/* badges (Fichier/Lien/Stock) */
+.res-badge{
+  background: rgba(255,255,255,.16);
+  border: 1px solid rgba(255,255,255,.22);
+  color:#fff;
+  padding: 10px 14px;
+  font-weight: 600;
+  border-radius: 999px;
+  font-size: 13px;
+  transition: transform .15s ease, background .15s ease;
+}
+.res-badge:hover{
+  transform: translateY(-1px);
+  background: rgba(255,255,255,.22);
+}
+
+/* ===== Main card bigger ===== */
+.card.shadow-sm.border-0.mb-4{
+  border-radius: var(--res-radius);
+  box-shadow: var(--res-shadow-soft);
+}
+
+.card-header{
+  padding: 18px 22px !important;
+}
+.card-body{
+  padding: 22px !important;
+}
+
+/* ===== Labels / Inputs ===== */
+.res-label{
+  font-weight: 700;
+  color: var(--res-text);
+  margin-bottom: 6px;
+}
+
+.form-control, .custom-select, select.form-control{
+  border-radius: 12px;
+  padding: 12px 14px;
+  height: auto;
+  border: 1px solid #e5e7eb;
+  transition: box-shadow .15s ease, border-color .15s ease;
+}
+
+.form-control:focus, .custom-select:focus, select.form-control:focus{
+  border-color: rgba(0,151,178,.55);
+  box-shadow: 0 0 0 .2rem rgba(0,151,178,.12);
+}
+
+textarea.form-control{
+  min-height: 110px;
+}
+
+/* ===== Hint alert nicer & bigger ===== */
+.res-hint{
+  border-radius: 14px;
+  padding: 14px 16px;
+  border: none;
+  box-shadow: 0 10px 20px rgba(0,0,0,.06);
+}
+
+/* ===== Soft cards (Mode Fichier/Lien/Stock) bigger + colors ===== */
+.res-soft{
+  border-radius: 16px;
+  box-shadow: 0 10px 22px rgba(0,0,0,.06);
+  background: #fff;
+  border: 1px solid #eef2ff !important;
+}
+.res-soft .card-body{
+  padding: 16px 18px !important;
+}
+
+.res-soft-title{
+  font-weight: 800;
+  font-size: 14px;
+  color: var(--res-text);
+}
+
+/* make the type blocks look different */
+.js-field-file .res-soft{
+  background: linear-gradient(180deg, rgba(0,51,153,.06), rgba(255,255,255,1));
+  border-color: rgba(0,51,153,.15) !important;
+}
+.js-field-link .res-soft{
+  background: linear-gradient(180deg, rgba(0,151,178,.08), rgba(255,255,255,1));
+  border-color: rgba(0,151,178,.18) !important;
+}
+.js-field-stock .res-soft{
+  background: linear-gradient(180deg, rgba(0,191,166,.10), rgba(255,255,255,1));
+  border-color: rgba(0,191,166,.20) !important;
+}
+
+/* ===== Buttons ===== */
+.res-btn{
+  border-radius: 12px;
+  padding: 11px 18px;
+  font-weight: 700;
+  box-shadow: 0 10px 18px rgba(0,51,153,.18);
+}
+.btn-light{
+  border-radius: 12px;
+  padding: 11px 16px;
+}
+
+/* ===== spacing helpers ===== */
+.gap-2{ gap: .5rem; }
+
+
+
+:root{
+  --res-blue:#003399;
+  --res-cyan:#0097B2;
+  --res-turq:#00BFA6;
+  --res-red:#BC0B09;
+  --res-bg:#f6f9ff;
+  --res-radius:16px;
+  --res-shadow:0 10px 28px rgba(0,0,0,.08);
+}
+
+.res-card{ border-radius: var(--res-radius); box-shadow: var(--res-shadow); }
+.res-table thead th{
+  border-top:none;
+  color:#6b7280;
+  font-weight:800;
+  letter-spacing:.2px;
+  text-transform: none;
+}
+.res-table tbody tr{
+  transition: transform .12s ease, box-shadow .12s ease;
+}
+.res-table tbody tr:hover{
+  transform: translateY(-1px);
+  box-shadow: 0 10px 20px rgba(0,0,0,.06);
+}
+.res-table td, .res-table th{ vertical-align: middle; }
+.res-action{ border-radius: 12px; padding: 8px 10px; }
+
+.res-search .input-group-text{
+  background:#fff;
+  border-right:0;
+  border-radius: 12px 0 0 12px;
+}
+.res-search .form-control{
+  border-left:0;
+  border-radius: 0 12px 12px 0;
+  padding: 10px 12px;
+}
+.res-btn-add{ border-radius: 12px; padding: 10px 14px; }
+
+.res-badge{
+  padding: 8px 12px;
+  font-weight: 800;
+  border-radius: 999px;
+}
+.res-badge-file{ background: rgba(0,51,153,.10); color: var(--res-blue); }
+.res-badge-link{ background: rgba(0,151,178,.12); color: var(--res-cyan); }
+.res-badge-stock{ background: rgba(0,191,166,.14); color: var(--res-turq); }
+
+/* KPI */
+.res-kpi{ border-radius: var(--res-radius); box-shadow: var(--res-shadow); }
+.res-kpi-label{ color:#6b7280; font-weight:700; font-size: 12px; text-transform: uppercase; letter-spacing:.5px; }
+.res-kpi-value{ color:#111827; font-weight:900; font-size: 18px; }
+
+.res-kpi-icon{
+  width: 46px; height: 46px;
+  border-radius: 14px;
+  display:flex; align-items:center; justify-content:center;
+  font-size: 18px;
+}
+.bg-primary-soft{ background: rgba(0,51,153,.12); color: var(--res-blue); }
+.bg-info-soft{ background: rgba(0,151,178,.14); color: var(--res-cyan); }
+.bg-success-soft{ background: rgba(0,191,166,.16); color: var(--res-turq); }
+
+
+/* ===== ACTION BUTTONS ===== */
+.res-actions {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.res-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  border: 1px solid transparent;
+  transition: all .15s ease;
+  white-space: nowrap;
+}
+
+/* VIEW */
+.res-btn-view {
+  color: #2563eb;
+  background: rgba(37,99,235,.08);
+  border-color: rgba(37,99,235,.25);
+}
+.res-btn-view:hover {
+  background: rgba(37,99,235,.15);
+}
+
+/* EDIT */
+.res-btn-edit {
+  color: #d97706;
+  background: rgba(217,119,6,.10);
+  border-color: rgba(217,119,6,.3);
+}
+.res-btn-edit:hover {
+  background: rgba(217,119,6,.18);
+}
+
+/* DELETE (soft danger) */
+.res-btn-delete {
+  color: #b91c1c;
+  background: rgba(185,28,28,.08);
+  border-color: rgba(185,28,28,.25);
+}
+.res-btn-delete:hover {
+  background: rgba(185,28,28,.18);
+}
+
+/* icons size */
+.res-btn i {
+  font-size: 14px;
+}
+/* erreurs Symfony Bootstrap */
+.invalid-feedback, .form-error-message {
+  display: block;
+}
+
+.is-invalid {
+  border-color: #e74a3b !important;
+  box-shadow: 0 0 0 .2rem rgba(231,74,59,.12);
+}
+
+.is-valid {
+  border-color: #1cc88a !important;
+  box-shadow: 0 0 0 .2rem rgba(28,200,138,.10);
+}
+
+/* messages d'erreur twig form_errors() */
+.form-error-icon, ul li {
+  color: #e74a3b;
+}

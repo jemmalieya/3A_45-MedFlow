@@ -1,0 +1,130 @@
+{% extends 'base_dashboard.html.twig' %}
+
+{% block title %}Statistiques Événements{% endblock %}
+
+{% block body %}
+<div class="container-fluid py-4">
+
+  <!-- Header -->
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h3 mb-0 text-gray-800">Statistiques</h1>
+    <a href="{{ path('admin_evenement_index') }}" class="btn btn-outline-primary">
+      <i class="fas fa-arrow-left me-1"></i> Retour
+    </a>
+  </div>
+
+  <!-- KPI Cards -->
+  <div class="row g-3 mb-4">
+    <div class="col-md-3">
+      <div class="card shadow-sm border-0">
+        <div class="card-body">
+          <div class="text-xs text-uppercase text-muted">Demandes (Total)</div>
+          <div class="h4 mb-0" id="kpi_total">—</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-3">
+      <div class="card shadow-sm border-0">
+        <div class="card-body">
+          <div class="text-xs text-uppercase text-muted">Acceptées</div>
+          <div class="h4 mb-0" id="kpi_acc">—</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-3">
+      <div class="card shadow-sm border-0">
+        <div class="card-body">
+          <div class="text-xs text-uppercase text-muted">En attente</div>
+          <div class="h4 mb-0" id="kpi_pen">—</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-3">
+      <div class="card shadow-sm border-0">
+        <div class="card-body">
+          <div class="text-xs text-uppercase text-muted">Refusées</div>
+          <div class="h4 mb-0" id="kpi_ref">—</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Charts -->
+  <div class="row g-4">
+    <div class="col-lg-6">
+      <div class="card shadow-sm border-0">
+        <div class="card-header bg-white fw-bold">
+          Répartition par type
+        </div>
+        <div class="card-body">
+          <canvas id="chartType" height="180"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-6">
+      <div class="card shadow-sm border-0">
+        <div class="card-header bg-white fw-bold">
+          Répartition par ville
+        </div>
+        <div class="card-body">
+          <canvas id="chartVille" height="180"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block javascripts %}
+{{ parent() }}
+
+ <script src="{{ asset('assets/vendor/chart.js/Chart.bundle.min.js') }}"></script>
+    <script src="{{ asset('assets/js/evenements-stats.js') }}"></script>
+
+<script>
+document.addEventListener('DOMContentLoaded', async () => {
+  try {
+    const res = await fetch("{{ path('admin_evenements_stats_data') }}");
+    const data = await res.json();
+
+    // KPIs
+    document.getElementById('kpi_total').textContent = data.demandes.total;
+    document.getElementById('kpi_acc').textContent = data.demandes.accepted;
+    document.getElementById('kpi_pen').textContent = data.demandes.pending;
+    document.getElementById('kpi_ref').textContent = data.demandes.refused;
+
+    // Chart by Type
+    new Chart(document.getElementById('chartType'), {
+      type: 'doughnut',
+      data: {
+        labels: Object.keys(data.byType),
+        datasets: [{
+          data: Object.values(data.byType),
+          backgroundColor: ['#4e73df', '#1cc88a', '#f6c23e', '#e74a3b']
+        }]
+      }
+    });
+
+    // Chart by Ville
+    new Chart(document.getElementById('chartVille'), {
+      type: 'doughnut',
+      data: {
+        labels: Object.keys(data.byVille),
+        datasets: [{
+          data: Object.values(data.byVille),
+          backgroundColor: ['#36b9cc', '#858796', '#fd7e14', '#20c997']
+        }]
+      }
+    });
+
+  } catch (e) {
+    console.error('Erreur chargement stats', e);
+  }
+});
+</script>
+{% endblock %}
