@@ -13,6 +13,7 @@ use Symfony\Component\Routing\Annotation\Route;
 use App\Repository\ReclamationRepository;
 use App\Repository\ReponseReclamationRepository;
 use Symfony\Component\HttpFoundation\File\Exception\FileException;
+use Symfony\Component\HttpFoundation\File\UploadedFile;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 
 class ReclamationController extends AbstractController

@@ -41,7 +41,6 @@
 
             <!-- Nav Item - Dashboard -->
             <li class="nav-item active">
-                <a class="nav-link" href="{{ path('app_dashboard') }}"
                 <a class="nav-link" href="{{ path('app_admin') }}"
                     <i class="fas fa-fw fa-tachometer-alt"></i>
                     <span>Dashboard</span></a>
@@ -53,15 +52,13 @@
     <span>Réclamations</span>
   </a>
 </li>
-
-             <!-- Divider -->
-            <hr class="sidebar-divider">
-
-            <li class="nav-item active">
-                <a class="nav-link" href="{{ path('app_home') }}"
-                    <i class="fas fa-fw fa-tachometer-alt"></i>
-                    <span>FrontOffice</span></a>
-            </li>
+<!-- Nav Item - Réclamations --> 
+<li class="nav-item active">
+  <a class="nav-link" href="{{ path('app_fiche_by_staff', {'idStaff': 2}) }}">
+    <i class="fas fa-fw fa-exclamation-circle"></i>
+    <span>Consultations</span>
+  </a>
+</li>
 
              <!-- Divider -->
             <hr class="sidebar-divider">

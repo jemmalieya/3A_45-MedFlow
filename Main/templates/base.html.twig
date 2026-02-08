@@ -66,7 +66,13 @@
           <li><a href="{{ path('app_home') }}" class="{{ app.request.attributes.get('_route') == 'app_home' ? 'active' : '' }}">Home</a></li>
           <li><a href="{{ path('reclamation_index') }}">Réclamations</a></li>
           <li><a href="{{ path('post_index') }}">Blog</a></li>
-          <li>Réclamations</li>
+
+          <li class="dropdown"><a href="#"><span>Consultations</span> <i class="bi bi-chevron-down toggle-dropdown"></i></a>
+            <ul>
+              <li><a href="{{ path('rendezvous_home') }}">Rendez Vous</a></li>
+              <li><a href="{{ path('rendezvous_list') }}">Mes Appointments</a></li>
+            </ul>
+          </li>
 
           {# Liens template laissés en statique pour l’instant #}
           <li><a href="#">About</a></li>
@@ -185,8 +191,7 @@
     <i class="bi bi-arrow-up-short"></i>
   </a>
 
-  <!-- Preloader -->
-  <div id="preloader"></div>
+  <!-- Preloader  <div id="preloader"></div> -->
 
   <!-- Vendor JS Files -->
   <script src="{{ asset('assets/vendor/bootstrap/js/bootstrap.bundle.min.js') }}"></script>

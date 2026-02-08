@@ -9,10 +9,12 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
+use Symfony\Component\HttpFoundation\File\UploadedFile;
+
 
 class RendezVousController extends AbstractController
 {
-    #[Route('/homeC', name: 'app_home')]
+    #[Route('/homeC', name: 'rendezvous_home')]
     public function index(): Response
     {
         return $this->render('rendez_vous/index.html.twig', [
