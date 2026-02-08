@@ -3,6 +3,8 @@
 namespace App\Entity;
 
 use App\Repository\FicheMedicaleRepository;
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Collection;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
@@ -37,6 +39,15 @@ class FicheMedicale
 
     #[ORM\Column]
     private ?\DateTime $createdAt = null;
+
+    #[ORM\OneToMany(mappedBy: 'ficheMedicale', targetEntity: Prescription::class, cascade: ['persist', 'remove'], orphanRemoval: true)]
+    private Collection $prescriptions;
+
+    public function __construct()
+    {
+        $this->createdAt = new \DateTime();
+        $this->prescriptions = new ArrayCollection();
+    }
 
     public function getId(): ?int
     {
@@ -138,9 +149,33 @@ class FicheMedicale
 
         return $this;
     }
-    public function __construct()
+
+    /**
+     * @return Collection<int, Prescription>
+     */
+    public function getPrescriptions(): Collection
     {
-        $this->createdAt = new \DateTime();
+        return $this->prescriptions;
     }
 
+    public function addPrescription(Prescription $prescription): static
+    {
+        if (!$this->prescriptions->contains($prescription)) {
+            $this->prescriptions->add($prescription);
+            $prescription->setFicheMedicale($this);
+        }
+
+        return $this;
+    }
+
+    public function removePrescription(Prescription $prescription): static
+    {
+        if ($this->prescriptions->removeElement($prescription)) {
+            if ($prescription->getFicheMedicale() === $this) {
+                $prescription->setFicheMedicale(null);
+            }
+        }
+
+        return $this;
+    }
 }
