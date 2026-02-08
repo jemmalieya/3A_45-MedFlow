@@ -68,7 +68,7 @@ class Produit
     )]
     private ?int $quantite_produit = null;
 
-    // ✅ Image (URL) - Accepte toutes les URLs
+    // ✅ Image (URL)
     #[ORM\Column(length: 255)]
     #[Assert\NotBlank(message: "L'URL de l'image est obligatoire.")]
     #[Assert\Url(
@@ -121,8 +121,6 @@ class Produit
         $this->ligne_commandes = new ArrayCollection();
     }
 
-    // Getters et Setters
-
     public function getId_produit(): ?int
     {
         return $this->id_produit;
@@ -133,9 +131,10 @@ class Produit
         return $this->nom_produit;
     }
 
-    public function setNomProduit(string $nom_produit): static
+    // ✅ accepte null pour éviter crash en edit
+    public function setNomProduit(?string $nom_produit): static
     {
-        $this->nom_produit = trim($nom_produit);
+        $this->nom_produit = $nom_produit !== null ? trim($nom_produit) : null;
         return $this;
     }
 
@@ -144,9 +143,10 @@ class Produit
         return $this->description_produit;
     }
 
-    public function setDescriptionProduit(string $description_produit): static
+    // ✅ accepte null pour éviter crash en edit
+    public function setDescriptionProduit(?string $description_produit): static
     {
-        $this->description_produit = trim($description_produit);
+        $this->description_produit = $description_produit !== null ? trim($description_produit) : null;
         return $this;
     }
 
@@ -155,9 +155,10 @@ class Produit
         return $this->prix_produit;
     }
 
-    public function setPrixProduit(float $prix_produit): static
+    // ✅ FIX: accepter null pour éviter "float, null given" en edit
+    public function setPrixProduit(?float $prix_produit): static
     {
-        $this->prix_produit = round($prix_produit, 2);
+        $this->prix_produit = ($prix_produit !== null) ? round($prix_produit, 2) : null;
         return $this;
     }
 
@@ -166,7 +167,8 @@ class Produit
         return $this->quantite_produit;
     }
 
-    public function setQuantiteProduit(int $quantite_produit): static
+    // ✅ FIX: accepter null pour éviter "int, null given" en edit
+    public function setQuantiteProduit(?int $quantite_produit): static
     {
         $this->quantite_produit = $quantite_produit;
         return $this;
@@ -178,20 +180,20 @@ class Produit
     }
 
     public function setImageProduit(?string $image_produit): static
-{
-    $this->image_produit = $image_produit ? trim($image_produit) : null;
-    return $this;
-}
-
+    {
+        $this->image_produit = $image_produit !== null ? trim($image_produit) : null;
+        return $this;
+    }
 
     public function getCategorieProduit(): ?string
     {
         return $this->categorie_produit;
     }
 
-    public function setCategorieProduit(string $categorie_produit): static
+    // ✅ FIX IMPORTANT: accepter null
+    public function setCategorieProduit(?string $categorie_produit): static
     {
-        $this->categorie_produit = trim($categorie_produit);
+        $this->categorie_produit = $categorie_produit !== null ? trim($categorie_produit) : null;
         return $this;
     }
 
@@ -200,9 +202,10 @@ class Produit
         return $this->status_produit;
     }
 
-    public function setStatusProduit(string $status_produit): static
+    // ✅ FIX IMPORTANT: accepter null
+    public function setStatusProduit(?string $status_produit): static
     {
-        $this->status_produit = $status_produit;
+        $this->status_produit = $status_produit !== null ? trim($status_produit) : null;
         return $this;
     }
 

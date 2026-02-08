@@ -16,28 +16,51 @@ class ProduitRepository extends ServiceEntityRepository
         parent::__construct($registry, Produit::class);
     }
 
-    //    /**
-    //     * @return Produit[] Returns an array of Produit objects
-    //     */
-    //    public function findByExampleField($value): array
-    //    {
-    //        return $this->createQueryBuilder('p')
-    //            ->andWhere('p.exampleField = :val')
-    //            ->setParameter('val', $value)
-    //            ->orderBy('p.id', 'ASC')
-    //            ->setMaxResults(10)
-    //            ->getQuery()
-    //            ->getResult()
-    //        ;
-    //    }
+    /**
+     * Recherche et tri des produits
+     */
+    public function findFiltered(?string $search = null, ?string $category = null, ?string $sortPrice = null): array
+    {
+        $qb = $this->createQueryBuilder('p');
 
-    //    public function findOneBySomeField($value): ?Produit
-    //    {
-    //        return $this->createQueryBuilder('p')
-    //            ->andWhere('p.exampleField = :val')
-    //            ->setParameter('val', $value)
-    //            ->getQuery()
-    //            ->getOneOrNullResult()
-    //        ;
-    //    }
+        // Recherche (utilise les noms de propriétés, pas les noms de colonnes)
+        if ($search && trim($search) !== '') {
+            $qb->andWhere('LOWER(p.nom_produit) LIKE :search 
+                        OR LOWER(p.description_produit) LIKE :search 
+                        OR LOWER(p.categorie_produit) LIKE :search')
+               ->setParameter('search', '%' . strtolower(trim($search)) . '%');
+        }
+
+        // Filtre par catégorie
+        if ($category && trim($category) !== '') {
+            $qb->andWhere('p.categorie_produit = :category')
+               ->setParameter('category', $category);
+        }
+
+        // Tri par prix
+        if ($sortPrice === 'asc') {
+            $qb->orderBy('p.prix_produit', 'ASC');
+        } elseif ($sortPrice === 'desc') {
+            $qb->orderBy('p.prix_produit', 'DESC');
+        } else {
+            $qb->orderBy('p.nom_produit', 'ASC');
+        }
+
+        return $qb->getQuery()->getResult();
+    }
+
+    /**
+     * Récupère toutes les catégories distinctes
+     */
+    public function findAllCategories(): array
+    {
+        $result = $this->createQueryBuilder('p')
+            ->select('DISTINCT p.categorie_produit')
+            ->where('p.categorie_produit IS NOT NULL')
+            ->orderBy('p.categorie_produit', 'ASC')
+            ->getQuery()
+            ->getResult();
+
+        return array_column($result, 'categorie_produit');
+    }
 }

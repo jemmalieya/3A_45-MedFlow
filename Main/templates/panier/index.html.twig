@@ -1,20 +1,243 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}Hello PanierController!{% endblock %}
+{% block title %}Mon Panier{% endblock %}
 
 {% block body %}
-<style>
-    .example-wrapper { margin: 1em auto; max-width: 800px; width: 95%; font: 18px/1.5 sans-serif; }
-    .example-wrapper code { background: #F5F5F5; padding: 2px 6px; }
-</style>
+<div class="panier-page">
 
-<div class="example-wrapper">
-    <h1>Hello {{ controller_name }}! ✅</h1>
+  {# Toast container #}
+  <div class="position-fixed top-0 start-50 translate-middle-x p-3"
+       style="z-index: 1050; max-width:400px;"
+       id="toast-container"></div>
 
-    This friendly message is coming from:
-    <ul>
-        <li>Your controller at <code>C:/Users/lenovo/MedFlow/3A_45-MedFlow/Main/src/Controller/PanierController.php</code></li>
-        <li>Your template at <code>C:/Users/lenovo/MedFlow/3A_45-MedFlow/Main/templates/panier/index.html.twig</code></li>
-    </ul>
+  {# Confirmation overlay #}
+  <div id="confirmOverlay" class="confirm-overlay d-none">
+    <div class="confirm-box">
+      <div class="confirm-icon">
+        <i class="bi bi-exclamation-circle text-warning"></i>
+      </div>
+      <h5 class="mt-3">Confirmation</h5>
+      <p id="confirmMessage" class="text-muted"></p>
+      <div class="confirm-buttons mt-4">
+        <button class="btn btn-outline-secondary px-4" id="confirmNo" type="button">Annuler</button>
+        <button class="btn btn-danger px-4" id="confirmYes" type="button">Confirmer</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="container py-5">
+
+    {# En-tête #}
+    <div class="panier-header text-center mb-5">
+      <div class="panier-icon mb-3">
+        <i class="bi bi-cart3"></i>
+      </div>
+      <h1 class="display-5 fw-bold mb-2">Mon Panier</h1>
+
+      <p class="text-muted" id="cart-items-text">
+        {% if produits|length > 0 %}
+          {{ produits|length }} article(s) dans votre panier
+        {% else %}
+          Votre panier est vide
+        {% endif %}
+      </p>
+    </div>
+
+    {% if produits is empty %}
+      {# Panier vide #}
+      <div class="empty-cart text-center py-5" id="empty-cart-block">
+        <div class="empty-cart-icon mb-4">
+          <i class="bi bi-cart-x"></i>
+        </div>
+        <h3 class="mb-3">Votre panier est vide</h3>
+        <p class="text-muted mb-4">Découvrez nos produits et commencez vos achats !</p>
+        <a href="{{ path('front_produit_index') }}" class="btn btn-primary btn-lg px-5">
+          <i class="bi bi-shop me-2"></i>Découvrir nos produits
+        </a>
+      </div>
+    {% else %}
+      <div class="row g-4" id="cart-content">
+
+        {# Liste des produits #}
+        <div class="col-lg-8">
+          <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white border-0 py-3">
+              <div class="d-flex justify-content-between align-items-center">
+                <h5 class="mb-0 fw-bold">Articles (<span id="cart-count-products">{{ produits|length }}</span>)</h5>
+
+                <button class="btn btn-outline-danger btn-sm" id="btnViderPanier" type="button">
+                  <i class="bi bi-trash me-1"></i>Vider le panier
+                </button>
+              </div>
+            </div>
+
+            <div class="card-body p-0" id="cart-items-list">
+              {% for produit in produits %}
+                <div class="cart-item produit-row" id="cart-row-{{ produit.id_produit }}"
+                     data-id="{{ produit.id_produit }}"
+                     data-price="{{ produit.prixProduit }}"
+                     data-qty="{{ produit.quantite_panier }}">
+
+                  <div class="row g-3 align-items-center">
+
+                    {# Image #}
+                    <div class="col-md-2 col-3">
+                      <div class="product-image">
+                        <img src="{{ produit.imageProduit }}" alt="{{ produit.nomProduit }}">
+                      </div>
+                    </div>
+
+                    {# Infos produit #}
+                    <div class="col-md-4 col-9">
+                      <h6 class="mb-1 fw-bold">{{ produit.nomProduit }}</h6>
+                      <p class="text-muted small mb-0">{{ produit.categorieProduit }}</p>
+                      <span class="badge bg-success-soft text-success mt-1">
+                        <i class="bi bi-check-circle me-1"></i>En stock
+                      </span>
+                    </div>
+
+                    {# Prix unitaire #}
+                    <div class="col-md-2 col-6 text-center">
+                      <small class="text-muted d-block mb-1">Prix unitaire</small>
+                      <span class="fw-bold">{{ produit.prixProduit }} DT</span>
+                    </div>
+
+                    {# Quantité #}
+                    <div class="col-md-2 col-6">
+                      <small class="text-muted d-block mb-2 text-center">Quantité</small>
+
+                      <div class="qty-control">
+                        <button class="qty-btn btn-minus" type="button"
+                                data-id="{{ produit.id_produit }}"
+                                data-nom="{{ produit.nomProduit }}">
+                          <i class="bi bi-dash"></i>
+                        </button>
+
+                        <input type="text"
+                               class="qty-input"
+                               id="qty-{{ produit.id_produit }}"
+                               value="{{ produit.quantite_panier }}"
+                               data-stock="{{ produit.quantiteProduit }}"
+                               readonly>
+
+                        <button class="qty-btn btn-plus" type="button"
+                                data-id="{{ produit.id_produit }}"
+                                data-nom="{{ produit.nomProduit }}">
+                          <i class="bi bi-plus"></i>
+                        </button>
+                      </div>
+                    </div>
+
+                    {# Total ligne + supprimer #}
+                    <div class="col-md-2 col-12">
+                      <div class="text-center text-md-end">
+                        <small class="text-muted d-block mb-1">Total</small>
+                        <span class="fw-bold fs-5 text-primary line-total" id="line-{{ produit.id_produit }}">
+                          {{ produit.prixProduit * produit.quantite_panier }}
+                        </span> <span class="text-muted">DT</span>
+                      </div>
+
+                      <div class="text-center text-md-end mt-2">
+                        <button class="btn btn-link text-danger btn-sm p-0 btn-supprimer"
+                                type="button"
+                                data-id="{{ produit.id_produit }}"
+                                data-nom="{{ produit.nomProduit }}">
+                          <i class="bi bi-trash me-1"></i>Supprimer
+                        </button>
+                      </div>
+                    </div>
+
+                  </div>
+                </div>
+              {% endfor %}
+            </div>
+          </div>
+
+          {# Continuer les achats #}
+          <div class="mt-4">
+            <a href="{{ path('front_produit_index') }}" class="btn btn-outline-primary">
+              <i class="bi bi-arrow-left me-2"></i>Continuer mes achats
+            </a>
+          </div>
+        </div>
+
+        {# Résumé de commande #}
+        <div class="col-lg-4">
+          <div class="card border-0 shadow-sm sticky-top" style="top: 100px;">
+            <div class="card-header bg-primary text-white py-3">
+              <h5 class="mb-0"><i class="bi bi-receipt me-2"></i>Résumé</h5>
+            </div>
+
+            <div class="card-body">
+              <div class="summary-line">
+                <span class="text-muted">Sous-total</span>
+                <span class="fw-bold"><span id="cart-subtotal">{{ total }}</span> DT</span>
+              </div>
+
+              <div class="summary-line">
+                <span class="text-muted">Livraison</span>
+                <span class="text-success fw-bold">Gratuite</span>
+              </div>
+
+              <hr>
+
+              <div class="summary-total">
+                <span class="fs-5 fw-bold">Total</span>
+                <span class="fs-4 fw-bold text-primary"><span id="cart-total">{{ total }}</span> <span class="text-muted">DT</span></span>
+              </div>
+
+              <a href="{{ path('commande_valider') }}" class="btn btn-success w-100 btn-lg mt-4 shadow-sm">
+                <i class="bi bi-check-circle me-2"></i>Valider la commande
+              </a>
+
+              <div class="mt-4 p-3 bg-light rounded">
+                <h6 class="small fw-bold mb-2">
+                  <i class="bi bi-shield-check text-success me-1"></i>Paiement sécurisé
+                </h6>
+                <p class="small text-muted mb-0">Vos informations sont protégées</p>
+              </div>
+
+              <div class="mt-3 p-3 bg-light rounded">
+                <h6 class="small fw-bold mb-2">
+                  <i class="bi bi-truck text-primary me-1"></i>Livraison rapide
+                </h6>
+                <p class="small text-muted mb-0">Sous 2-3 jours ouvrables</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    {% endif %}
+  </div>
 </div>
+
+
+{% endblock %}
+
+{% block stylesheets %}
+  {{ parent() }}
+  <link rel="stylesheet" href="{{ asset('assets/css/panier.css') }}">
+{% endblock %}
+
+{% block javascripts %}
+  {{ parent() }}
+  <script src="{{ asset('assets/js/panier.js') }}"></script>
+
+  {# ✅ Twig -> JS (flash messages) #}
+  <script>
+    (function () {
+      {% for message in app.flashes('success') %}
+        if (typeof window.showToast === 'function') {
+          window.showToast("{{ message|e('js') }}", 'success');
+        }
+      {% endfor %}
+
+      {% for message in app.flashes('error') %}
+        if (typeof window.showToast === 'function') {
+          window.showToast("{{ message|e('js') }}", 'danger');
+        }
+      {% endfor %}
+    })();
+  </script>
 {% endblock %}
