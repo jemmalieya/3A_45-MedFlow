@@ -18,7 +18,7 @@ use Dompdf\Options;
 #[Route('/posts')]
 class PostController extends AbstractController
 {
-    #[Route('', name: 'post_index', methods: ['GET'])]
+    #[Route('', name: 'post_index', methods: ['GET', 'POST'])]
     public function index(PostRepository $repo, Request $request): Response
     {
         $q = trim((string) $request->query->get('q', ''));
