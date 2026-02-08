@@ -3,14 +3,63 @@
 
 {% block body %}
 <section class="section" style="padding-top:120px;">
-  <div class="container">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-      <div>
-        <h2 class="mb-1">Latest blogs</h2>
-        <p class="text-muted mb-0">Découvrez les derniers posts</p>
-      </div>
+ <div class="container-lg py-4">
+  <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
+    <div>
+      <h2 class="mb-1">Latest blogs</h2>
+      <p class="text-muted mb-0">Découvrez les derniers posts</p>
+    </div>
+
+    <div class="d-flex align-items-center gap-2">
+      <form method="get" action="{{ path('post_index') }}" class="d-flex">
+        <div class="input-group" style="min-width:320px; max-width:520px;">
+          <span class="input-group-text bg-white">
+            <i class="bi bi-search"></i>
+          </span>
+
+          <input id="postSearch"
+                 type="text"
+                 name="q"
+                 value="{{ q|default('') }}"
+                 class="form-control"
+                 placeholder="Rechercher...">
+
+          <!-- TRI auto -->
+          <select name="sort" class="form-select" onchange="this.form.submit()">
+            <option value="">Trier par</option>
+            <option value="date_desc" {{ app.request.get('sort') == 'date_desc' ? 'selected' : '' }}>Plus récents</option>
+            <option value="date_asc" {{ app.request.get('sort') == 'date_asc' ? 'selected' : '' }}>Plus anciens</option>
+            <option value="reactions_desc" {{ app.request.get('sort') == 'reactions_desc' ? 'selected' : '' }}>Plus de réactions</option>
+            <option value="categorie_asc" {{ app.request.get('sort') == 'categorie_asc' ? 'selected' : '' }}>Catégorie (A → Z)</option>
+          </select>
+
+          {% if q is defined and q|trim != '' %}
+            <a class="btn btn-outline-secondary" href="{{ path('post_index') }}" title="Effacer">
+              <i class="bi bi-x-lg"></i>
+            </a>
+          {% else %}
+            <button class="btn btn-outline-secondary" type="submit" title="Rechercher">
+              <i class="bi bi-arrow-return-left"></i>
+            </button>
+          {% endif %}
+        </div>
+      </form>
+      <a href="{{ path('post_export_pdf', { q: q|default(''), sort: sort|default('date_desc') }) }}"
+   class="btn btn-outline-dark">
+  Export PDF
+</a>
+<a href="{{ path('post_stats') }}" class="btn btn-outline-success">
+  Stats
+</a>
+
+
       <a href="{{ path('post_new') }}" class="btn btn-outline-primary">Nouveau post</a>
     </div>
+  </div>
+</div>
+
+
+
 
     {% for m in app.flashes('success') %}
       <div class="alert alert-success alert-dismissible fade show">
@@ -19,15 +68,224 @@
       </div>
     {% endfor %}
 
-    <div class="row g-4">
-      <div class="col-lg-8">
+    {# ✅ Construire un "dictionnaire" des erreurs commentaire par Post ID #}
+    {% set commentErrors = {} %}
+    {% for e in app.flashes('comment_error') %}
+      {% set parts = e|split('|', 2) %}
+      {% if parts|length == 2 %}
+        {% set postId = parts[0] %}
+        {% set msg = parts[1] %}
+        {% set commentErrors = commentErrors|merge({ (postId): msg }) %}
+      {% endif %}
+    {% endfor %}
+
+<style>
+  /* Container commentaires (comme une sous-card) */
+  .ig-comments {
+    margin-top: 16px;
+    padding: 14px 16px;
+    border-radius: 16px;
+    background: rgba(13,110,253,.03);
+    border: 1px solid rgba(0,0,0,.06);
+  }
+
+  .ig-comments-top{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:10px;
+    margin-bottom: 10px;
+  }
+
+  .ig-chip{
+    display:inline-flex;
+    align-items:center;
+    gap:8px;
+    padding: 6px 10px;
+    border-radius: 999px;
+    background: #fff;
+    border: 1px solid rgba(0,0,0,.06);
+    font-size: .88rem;
+  }
+
+  .ig-c-list{ margin-top: 8px; display:flex; flex-direction:column; gap:10px; }
+
+  .ig-c-row{
+    display:flex;
+    gap:10px;
+    align-items:flex-start;
+    padding: 10px 10px;
+    border-radius: 14px;
+    background:#fff;
+    border:1px solid rgba(0,0,0,.06);
+    box-shadow: 0 4px 12px rgba(0,0,0,.03);
+  }
+
+  .ig-c-ava{
+    width:38px;height:38px;border-radius:50%;
+    display:inline-flex;align-items:center;justify-content:center;
+    background: linear-gradient(135deg, rgba(13,110,253,.18), rgba(32,201,151,.18));
+    border: 1px solid rgba(0,0,0,.06);
+    font-weight:700;
+    flex: 0 0 38px;
+  }
+
+  .ig-c-body{ width:100%; }
+
+  .ig-c-meta{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:10px;
+    font-size:.82rem;
+    color:#6c757d;
+    margin-bottom: 4px;
+  }
+
+  .ig-c-name{
+    font-weight:700;
+    color:#212529;
+    font-size:.92rem;
+  }
+
+  .ig-c-text{ font-size:.95rem; color:#212529; line-height:1.35; }
+
+  .ig-badge{
+    font-size:.70rem;
+    border-radius: 999px;
+    padding: .25rem .5rem;
+  }
+
+  .ig-c-actions{
+    margin-top: 6px;
+    display:flex;
+    gap:14px;
+    font-size:.85rem;
+    color:#6c757d;
+  }
+  .ig-c-actions span{ cursor:pointer; }
+  .ig-c-actions span:hover{ color:#0d6efd; }
+
+  /* Barre d'ajout */
+  .ig-addbar{
+    margin-top: 12px;
+    display:flex;
+    gap:10px;
+    align-items:center;
+    padding-top: 12px;
+    border-top: 1px dashed rgba(0,0,0,.10);
+  }
+  .ig-addbar input{
+    border-radius: 999px !important;
+    padding-left: 14px !important;
+    background:#fff;
+  }
+
+  .react-bar{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    margin-top: 12px;
+    padding-top: 10px;
+    border-top: 1px solid rgba(0,0,0,.06);
+  }
+  .react-emojis{
+    display:flex;
+    gap:8px;
+    align-items:center;
+  }
+  .emoji-btn{
+    border:1px solid rgba(0,0,0,.08);
+    background:#fff;
+    border-radius:999px;
+    padding:6px 10px;
+    cursor:pointer;
+    transition: transform .08s ease, box-shadow .08s ease;
+    font-size: 1.05rem;
+    line-height: 1;
+  }
+  .emoji-btn:hover{
+    transform: translateY(-1px);
+    box-shadow: 0 6px 14px rgba(0,0,0,.06);
+  }
+  .react-count{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    color:#6c757d;
+    font-size:.9rem;
+    white-space:nowrap;
+  }
+  .react-count .pill{
+    background: rgba(13,110,253,.08);
+    border:1px solid rgba(13,110,253,.15);
+    color:#0d6efd;
+    border-radius:999px;
+    padding:4px 10px;
+    font-weight:600;
+  }
+
+  .reaction-zone{
+    position: relative;
+    overflow: visible !important;
+    z-index: 20;
+  }
+
+  .reaction-float{
+    position: absolute;
+    bottom: 14px;
+    left: var(--x, 50%);
+    font-size: var(--size, 22px);
+    opacity: 0;
+    transform: translate(-50%, 0) scale(1);
+    animation: floatUp var(--dur, 900ms) ease-out forwards;
+    pointer-events: none;
+    filter: drop-shadow(0 6px 10px rgba(0,0,0,.12));
+    z-index: 9999 !important;
+  }
+
+  @keyframes floatUp{
+    0%   { opacity: 0; transform: translate(-50%, 8px) scale(.85); }
+    10%  { opacity: 1; }
+    100% { opacity: 0; transform: translate(calc(-50% + var(--dx, 0px)), -120px) scale(1.25); }
+  }
+
+  /* ✅ POST = HÉROS */
+  .post-card{ border-radius: 18px; overflow: hidden; }
+  .post-img{
+    width:100%;
+    height: 220px;
+    object-fit: cover;
+    border-radius: 14px;
+    box-shadow: 0 10px 24px rgba(0,0,0,.06);
+  }
+  .post-title{ font-size: 1.55rem; font-weight: 800; line-height: 1.2; }
+
+  /* ✅ COMMENTAIRES = secondaire */
+  .ig-comments{
+    background: rgba(13,110,253,.02);
+    border: 1px solid rgba(0,0,0,.05);
+    max-height: 360px;
+    overflow: auto;
+  }
+  .ig-comments::-webkit-scrollbar{ width: 8px; }
+  .ig-comments::-webkit-scrollbar-thumb{ background: rgba(0,0,0,.12); border-radius: 999px; }
+</style>
+  <div class="container my-5">
+    <div class="row justify-content-center">
+
+    <!-- largeur contrôlée -->
+    <div class="col-12 col-lg-9 col-xl-8">
+
         {% for p in posts %}
-          <div class="card border-0 shadow-sm mb-4">
+
+          <div class="card border-0 shadow-sm mb-4 post-card">
             <div class="card-body">
               <div class="row g-3">
                 <div class="col-md-4">
                   <a href="{{ path('post_show', {id: p.id}) }}">
-                    <img src="{{ asset(p.imgPost) }}" class="img-fluid rounded" alt="post">
+                    <img src="{{ asset(p.imgPost) }}" class="img-fluid post-img" alt="post">
                   </a>
                 </div>
 
@@ -39,11 +297,11 @@
                     {% endif %}
                   </div>
 
-                  <h4 class="mb-2">
+                  <h3 class="mb-2 post-title">
                     <a class="text-decoration-none" href="{{ path('post_show', {id: p.id}) }}">
                       {{ p.titre }}
                     </a>
-                  </h4>
+                  </h3>
 
                   <p class="text-muted mb-2">
                     {{ p.contenu|striptags|slice(0, 130) ~ '...' }}
@@ -70,13 +328,158 @@
               </div>
             </div>
           </div>
+
+          <div class="reaction-zone" data-zone>
+            <div class="react-bar">
+              <div class="react-emojis">
+                {% set token = csrf_token('react_post_' ~ p.id) %}
+
+                <form class="react-form" method="post" action="{{ path('post_react', {id: p.id}) }}">
+                  <input type="hidden" name="_token" value="{{ token }}">
+                  <input type="hidden" name="type" value="like">
+                  <button class="emoji-btn" type="submit" title="J'aime" data-emoji="👍">👍</button>
+                </form>
+
+                <form class="react-form" method="post" action="{{ path('post_react', {id: p.id}) }}">
+                  <input type="hidden" name="_token" value="{{ token }}">
+                  <input type="hidden" name="type" value="love">
+                  <button class="emoji-btn" type="submit" title="J'adore" data-emoji="❤️">❤️</button>
+                </form>
+
+                <form class="react-form" method="post" action="{{ path('post_react', {id: p.id}) }}">
+                  <input type="hidden" name="_token" value="{{ token }}">
+                  <input type="hidden" name="type" value="haha">
+                  <button class="emoji-btn" type="submit" title="Haha" data-emoji="😂">😂</button>
+                </form>
+
+                <form class="react-form" method="post" action="{{ path('post_react', {id: p.id}) }}">
+                  <input type="hidden" name="_token" value="{{ token }}">
+                  <input type="hidden" name="type" value="wow">
+                  <button class="emoji-btn" type="submit" title="Wow" data-emoji="😮">😮</button>
+                </form>
+
+                <form class="react-form" method="post" action="{{ path('post_react', {id: p.id}) }}">
+                  <input type="hidden" name="_token" value="{{ token }}">
+                  <input type="hidden" name="type" value="sad">
+                  <button class="emoji-btn" type="submit" title="Triste" data-emoji="😢">😢</button>
+                </form>
+
+                <form class="react-form" method="post" action="{{ path('post_react', {id: p.id}) }}">
+                  <input type="hidden" name="_token" value="{{ token }}">
+                  <input type="hidden" name="type" value="angry">
+                  <button class="emoji-btn" type="submit" title="Grr" data-emoji="😡">😡</button>
+                </form>
+              </div>
+
+              <div class="react-count">
+                <i class="bi bi-hand-thumbs-up"></i>
+                <span class="pill" data-count>{{ p.nbrReactions ?? 0 }}</span>
+                <span>réaction(s)</span>
+                <span class="mx-2 text-muted">•</span>
+                <span class="d-inline-flex align-items-center gap-2">
+                  <i class="bi bi-chat-dots"></i>
+                  <span class="pill pill-comment" data-comment-count>{{ p.nbrCommentaires ?? 0 }}</span>
+                  <span>commentaire(s)</span>
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div class="ig-comments">
+
+            <div class="d-flex justify-content-between align-items-center">
+              <div class="text-muted small">
+                <i class="bi bi-chat-dots"></i>
+                {{ p.commentaires|length }} commentaire(s)
+                {% if p.commentaires|length > 2 %}
+                  · <a class="text-decoration-none" href="{{ path('post_show', {id: p.id}) }}">Voir tous</a>
+                {% endif %}
+              </div>
+
+              <a class="btn btn-sm btn-outline-primary"
+                 href="{{ path('commentaire_add', {id: p.id}) }}">
+                <i class="bi bi-plus-circle"></i> Ajouter
+              </a>
+            </div>
+
+            {% set lastTwo = p.commentaires|sort((a,b) => b.dateCreation <=> a.dateCreation)|slice(0,2) %}
+
+            {% for c in lastTwo %}
+              <div class="ig-c-row">
+                <div class="ig-c-ava">
+                  {% if c.estAnonyme %}
+                    <i class="bi bi-incognito"></i>
+                  {% else %}
+                    U
+                  {% endif %}
+                </div>
+
+                <div class="ig-c-bubble">
+                  <div class="ig-c-meta">
+                    <strong>
+                      {% if c.estAnonyme %}Anonyme{% else %}Utilisateur{% endif %}
+                    </strong>
+                    · {{ c.dateCreation|date('d/m/Y H:i') }}
+
+                    {% set badge =
+                      c.parametresConfidentialite == 'PRIVE' ? 'danger' :
+                      (c.parametresConfidentialite == 'AMIS' ? 'info' : 'success')
+                    %}
+                    <span class="badge bg-{{ badge }} ms-2" style="font-size:.7rem;border-radius:999px;">
+                      {{ c.parametresConfidentialite }}
+                    </span>
+                  </div>
+
+                  <div>{{ c.contenu }}</div>
+                </div>
+              </div>
+            {% else %}
+              <div class="text-muted small mt-2">Aucun commentaire pour le moment.</div>
+            {% endfor %}
+
+            {# ✅ Erreur du post courant (clé string) #}
+            {% set postKey = p.id ~ '' %}
+            {% set errMsg = commentErrors[postKey] is defined ? commentErrors[postKey] : null %}
+
+            <div class="ig-addbar">
+              <div class="ig-c-ava" style="width:32px;height:32px;flex:0 0 32px;">U</div>
+
+              <form id="comment-form-{{ p.id }}"
+                    class="comment-inline-form w-100 d-flex gap-2"
+                    method="post"
+                    action="{{ path('commentaire_add_inline', {id: p.id}) }}">
+
+                <input type="hidden" name="_token" value="{{ csrf_token('add_comment_' ~ p.id) }}">
+
+                <div class="w-100">
+                  <input class="form-control form-control-sm {{ errMsg ? 'is-invalid' : '' }}"
+                         name="contenu"
+                         placeholder="Ajouter un commentaire…">
+
+                  {# ✅ Erreur PHP affichée sous l’input du BON POST #}
+                  {% if errMsg %}
+                    <div class="invalid-feedback d-block">
+                      {{ errMsg }}
+                    </div>
+                  {% endif %}
+                </div>
+
+                <button class="btn btn-sm btn-primary rounded-pill" type="submit">
+                  Publier
+                </button>
+              </form>
+            </div>
+
+          </div>
+
         {% else %}
           <div class="alert alert-info">Aucun post pour le moment.</div>
         {% endfor %}
+
       </div>
 
       <div class="col-lg-4">
-        <div class="card border-0 shadow-sm mb-4">
+        <div class="card border-0 shadow-sm mb-4 post-card">
           <div class="card-body">
             <h5 class="mb-3">Recent post</h5>
             {% for rp in recentPosts %}
@@ -112,4 +515,78 @@
 
   </div>
 </section>
+
+<script>
+(function () {
+
+  function burst(zone, emoji, count) {
+    const baseX = Math.random() * 70 + 15;
+
+    for (let i = 0; i < count; i++) {
+      const el = document.createElement("span");
+      el.className = "reaction-float";
+      el.textContent = emoji;
+
+      const dx  = (Math.random() * 80 - 40).toFixed(0) + "px";
+      const size = (Math.random() * 10 + 18).toFixed(0) + "px";
+      const dur  = (Math.random() * 500 + 700).toFixed(0) + "ms";
+
+      el.style.setProperty("--dx", dx);
+      el.style.setProperty("--size", size);
+      el.style.setProperty("--dur", dur);
+      el.style.setProperty("--x", (baseX + (Math.random() * 10 - 5)) + "%");
+
+      zone.appendChild(el);
+      setTimeout(() => el.remove(), 1400);
+    }
+  }
+
+  // ✅ submit AJAX pour réactions (inchangé)
+  document.addEventListener("submit", async function (e) {
+    const form = e.target.closest(".react-form");
+    if (!form) return;
+
+    e.preventDefault();
+
+    const zone = form.closest("[data-zone]");
+    const btn  = form.querySelector(".emoji-btn");
+    const emoji = btn?.dataset.emoji || btn?.textContent?.trim() || "👍";
+
+    burst(zone, emoji, emoji === "❤️" ? 14 : 10);
+
+    try {
+      const res = await fetch(form.action, {
+        method: "POST",
+        body: new FormData(form),
+        headers: { "X-Requested-With": "XMLHttpRequest" }
+      });
+
+      const data = await res.json();
+
+      if (data && data.ok) {
+        const countEl = zone.querySelector("[data-count]");
+        if (countEl) countEl.textContent = data.nbrReactions;
+      }
+    } catch (err) {
+      console.error("React AJAX error:", err);
+    }
+  });
+
+})();
+
+(function () {
+  const input = document.getElementById('postSearch');
+  if (!input) return;
+
+  let t = null;
+  input.addEventListener('input', () => {
+    clearTimeout(t);
+    t = setTimeout(() => {
+      input.closest('form').submit();
+    }, 350);
+  });
+})();
+</script>
+
+
 {% endblock %}

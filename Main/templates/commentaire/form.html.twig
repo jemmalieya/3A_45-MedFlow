@@ -1,0 +1,63 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Commentaire{% endblock %}
+
+{% block body %}
+<section class="container" style="padding-top:120px; max-width: 800px;">
+  <div class="card shadow-sm border-0">
+    <div class="card-body p-4">
+      <h4 class="mb-3">
+        {{ mode == 'add' ? 'Ajouter un commentaire' : 'Modifier le commentaire' }}
+      </h4>
+
+      {# ❌ désactiver validation HTML5 #}
+      {{ form_start(form, { attr: { novalidate: 'novalidate' } }) }}
+
+        <div class="mb-3">
+          {# ✅ Champ contenu – PHP ONLY #}
+          {{ form_widget(form.contenu, {
+            attr: {
+              class: 'form-control ' ~ (form.contenu.vars.errors|length > 0 ? 'is-invalid' : ''),
+              placeholder: 'Écrire un commentaire...',
+              required: false
+            }
+          }) }}
+
+          {% if form.contenu.vars.errors|length > 0 %}
+            <div class="invalid-feedback d-block">
+              {{ form_errors(form.contenu) }}
+            </div>
+          {% endif %}
+        </div>
+
+        <div class="d-flex gap-3 align-items-center mb-3">
+          <div class="form-check">
+            {{ form_widget(form.est_anonyme, {
+              attr: { class: 'form-check-input', required: false }
+            }) }}
+            {{ form_label(form.est_anonyme, null, {
+              label_attr: { class: 'form-check-label' }
+            }) }}
+          </div>
+
+          <div style="min-width: 220px;">
+            {{ form_widget(form.parametres_confidentialite, {
+              attr: { class: 'form-select', required: false }
+            }) }}
+          </div>
+        </div>
+
+        <div class="d-flex justify-content-end gap-2">
+          <a class="btn btn-light" href="{{ path('post_show', {id: post.id}) }}">
+            Annuler
+          </a>
+          <button class="btn btn-primary">
+            {{ mode == 'add' ? 'Publier' : 'Enregistrer' }}
+          </button>
+        </div>
+
+      {{ form_end(form) }}
+    </div>
+  </div>
+</section>
+{% endblock %}

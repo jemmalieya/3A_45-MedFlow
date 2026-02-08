@@ -37,12 +37,19 @@ class Post
     private ?string $contenu = null;
 
     #[ORM\Column(length: 255)]
-    #[Assert\NotBlank(message: "La localisation est obligatoire.")]
-    #[Assert\Length(
-        max: 80,
-        maxMessage: "La localisation ne doit pas dépasser {{ limit }} caractères."
-    )]
-    private ?string $localisation = null;
+#[Assert\NotBlank(message: "La localisation est obligatoire.")]
+#[Assert\Length(
+    min: 3,
+    max: 80,
+    minMessage: "La localisation doit contenir au moins {{ limit }} caractères.",
+    maxMessage: "La localisation ne doit pas dépasser {{ limit }} caractères."
+)]
+#[Assert\Regex(
+    pattern: "/^[\p{L}0-9\s,'-]+$/u",
+    message: "La localisation contient des caractères invalides."
+)]
+private ?string $localisation = null;
+
 
     #[ORM\Column(length: 255)]
     private ?string $img_post = null;
@@ -87,8 +94,8 @@ class Post
      #[ORM\Column(length: 255)]
     #[Assert\NotBlank(message: "L'humeur' est obligatoire.")]
     #[Assert\Choice(
-        choices: ["Heureux ","Stressé ","Motivé ","Calme ","Confiant ","Fatigué ","Triste ","En colère "],
-        message: "Catégorie invalide."
+        choices: ["Heureux","Stressé","Motivé","Calme","Confiant","Fatigué","Triste","En colère","inquiet"],
+        message: "humeur invalide."
     )]
     private ?string $humeur= null;
 
@@ -308,4 +315,9 @@ class Post
         }
         return $this;
     }
+  public function updateNbrCommentaires(): self
+{
+    $this->nbr_commentaires = $this->commentaires->count();
+    return $this;
+}
 }

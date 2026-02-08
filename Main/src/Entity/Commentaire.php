@@ -48,11 +48,12 @@ class Commentaire
         return $this->contenu;
     }
 
-    public function setContenu(string $contenu): static
-    {
-        $this->contenu = $contenu;
-        return $this;
-    }
+   public function setContenu(?string $contenu): self
+{
+    $this->contenu = $contenu ?? '';
+    return $this;
+}
+
 
     public function getDateCreation(): ?\DateTimeImmutable
     {

@@ -162,9 +162,10 @@
               <a href="{{ path('post_index') }}" class="btn btn-outline-secondary px-4">
                 Annuler
               </a>
-              <button class="btn btn-primary px-4">
-                Publier
-              </button>
+             <button type="submit" class="btn btn-primary px-4">
+  Publier
+</button>
+
             </div>
 
             {{ form_end(form) }}
@@ -184,8 +185,24 @@
                 Aucune image
               </div>
             </div>
+            <div class="mt-3" id="postPreviewDetails" style="display:none;">
+  <span class="badge bg-primary mb-2 d-inline-block" id="pvCategorie"></span>
+
+  <h6 class="fw-bold mb-1" id="pvTitre"></h6>
+
+  <p class="text-muted mb-2" style="font-size:0.9rem;" id="pvContenu"></p>
+
+  <div class="d-flex flex-wrap gap-2 mb-2">
+    <span class="badge bg-light text-dark border" id="pvHumeur"></span>
+    <span class="badge bg-light text-dark border" id="pvLocalisation"></span>
+  </div>
+
+  <div class="d-flex flex-wrap gap-2" id="pvHashtags"></div>
+</div>
           </div>
         </div>
+        
+
 
         <div class="alert alert-info border-0 shadow-sm mt-4">
           <div class="fw-semibold mb-1">Conseil</div>
@@ -208,4 +225,133 @@
   .btn { border-radius: 10px; }
   .form-control, .form-select { border-radius: 10px; }
 </style>
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const inputId = '{{ form.img_post.vars.id }}';
+    const fileInput = document.getElementById(inputId);
+
+    const img = document.getElementById('imgPreview');
+    const placeholder = document.getElementById('imgPlaceholder');
+
+    if (!fileInput || !img || !placeholder) return;
+
+    fileInput.addEventListener('change', (e) => {
+      const file = e.target.files && e.target.files[0];
+
+      if (!file) {
+        img.style.display = 'none';
+        img.removeAttribute('src');
+        placeholder.style.display = 'flex';
+        return;
+      }
+
+      // sécurité: preview seulement pour images
+      if (!file.type.startsWith('image/')) {
+        img.style.display = 'none';
+        img.removeAttribute('src');
+        placeholder.textContent = 'Fichier non image';
+        placeholder.style.display = 'flex';
+        fileInput.value = '';
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        img.src = ev.target.result;
+        img.style.display = 'block';
+        placeholder.style.display = 'none';
+      };
+      reader.readAsDataURL(file);
+    });
+  });
+document.addEventListener('DOMContentLoaded', () => {
+
+  const fields = {
+    titre: document.getElementById('{{ form.titre.vars.id }}'),
+    contenu: document.getElementById('{{ form.contenu.vars.id }}'),
+    categorie: document.getElementById('{{ form.categorie.vars.id }}'),
+    humeur: document.getElementById('{{ form.humeur.vars.id }}'),
+    localisation: document.getElementById('{{ form.localisation.vars.id }}'),
+    hashtags: document.getElementById('{{ form.hashtags.vars.id }}'),
+  };
+
+  const preview = {
+    box: document.getElementById('postPreviewDetails'),
+    titre: document.getElementById('pvTitre'),
+    contenu: document.getElementById('pvContenu'),
+    categorie: document.getElementById('pvCategorie'),
+    humeur: document.getElementById('pvHumeur'),
+    localisation: document.getElementById('pvLocalisation'),
+    hashtags: document.getElementById('pvHashtags'),
+  };
+
+  const updatePreview = () => {
+    let hasContent = false;
+
+    // Titre
+    if (fields.titre?.value.trim()) {
+      preview.titre.textContent = fields.titre.value;
+      hasContent = true;
+    }
+
+    // Contenu (extrait)
+    if (fields.contenu?.value.trim()) {
+      const text = fields.contenu.value.trim();
+      preview.contenu.textContent =
+        text.length > 100 ? text.substring(0, 100) + '…' : text;
+      hasContent = true;
+    }
+
+    // Catégorie
+    if (fields.categorie?.value) {
+      preview.categorie.textContent =
+        fields.categorie.selectedOptions[0].text;
+      hasContent = true;
+    }
+
+    // Humeur
+    if (fields.humeur?.value) {
+      preview.humeur.textContent = '😊 ' + fields.humeur.selectedOptions[0].text;
+      hasContent = true;
+    }
+
+    // Localisation
+    if (fields.localisation?.value.trim()) {
+      preview.localisation.textContent = '📍 ' + fields.localisation.value;
+      hasContent = true;
+    }
+
+    // Hashtags
+    preview.hashtags.innerHTML = '';
+    if (fields.hashtags?.value.trim()) {
+      const tags = fields.hashtags.value
+        .split(/[\s,]+/)
+        .filter(Boolean)
+        .slice(0, 6);
+
+      tags.forEach(tag => {
+        const span = document.createElement('span');
+        span.className = 'badge bg-light text-dark border';
+        span.textContent = tag.startsWith('#') ? tag : '#' + tag;
+        preview.hashtags.appendChild(span);
+      });
+
+      hasContent = true;
+    }
+
+    preview.box.style.display = hasContent ? 'block' : 'none';
+  };
+
+  Object.values(fields).forEach(field => {
+    if (field) {
+      field.addEventListener('input', updatePreview);
+      field.addEventListener('change', updatePreview);
+    }
+  });
+
+  updatePreview();
+});
+</script>
+
+
 {% endblock %}
