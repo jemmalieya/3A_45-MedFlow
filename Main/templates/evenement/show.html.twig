@@ -4,6 +4,9 @@
 {% block title %}Détails Événements - MedFlow{% endblock %}
 
 {% block stylesheets %}
+
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   {{ parent() }}
   <link rel="stylesheet" href="{{ asset('assets/css/evenement-show.css') }}">
 {% endblock %}
@@ -214,6 +217,17 @@
                     <div class="text-muted small">{{ evenement.adresseEvent }}</div>
                   </div>
                 </div>
+<section id="map-section" class="mt-4">
+  <h5 class="mb-2">Localisation</h5>
+
+  <div id="map"
+       style="height: 360px; border-radius: 16px; overflow: hidden;"
+       data-nomlieu="{{ evenement.nomLieuEvent|e('html_attr') }}"
+       data-adresse="{{ evenement.adresseEvent|e('html_attr') }}"
+       data-ville="{{ evenement.villeEvent|e('html_attr') }}">
+  </div>
+</section>
+
 
                 <div class="d-flex align-items-start gap-2 mb-3">
                   <i class="bi bi-envelope-paper me-1" style="color:#0097B2; font-size:1.2rem;"></i>
@@ -245,6 +259,10 @@
               </div>
             </div>
 
+            <a href="#map-section" class="btn btn-outline-primary mt-3">
+  <i class="bi bi-geo-alt"></i> Voir la localisation
+</a>
+
           </div>
 
         </div>
@@ -256,6 +274,11 @@
 {% endblock %}
 
 {% block javascripts %}
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="{{ asset('assets/js/evenement-map.js') }}"></script>
+
+
   {{ parent() }}
   form.addEventListener("submit", function(event) {
     event.preventDefault(); // Prevent default form submission
