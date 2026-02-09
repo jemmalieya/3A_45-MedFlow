@@ -24,9 +24,14 @@ class TwilioSmsService
 
     public function send(string $to, string $message): void
     {
-        $this->client->messages->create($to, [
-            'from' => $this->from,
-            'body' => $message,
-        ]);
+        try {
+            $this->client->messages->create($to, [
+                'from' => $this->from,
+                'body' => $message,
+            ]);
+        } catch (\Exception $e) {
+            // Log or handle the error
+            throw new \RuntimeException('Erreur Twilio: ' . $e->getMessage());
+        }
     }
 }

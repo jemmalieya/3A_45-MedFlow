@@ -59,7 +59,14 @@
                                     <tr>
                                         <td class="fw-bold">#{{ commande.idCommande }}</td>
                                         <td>{{ commande.dateCreationCommande|date('d/m/Y H:i') }}</td>
-                                        <td>User #{{ commande.idUser }}</td>
+                                        <td>
+                                            {% if commande.user %}
+                                                <div class="fw-bold">{{ commande.user.nom }} {{ commande.user.prenom }}</div>
+                                                <small class="text-muted">{{ commande.user.emailUser }}</small>
+                                            {% else %}
+                                                <span class="text-muted">Utilisateur supprimé</span>
+                                            {% endif %}
+                                        </td>
                                         <td class="fw-bold text-success">{{ commande.montantTotal|number_format(2, '.', '') }} Dt</td>
                                         <td>
                                             {% if commande.statutCommande == 'En attente' %}
@@ -77,15 +84,16 @@
                                         <td>
                                             <span class="badge bg-secondary">{{ commande.ligneCommandes|length }} produit(s)</span>
                                         </td>
-<td class="text-end">
-    <a href="{{ path('admin_commande_show', {id: commande.idCommande}) }}" class="btn btn-sm btn-primary">
-        <i class="bi bi-eye"></i> Détails
-    </a>
-    <a href="{{ path('commande_facture_pdf', {id: commande.idCommande}) }}" class="btn btn-sm btn-warning">
-        <i class="bi bi-download"></i> Télécharger la facture
-    </a>
-</td>
-
+                                        <td class="text-end">
+                                            <a href="{{ path('admin_commande_show', {id: commande.idCommande}) }}" 
+                                               class="btn btn-sm btn-primary">
+                                                <i class="bi bi-eye"></i> Détails
+                                            </a>
+                                            <a href="{{ path('admin_commande_facture_pdf', {id: commande.idCommande}) }}" 
+                                               class="btn btn-sm btn-warning">
+                                                <i class="bi bi-download"></i> Facture
+                                            </a>
+                                        </td>
                                     </tr>
                                     {% endfor %}
                                 {% endif %}
@@ -137,28 +145,59 @@
                     {# Informations générales #}
                     <div class="row mb-4">
                         <div class="col-md-4">
-                            <h6 class="text-muted">Client</h6>
-                            <p class="fw-bold">User #{{ commande.idUser }}</p>
+                            <h6 class="text-muted mb-3"><i class="bi bi-person"></i> Informations client</h6>
+                            {% if commande.user %}
+                                <p class="mb-1">
+                                    <strong>Nom :</strong> {{ commande.user.nom }} {{ commande.user.prenom }}
+                                </p>
+                                <p class="mb-1">
+                                    <strong>CIN :</strong> {{ commande.user.cin }}
+                                </p>
+                                <p class="mb-1">
+                                    <strong>Email :</strong> {{ commande.user.emailUser }}
+                                </p>
+                                <p class="mb-1">
+                                    <strong>Téléphone :</strong> {{ commande.user.telephoneUser }}
+                                </p>
+                                {% if commande.user.adresseUser %}
+                                    <p class="mb-1">
+                                        <strong>Adresse :</strong> {{ commande.user.adresseUser }}
+                                    </p>
+                                {% endif %}
+                            {% else %}
+                                <p class="text-muted">Utilisateur supprimé</p>
+                            {% endif %}
                         </div>
                         <div class="col-md-4">
-                            <h6 class="text-muted">Montant total</h6>
-                            <p class="fw-bold text-success fs-4">{{ commande.montantTotal|number_format(2, '.', '') }} Dt</p>
+                            <h6 class="text-muted mb-3"><i class="bi bi-cash-stack"></i> Montant</h6>
+                            <p class="fw-bold text-success fs-4 mb-0">{{ commande.montantTotal|number_format(2, '.', '') }} Dt</p>
+                            {% if commande.paidAt %}
+                                <small class="text-muted">
+                                    <i class="bi bi-check-circle-fill text-success"></i> 
+                                    Payé le {{ commande.paidAt|date('d/m/Y à H:i') }}
+                                </small>
+                            {% endif %}
                         </div>
                         <div class="col-md-4">
-                            <h6 class="text-muted">Statut actuel</h6>
+                            <h6 class="text-muted mb-3"><i class="bi bi-info-circle"></i> Statut</h6>
                             <p>
                                 {% if commande.statutCommande == 'En attente' %}
-                                    <span class="badge bg-warning text-dark fs-6">{{ commande.statutCommande }}</span>
+                                    <span class="badge bg-warning text-dark fs-6">⏳ {{ commande.statutCommande }}</span>
                                 {% elseif commande.statutCommande == 'En cours' %}
-                                    <span class="badge bg-info fs-6">{{ commande.statutCommande }}</span>
+                                    <span class="badge bg-info fs-6">🔄 {{ commande.statutCommande }}</span>
                                 {% elseif commande.statutCommande == 'Expédiée' %}
-                                    <span class="badge bg-primary fs-6">{{ commande.statutCommande }}</span>
+                                    <span class="badge bg-primary fs-6">📦 {{ commande.statutCommande }}</span>
                                 {% elseif commande.statutCommande == 'Livrée' %}
-                                    <span class="badge bg-success fs-6">{{ commande.statutCommande }}</span>
+                                    <span class="badge bg-success fs-6">✅ {{ commande.statutCommande }}</span>
                                 {% else %}
-                                    <span class="badge bg-danger fs-6">{{ commande.statutCommande }}</span>
+                                    <span class="badge bg-danger fs-6">❌ {{ commande.statutCommande }}</span>
                                 {% endif %}
                             </p>
+                            {% if commande.stripeSessionId %}
+                                <small class="text-muted d-block mt-2">
+                                    <i class="bi bi-credit-card"></i> Paiement Stripe
+                                </small>
+                            {% endif %}
                         </div>
                     </div>
 
@@ -181,10 +220,12 @@
                                 <tr>
                                     <td>
                                         <div class="d-flex align-items-center">
-                                            <img src="{{ ligne.produit.imageProduit }}" 
-                                                 alt="{{ ligne.produit.nomProduit }}"
-                                                 style="width: 50px; height: 50px; object-fit: cover; border-radius: 8px;"
-                                                 class="me-3">
+                                            {% if ligne.produit.imageProduit %}
+                                                <img src="{{ ligne.produit.imageProduit }}" 
+                                                     alt="{{ ligne.produit.nomProduit }}"
+                                                     style="width: 50px; height: 50px; object-fit: cover; border-radius: 8px;"
+                                                     class="me-3">
+                                            {% endif %}
                                             <div>
                                                 <div class="fw-bold">{{ ligne.produit.nomProduit }}</div>
                                                 <small class="text-muted">{{ ligne.produit.categorieProduit }}</small>
@@ -208,6 +249,31 @@
                         </table>
                     </div>
 
+                </div>
+            </div>
+
+            {# Actions rapides #}
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0"><i class="bi bi-lightning"></i> Actions rapides</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex gap-2 flex-wrap">
+                        <a href="{{ path('admin_commande_facture_pdf', {id: commande.idCommande}) }}" 
+                           class="btn btn-warning">
+                            <i class="bi bi-download"></i> Télécharger la facture
+                        </a>
+                        {% if commande.user and commande.user.emailUser %}
+                            <a href="mailto:{{ commande.user.emailUser }}" class="btn btn-secondary">
+                                <i class="bi bi-envelope"></i> Contacter par email
+                            </a>
+                        {% endif %}
+                        {% if commande.user and commande.user.telephoneUser %}
+                            <a href="tel:{{ commande.user.telephoneUser }}" class="btn btn-success">
+                                <i class="bi bi-telephone"></i> Appeler le client
+                            </a>
+                        {% endif %}
+                    </div>
                 </div>
             </div>
 
@@ -239,7 +305,7 @@
                 </div>
             </div>
 
-            {# Supprimer la commande - SANS CSRF #}
+            {# Supprimer la commande #}
             <div class="card shadow-sm border-danger">
                 <div class="card-header bg-danger text-white">
                     <h5 class="mb-0"><i class="bi bi-trash"></i> Zone dangereuse</h5>
@@ -247,7 +313,7 @@
                 <div class="card-body">
                     <p class="text-muted">Une fois supprimée, cette commande ne pourra pas être récupérée.</p>
                     <form method="post" action="{{ path('admin_commande_delete', {id: commande.idCommande}) }}"
-                          onsubmit="return confirm('Êtes-vous sûr de vouloir supprimer cette commande ?');">
+                          onsubmit="return confirm('Êtes-vous sûr de vouloir supprimer cette commande #{{ commande.idCommande }} ?');">
                         <button type="submit" class="btn btn-danger">
                             <i class="bi bi-trash"></i> Supprimer cette commande
                         </button>
@@ -260,6 +326,7 @@
 </div>
 
 {% endif %}
+
 <style>
 .container-fluid * {
   color: #111827 !important;
@@ -267,9 +334,6 @@
 </style>
 
 {% endblock %}
-
-
-
 
 {% block stylesheets %}
   {{ parent() }}

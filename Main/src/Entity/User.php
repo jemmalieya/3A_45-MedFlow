@@ -8,7 +8,8 @@ use Symfony\Bridge\Doctrine\Validator\Constraints\UniqueEntity;
 use Symfony\Component\Security\Core\User\UserInterface;
 use Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface;
 use Symfony\Component\Validator\Constraints as Assert;
-
+use Doctrine\Common\Collections\Collection;
+use Doctrine\Common\Collections\ArrayCollection;
 
 #[UniqueEntity(fields: ['emailUser'], message: 'Cet email est déjà utilisé.')]
 #[ORM\Entity(repositoryClass: UserRepository::class)]
@@ -112,7 +113,18 @@ private ?string $googleId = null;
     #[ORM\Column(nullable: true)]
     private ?int $staffReviewedBy = null; // id admin (simple)
 
-
+    #[ORM\OneToMany(mappedBy: 'user', targetEntity: Commande::class)]
+    private Collection $commandes;
+    
+    public function __construct()
+    {
+        $this->commandes = new ArrayCollection();
+    }
+    
+    public function getCommandes(): Collection
+    {
+        return $this->commandes;
+    }
     public function getProfilePicture(): ?string
     {
         return $this->profilePicture;

@@ -15,8 +15,10 @@ class Commande
     #[ORM\Column(name: "id_commande")]
     private ?int $id_commande = null;
 
-    #[ORM\Column]
-    private ?int $id_user = null;
+    // Relation avec l'entité User (clé étrangère)
+    #[ORM\ManyToOne(targetEntity: User::class)]
+    #[ORM\JoinColumn(name: "id_user", referencedColumnName: "id", nullable: false)]
+    private ?User $user;
 
     #[ORM\Column]
     private ?\DateTimeImmutable $date_creation_commande = null;
@@ -59,14 +61,14 @@ class Commande
         return $this->id_commande;
     }
 
-    public function getIdUser(): ?int
+    public function getUser(): ?User
     {
-        return $this->id_user;
+        return $this->user;
     }
 
-    public function setIdUser(int $id_user): static
+    public function setUser(User $user): self
     {
-        $this->id_user = $id_user;
+        $this->user = $user;
         return $this;
     }
 
@@ -75,7 +77,7 @@ class Commande
         return $this->date_creation_commande;
     }
 
-    public function setDateCreationCommande(\DateTimeImmutable $date_creation_commande): static
+    public function setDateCreationCommande(\DateTimeImmutable $date_creation_commande): self
     {
         $this->date_creation_commande = $date_creation_commande;
         return $this;
@@ -86,7 +88,7 @@ class Commande
         return $this->statut_commande;
     }
 
-    public function setStatutCommande(string $statut_commande): static
+    public function setStatutCommande(string $statut_commande): self
     {
         $this->statut_commande = $statut_commande;
         return $this;
@@ -97,7 +99,7 @@ class Commande
         return $this->montant_total;
     }
 
-    public function setMontantTotal(float $montant_total): static
+    public function setMontantTotal(float $montant_total): self
     {
         $this->montant_total = $montant_total;
         return $this;
@@ -109,7 +111,7 @@ class Commande
         return $this->stripe_session_id;
     }
 
-    public function setStripeSessionId(?string $stripe_session_id): static
+    public function setStripeSessionId(?string $stripe_session_id): self
     {
         $this->stripe_session_id = $stripe_session_id;
         return $this;
@@ -120,7 +122,7 @@ class Commande
         return $this->paid_at;
     }
 
-    public function setPaidAt(?\DateTimeImmutable $paid_at): static
+    public function setPaidAt(?\DateTimeImmutable $paid_at): self
     {
         $this->paid_at = $paid_at;
         return $this;
@@ -134,7 +136,7 @@ class Commande
         return $this->ligne_commandes;
     }
 
-    public function addLigneCommande(LigneCommande $ligneCommande): static
+    public function addLigneCommande(LigneCommande $ligneCommande): self
     {
         if (!$this->ligne_commandes->contains($ligneCommande)) {
             $this->ligne_commandes->add($ligneCommande);
@@ -144,7 +146,7 @@ class Commande
         return $this;
     }
 
-    public function removeLigneCommande(LigneCommande $ligneCommande): static
+    public function removeLigneCommande(LigneCommande $ligneCommande): self
     {
         if ($this->ligne_commandes->removeElement($ligneCommande)) {
             if ($ligneCommande->getCommande() === $this) {

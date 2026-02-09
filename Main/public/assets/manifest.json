@@ -1,0 +1,12 @@
+{
+    "@symfony\/stimulus-bundle\/controllers.js": "\/assets\/@symfony\/stimulus-bundle\/controllers-9d42643c079ab11f27a3a9614f81cc2f.js",
+    "@symfony\/stimulus-bundle\/loader.js": "\/assets\/@symfony\/stimulus-bundle\/loader-5751ad1ee2975e725a94d8121d153d17.js",
+    "@symfony\/ux-turbo\/turbo_controller.js": "\/assets\/@symfony\/ux-turbo\/turbo_controller-f3040d8b6a5a81530e1ea5ec500d1142.js",
+    "@symfony\/ux-turbo\/turbo_stream_controller.js": "\/assets\/@symfony\/ux-turbo\/turbo_stream_controller-2dc2b209912de93ed8105ab931271bb3.js",
+    "app.js": "\/assets\/app-6b441ed8180f8622c4fc87c5fb1ac3d4.js",
+    "bootstrap.js": "\/assets\/bootstrap-cc5c6b37ef9048483d38378d107ab32c.js",
+    "controllers\/hello_controller.js": "\/assets\/controllers\/hello_controller-87b6385829902356204e988334af9bf5.js",
+    "styles\/app.css": "\/assets\/styles\/app-eddbbd371a8b5ef0cc1ad2cb664160ba.css",
+    "vendor\/@hotwired\/stimulus\/stimulus.index.js": "\/assets\/vendor\/@hotwired\/stimulus\/stimulus.index-4b8ccd71e6b1c4ddba22853d5a50a26c.js",
+    "vendor\/@hotwired\/turbo\/turbo.index.js": "\/assets\/vendor\/@hotwired\/turbo\/turbo.index-a53d794fa85309d61a95703410716017.js"
+}
