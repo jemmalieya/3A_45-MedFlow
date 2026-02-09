@@ -74,8 +74,14 @@ final class UserController extends AbstractController
 
     // Modifier un utilisateur (admin)
     #[Route('/admin/users/{id}/edit', name: 'admin_user_edit', methods: ['GET', 'POST'])]
-    public function edit(User $user, Request $request, EntityManagerInterface $em): Response
+    public function edit(int $id, Request $request, EntityManagerInterface $em, UserRepository $userRepo): Response
     {
+        $user = $userRepo->find($id);
+        
+        if (!$user) {
+            throw $this->createNotFoundException('Utilisateur non trouvé');
+        }
+        
         $form = $this->createForm(RegisterUserType::class, $user);
         $form->handleRequest($request);
 
@@ -94,13 +100,20 @@ final class UserController extends AbstractController
 
         return $this->render('admin/editUser.html.twig', [
             'form' => $form->createView(),
+            'user' => $user,
         ]);
     }
 
     // Supprimer un utilisateur (admin)
     #[Route('/admin/users/{id}/delete', name: 'admin_user_delete', methods: ['POST'])]
-    public function delete(User $user, Request $request, EntityManagerInterface $em): Response
+    public function delete(int $id, Request $request, EntityManagerInterface $em, UserRepository $userRepo): Response
     {
+        $user = $userRepo->find($id);
+        
+        if (!$user) {
+            throw $this->createNotFoundException('Utilisateur non trouvé');
+        }
+        
         if ($this->isCsrfTokenValid('delete'.$user->getId(), $request->request->get('_token'))) {
             $em->remove($user);
             $em->flush();
