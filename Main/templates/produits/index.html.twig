@@ -40,7 +40,7 @@
 
 <div class="container mb-5">
     
-    {# Barre de recherche et filtres - SANS FORMULAIRE pour recherche en temps réel #}
+    {# Barre de recherche et filtres #}
     <div class="search-filter-section mb-4">
         <div class="row g-3">
             {# Recherche #}
@@ -57,12 +57,20 @@
                 </div>
             </div>
 
-            {# Tri par prix #}
             <div class="col-md-3">
                 <select id="sortPrice" class="form-select">
                     <option value="">Trier par prix</option>
-                    <option value="asc">Prix croissant</option>
-                    <option value="desc">Prix décroissant</option>
+                    <option value="asc" {% if currentSort == 'asc' %}selected{% endif %}>Prix croissant</option>
+                    <option value="desc" {% if currentSort == 'desc' %}selected{% endif %}>Prix décroissant</option>
+                </select>
+            </div>
+
+            <!-- Nouveau select pour trier par stock -->
+            <div class="col-md-3">
+                <select id="sortStock" class="form-select">
+                    <option value="">Trier par stock</option>
+                    <option value="asc" {% if currentSortStock == 'asc' %}selected{% endif %}>Stock croissant</option>
+                    <option value="desc" {% if currentSortStock == 'desc' %}selected{% endif %}>Stock décroissant</option>
                 </select>
             </div>
 
@@ -100,6 +108,7 @@
                      data-nom="{{ produit.nomProduit|lower }}"
                      data-categorie="{{ produit.categorieProduit|lower }}"
                      data-prix="{{ produit.prixProduit }}"
+                     data-stock="{{ produit.quantiteProduit }}"
                      data-description="{{ produit.descriptionProduit|lower }}">
                     <div class="produit-card {% if produit.statusProduit != 'Disponible' %}unavailable{% endif %}">
                         
@@ -110,7 +119,6 @@
                             {% else %}
                                 <div class="price-badge">{{ produit.prixProduit }} DT</div>
                             {% endif %}
-                            
                             <img src="{{ produit.imageProduit }}" 
                                  class="produit-img {% if produit.statusProduit != 'Disponible' %}img-grayscale{% endif %}" 
                                  alt="{{ produit.nomProduit }}">
@@ -119,21 +127,17 @@
                         {# Body #}
                         <div class="card-body">
                             <h5 class="card-title">{{ produit.nomProduit }}</h5>
-                            
-                            <span class="card-category">
+                             <span class="card-category">
                                 <i class="bi bi-tag me-1"></i>{{ produit.categorieProduit }}
                             </span>
-
                             <div class="card-stock">
                                 <i class="bi bi-box-seam"></i>
                                 <span>{{ produit.quantiteProduit }} en stock</span>
                             </div>
-
                             <span class="status-badge {% if produit.statusProduit == 'Disponible' %}available{% else %}unavailable{% endif %}">
                                 <i class="bi bi-{% if produit.statusProduit == 'Disponible' %}check{% else %}x{% endif %}-circle"></i>
                                 {{ produit.statusProduit }}
                             </span>
-
                             {# Actions #}
                             <div class="card-actions">
                                 {% if produit.statusProduit == 'Disponible' %}

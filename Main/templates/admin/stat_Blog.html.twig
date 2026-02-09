@@ -1,0 +1,141 @@
+{% extends 'base_dashboard.html.twig' %}
+{% block title %}Statistiques Blog{% endblock %}
+
+{% block body %}
+<div class="container-fluid py-4">
+
+  <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+    <div>
+      <h1 class="h3 mb-0">Statistiques Blog</h1>
+      <div class="text-muted small">
+        Période : {{ from|date('d/m/Y') }} → {{ to|date('d/m/Y') }} ({{ days }} jours)
+      </div>
+    </div>
+
+    <div class="d-flex gap-2">
+      <a class="btn btn-outline-primary {{ days == 7 ? 'active' : '' }}" href="{{ path('admin_blog_stats', {days: 7}) }}">7 jours</a>
+      <a class="btn btn-outline-primary {{ days == 14 ? 'active' : '' }}" href="{{ path('admin_blog_stats', {days: 14}) }}">14 jours</a>
+      <a class="btn btn-outline-primary {{ days == 30 ? 'active' : '' }}" href="{{ path('admin_blog_stats', {days: 30}) }}">30 jours</a>
+    </div>
+  </div>
+
+  <div class="row g-3 mb-4">
+    <div class="col-md-3">
+      <div class="card shadow-sm border-0"><div class="card-body">
+        <div class="text-xs text-uppercase text-muted">Total posts</div>
+        <div class="h4 mb-0">{{ kpis.total ?? 0 }}</div>
+      </div></div>
+    </div>
+    <div class="col-md-3">
+      <div class="card shadow-sm border-0"><div class="card-body">
+        <div class="text-xs text-uppercase text-muted">Réactions</div>
+        <div class="h4 mb-0">{{ kpis.reactions ?? 0 }}</div>
+        <div class="text-muted small">Moyenne: {{ kpis.avg_reactions ?? 0 }} / post</div>
+      </div></div>
+    </div>
+    <div class="col-md-3">
+      <div class="card shadow-sm border-0"><div class="card-body">
+        <div class="text-xs text-uppercase text-muted">Commentaires</div>
+        <div class="h4 mb-0">{{ kpis.comments ?? 0 }}</div>
+      </div></div>
+    </div>
+    <div class="col-md-3">
+      <div class="card shadow-sm border-0"><div class="card-body">
+        <div class="text-xs text-uppercase text-muted">Taux PUBLIC</div>
+        <div class="h4 mb-0">{{ kpis.public_rate ?? 0 }}%</div>
+      </div></div>
+    </div>
+  </div>
+
+  <div class="row g-3">
+    <div class="col-lg-8">
+      <div class="card shadow-sm border-0"><div class="card-body">
+        <div class="fw-semibold mb-2">Évolution quotidienne</div>
+        <canvas id="blogLine" height="110"></canvas>
+      </div></div>
+    </div>
+
+    <div class="col-lg-4">
+      <div class="card shadow-sm border-0"><div class="card-body">
+        <div class="fw-semibold mb-2">Catégories</div>
+        <canvas id="catBar" height="160"></canvas>
+      </div></div>
+    </div>
+
+    <div class="col-lg-4">
+      <div class="card shadow-sm border-0"><div class="card-body">
+        <div class="fw-semibold mb-2">Humeurs</div>
+        <canvas id="moodDonut" height="160"></canvas>
+      </div></div>
+    </div>
+
+    <div class="col-lg-8">
+      <div class="card shadow-sm border-0"><div class="card-body">
+        <div class="fw-semibold mb-2">Top posts (réactions)</div>
+        <div class="table-responsive">
+          <table class="table align-middle mb-0">
+            <thead class="table-light">
+              <tr>
+                <th>Titre</th>
+                <th>Catégorie</th>
+                <th class="text-end">Réactions</th>
+                <th class="text-end">Commentaires</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for p in topPosts %}
+                <tr>
+                  <td class="fw-semibold">{{ p.titre }}</td>
+                  <td><span class="badge bg-primary">{{ p.categorie ?: '—' }}</span></td>
+                  <td class="text-end">{{ p.nbrReactions ?? 0 }}</td>
+                  <td class="text-end">{{ p.nbrCommentaires ?? 0 }}</td>
+                </tr>
+              {% else %}
+                <tr><td colspan="4" class="text-muted">Aucun post sur la période.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div></div>
+    </div>
+  </div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+  const byDay = {{ byDay|json_encode|raw }};
+  const labels = byDay.map(r => r.day);
+  const posts = byDay.map(r => Number(r.total || 0));
+  const reacts = byDay.map(r => Number(r.reactions || 0));
+  const comments = byDay.map(r => Number(r.comments || 0));
+
+  new Chart(document.getElementById('blogLine'), {
+    type: 'line',
+    data: { labels, datasets: [
+      { label: 'Posts', data: posts, tension: 0.35 },
+      { label: 'Réactions', data: reacts, tension: 0.35 },
+      { label: 'Commentaires', data: comments, tension: 0.35 },
+    ]},
+    options: { responsive: true }
+  });
+
+  const byCat = {{ byCategorie|json_encode|raw }};
+  new Chart(document.getElementById('catBar'), {
+    type: 'bar',
+    data: { labels: byCat.map(r => r.label), datasets: [
+      { label: 'Posts', data: byCat.map(r => Number(r.total || 0)) }
+    ]},
+    options: { responsive: true, plugins: { legend: { display:false } } }
+  });
+
+  const byMood = {{ byHumeur|json_encode|raw }};
+  new Chart(document.getElementById('moodDonut'), {
+    type: 'doughnut',
+    data: { labels: byMood.map(r => r.label), datasets: [
+      { data: byMood.map(r => Number(r.total || 0)) }
+    ]},
+    options: { responsive: true, plugins: { legend: { position:'bottom' } } }
+  });
+</script>
+{% endblock %}

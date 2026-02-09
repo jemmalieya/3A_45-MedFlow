@@ -451,6 +451,7 @@
         const formEl = document.getElementById('consultationForm');
         if (formEl) {
             formEl.addEventListener('submit', function() {
+                reindexPrescriptionRows();
                 if (container) container.querySelectorAll('.prescription-row').forEach(function(row) {
                     validatePrescriptionRow(row);
                 });

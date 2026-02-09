@@ -5,6 +5,7 @@ namespace App\Controller;
 use App\Entity\User;
 use App\Form\RegisterUserType;
 use App\Repository\UserRepository;
+use App\Service\UserService;  // Importation du service UserService
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -13,9 +14,18 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use Symfony\Component\Routing\Annotation\Route;
 
+
 class RegistrationController extends AbstractController
 {
-    #[Route('/register', name: 'app_register')]
+    private $userService;
+
+    // Injection du service UserService dans le constructeur
+    public function __construct(UserService $userService)
+    {
+        $this->userService = $userService;
+    }
+
+#[Route('/register', name: 'app_register')]
     public function register(
         Request $request,
         EntityManagerInterface $em,
@@ -27,8 +37,6 @@ class RegistrationController extends AbstractController
         $session->start();
 
         $google = $session->get('google_oauth');
-
-        // ✅ 1) Si Google a déjà donné un email, on utilise soit un user existant, soit new user
         if ($google && !empty($google['email'])) {
             $user = $userRepo->findOneBy(['emailUser' => $google['email']]) ?? new User();
 
@@ -61,82 +69,76 @@ class RegistrationController extends AbstractController
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
+            $cin = $form->get('cin')->getData();
+        $telephoneUser = $form->get('telephoneUser')->getData();
+        $adresseUser = $form->get('adresseUser')->getData();
+        $dateNaissance = $form->get('dateNaissance')->getData();
+        $user->setDateNaissance($dateNaissance);
 
-            // ✅ 2) dateNaissance est mapped=false dans RegisterUserType => on la set ici
-            $dateNaissance = $form->get('dateNaissance')->getData();
-            $user->setDateNaissance($dateNaissance);
 
-            // ✅ 3) Password
+            if (!$telephoneUser) {
+                $this->addFlash('error', 'Le téléphone est requis.');
+                return $this->redirectToRoute('app_register');
+            }
+
+
+            if (!$cin || !$telephoneUser || !$dateNaissance) {
+            $this->addFlash('error', 'Le CIN, le téléphone et la date de naissance sont requis.');
+            return $this->redirectToRoute('app_register');
+        }
+            // Récupérer et hacher le mot de passe
             $plainPassword = $form->get('plainPassword')->getData();
             if ($plainPassword) {
                 $user->setPassword($hasher->hashPassword($user, $plainPassword));
             }
 
-            // ✅ 4) Logique métier (garde ta logique actuelle)
+            // Définir rôle et token si nécessaire
             if ($isNew) {
                 $user->setRoleSysteme('PATIENT');
                 $user->setIsVerified(false);
-            } else {
-                // si user existe déjà, on ne reset pas verified si déjà true
-                // mais si tu veux FORCER re-verification même pour existant, mets false ici.
-                if ($user->IsVerified() === null) {
-                    $user->setIsVerified(false);
-                }
+            }   // Setting token expiration (24 hours)
+            $user->setTokenExpiresAt((new \DateTime())->modify('+24 hours'));
+
+
+           if ($isNew || $user->IsVerified() === false) {
+            $token = bin2hex(random_bytes(32)); // Generate random token
+            $user->setVerificationToken($token);  // Set the token
+            $user->setTokenExpiresAt((new \DateTime())->modify('+24 hours')); // Set token expiration
+        }
+
+            // Utiliser UserService pour créer l'utilisateur
+            $this->userService->saveUser($user);
+
+            // Envoi d'email de vérification via Brevo
+            try {
+                $brevoResponse = $this->sendVerificationEmail($user);
+                $logger->info('Brevo email sent', [
+                    'user' => $user->getEmailUser(),
+                    'response' => $brevoResponse,
+                ]);
+                $this->addFlash('success', 'Compte créé ! Vérifiez votre email pour activer votre compte.');
+            } catch (\Throwable $e) {
+                $logger->error('Brevo email failed', [
+                    'user' => $user->getEmailUser(),
+                    'error' => $e->getMessage(),
+                ]);
+                $this->addFlash('warning', "Compte créé, mais l'email de vérification n'a pas pu être envoyé.");
             }
 
-            // ✅ 5) Token + expiration (si nouveau ou pas encore vérifié)
-            if ($isNew || $user->IsVerified() === false) {
-                $token = bin2hex(random_bytes(32));
-                $user->setVerificationToken($token);
-                $user->setTokenExpiresAt((new \DateTime())->modify('+24 hours'));
-            }
-
-            // ✅ 6) Save
-            $em->persist($user);
-            $em->flush();
-
-            // ✅ 7) Envoi email Brevo (si pas vérifié)
-            if ($user->IsVerified() === false) {
-                try {
-                    $brevoResponse = $this->sendVerificationEmail($user);
-                    $logger->info('Brevo email sent', [
-                        'user' => $user->getEmailUser(),
-                        'response' => $brevoResponse,
-                    ]);
-
-                    $this->addFlash('success', 'Compte créé ! Vérifiez votre email pour activer votre compte.');
-                } catch (\Throwable $e) {
-                    $logger->error('Brevo email failed', [
-                        'user' => $user->getEmailUser(),
-                        'error' => $e->getMessage(),
-                    ]);
-
-                    $this->addFlash('warning', "Compte créé, mais l'email de vérification n'a pas pu être envoyé. Réessayez plus tard.");
-                }
-            } else {
-                $this->addFlash('success', 'Profil mis à jour.');
-            }
-
-            // ✅ 8) Clear google session
             $session->remove('google_oauth');
-
             return $this->redirectToRoute('app_login');
         }
 
         return $this->render('registration/index.html.twig', [
-            'title' => 'Inscription',
             'form' => $form->createView(),
         ]);
     }
 
-    /**
-     * @return array<string, mixed> Brevo JSON response decoded
-     */
+
     private function sendVerificationEmail(User $user): array
     {
         $apiKey = $_ENV['BREVO_API_KEY'] ?? null;
         $appUrl = $_ENV['APP_URL'] ?? 'http://127.0.0.1:8000';
-
         $senderEmail = $_ENV['BREVO_SENDER_EMAIL'] ?? null;
         $senderName  = $_ENV['BREVO_SENDER_NAME'] ?? 'MedFlow';
 
@@ -153,8 +155,8 @@ class RegistrationController extends AbstractController
             ],
             'to' => [[
                 'email' => $user->getEmailUser(),
-                'name' => trim(($user->getPrenom() ?? '') . ' ' . ($user->getNom() ?? '')),
-            ]],
+                'name' => trim(($user->getPrenom() ?? '') . ' ' . ($user->getNom() ?? ''))],
+            ],
             'subject' => 'Activez votre compte MedFlow',
             'htmlContent' => "
                 <div style='font-family:Arial,sans-serif'>
@@ -200,4 +202,5 @@ class RegistrationController extends AbstractController
         $decoded = json_decode($response, true);
         return is_array($decoded) ? $decoded : ['raw' => $response, 'httpCode' => $httpCode];
     }
+    
 }

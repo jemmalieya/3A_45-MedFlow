@@ -4,116 +4,109 @@ namespace App\Controller;
 
 use App\Entity\User;
 use App\Form\RegisterUserType;
-
+use App\Service\UserService;
 use App\Repository\UserRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\Routing\Attribute\Route;
-use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
+use Symfony\Component\Routing\Annotation\Route;
 
 final class UserController extends AbstractController
 {
-    #[Route('/user', name: 'app_user')]
-    public function index(): Response
+    private $userService;
+
+    // Injection du service UserService
+    public function __construct(UserService $userService)
     {
-        return $this->render('user/index.html.twig');
+        $this->userService = $userService;
     }
 
-    
-    #[Route('/user/list', name: 'app_user_list')]
-    public function userList(UserRepository $userRepository): Response
+    // Affichage de la liste des utilisateurs (admin)
+    #[Route('/admin/users', name: 'admin_users_index', methods: ['GET'])]
+    public function adminIndex(UserRepository $userRepo): Response
     {
-        $users = $userRepository->findAll();
+        $users = $userRepo->findAll();
 
-        return $this->render('user/list.html.twig', [
+        return $this->render('admin/index_user.html.twig', [
             'users' => $users
         ]);
     }
 
-    #[Route('/user/details/{id}', name: 'app_user_details')]
-    public function userDetails(int $id, UserRepository $userRepository): Response
+    // Ajouter un utilisateur (admin)
+        #[Route('/admin/users/new', name: 'admin_user_new', methods: ['GET', 'POST'])]
+    public function new(Request $request, EntityManagerInterface $em): Response
     {
-        $user = $userRepository->find($id);
-        if (!$user) {
-            throw $this->createNotFoundException("User not found");
-        }
-
-        return $this->render('user/details.html.twig', [
-            'user' => $user
-        ]);
-    }
-
-    /*#[Route('/user/update/{id}', name: 'app_user_update')]
-    public function updateUser(
-        int $id,
-        UserRepository $userRepository,
-        Request $request,
-        EntityManagerInterface $em,
-        UserPasswordHasherInterface $hasher
-    ): Response {
-        $user = $userRepository->find($id);
-        if (!$user) {
-            throw $this->createNotFoundException("User not found");
-        }
-
-        $form = $this->createForm(AddEditUserType::class, $user, [
-            'is_edit' => true
-        ]);
+        $user = new User();
+        $form = $this->createForm(RegisterUserType::class, $user);
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
+            // Retrieve form fields
+            $cin = $form->get('cin')->getData();
+            $telephoneUser = $form->get('telephoneUser')->getData();
 
-            // If user typed a new password -> hash and replace
-            if ($user->getPlainPassword()) {
-                $user->setPassword(
-                    $hasher->hashPassword($user, $user->getPlainPassword())
-                );
-                $user->setPlainPassword(null);
+            // Check if CIN and telephone are provided
+            if (!$cin || !$telephoneUser) {
+                $this->addFlash('error', 'Le CIN et le téléphone sont requis.');
+                return $this->redirectToRoute('admin_user_new');
             }
 
-            $em->flush();
-            return $this->redirectToRoute('app_user_list');
+            // Create the user via the service
+            $this->userService->createUser([
+                'email' => $user->getEmailUser(),
+                'prenom' => $user->getPrenom(),
+                'nom' => $user->getNom(),
+                'cin' => $cin,
+                'telephoneUser' => $telephoneUser,
+                'dateNaissance' => $user->getDateNaissance(),
+                'plainPassword' => $form->get('plainPassword')->getData(),
+            ]);
+
+            $this->addFlash('success', 'Utilisateur ajouté avec succès !');
+            return $this->redirectToRoute('admin_users_index');
         }
 
-        return $this->render('user/form.html.twig', [
-            'title' => 'Update User',
-            'form'  => $form->createView(),
+        return $this->render('admin/newUser.html.twig', [
+            'form' => $form->createView(),
         ]);
-    }*/
+    }
 
-    #[Route('/user/delete/{id}', name: 'app_user_delete')]
-    public function deleteUser(int $id, UserRepository $userRepository, EntityManagerInterface $em): Response
+    // Modifier un utilisateur (admin)
+    #[Route('/admin/users/{id}/edit', name: 'admin_user_edit', methods: ['GET', 'POST'])]
+    public function edit(User $user, Request $request, EntityManagerInterface $em): Response
     {
-        $user = $userRepository->find($id);
-        if ($user) {
+        $form = $this->createForm(RegisterUserType::class, $user);
+        $form->handleRequest($request);
+
+        if ($form->isSubmitted() && $form->isValid()) {
+            $this->userService->updateUser($user, [
+                'prenom' => $user->getPrenom(),
+                'nom' => $user->getNom(),
+                // Ajouter d'autres champs si nécessaire
+            ]);
+
+            $em->flush();
+
+            $this->addFlash('success', 'Utilisateur modifié avec succès !');
+            return $this->redirectToRoute('admin_users_index');
+        }
+
+        return $this->render('admin/editUser.html.twig', [
+            'form' => $form->createView(),
+        ]);
+    }
+
+    // Supprimer un utilisateur (admin)
+    #[Route('/admin/users/{id}/delete', name: 'admin_user_delete', methods: ['POST'])]
+    public function delete(User $user, Request $request, EntityManagerInterface $em): Response
+    {
+        if ($this->isCsrfTokenValid('delete'.$user->getId(), $request->request->get('_token'))) {
             $em->remove($user);
             $em->flush();
+            $this->addFlash('success', 'Utilisateur supprimé avec succès !');
         }
 
-        return $this->redirectToRoute('app_user_list');
-    }
-
-    // ✅ Search example (by email)
-    #[Route('/user/search/email/{email}', name: 'app_user_search_email')]
-    public function searchByEmail(string $email, UserRepository $userRepository): Response
-    {
-        $users = $userRepository->searchByEmail($email);
-
-        return $this->render('user/list.html.twig', [
-            'users' => $users
-        ]);
-    }
-
-    // ✅ Search example (by cin)
-    #[Route('/user/search/cin/{cin}', name: 'app_user_search_cin')]
-    public function searchByCin(string $cin, UserRepository $userRepository): Response
-    {
-        $users = $userRepository->searchByCin($cin);
-
-        return $this->render('user/list.html.twig', [
-            'users' => $users
-        ]);
+        return $this->redirectToRoute('admin_users_index');
     }
 }

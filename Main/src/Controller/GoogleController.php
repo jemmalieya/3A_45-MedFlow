@@ -13,6 +13,7 @@ use Symfony\Component\Routing\Attribute\Route;
 
 class GoogleController extends AbstractController
 {
+    
     private function buildClient(): Client
     {
         $client = new Client();

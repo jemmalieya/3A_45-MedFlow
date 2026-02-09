@@ -1,0 +1,298 @@
+{% extends 'base_dashboard.html.twig' %}
+
+{% block title %}Stat Réclamations{% endblock %}
+
+{% block stylesheets %}
+{{ parent() }}
+<style>
+  /* ===== KPI color cards ===== */
+  .kpi-card{
+    color:#fff;
+    border-radius: 14px;
+    overflow: hidden;
+    position: relative;
+  }
+  .kpi-card .text-xs{ opacity:.85; letter-spacing:.4px; }
+  .kpi-card .kpi-value{ font-weight: 900; font-size: 2rem; line-height: 1; }
+  .kpi-card::after{
+    content:"";
+    position:absolute;
+    right:-40px; top:-40px;
+    width:160px; height:160px;
+    background: rgba(255,255,255,.12);
+    border-radius: 999px;
+  }
+  .kpi-total { background: linear-gradient(135deg, #4f46e5, #6366f1); }
+  .kpi-ok    { background: linear-gradient(135deg, #16a34a, #22c55e); }
+  .kpi-wait  { background: linear-gradient(135deg, #f59e0b, #fbbf24); }
+
+  .period-chip{
+    background: rgba(79,70,229,.08);
+    border: 1px solid rgba(79,70,229,.18);
+    color:#4f46e5;
+    font-weight: 700;
+    border-radius: 999px;
+    padding: .35rem .65rem;
+  }
+
+  .chart-card{ border-radius: 14px; }
+  .chart-card h6{ font-weight: 800; color:#111827; }
+
+  /* ✅ FIX: stable chart height (sinon canvas peut devenir 0px) */
+  .chart-wrap{
+    position: relative;
+    height: 320px;
+    width: 100%;
+  }
+  .chart-wrap.sm{ height: 300px; }
+
+  canvas{
+    width: 100% !important;
+    height: 100% !important;
+  }
+</style>
+{% endblock %}
+
+{% block body %}
+<div class="container-fluid py-4">
+
+  <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+    <div>
+      <h1 class="h3 mb-1 text-gray-800">
+        <i class="bi bi-graph-up-arrow me-2"></i> Statistiques Réclamations
+      </h1>
+      <div class="small text-muted">
+        <span class="period-chip">
+          Période : {{ from|date('d/m/Y') }} → {{ to|date('d/m/Y') }}
+        </span>
+        <span class="ms-2">({{ days }} jours)</span>
+      </div>
+    </div>
+
+    <div class="d-flex gap-2 flex-wrap">
+      <a class="btn btn-sm btn-outline-primary" href="{{ path('admin_reclamations_stats', {days: 7}) }}">7j</a>
+      <a class="btn btn-sm btn-outline-primary" href="{{ path('admin_reclamations_stats', {days: 30}) }}">30j</a>
+      <a class="btn btn-sm btn-outline-primary" href="{{ path('admin_reclamations_stats', {days: 90}) }}">90j</a>
+      <a class="btn btn-sm btn-primary" href="{{ path('admin_reclamations') }}">
+        <i class="bi bi-arrow-left me-1"></i> Retour liste
+      </a>
+    </div>
+  </div>
+
+  {# ===== KPI ===== #}
+  <div class="row g-3 mb-4">
+    <div class="col-md-4">
+      <div class="card shadow-sm border-0 kpi-card kpi-total">
+        <div class="card-body">
+          <div class="text-xs text-uppercase">TOTAL</div>
+          <div class="kpi-value mt-2">{{ kpis.total }}</div>
+          <div class="small mt-2 opacity-75">Toutes les réclamations</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-4">
+      <div class="card shadow-sm border-0 kpi-card kpi-ok">
+        <div class="card-body">
+          <div class="text-xs text-uppercase">TRAITÉE</div>
+          <div class="kpi-value mt-2">{{ kpis.traitees }}</div>
+          <div class="small mt-2 opacity-75">Résolues / clôturées</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-4">
+      <div class="card shadow-sm border-0 kpi-card kpi-wait">
+        <div class="card-body">
+          <div class="text-xs text-uppercase">EN ATTENTE</div>
+          <div class="kpi-value mt-2">{{ kpis.enAttente }}</div>
+          <div class="small mt-2 opacity-75">À traiter</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {# ===== Charts ===== #}
+  <div class="row g-4">
+    <div class="col-md-6">
+      <div class="card shadow-sm border-0 chart-card">
+        <div class="card-body">
+          <h6 class="mb-3">Réclamations par jour</h6>
+          <div class="chart-wrap">
+            <canvas id="chartByDay"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-6">
+      <div class="card shadow-sm border-0 chart-card">
+        <div class="card-body">
+          <h6 class="mb-3">Par statut</h6>
+          <div class="chart-wrap sm">
+            <canvas id="chartByStatut"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-6">
+      <div class="card shadow-sm border-0 chart-card">
+        <div class="card-body">
+          <h6 class="mb-3">Par type</h6>
+          <div class="chart-wrap sm">
+            <canvas id="chartByType"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-6">
+      <div class="card shadow-sm border-0 chart-card">
+        <div class="card-body">
+          <h6 class="mb-3">Par priorité</h6>
+          <div class="chart-wrap sm">
+            <canvas id="chartByPriorite"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block javascripts %}
+{{ parent() }}
+<script>
+  const byDay = {{ byDay|json_encode|raw }};
+  const byStatut = {{ byStatut|json_encode|raw }};
+  const byType = {{ byType|json_encode|raw }};
+  const byPriorite = {{ byPriorite|json_encode|raw }};
+
+  // ✅ éviter crash si données vides
+  const safeRows = (rows) => Array.isArray(rows) ? rows : [];
+
+  // SB Admin peut être Chart.js v2
+  const isV2 = !!(Chart && Chart.defaults && Chart.defaults.global);
+
+  // ===== Global defaults =====
+  if (isV2) {
+    Chart.defaults.global.defaultFontFamily = "Nunito, system-ui, -apple-system, Segoe UI, Roboto, Arial";
+    Chart.defaults.global.legend.labels.boxWidth = 12;
+  } else {
+    Chart.defaults.font.family = "Nunito, system-ui, -apple-system, Segoe UI, Roboto, Arial";
+    Chart.defaults.plugins.legend.labels.boxWidth = 12;
+  }
+
+  // ===== Line: by day with gradient =====
+  const dayLabels = safeRows(byDay).map(x => x.day);
+  const dayValues = safeRows(byDay).map(x => x.total);
+
+  const ctxDay = document.getElementById('chartByDay').getContext('2d');
+  const grad = ctxDay.createLinearGradient(0, 0, 0, 240);
+  grad.addColorStop(0, 'rgba(79,70,229,0.35)');
+  grad.addColorStop(1, 'rgba(79,70,229,0.05)');
+
+  new Chart(ctxDay, {
+    type: 'line',
+    data: {
+      labels: dayLabels,
+      datasets: [{
+        label: 'Réclamations',
+        data: dayValues,
+        fill: true,
+        backgroundColor: grad,
+        borderColor: '#4f46e5',
+        pointBackgroundColor: '#4f46e5',
+        pointBorderColor: '#ffffff',
+        pointBorderWidth: 2,
+        pointRadius: 4,
+        pointHoverRadius: 6,
+        tension: 0.35
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      tooltips: isV2 ? { mode: 'index', intersect: false } : undefined,
+      plugins: isV2 ? undefined : {
+        legend: { position: 'top' },
+        tooltip: { mode: 'index', intersect: false }
+      },
+      legend: isV2 ? { display: true, position: 'top' } : undefined,
+      scales: isV2 ? {
+        yAxes: [{ ticks: { beginAtZero: true, precision: 0 } }]
+      } : {
+        y: { beginAtZero: true, ticks: { precision: 0 } }
+      }
+    }
+  });
+
+  // ===== Doughnut helper (compatible v2/v3) =====
+  function doughnut(elId, rows, colors) {
+    const dataRows = safeRows(rows);
+    const labels = dataRows.map(x => x.label);
+    const values = dataRows.map(x => x.total);
+
+    const options = {
+      responsive: true,
+      maintainAspectRatio: false,
+      legend: isV2 ? { position: 'bottom' } : undefined,
+      plugins: isV2 ? undefined : { legend: { position: 'bottom' } }
+    };
+
+    // cutout v2 vs v3+
+    if (isV2) options.cutoutPercentage = 65;
+    else options.cutout = '65%';
+
+    return new Chart(document.getElementById(elId), {
+      type: 'doughnut',
+      data: {
+        labels,
+        datasets: [{
+          data: values,
+          backgroundColor: colors,
+          borderWidth: 0,
+          hoverOffset: 6
+        }]
+      },
+      options
+    });
+  }
+
+  // Statut colors: TRAITEE green, En attente orange, autres rouge/bleu
+  doughnut('chartByStatut', byStatut, ['#22c55e', '#f59e0b', '#ef4444', '#6366f1']);
+
+  // Type colors (palette)
+  const typePalette = ['#4f46e5', '#06b6d4', '#a855f7', '#f97316', '#22c55e', '#ef4444', '#64748b'];
+  doughnut('chartByType', byType, typePalette);
+
+  // ===== Priorité: bar (plus lisible) =====
+  const prLabels = safeRows(byPriorite).map(x => x.label);
+  const prValues = safeRows(byPriorite).map(x => x.total);
+
+  new Chart(document.getElementById('chartByPriorite'), {
+    type: 'bar',
+    data: {
+      labels: prLabels,
+      datasets: [{
+        label: 'Réclamations',
+        data: prValues,
+        backgroundColor: ['#ef4444', '#f59e0b', '#22c55e', '#4f46e5']
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      legend: isV2 ? { display: false } : undefined,
+      plugins: isV2 ? undefined : { legend: { display: false } },
+      scales: isV2 ? {
+        yAxes: [{ ticks: { beginAtZero: true, precision: 0 } }]
+      } : {
+        y: { beginAtZero: true, ticks: { precision: 0 } }
+      }
+    }
+  });
+</script>
+{% endblock %}

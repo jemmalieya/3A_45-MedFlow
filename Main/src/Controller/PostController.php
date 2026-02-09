@@ -4,16 +4,18 @@ namespace App\Controller;
 
 use App\Entity\Post;
 use App\Form\PostType;
-use App\Repository\PostRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
-use Symfony\Component\HttpFoundation\File\UploadedFile;
-use Symfony\Component\HttpFoundation\JsonResponse;
 use Dompdf\Dompdf;
 use Dompdf\Options;
+use App\Repository\PostRepository;
+use App\Service\GeminiService;
+use Symfony\Component\HttpFoundation\JsonResponse;
+use Psr\Log\LoggerInterface;
+
 
 #[Route('/posts')]
 class PostController extends AbstractController
@@ -56,7 +58,7 @@ class PostController extends AbstractController
         ]);
     }
 
-    #[Route('/new', name: 'post_new', methods: ['GET', 'POST'])]
+  #[Route('/new', name: 'post_new', methods: ['GET', 'POST'])]
 public function new(Request $request, EntityManagerInterface $em): Response
 {
     $post = new Post();
@@ -67,15 +69,13 @@ public function new(Request $request, EntityManagerInterface $em): Response
 
     if ($form->isSubmitted() && $form->isValid()) {
 
-        /** @var UploadedFile|null $file */
-        $file = $form->get('img_post')->getData();
+        // ✅ URL image (champ HTML "image_url" dans twig)
+        $imageUrl = trim((string) $request->request->get('image_url', ''));
 
-        if ($file) {
-            $newFilename = uniqid() . '.' . $file->guessExtension();
-            $file->move($this->getParameter('pieces_jointes_directory'), $newFilename);
-            $post->setImgPost('uploads/pieces_jointes/' . $newFilename);
+        if ($imageUrl !== '') {
+            $post->setImgPost($imageUrl);
         } else {
-            // option: image par défaut
+            // optionnel : image par défaut si tu veux
             $post->setImgPost('uploads/pieces_jointes/default-post.jpg');
         }
 
@@ -88,31 +88,27 @@ public function new(Request $request, EntityManagerInterface $em): Response
 
     return $this->render('post/new.html.twig', [
         'form' => $form->createView(),
+        'post' => $post, // utile pour value="{{ post.imgPost ?? '' }}"
     ]);
 }
+
 
 
   #[Route('/posts/{id}/edit', name: 'post_edit', methods: ['GET', 'POST'])]
 public function edit(Request $request, Post $post, EntityManagerInterface $em): Response
 {
-    $oldImg = $post->getImgPost();
-
     $form = $this->createForm(PostType::class, $post);
     $form->handleRequest($request);
 
     if ($form->isSubmitted() && $form->isValid()) {
 
-        /** @var UploadedFile|null $file */
-        $file = $form->get('img_post')->getData();
+        // ✅ URL image (champ HTML "image_url" dans twig)
+        $imageUrl = trim((string) $request->request->get('image_url', ''));
 
-        if ($file) {
-            $newFilename = uniqid() . '.' . $file->guessExtension();
-            $file->move($this->getParameter('pieces_jointes_directory'), $newFilename);
-            $post->setImgPost('uploads/pieces_jointes/' . $newFilename);
-        } else {
-            // ✅ garder l'ancienne
-            $post->setImgPost($oldImg);
+        if ($imageUrl !== '') {
+            $post->setImgPost($imageUrl);
         }
+        // sinon on garde l’ancienne imgPost (ne rien faire)
 
         $post->setDateModification(new \DateTimeImmutable());
 
@@ -127,8 +123,6 @@ public function edit(Request $request, Post $post, EntityManagerInterface $em): 
         'form' => $form->createView(),
     ]);
 }
-
-
 #[Route('/posts/{id}', name: 'post_show', requirements: ['id' => '\d+'],methods: ['GET'])]
 public function show(Post $post): Response
 {
@@ -248,30 +242,70 @@ public function exportAllPdf(PostRepository $repo, Request $request): Response
 }
 
 
-#[Route('/posts/stats', name: 'post_stats', methods: ['GET'])]
-public function stats(PostRepository $repo): Response
+#[Route('/admin/blog/stats', name: 'admin_blog_stats', methods: ['GET'])]
+public function adminBlogStats(PostRepository $repo, Request $request): Response
 {
-    $kpis = $repo->getKpis();
-    $byCategorie = $repo->countByCategorie();
-    $byHumeur = $repo->countByHumeur();
-    $topPosts = $repo->topPostsByReactions(5);
+    $days = max(1, (int) $request->query->get('days', 7));
 
-    // max pour les barres
-    $maxCat = 0;
-    foreach ($byCategorie as $row) $maxCat = max($maxCat, (int)$row['total']);
+    $to = new \DateTimeImmutable('today 23:59:59');
+    $from = $to->modify('-'.($days - 1).' days')->setTime(0, 0, 0);
 
-    $maxMood = 0;
-    foreach ($byHumeur as $row) $maxMood = max($maxMood, (int)$row['total']);
+    // Ces méthodes doivent exister dans PostRepository (je te les donne si tu veux)
+    $kpis = $repo->getBlogKpis($from, $to);
+    $byDay = $repo->countBlogByDay($from, $to);
+    $byCategorie = $repo->countBlogByCategorie($from, $to);
+    $byHumeur = $repo->countBlogByHumeur($from, $to);
+    $topPosts = $repo->topBlogPostsByReactions($from, $to, 5);
 
-    return $this->render('post/stats.html.twig', [
+    return $this->render('admin/stat_Blog.html.twig', [
+        'days' => $days,
+        'from' => $from,
+        'to' => $to,
         'kpis' => $kpis,
+        'byDay' => $byDay,
         'byCategorie' => $byCategorie,
         'byHumeur' => $byHumeur,
         'topPosts' => $topPosts,
-        'maxCat' => $maxCat,
-        'maxMood' => $maxMood,
     ]);
 }
+
+
+
+#[Route('/ai/generate', name: 'post_ai_generate', methods: ['POST'])]
+public function aiGenerate(Request $request, GeminiService $gemini, LoggerInterface $logger): JsonResponse
+{
+    // Récupérer les données du payload JSON
+    $payload = json_decode($request->getContent(), true) ?? [];
+    $task = $payload['task'] ?? 'improve'; // La tâche (améliorer le texte, générer des hashtags, etc.)
+    $text = trim((string)($payload['text'] ?? ''));
+
+    // Si le texte est vide, retour d'erreur
+    if ($text === '') {
+        return new JsonResponse(['ok' => false, 'message' => 'Texte vide'], 400);
+    }
+
+    // Choisir le prompt en fonction de la tâche
+    $prompt = match ($task) {
+        'title' => "Propose 5 titres courts (max 8 mots) pour ce post:\n\n" . $text,
+        'hashtags' => "Donne 8 hashtags pertinents (format #tag) séparés par espace pour ce post:\n\n" . $text,
+        default => "Améliore ce contenu en français: plus clair, professionnel, et garde le sens. Retourne uniquement le texte amélioré.\n\n" . $text,
+    };
+
+    // Appel au service Gemini pour générer le contenu
+    try {
+        $result = $gemini->generate($prompt);
+        
+        // Retourner le résultat généré par Gemini
+        return new JsonResponse(['ok' => true, 'result' => $result]);
+        
+    } catch (\Exception $e) {
+        // Log l'erreur pour le débogage
+        $logger->error('Erreur Gemini: ' . $e->getMessage());
+        return new JsonResponse(['ok' => false, 'message' => 'Erreur lors de la génération du contenu.'], 500);
+    }
+}
+
+
 
 
 }

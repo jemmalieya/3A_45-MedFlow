@@ -1,0 +1,18 @@
+.event-join-card{
+  background: linear-gradient(180deg, #f7fbff, #ffffff);
+  border-color: #e6f1ff !important;
+}
+
+.event-join-card .btn-primary{
+  border-radius: 999px;
+  padding: .6rem 1.1rem;
+}
+
+.event-join-card .btn-outline-secondary{
+  border-radius: 999px;
+  padding: .6rem 1.1rem;
+}
+
+.event-join-card .form-control{
+  border-radius: 12px;
+}

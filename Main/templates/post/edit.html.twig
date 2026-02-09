@@ -21,7 +21,7 @@
         <div class="card border-0 shadow-sm">
           <div class="card-body p-4 p-lg-5">
 
-            {{ form_start(form, {'attr': {'class': 'needs-validation'}, 'enctype': 'multipart/form-data'}) }}
+            {{ form_start(form, {'attr': {'class': 'needs-validation'}}) }}
 
             <div class="mb-4">
               <label class="form-label fw-semibold">Titre</label>
@@ -71,22 +71,25 @@
                 {{ form_errors(form.hashtags) }}
               </div>
 
-              {# ✅ Image = FILE INPUT (upload) #}
               <div class="col-md-6">
-                <label class="form-label fw-semibold">Image</label>
-                {{ form_widget(form.img_post, {'attr': {'class': 'form-control'}}) }}
+  <label class="form-label fw-semibold">Image (URL)</label>
 
-                {% if post.imgPost %}
-                  <div class="form-text mt-2">
-                    Image actuelle :
-                    <a href="{{ asset(post.imgPost) }}" target="_blank">{{ post.imgPost }}</a>
-                  </div>
-                {% else %}
-                  <div class="form-text">Choisissez une image depuis votre ordinateur (JPG/PNG/WEBP).</div>
-                {% endif %}
+  <input type="url"
+         name="image_url"
+         class="form-control"
+         placeholder="Colle ici l’URL d’une image (https://...)"
+         value="{{ post.imgPost ?? '' }}">
 
-                {{ form_errors(form.img_post) }}
-              </div>
+  {% if post.imgPost %}
+    <div class="form-text mt-2">
+      Image actuelle :
+      <a href="{{ post.imgPost }}" target="_blank">{{ post.imgPost }}</a>
+    </div>
+  {% else %}
+    <div class="form-text">Colle un lien d’image (Google, etc.).</div>
+  {% endif %}
+</div>
+
 
               <div class="col-12">
                 <div class="form-check mt-2">
@@ -110,7 +113,9 @@
               </button>
             </div>
 
-            {{ form_end(form) }}
+            {{ form_row(form._token) }}
+
+
 
           </div>
         </div>
@@ -171,7 +176,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const localisation = document.getElementById('{{ form.localisation.vars.id }}');
   const hashtags = document.getElementById('{{ form.hashtags.vars.id }}');
   const visibilite = document.getElementById('{{ form.visibilite.vars.id }}');
-  const img = document.getElementById('{{ form.img_post.vars.id }}');
+  const imgUrlInput = document.querySelector('input[name="image_url"]');
+
 
   const titlePreview = document.getElementById('titlePreview');
   const catPreview = document.getElementById('catPreview');
@@ -202,29 +208,19 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function setPreviewImage() {
-    // ✅ Si utilisateur choisit une nouvelle image
-    if (img && img.files && img.files[0]) {
-      const file = img.files[0];
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        imgPreview.src = e.target.result;
-        imgPreview.style.display = 'block';
-        imgPlaceholder.style.display = 'none';
-      };
-      reader.readAsDataURL(file);
-      return;
-    }
+  const url = (imgUrlInput?.value || '').trim();
 
-    // ✅ Sinon afficher image actuelle du post (si existe)
-    {% if post.imgPost %}
-      imgPreview.src = "{{ asset(post.imgPost) }}";
-      imgPreview.style.display = 'block';
-      imgPlaceholder.style.display = 'none';
-    {% else %}
-      imgPreview.style.display = 'none';
-      imgPlaceholder.style.display = 'flex';
-    {% endif %}
+  if (url) {
+    imgPreview.src = url;
+    imgPreview.style.display = 'block';
+    imgPlaceholder.style.display = 'none';
+  } else {
+    imgPreview.style.display = 'none';
+    imgPreview.removeAttribute('src');
+    imgPlaceholder.style.display = 'flex';
   }
+}
+
 
   [titre, categorie, localisation, hashtags, visibilite].forEach(el => {
     if (!el) return;
@@ -232,7 +228,7 @@ document.addEventListener('DOMContentLoaded', () => {
     el.addEventListener('change', setPreviewText);
   });
 
-  if (img) img.addEventListener('change', setPreviewImage);
+  if (imgUrlInput) imgUrlInput.addEventListener('input', setPreviewImage);
 
   setPreviewText();
   setPreviewImage();

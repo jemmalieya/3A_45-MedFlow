@@ -21,24 +21,23 @@ use Symfony\Component\Security\Csrf\CsrfToken;
 
 
 
-#[Route('/staff')]
-#[IsGranted('ROLE_STAFF')]
+//#[Route('/staff')]
+//#[IsGranted('ROLE_STAFF')]
 class StaffController extends AbstractController
 {
     /* =========================
      *  DASHBOARD STAFF
      * ========================= */
-    #[Route('', name: 'staff_dashboard', methods: ['GET'])]
+    #[Route('/admin/staff', name: 'staff_dashboard', methods: ['GET'])]
     public function index(): Response
     {
         return $this->render('staff/dashboard.html.twig');
     }
 
   
-#[Route('/patients', name: 'staff_patients_index', methods: ['GET'])]
+#[Route('/admin/staff/patients', name: 'staff_patients_index', methods: ['GET'])]
 public function patientsIndex(Request $request, UserRepository $repo): Response
 {
-    $this->denyAccessUnlessRespPatients();
 
     $q = trim((string) $request->query->get('q', ''));
     $verified = (string) $request->query->get('verified', ''); // '' | '1' | '0'
@@ -129,10 +128,10 @@ public function patientsIndex(Request $request, UserRepository $repo): Response
      *  GESTION PATIENTS (RESP_PATIENTS ONLY)
      *  Page 2 : Fiche patient
      * ========================= */
-    #[Route('/patients/{id}', name: 'staff_patients_show', requirements: ['id' => '\d+'], methods: ['GET'])]
+    #[Route('admin/staff/patients/{id}', name: 'staff_patients_show', requirements: ['id' => '\d+'], methods: ['GET'])]
     public function patientsShow(User $patient): Response
     {
-        $this->denyAccessUnlessRespPatients();
+
 
         // Sécurité supplémentaire : on n'affiche que les patients
         if ($patient->getRoleSysteme() !== 'PATIENT') {
@@ -144,28 +143,13 @@ public function patientsIndex(Request $request, UserRepository $repo): Response
         ]);
     }
 
-    /* =========================
-     *  Helper: only RESP_PATIENTS
-     * ========================= */
-    private function denyAccessUnlessRespPatients(): void
-    {
-        $user = $this->getUser();
-        if (!$user instanceof User) {
-            throw $this->createAccessDeniedException();
-        }
 
-        // type_staff doit être RESP_PATIENTS
-        if (strtoupper((string) $user->getTypeStaff()) !== 'RESP_PATIENTS') {
-            throw $this->createAccessDeniedException("Accès réservé au responsable Patients.");
-        }
-    }
-    #[Route('/patients/{id}/resend-verification', name: 'staff_patient_resend_verification', methods: ['POST'])]
+    #[Route('admin/staff/patients/{id}/resend-verification', name: 'staff_patient_resend_verification', methods: ['POST'])]
 public function resendPatientVerification(
     User $patient,
     EntityManagerInterface $em,
     LoggerInterface $logger
 ): Response {
-    $this->denyAccessUnlessRespPatients();
 
     // sécurité: uniquement patient
     if ($patient->getRoleSysteme() !== 'PATIENT') {
@@ -304,10 +288,10 @@ private function buildTriage(User $p): array
         'expired' => $expired,
     ];
 }
-#[Route('/patients/stats', name: 'staff_patients_stats', methods: ['GET'])]
+#[Route('admin/staff/patients/stats', name: 'staff_patients_stats', methods: ['GET'])]
 public function patientsStats(Request $request, UserRepository $repo): Response
 {
-    $this->denyAccessUnlessRespPatients();
+
 
     // Reprend la même base que index : patients only
     $patients = $repo->createQueryBuilder('u')
@@ -379,10 +363,10 @@ public function patientsStats(Request $request, UserRepository $repo): Response
     ]);
 }
 
-#[Route('/patients/report/pdf', name: 'staff_patients_report_pdf', methods: ['GET'])]
+#[Route('admin/staff/patients/report/pdf', name: 'staff_patients_report_pdf', methods: ['GET'])]
 public function patientsReportPdf(UserRepository $repo): Response
 {
-    $this->denyAccessUnlessRespPatients();
+
 
     $patients = $repo->createQueryBuilder('u')
         ->andWhere('u.roleSysteme = :role')
@@ -455,14 +439,13 @@ public function patientsReportPdf(UserRepository $repo): Response
 
     return $response;
 }
-#[Route('/patients/{id}/email-check', name: 'staff_patient_email_check', methods: ['POST'])]
+#[Route('admin/staff/patients/{id}/email-check', name: 'staff_patient_email_check', methods: ['POST'])]
 public function emailCheck(
     User $patient,
     HttpClientInterface $http,
     Request $request,
     CsrfTokenManagerInterface $csrf
 ): JsonResponse {
-    $this->denyAccessUnlessRespPatients();
 
     if ($patient->getRoleSysteme() !== 'PATIENT') {
         return $this->json(['ok' => false, 'error' => 'Not found'], 404);

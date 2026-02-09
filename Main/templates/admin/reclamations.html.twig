@@ -14,6 +14,13 @@
         <p class="text-muted mb-0">{{ reclamations|length }} réclamation(s)</p>
       </div>
     </div>
+    <div class="d-flex align-items-center gap-2 flex-wrap mt-2">
+  <a href="{{ path('admin_reclamations_stats') }}"
+     class="btn btn-sm btn-outline-primary btn-action">
+    <i class="bi bi-graph-up-arrow me-1"></i> Stat Réclamations
+  </a>
+</div>
+
 
     <style>
       .btn-action {

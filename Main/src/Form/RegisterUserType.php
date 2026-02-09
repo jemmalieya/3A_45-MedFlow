@@ -14,23 +14,26 @@ use Symfony\Component\Form\Extension\Core\Type\PasswordType;
 use Symfony\Component\Form\Extension\Core\Type\FileType;
 use Symfony\Component\Validator\Constraints\NotBlank;
 use Symfony\Component\Validator\Constraints\Regex;
+use Symfony\Component\Validator\Constraints\Date;
+use Symfony\Component\Validator\Constraints as Assert;
+
+
+
 
 class RegisterUserType extends AbstractType
 {
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
         $builder
-            ->add('cin', TextType::class, [
-                'required' => true,
-                'attr' => ['placeholder' => 'CIN (8 chiffres)'],
-                'constraints' => [
-                    new NotBlank(['message' => 'Le CIN est obligatoire.']),
-                    new Regex([
-                        'pattern' => '/^\d{8}$/',
-                        'message' => 'Le CIN doit contenir exactement 8 chiffres.'
-                    ]),
-                ],
+          ->add('cin', TextType::class, [
+        'constraints' => [
+            new NotBlank(['message' => 'Le CIN est obligatoire.']),
+            new Regex([
+                'pattern' => '/^\d{8}$/',
+                'message' => 'Le CIN doit contenir exactement 8 chiffres.'
             ])
+        ]
+    ])
 
             ->add('nom', TextType::class, [
                 'required' => true,
@@ -49,21 +52,18 @@ class RegisterUserType extends AbstractType
             ])
 
             ->add('dateNaissance', DateType::class, [
-                'widget' => 'single_text',
-                
-                'required' => true,
-                'constraints' => [
-                    new NotBlank(['message' => 'La date de naissance est obligatoire.']),
-                ],
+            'widget' => 'single_text',
             ])
 
-            ->add('telephoneUser', TextType::class, [
-                'required' => true,
-                'attr' => ['placeholder' => 'Téléphone (+216...)'],
-                'constraints' => [
-                    new NotBlank(['message' => 'Le téléphone est obligatoire.']),
-                ],
+             ->add('telephoneUser', TextType::class, [
+        'constraints' => [
+            new NotBlank(['message' => 'Le téléphone est obligatoire.']),
+            new Regex([
+                'pattern' => "/^\+?\d{8,15}$/",
+                'message' => 'Téléphone invalide (ex: 54430709 ou +21654430709).'
             ])
+        ]
+    ])
 
             ->add('emailUser', EmailType::class, [
                 'required' => true,
@@ -74,8 +74,10 @@ class RegisterUserType extends AbstractType
             ])
 
             ->add('adresseUser', TextType::class, [
-                'required' => false,
-                'attr' => ['placeholder' => 'Adresse (optionnel)'],
+            'required' => false,
+            'constraints' => [
+                new Assert\Length(['max' => 180]),
+            ],
             ])
 
             ->add('plainPassword', PasswordType::class, [

@@ -15,6 +15,8 @@ use App\Repository\ReponseReclamationRepository;
 use Symfony\Component\HttpFoundation\File\Exception\FileException;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
+use Dompdf\Dompdf;
+use Dompdf\Options;
 
 class ReclamationController extends AbstractController
 {
@@ -104,7 +106,7 @@ public function list(Request $request, ReclamationRepository $reclamationReposit
 
     // 🎯 Filtre statut_reclamation
     if ($statut && trim($statut) !== '') {
-        $qb->andWhere('r.statut = :statut')
+        $qb->andWhere('r.statutReclamation = :statut')
            ->setParameter('statut', $statut);
     }
 
@@ -197,6 +199,73 @@ public function reponsesFront(
         'reclamation' => $reclamation,
         'reponses' => $reponses,
     ]);
+}
+#[Route('/admin/reclamations/stats', name: 'admin_reclamations_stats', methods: ['GET'])]
+public function stats(ReclamationRepository $repo, Request $request): Response
+{
+    $days = max(1, (int) $request->query->get('days', 7));
+
+    $to = new \DateTimeImmutable('today 23:59:59');
+    $from = $to->modify('-'.($days - 1).' days')->setTime(0, 0, 0);
+
+    $kpis = $repo->getReclamKpis($from, $to);
+    $byDay = $repo->countReclamByDay($from, $to);
+    $byType = $repo->countReclamByType($from, $to);
+    $byStatut = $repo->countReclamByStatut($from, $to);
+    $byPriorite = $repo->countReclamByPriorite($from, $to);
+
+    return $this->render('admin/stat_reclamation.html.twig', [
+        'days' => $days,
+        'from' => $from,
+        'to' => $to,
+        'kpis' => $kpis,
+        'byDay' => $byDay,
+        'byType' => $byType,
+        'byStatut' => $byStatut,
+        'byPriorite' => $byPriorite,
+    ]);
+}
+
+
+#[Route('/reclamations/export/pdf', name: 'reclamation_export_pdf', methods: ['GET'])]
+public function exportPdf(Request $request, ReclamationRepository $repo): Response
+{
+    $q = trim((string) $request->query->get('q', ''));
+    $sort = (string) $request->query->get('sort', 'date_creation_r');
+    $dir  = (string) $request->query->get('dir', 'DESC');
+
+    // ✅ même logique que la liste (sans userId)
+    $reclamations = $repo->findFiltered([
+        'q' => $q,
+        'sort' => $sort,
+        'dir' => $dir,
+    ]);
+
+    $html = $this->renderView('reclamation/pdf_list.html.twig', [
+        'reclamations' => $reclamations,
+        'generatedAt' => new \DateTimeImmutable(),
+        'q' => $q,
+        'sort' => $sort,
+        'dir' => $dir,
+    ]);
+
+    $options = new Options();
+    $options->set('defaultFont', 'DejaVu Sans');
+    $options->set('isRemoteEnabled', true);
+
+    $dompdf = new Dompdf($options);
+    $dompdf->loadHtml($html);
+    $dompdf->setPaper('A4', 'portrait');
+    $dompdf->render();
+
+    return new Response(
+        $dompdf->output(),
+        200,
+        [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'attachment; filename="reclamations.pdf"',
+        ]
+    );
 }
 
 

@@ -134,6 +134,98 @@ public function topPostsByReactions(int $limit = 5): array
         ->getResult();
 }
 
+  public function getBlogKpis(\DateTimeInterface $from, \DateTimeInterface $to): array
+{
+    $row = $this->createQueryBuilder('p')
+        ->select('COUNT(p.id) AS totalPosts')
+        ->addSelect('COALESCE(SUM(p.nbr_reactions), 0) AS totalReactions')
+        ->addSelect('COALESCE(SUM(p.nbr_commentaires), 0) AS totalComments')
+        ->andWhere('p.date_creation BETWEEN :from AND :to')
+        ->setParameter('from', $from)
+        ->setParameter('to', $to)
+        ->getQuery()
+        ->getSingleResult();
+
+    return [
+        'totalPosts' => (int) $row['totalPosts'],
+        'totalReactions' => (int) $row['totalReactions'],
+        'totalComments' => (int) $row['totalComments'],
+    ];
+}
+
+public function topBlogPostsByReactions(\DateTimeInterface $from, \DateTimeInterface $to, int $limit = 5): array
+{
+    return $this->createQueryBuilder('p')
+        ->andWhere('p.date_creation BETWEEN :from AND :to')
+        ->setParameter('from', $from)
+        ->setParameter('to', $to)
+        ->orderBy('p.nbr_reactions', 'DESC')
+        ->setMaxResults($limit)
+        ->getQuery()
+        ->getResult();
+}
+
+public function countBlogByCategorie(\DateTimeInterface $from, \DateTimeInterface $to): array
+{
+    return $this->createQueryBuilder('p')
+        ->select("COALESCE(p.categorie, 'Sans catégorie') AS label, COUNT(p.id) AS total")
+        ->andWhere('p.date_creation BETWEEN :from AND :to')
+        ->setParameter('from', $from)
+        ->setParameter('to', $to)
+        ->groupBy('label')
+        ->orderBy('total', 'DESC')
+        ->getQuery()
+        ->getArrayResult();
+}
+
+public function countBlogByHumeur(\DateTimeInterface $from, \DateTimeInterface $to): array
+{
+    return $this->createQueryBuilder('p')
+        ->select("COALESCE(p.humeur, 'Non définie') AS label, COUNT(p.id) AS total")
+        ->andWhere('p.date_creation BETWEEN :from AND :to')
+        ->setParameter('from', $from)
+        ->setParameter('to', $to)
+        ->groupBy('label')
+        ->orderBy('total', 'DESC')
+        ->getQuery()
+        ->getArrayResult();
+}
+
+public function countBlogByDay(\DateTimeInterface $from, \DateTimeInterface $to): array
+{
+    $rows = $this->createQueryBuilder('p')
+        ->select('p.date_creation AS d')
+        ->andWhere('p.date_creation BETWEEN :from AND :to')
+        ->setParameter('from', $from)
+        ->setParameter('to', $to)
+        ->getQuery()
+        ->getArrayResult();
+
+    // Regrouper par jour en PHP
+    $map = [];
+
+    foreach ($rows as $r) {
+        $dt = $r['d']; // peut être DateTimeInterface
+        if ($dt instanceof \DateTimeInterface) {
+            $day = $dt->format('Y-m-d');
+        } else {
+            // fallback si doctrine renvoie string
+            $day = (new \DateTimeImmutable((string)$dt))->format('Y-m-d');
+        }
+        $map[$day] = ($map[$day] ?? 0) + 1;
+    }
+
+    ksort($map);
+
+    $result = [];
+    foreach ($map as $day => $total) {
+        $result[] = ['day' => $day, 'total' => $total];
+    }
+
+    return $result;
+}
+
+
 
 
 

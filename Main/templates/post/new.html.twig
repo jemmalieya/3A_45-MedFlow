@@ -26,7 +26,6 @@
     'class': 'needs-validation',
     'novalidate': 'novalidate'
   },
-  'enctype': 'multipart/form-data'
 }) }}
 
 
@@ -59,6 +58,28 @@
                 {{ form_errors(form.contenu) }}
               </div>
             </div>
+<div class="d-flex gap-2 mt-2">
+  <button type="button" class="btn btn-outline-primary btn-sm" id="aiImprove">
+    ✨ Améliorer contenu
+  </button>
+  <button type="button" class="btn btn-outline-secondary btn-sm" id="aiTitle">
+    🧠 Générer titres
+  </button>
+  <button type="button" class="btn btn-outline-success btn-sm" id="aiTags">
+    # Hashtags
+  </button>
+</div>
+
+<div class="mt-2" id="aiBox" style="display:none;">
+  <div class="alert alert-info mb-0">
+    <div class="fw-semibold mb-2">Suggestion IA</div>
+    <pre id="aiResult" style="white-space:pre-wrap;margin:0;"></pre>
+    <div class="d-flex gap-2 mt-2">
+      <button type="button" class="btn btn-sm btn-primary" id="aiApply">Appliquer</button>
+      <button type="button" class="btn btn-sm btn-outline-secondary" id="aiClose">Fermer</button>
+    </div>
+  </div>
+</div>
 
             <div class="row g-3">
               <div class="col-md-6">
@@ -129,19 +150,21 @@
               </div>
 
               <div class="col-md-6">
-                <label class="form-label fw-semibold">Image</label>
-                {{ form_widget(form.img_post, {
-                  'attr': {
-                    'class': 'form-control'
-                  }
-                }) }}
-                <div class="form-text">
-                  Choisissez une image depuis votre ordinateur (JPG / PNG / WEBP).
-                </div>
-                <div class="form-error">
-                  {{ form_errors(form.img_post) }}
-                </div>
-              </div>
+  <label class="form-label fw-semibold">Image (URL)</label>
+
+  <input type="url"
+         id="image_url"
+         name="image_url"
+         class="form-control"
+         placeholder="https://images.unsplash.com/..."
+         value="{{ app.request.get('image_url') ?? '' }}"
+>
+
+  <div class="form-text">
+    Colle un lien direct d’image (JPG / PNG / WEBP).
+  </div>
+</div>
+
 
               <div class="col-12">
                 <div class="form-check mt-2">
@@ -169,6 +192,7 @@
             </div>
 
             {{ form_end(form) }}
+
 
           </div>
         </div>
@@ -227,43 +251,40 @@
 </style>
 <script>
   document.addEventListener('DOMContentLoaded', () => {
-    const inputId = '{{ form.img_post.vars.id }}';
-    const fileInput = document.getElementById(inputId);
+  const urlInput = document.getElementById('image_url');
 
-    const img = document.getElementById('imgPreview');
-    const placeholder = document.getElementById('imgPlaceholder');
+  const img = document.getElementById('imgPreview');
+  const placeholder = document.getElementById('imgPlaceholder');
 
-    if (!fileInput || !img || !placeholder) return;
+  if (!urlInput || !img || !placeholder) return;
 
-    fileInput.addEventListener('change', (e) => {
-      const file = e.target.files && e.target.files[0];
+  const refresh = () => {
+    const url = (urlInput.value || '').trim();
 
-      if (!file) {
-        img.style.display = 'none';
-        img.removeAttribute('src');
-        placeholder.style.display = 'flex';
-        return;
-      }
+    if (!url) {
+      img.style.display = 'none';
+      img.removeAttribute('src');
+      placeholder.textContent = 'Aucune image';
+      placeholder.style.display = 'flex';
+      return;
+    }
 
-      // sécurité: preview seulement pour images
-      if (!file.type.startsWith('image/')) {
-        img.style.display = 'none';
-        img.removeAttribute('src');
-        placeholder.textContent = 'Fichier non image';
-        placeholder.style.display = 'flex';
-        fileInput.value = '';
-        return;
-      }
+    img.src = url;
+    img.style.display = 'block';
+    placeholder.style.display = 'none';
 
-      const reader = new FileReader();
-      reader.onload = (ev) => {
-        img.src = ev.target.result;
-        img.style.display = 'block';
-        placeholder.style.display = 'none';
-      };
-      reader.readAsDataURL(file);
-    });
-  });
+    img.onerror = () => {
+      img.style.display = 'none';
+      img.removeAttribute('src');
+      placeholder.textContent = 'Lien invalide ou non-image';
+      placeholder.style.display = 'flex';
+    };
+  };
+
+  urlInput.addEventListener('input', refresh);
+  refresh();
+});
+
 document.addEventListener('DOMContentLoaded', () => {
 
   const fields = {
@@ -350,6 +371,74 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   updatePreview();
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+  const contenu = document.getElementById('{{ form.contenu.vars.id }}');
+  const titre = document.getElementById('{{ form.titre.vars.id }}');
+  const hashtags = document.getElementById('{{ form.hashtags.vars.id }}');
+
+  const btnImprove = document.getElementById('aiImprove');
+  const btnTitle = document.getElementById('aiTitle');
+  const btnTags = document.getElementById('aiTags');
+
+  const box = document.getElementById('aiBox');
+  const out = document.getElementById('aiResult');
+  const apply = document.getElementById('aiApply');
+  const close = document.getElementById('aiClose');
+
+  let lastTask = 'improve';
+  let lastText = '';
+
+  async function callAI(task) {
+    if (!contenu || !contenu.value.trim()) {
+      alert('Écris d’abord un contenu 🙂');
+      return;
+    }
+
+    lastTask = task;
+    lastText = contenu.value.trim();
+
+    box.style.display = 'block';
+    out.textContent = '⏳ Génération en cours...';
+
+    const res = await fetch('{{ path("post_ai_generate") }}', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ task, text: lastText })
+    });
+
+    const data = await res.json();
+    if (!data.ok) {
+      out.textContent = data.message || 'Erreur IA';
+      return;
+    }
+    out.textContent = data.result || '(vide)';
+  }
+
+  btnImprove?.addEventListener('click', () => callAI('improve'));
+  btnTitle?.addEventListener('click', () => callAI('title'));
+  btnTags?.addEventListener('click', () => callAI('hashtags'));
+
+  apply?.addEventListener('click', () => {
+    const txt = out.textContent.trim();
+    if (!txt) return;
+
+    if (lastTask === 'improve') {
+      contenu.value = txt;
+      contenu.dispatchEvent(new Event('input'));
+    } else if (lastTask === 'title' && titre) {
+      // prend la 1ère ligne comme titre
+      const firstLine = txt.split('\n').find(l => l.trim()) || txt;
+      titre.value = firstLine.replace(/^\d+[\).\-\s]+/, '').trim();
+      titre.dispatchEvent(new Event('input'));
+    } else if (lastTask === 'hashtags' && hashtags) {
+      hashtags.value = txt.replace(/\n/g,' ').trim();
+      hashtags.dispatchEvent(new Event('input'));
+    }
+  });
+
+  close?.addEventListener('click', () => box.style.display = 'none');
 });
 </script>
 

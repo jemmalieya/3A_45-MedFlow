@@ -77,12 +77,15 @@
                                         <td>
                                             <span class="badge bg-secondary">{{ commande.ligneCommandes|length }} produit(s)</span>
                                         </td>
-                                        <td class="text-end">
-                                            <a href="{{ path('admin_commande_show', {id: commande.idCommande}) }}" 
-                                               class="btn btn-sm btn-primary">
-                                                <i class="bi bi-eye"></i> Détails
-                                            </a>
-                                        </td>
+<td class="text-end">
+    <a href="{{ path('admin_commande_show', {id: commande.idCommande}) }}" class="btn btn-sm btn-primary">
+        <i class="bi bi-eye"></i> Détails
+    </a>
+    <a href="{{ path('commande_facture_pdf', {id: commande.idCommande}) }}" class="btn btn-sm btn-warning">
+        <i class="bi bi-download"></i> Télécharger la facture
+    </a>
+</td>
+
                                     </tr>
                                     {% endfor %}
                                 {% endif %}

@@ -23,9 +23,10 @@ class ReclamationRepository extends ServiceEntityRepository
     ?string $sort,
     ?string $dir
 ): array {
-    $qb = $this->createQueryBuilder('r')
-        ->andWhere('r.id_user = :uid') // ⚠️ si chez toi c'est r.user -> voir note plus bas
-        ->setParameter('uid', $userId);
+   $qb = $this->createQueryBuilder('r')
+    ->andWhere('r.user = :user')
+    ->setParameter('user', $userId); // objet User
+
 
     // ✅ Recherche texte (contenu / description)
     if ($q && trim($q) !== '') {
@@ -57,6 +58,121 @@ class ReclamationRepository extends ServiceEntityRepository
               ->getQuery()
               ->getResult();
 }
+public function getReclamKpis(\DateTimeInterface $from, \DateTimeInterface $to): array
+{
+    $row = $this->createQueryBuilder('r')
+        ->select('COUNT(r.id_reclamation) AS total')
+        ->addSelect("SUM(CASE WHEN r.statutReclamation = 'TRAITEE' THEN 1 ELSE 0 END) AS traitees")
+        ->addSelect("SUM(CASE WHEN r.statutReclamation <> 'TRAITEE' THEN 1 ELSE 0 END) AS enAttente")
+        ->andWhere('r.date_creation_r BETWEEN :from AND :to')
+        ->setParameter('from', $from)
+        ->setParameter('to', $to)
+        ->getQuery()
+        ->getSingleResult();
+
+    return [
+        'total' => (int) $row['total'],
+        'traitees' => (int) $row['traitees'],
+        'enAttente' => (int) $row['enAttente'],
+    ];
+}
+
+public function countReclamByType(\DateTimeInterface $from, \DateTimeInterface $to): array
+{
+    return $this->createQueryBuilder('r')
+        ->select("COALESCE(r.type, 'Non défini') AS label, COUNT(r.id_reclamation) AS total")
+        ->andWhere('r.date_creation_r BETWEEN :from AND :to')
+        ->setParameter('from', $from)
+        ->setParameter('to', $to)
+        ->groupBy('label')
+        ->orderBy('total', 'DESC')
+        ->getQuery()
+        ->getArrayResult();
+}
+
+public function countReclamByStatut(\DateTimeInterface $from, \DateTimeInterface $to): array
+{
+    return $this->createQueryBuilder('r')
+        ->select("COALESCE(r.statutReclamation, 'Non défini') AS label, COUNT(r.id_reclamation) AS total")
+        ->andWhere('r.date_creation_r BETWEEN :from AND :to')
+        ->setParameter('from', $from)
+        ->setParameter('to', $to)
+        ->groupBy('label')
+        ->orderBy('total', 'DESC')
+        ->getQuery()
+        ->getArrayResult();
+}
+
+public function countReclamByPriorite(\DateTimeInterface $from, \DateTimeInterface $to): array
+{
+    return $this->createQueryBuilder('r')
+        ->select("COALESCE(r.priorite, 'Non défini') AS label, COUNT(r.id_reclamation) AS total")
+        ->andWhere('r.date_creation_r BETWEEN :from AND :to')
+        ->setParameter('from', $from)
+        ->setParameter('to', $to)
+        ->groupBy('label')
+        ->orderBy('total', 'DESC')
+        ->getQuery()
+        ->getArrayResult();
+}
+public function countReclamByDay(\DateTimeInterface $from, \DateTimeInterface $to): array
+{
+    $rows = $this->createQueryBuilder('r')
+        ->select('r.date_creation_r AS d')
+        ->andWhere('r.date_creation_r BETWEEN :from AND :to')
+        ->setParameter('from', $from)
+        ->setParameter('to', $to)
+        ->getQuery()
+        ->getArrayResult();
+
+    $map = [];
+    foreach ($rows as $row) {
+        $dt = $row['d'];
+        $day = ($dt instanceof \DateTimeInterface)
+            ? $dt->format('Y-m-d')
+            : (new \DateTimeImmutable((string)$dt))->format('Y-m-d');
+
+        $map[$day] = ($map[$day] ?? 0) + 1;
+    }
+
+    ksort($map);
+
+    $result = [];
+    foreach ($map as $day => $total) {
+        $result[] = ['day' => $day, 'total' => $total];
+    }
+    return $result;
+}
+public function findFiltered(array $filters = []): array
+{
+    $q    = trim((string)($filters['q'] ?? ''));
+    $sort = (string)($filters['sort'] ?? 'date_creation_r');
+    $dir  = strtoupper((string)($filters['dir'] ?? 'DESC')) === 'ASC' ? 'ASC' : 'DESC';
+
+    // ✅ champs autorisés
+    $allowedSort = [
+        'date_creation_r' => 'r.date_creation_r',
+        'contenu'         => 'r.contenu',
+        'type'            => 'r.type',
+        'statut_reclamation' => 'r.statutReclamation',
+        'priorite'        => 'r.priorite',
+    ];
+
+    $orderBy = $allowedSort[$sort] ?? 'r.date_creation_r';
+
+    $qb = $this->createQueryBuilder('r');
+
+    // 🔎 recherche
+    if ($q !== '') {
+        $qb->andWhere('LOWER(r.contenu) LIKE :q OR LOWER(r.description) LIKE :q OR LOWER(r.referenceReclamation) LIKE :q')
+           ->setParameter('q', '%'.mb_strtolower($q).'%');
+    }
+
+     return $qb
+        ->orderBy($orderBy, $dir)
+        ->getQuery()
+        ->getResult();
+}
 
 
     //    /**
@@ -67,7 +183,7 @@ class ReclamationRepository extends ServiceEntityRepository
     //        return $this->createQueryBuilder('r')
     //            ->andWhere('r.exampleField = :val')
     //            ->setParameter('val', $value)
-    //            ->orderBy('r.id', 'ASC')
+    //            ->orderBy('r.id_reclamation_reclamation', 'ASC')
     //            ->setMaxResults(10)
     //            ->getQuery()
     //            ->getResult()

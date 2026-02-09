@@ -45,11 +45,9 @@ private ?string $googleId = null;
     #[Assert\Length(max: 100, maxMessage: "Le prénom ne doit pas dépasser {{ limit }} caractères.")]
     #[Assert\Regex(pattern: "/^[a-zA-ZÀ-ÿ\s'-]+$/", message: "Le prénom ne doit contenir que des lettres.")]
     private ?string $prenom = null;
-
-    #[ORM\Column(type: Types::DATE_MUTABLE)]
-    #[Assert\NotBlank(message: "La date de naissance est obligatoire.")]
-    #[Assert\LessThan("today", message: "La date de naissance doit être dans le passé.")]
+   #[ORM\Column(type: Types::DATE_MUTABLE)]
     private ?\DateTimeInterface $dateNaissance = null;
+
 
 
    #[ORM\Column(length: 20)]
@@ -276,6 +274,7 @@ private ?string $googleId = null;
         // PATIENT
         $roles[] = 'ROLE_PATIENT';
     }
+    
 
     return array_values(array_unique($roles));
 }
@@ -407,14 +406,12 @@ private ?string $googleId = null;
         $this->staffReviewedBy = $staffReviewedBy;
         return $this;
     }
-    public function getGoogleId(): ?string
-{
-    return $this->googleId;
-}
-
+    // In your User entity, add the method
 public function setGoogleId(?string $googleId): self
 {
     $this->googleId = $googleId;
     return $this;
 }
+
+    
 }
