@@ -125,6 +125,12 @@
               placeholder="••••••••"
               autocomplete="current-password"
             >
+            <div class="text-end mt-2">
+              <a href="{{ path('forgot_password') }}" class="small-link text-decoration-none">
+                Mot de passe oublié ?
+              </a>
+            </div>
+
           </div>
 
           <input type="hidden" name="_csrf_token" value="{{ csrf_token('authenticate') }}">

@@ -1,3 +1,5 @@
+{# templates/admin/staff/patients/index.html.twig #}
+
 {% extends 'base_dashboard.html.twig' %}
 {% block title %}Gestion Patients{% endblock %}
 
@@ -11,12 +13,8 @@
       <div class="text-muted">Triage intelligent, alertes & suivi qualité</div>
     </div>
     <div class="d-flex gap-2">
-      <a href="{{ path('staff_dashboard') }}" class="btn btn-outline-secondary btn-sm">
-        ← Dashboard
-      </a>
-      <a href="{{ path('staff_patients_index') }}" class="btn btn-light border btn-sm">
-        Réinitialiser
-      </a>
+      <a href="{{ path('staff_dashboard') }}" class="btn btn-outline-secondary btn-sm">← Dashboard</a>
+      <a href="{{ path('staff_patients_index') }}" class="btn btn-light border btn-sm">Réinitialiser</a>
     </div>
   </div>
 
@@ -40,7 +38,6 @@
         </div>
       </div>
     </div>
-
     <div class="col-12 col-md-3">
       <div class="card border-0 shadow-sm">
         <div class="card-body py-3">
@@ -54,7 +51,6 @@
         </div>
       </div>
     </div>
-
     <div class="col-12 col-md-3">
       <div class="card border-0 shadow-sm">
         <div class="card-body py-3">
@@ -68,7 +64,6 @@
         </div>
       </div>
     </div>
-
     <div class="col-12 col-md-3">
       <div class="card border-0 shadow-sm">
         <div class="card-body py-3">
@@ -87,35 +82,6 @@
     </div>
   </div>
 
-  {# ===== ALERT STRIP (one line, useful) ===== #}
-  <div class="card border-0 shadow-sm mb-3">
-    <div class="card-body py-3">
-      <div class="d-flex flex-wrap gap-2 align-items-center">
-        <span class="fw-semibold">Alertes :</span>
-
-        <span class="badge bg-light text-dark border">
-          Téléphones invalides: <span class="fw-semibold">{{ stats.phone_invalid ?? 0 }}</span>
-        </span>
-
-        <span class="badge bg-light text-dark border">
-          Comptes bloqués: <span class="fw-semibold">{{ stats.blocked ?? 0 }}</span>
-        </span>
-
-        <span class="badge bg-light text-dark border">
-          Haute: <span class="fw-semibold">{{ stats.priorities.HAUTE ?? 0 }}</span>
-        </span>
-
-        <span class="badge bg-light text-dark border">
-          Moyenne: <span class="fw-semibold">{{ stats.priorities.MOYENNE ?? 0 }}</span>
-        </span>
-
-        <span class="ms-auto small text-muted">
-          Conseil: {% if (stats.unverified ?? 0) > 0 %}relancer les non vérifiés{% else %}situation saine{% endif %}
-        </span>
-      </div>
-    </div>
-  </div>
-
   {# ===== FILTER BAR (compact, 1 row) ===== #}
   <div class="card border-0 shadow-sm mb-3">
     <div class="card-body">
@@ -129,7 +95,6 @@
           </div>
         </div>
 
-        {# Triage rapide (plus pro que 5 selects) #}
         <div class="col-6 col-lg-3">
           <select name="alert" class="form-select">
             <option value="" {{ alert == '' ? 'selected' : '' }}>Triage rapide : Tout</option>
@@ -162,15 +127,6 @@
           <button class="btn btn-primary">Go</button>
         </div>
       </form>
-
-      {% if q or triage != '' or alert != '' %}
-        <div class="small text-muted mt-2">
-          Actif :
-          {% if q %}<span class="badge bg-light text-dark border">Recherche</span>{% endif %}
-          {% if triage != '' %}<span class="badge bg-light text-dark border">Priorité {{ triage }}</span>{% endif %}
-          {% if alert != '' %}<span class="badge bg-light text-dark border">Triage</span>{% endif %}
-        </div>
-      {% endif %}
     </div>
   </div>
 
@@ -197,7 +153,6 @@
 
           <tr>
             <td class="text-muted">{{ p.cin }}</td>
-
             <td>
               <div class="fw-semibold">{{ p.nom }} {{ p.prenom }}</div>
               <div class="text-muted small">
@@ -206,62 +161,37 @@
                 {% else %}
                   {# icones compactes #}
                   {% for a in t.alerts %}
-                    {% if a.key == 'blocked' %}
-                      <span class="me-1">🔒</span>
-                    {% elseif a.key == 'phone_invalid' %}
-                      <span class="me-1">📵</span>
-                    {% elseif a.key == 'unverified_expired' %}
-                      <span class="me-1">⏳</span>
-                    {% elseif a.key == 'unverified' %}
-                      <span class="me-1">✉️</span>
-                    {% endif %}
+                    {% if a.key == 'blocked' %} <span class="me-1">🔒</span> {% endif %}
+                    {% if a.key == 'phone_invalid' %} <span class="me-1">📵</span> {% endif %}
+                    {% if a.key == 'unverified_expired' %} <span class="me-1">⏳</span> {% endif %}
+                    {% if a.key == 'unverified' %} <span class="me-1">✉️</span> {% endif %}
                   {% endfor %}
                   <span class="ms-1">alertes</span>
                 {% endif %}
               </div>
             </td>
-
             <td>
               {% if p.telephoneUser %}
-                <span class="{{ t.phoneOk ? '' : 'text-danger fw-semibold' }}">
-                  {{ p.telephoneUser }}
-                </span>
+                <span class="{{ t.phoneOk ? '' : 'text-danger fw-semibold' }}">{{ p.telephoneUser }}</span>
               {% else %}
                 <span class="text-danger fw-semibold">—</span>
               {% endif %}
             </td>
-
             <td><a href="mailto:{{ p.emailUser }}">{{ p.emailUser }}</a></td>
-
             <td>
-              {# priorité pill #}
-              {% if t.priority.level == 'CRITIQUE' %}
-                <span class="badge bg-danger">Critique</span>
-              {% elseif t.priority.level == 'HAUTE' %}
-                <span class="badge bg-warning text-dark">Haute</span>
-              {% elseif t.priority.level == 'MOYENNE' %}
-                <span class="badge bg-info text-dark">Moyenne</span>
-              {% else %}
-                <span class="badge bg-success">OK</span>
+              {% if t.priority.level == 'CRITIQUE' %} <span class="badge bg-danger">Critique</span>
+              {% elseif t.priority.level == 'HAUTE' %} <span class="badge bg-warning text-dark">Haute</span>
+              {% elseif t.priority.level == 'MOYENNE' %} <span class="badge bg-info text-dark">Moyenne</span>
+              {% else %} <span class="badge bg-success">OK</span>
               {% endif %}
             </td>
-
             <td>
-              {% if p.isVerified %}
-                <span class="badge bg-success">Vérifié</span>
-              {% else %}
-                <span class="badge bg-danger">Non vérifié</span>
-              {% endif %}
-              {% if t.blocked %}
-                <span class="badge bg-dark ms-1">Bloqué</span>
-              {% endif %}
+              {% if p.isVerified %} <span class="badge bg-success">Vérifié</span>
+              {% else %} <span class="badge bg-danger">Non vérifié</span> {% endif %}
+              {% if t.blocked %} <span class="badge bg-dark ms-1">Bloqué</span> {% endif %}
             </td>
-
             <td class="text-end">
-              <a class="btn btn-sm btn-outline-primary"
-                 href="{{ path('staff_patients_show', {id: p.id}) }}">
-                Voir
-              </a>
+              <a class="btn btn-sm btn-outline-primary" href="{{ path('staff_patients_show', {id: p.id}) }}">Voir</a>
             </td>
           </tr>
 
@@ -270,18 +200,14 @@
             <td colspan="7" class="text-center py-5 text-muted">
               Aucun patient ne correspond aux filtres.
               <div class="mt-2">
-                <a class="btn btn-sm btn-outline-secondary" href="{{ path('staff_patients_index') }}">
-                  Réinitialiser
-                </a>
+                <a class="btn btn-sm btn-outline-secondary" href="{{ path('staff_patients_index') }}">Réinitialiser</a>
               </div>
             </td>
           </tr>
         {% endfor %}
         </tbody>
-
       </table>
     </div>
   </div>
-
 </div>
 {% endblock %}

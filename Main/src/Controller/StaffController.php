@@ -37,80 +37,73 @@ class StaffController extends AbstractController
   
 #[Route('/admin/staff/patients', name: 'staff_patients_index', methods: ['GET'])]
 public function patientsIndex(Request $request, UserRepository $repo): Response
-{
-
+{ 
     $q = trim((string) $request->query->get('q', ''));
     $verified = (string) $request->query->get('verified', ''); // '' | '1' | '0'
     $sort = (string) $request->query->get('sort', 'recent');   // recent|name|cin
     $triageFilter = (string) $request->query->get('triage', ''); // ''|CRITIQUE|HAUTE|MOYENNE|OK
     $alertFilter = (string) $request->query->get('alert', '');   // ''|unverified|unverified_expired|phone_invalid|blocked
 
-    $qb = $repo->createQueryBuilder('u')
-        ->andWhere('u.roleSysteme = :role')
-        ->setParameter('role', 'PATIENT');
+    $patients = $repo->findPatientsWithFilters([
+        'q' => $q,
+        'verified' => $verified === '' ? null : (bool) $verified,
+    ]);
 
-    if ($q !== '') {
-        $qb->andWhere('u.cin LIKE :q OR u.nom LIKE :q OR u.prenom LIKE :q OR u.emailUser LIKE :q')
-           ->setParameter('q', '%'.$q.'%');
-    }
-
-    if ($verified === '1') {
-        $qb->andWhere('u.isVerified = 1');
-    } elseif ($verified === '0') {
-        $qb->andWhere('u.isVerified = 0');
-    }
-
-    // Tri simple
-    if ($sort === 'name') {
-        $qb->orderBy('u.nom', 'ASC')->addOrderBy('u.prenom', 'ASC');
-    } elseif ($sort === 'cin') {
-        $qb->orderBy('u.cin', 'ASC');
-    } else {
-        $qb->orderBy('u.id', 'DESC');
-    }
-
-    $patients = $qb->getQuery()->getResult();
-
-    // ✅ Triage + stats (sans table)
+    // Stats and row data
     $rows = [];
     $stats = [
         'total' => 0,
         'verified' => 0,
         'unverified' => 0,
+        'phone_valid' => 0,
         'phone_invalid' => 0,
+        'phone_pending' => 0,
         'blocked' => 0,
-        'priorities' => ['CRITIQUE' => 0, 'HAUTE' => 0, 'MOYENNE' => 0, 'OK' => 0],
         'expired_links' => 0,
+        'priorities' => ['CRITIQUE' => 0, 'HAUTE' => 0, 'MOYENNE' => 0, 'OK' => 0],
     ];
 
+    // Calculate stats and process patients
     foreach ($patients as $p) {
         $t = $this->buildTriage($p);
 
-        // stats globales
+        // General stats
         $stats['total']++;
         $p->isVerified() ? $stats['verified']++ : $stats['unverified']++;
-        if (!$t['phoneOk']) $stats['phone_invalid']++;
+        $t['phoneOk'] ? $stats['phone_valid']++ : ($t['phoneOk'] === false ? $stats['phone_invalid']++ : $stats['phone_pending']++);
         if ($t['blocked']) $stats['blocked']++;
         if ($t['expired']) $stats['expired_links']++;
         $stats['priorities'][$t['priority']['level']]++;
 
-        // filtres avancés (après calcul triage)
+        // Apply filters after calculating triage
         if ($triageFilter && $t['priority']['level'] !== $triageFilter) {
             continue;
         }
         if ($alertFilter) {
-            $has = false;
+            $hasAlert = false;
             foreach ($t['alerts'] as $a) {
-                if ($a['key'] === $alertFilter) { $has = true; break; }
+                if ($a['key'] === $alertFilter) {
+                    $hasAlert = true;
+                    break;
+                }
             }
-            if (!$has) continue;
+            if (!$hasAlert) continue;
         }
 
-        $rows[] = [
-            'p' => $p,
-            'triage' => $t,
-        ];
+        $rows[] = ['p' => $p, 'triage' => $t];
     }
+
+    // Sorting and displaying filtered stats
+    usort($rows, fn($a, $b) => $b['triage']['score'] <=> $a['triage']['score']);
+    $top = array_slice($rows, 0, 10);
+
+    // Actionable insights based on stats
+    $tips = [];
+    if ($stats['unverified'] > 0) $tips[] = "Relancer les non-vérifiés via Brevo (email de vérification).";
+    if ($stats['expired_links'] > 0) $tips[] = "Beaucoup de liens expirés : proposer un bouton de renvoi en masse.";
+    if ($stats['phone_invalid'] > 0) $tips[] = "Téléphones invalides : demander correction lors de la prochaine connexion.";
+    if ($stats['blocked'] > 0) $tips[] = "Comptes bloqués : vérifier l’origine et décider déblocage/suppression.";
+    if ($tips === []) $tips[] = "Aucune anomalie critique détectée.";
 
     return $this->render('staff/patients/index.html.twig', [
         'rows' => $rows,
@@ -120,8 +113,10 @@ public function patientsIndex(Request $request, UserRepository $repo): Response
         'triage' => $triageFilter,
         'alert' => $alertFilter,
         'stats' => $stats,
+        'tips' => $tips,
     ]);
 }
+
 
 
     /* =========================
@@ -363,17 +358,17 @@ public function patientsStats(Request $request, UserRepository $repo): Response
     ]);
 }
 
-#[Route('admin/staff/patients/report/pdf', name: 'staff_patients_report_pdf', methods: ['GET'])]
-public function patientsReportPdf(UserRepository $repo): Response
+#[Route('/admin/staff/patients/report/pdf', name: 'staff_patients_report_pdf', methods: ['GET'])]
+public function generatePatientReport(UserRepository $repo): Response
 {
-
-
+    // Get all patients
     $patients = $repo->createQueryBuilder('u')
         ->andWhere('u.roleSysteme = :role')
         ->setParameter('role', 'PATIENT')
         ->orderBy('u.id', 'DESC')
         ->getQuery()->getResult();
 
+    // Initialize stats and rows
     $rows = [];
     $stats = [
         'total' => 0,
@@ -385,9 +380,11 @@ public function patientsReportPdf(UserRepository $repo): Response
         'priorities' => ['CRITIQUE' => 0, 'HAUTE' => 0, 'MOYENNE' => 0, 'OK' => 0],
     ];
 
+    // Collect data and calculate statistics
     foreach ($patients as $p) {
         $t = $this->buildTriage($p);
 
+        // Update stats based on patient data
         $stats['total']++;
         $p->isVerified() ? $stats['verified']++ : $stats['unverified']++;
         if (!$t['phoneOk']) $stats['phone_invalid']++;
@@ -395,14 +392,15 @@ public function patientsReportPdf(UserRepository $repo): Response
         if ($t['expired']) $stats['expired_links']++;
         $stats['priorities'][$t['priority']['level']]++;
 
+        // Store rows for PDF display
         $rows[] = ['p' => $p, 'triage' => $t];
     }
 
-    // Top 10 critiques/hautes (rapport utile)
+    // Sort patients and get top 10 critical/high priority patients
     usort($rows, fn($a, $b) => $b['triage']['score'] <=> $a['triage']['score']);
     $top = array_slice($rows, 0, 10);
 
-    // Conseils
+    // Actionable insights for the admin
     $tips = [];
     if ($stats['unverified'] > 0) $tips[] = "Relancer les non-vérifiés via Brevo (email de vérification).";
     if ($stats['expired_links'] > 0) $tips[] = "Beaucoup de liens expirés : proposer un bouton de renvoi en masse.";
@@ -410,7 +408,7 @@ public function patientsReportPdf(UserRepository $repo): Response
     if ($stats['blocked'] > 0) $tips[] = "Comptes bloqués : vérifier l’origine et décider déblocage/suppression.";
     if ($tips === []) $tips[] = "Aucune anomalie critique détectée.";
 
-    // HTML PDF
+    // Render the HTML content to be converted into a PDF
     $html = $this->renderView('staff/patients/report_pdf.html.twig', [
         'stats' => $stats,
         'top' => $top,
@@ -419,16 +417,25 @@ public function patientsReportPdf(UserRepository $repo): Response
         'staffName' => $this->getUser()?->getPrenom(),
     ]);
 
+    // Initialize Dompdf with options
     $options = new Options();
     $options->set('defaultFont', 'DejaVu Sans');
     $dompdf = new Dompdf($options);
+
+    // Load HTML content into Dompdf
     $dompdf->loadHtml($html);
+
+    // Set paper size and orientation (A4 and portrait)
     $dompdf->setPaper('A4', 'portrait');
+
+    // Render PDF from HTML content
     $dompdf->render();
 
+    // Get the PDF output
     $output = $dompdf->output();
-    $response = new Response($output);
 
+    // Prepare the response as a PDF attachment for download
+    $response = new Response($output);
     $disposition = $response->headers->makeDisposition(
         ResponseHeaderBag::DISPOSITION_ATTACHMENT,
         'rapport_qualite_patients.pdf'
@@ -439,6 +446,7 @@ public function patientsReportPdf(UserRepository $repo): Response
 
     return $response;
 }
+
 #[Route('admin/staff/patients/{id}/email-check', name: 'staff_patient_email_check', methods: ['POST'])]
 public function emailCheck(
     User $patient,

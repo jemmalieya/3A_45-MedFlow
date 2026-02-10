@@ -28,10 +28,10 @@ class RegisterUserType extends AbstractType
           ->add('cin', TextType::class, [
         'constraints' => [
             new NotBlank(['message' => 'Le CIN est obligatoire.']),
-            new Regex([
+           /* new Regex([
                 'pattern' => '/^\d{8}$/',
                 'message' => 'Le CIN doit contenir exactement 8 chiffres.'
-            ])
+            ])*/
         ]
     ])
 
@@ -47,21 +47,24 @@ class RegisterUserType extends AbstractType
                 'required' => true,
                 'attr' => ['placeholder' => 'Prénom'],
                 'constraints' => [
-                    new NotBlank(['message' => 'Le prénom est obligatoire.']),
+                  new NotBlank(['message' => 'Le prénom est obligatoire.']),
                 ],
             ])
 
             ->add('dateNaissance', DateType::class, [
             'widget' => 'single_text',
+            /*'constraints' => [
+                new NotBlank(['message' => 'La date de naissance est obligatoire.']),
+            ],*/
             ])
 
              ->add('telephoneUser', TextType::class, [
         'constraints' => [
             new NotBlank(['message' => 'Le téléphone est obligatoire.']),
-            new Regex([
+           /* new Regex([
                 'pattern' => "/^\+?\d{8,15}$/",
                 'message' => 'Téléphone invalide (ex: 54430709 ou +21654430709).'
-            ])
+            ])*/
         ]
     ])
 
@@ -84,6 +87,14 @@ class RegisterUserType extends AbstractType
                 'required' => true,
                 'mapped' => false,
                 'attr' => ['placeholder' => 'Mot de passe'],
+                'constraints' => [
+                    new NotBlank(['message' => 'Le mot de passe est obligatoire.']),
+                    new Assert\Length(['min' => 8, 'minMessage' => 'Le mot de passe doit contenir au moins {{ limit }} caractères.']),
+                    new Regex([
+                        'pattern' => '/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&]).{8,}$/',
+                        'message' => 'Le mot de passe doit contenir: lettres (minuscules + majuscules), chiffres et caractères spéciaux (@$!%*?&).'
+                    ])
+                ]
             ])
 
             ->add('profilePictureFile', FileType::class, [

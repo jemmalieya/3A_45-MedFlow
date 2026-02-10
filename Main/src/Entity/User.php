@@ -12,22 +12,23 @@ use Doctrine\Common\Collections\Collection;
 use Doctrine\Common\Collections\ArrayCollection;
 
 #[UniqueEntity(fields: ['emailUser'], message: 'Cet email est déjà utilisé.')]
+#[UniqueEntity(fields: ['cin'], message: 'Ce CIN est déjà utilisé.')]
 #[ORM\Entity(repositoryClass: UserRepository::class)]
 class User implements UserInterface, PasswordAuthenticatedUserInterface
 {
     #[Assert\NotBlank(message: "Le mot de passe est obligatoire.", groups: ["registration"])]
-    #[Assert\Length(min: 6, minMessage: "Le mot de passe doit contenir au moins {{ limit }} caractères.", groups: ["registration"])]
+    #[Assert\Length(min: 8, minMessage: "Le mot de passe doit contenir au moins {{ limit }} caractères.", groups: ["registration"])]
+    #[Assert\Regex(pattern: "/^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&]).{8,}$/", message: "Le mot de passe doit contenir: lettres (minuscules + majuscules), chiffres et caractères spéciaux (@$!%*?&).", groups: ["registration"])]
     private ?string $plainPassword = null;
 
     #[ORM\Column(length: 255, nullable: true)]
 private ?string $googleId = null;
-
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
     private ?int $id = null;
 
-    #[ORM\Column(length: 8)]
+    #[ORM\Column(length: 8, unique: true)]
     #[Assert\NotBlank(message: "Le CIN est obligatoire.")]
     #[Assert\Regex(pattern: "/^\d{8}$/", message: "Le CIN doit contenir exactement 8 chiffres.")]
     private ?string $cin = null;
@@ -47,6 +48,7 @@ private ?string $googleId = null;
     #[Assert\Regex(pattern: "/^[a-zA-ZÀ-ÿ\s'-]+$/", message: "Le prénom ne doit contenir que des lettres.")]
     private ?string $prenom = null;
    #[ORM\Column(type: Types::DATE_MUTABLE)]
+    #[Assert\NotBlank(message: "La date de naissance est obligatoire.")]
     private ?\DateTimeInterface $dateNaissance = null;
 
 
@@ -93,6 +95,13 @@ private ?string $googleId = null;
 
     #[ORM\Column(type: Types::DATETIME_MUTABLE, nullable: true)]
     private ?\DateTimeInterface $tokenExpiresAt = null;
+
+    // ===== Réinitialisation de mot de passe =====
+    #[ORM\Column(length: 255, nullable: true)]
+    private ?string $resetToken = null;
+
+    #[ORM\Column(type: Types::DATETIME_MUTABLE, nullable: true)]
+    private ?\DateTimeInterface $resetTokenExpiresAt = null;
 
     // ===== Demande staff (Option C sans nouvelle table) =====
     #[ORM\Column(length: 20, nullable: true)]
@@ -418,12 +427,37 @@ private ?string $googleId = null;
         $this->staffReviewedBy = $staffReviewedBy;
         return $this;
     }
+
+    public function getResetToken(): ?string
+    {
+        return $this->resetToken;
+    }
+
+    public function setResetToken(?string $resetToken): self
+    {
+        $this->resetToken = $resetToken;
+        return $this;
+    }
+
+    public function getResetTokenExpiresAt(): ?\DateTimeInterface
+    {
+        return $this->resetTokenExpiresAt;
+    }
+
+    public function setResetTokenExpiresAt(?\DateTimeInterface $resetTokenExpiresAt): self
+    {
+        $this->resetTokenExpiresAt = $resetTokenExpiresAt;
+        return $this;
+    }
+
     // In your User entity, add the method
 public function setGoogleId(?string $googleId): self
 {
     $this->googleId = $googleId;
     return $this;
 }
+
+
 
     
 }

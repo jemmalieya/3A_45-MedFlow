@@ -62,4 +62,30 @@ class UserService
         $this->em->remove($user);
         $this->em->flush();
     }
+
+
+public function getFilteredUsers(string $q, string $sort, string $role = 'PATIENT'): array
+{
+    $qb = $this->em->getRepository(User::class)->createQueryBuilder('u')
+        ->andWhere('u.roleSysteme = :role')
+        ->setParameter('role', $role);
+
+    // Filter by search query
+    if ($q !== '') {
+        $qb->andWhere('u.cin LIKE :q OR u.nom LIKE :q OR u.prenom LIKE :q OR u.emailUser LIKE :q')
+           ->setParameter('q', '%'.$q.'%');
+    }
+
+    // Sorting logic
+    if ($sort === 'name') {
+        $qb->orderBy('u.nom', 'ASC')->addOrderBy('u.prenom', 'ASC');
+    } elseif ($sort === 'cin') {
+        $qb->orderBy('u.cin', 'ASC');
+    } else {
+        $qb->orderBy('u.id', 'DESC');
+    }
+
+    return $qb->getQuery()->getResult();
+}
+
 }

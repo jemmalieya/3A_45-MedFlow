@@ -1,80 +1,114 @@
 {% extends 'base_dashboard.html.twig' %}
-{% block title %}Statistiques Patients{% endblock %}
+
+{% block title %}Statistiques des Patients{% endblock %}
 
 {% block body %}
 <div class="container-fluid py-4">
-
-  <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-4">
-    <div>
-      <h1 class="h3 mb-1">Statistiques Patients</h1>
-      <div class="text-muted">Vue décisionnelle — priorités, vérification, qualité</div>
-    </div>
-
-    <div class="d-flex gap-2">
-      <a href="{{ path('staff_patients_index') }}" class="btn btn-outline-secondary btn-sm">← Retour</a>
-      <a href="{{ path('staff_patients_report_pdf') }}" class="btn btn-primary btn-sm">Télécharger PDF</a>
-    </div>
-  </div>
-
-  <div class="row g-3 mb-4">
-    <div class="col-12 col-md-3"><div class="card border-0 shadow-sm"><div class="card-body">
-      <div class="text-muted small">Total</div><div class="h3 mb-0">{{ stats.total }}</div>
-    </div></div></div>
-    <div class="col-12 col-md-3"><div class="card border-0 shadow-sm"><div class="card-body">
-      <div class="text-muted small">Vérifiés</div><div class="h3 mb-0">{{ stats.verified }}</div>
-    </div></div></div>
-    <div class="col-12 col-md-3"><div class="card border-0 shadow-sm"><div class="card-body">
-      <div class="text-muted small">Non vérifiés</div><div class="h3 mb-0">{{ stats.unverified }}</div>
-    </div></div></div>
-    <div class="col-12 col-md-3"><div class="card border-0 shadow-sm"><div class="card-body">
-      <div class="text-muted small">Alertes (qualité)</div>
-      <div class="small">
-        📵 {{ stats.phone_invalid }} tel invalides • 🔒 {{ stats.blocked }} bloqués • ⏳ {{ stats.expired_links }} expirés
-      </div>
-    </div></div></div>
-  </div>
-
-  <div class="row g-3">
-    <div class="col-12 col-lg-6">
-      <div class="card border-0 shadow-sm">
-        <div class="card-body">
-          <div class="fw-semibold mb-2">Priorités</div>
-          <canvas id="chartPriorities" height="120"></canvas>
+    <!-- ===== HEADER ===== -->
+    <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-4">
+        <div>
+            <h1 class="h3 mb-1">Statistiques des Patients</h1>
+            <div class="text-muted">Vue décisionnelle — priorités, vérification, qualité</div>
         </div>
-      </div>
+        <div class="d-flex gap-2">
+            <a href="{{ path('staff_patients_index') }}" class="btn btn-outline-secondary btn-sm">← Retour</a>
+            <a href="{{ path('staff_patients_report_pdf') }}" class="btn btn-primary btn-sm">Télécharger PDF</a>
+        </div>
     </div>
 
-    <div class="col-12 col-lg-6">
-      <div class="card border-0 shadow-sm">
-        <div class="card-body">
-          <div class="fw-semibold mb-2">Vérification</div>
-          <canvas id="chartVerification" height="120"></canvas>
+    <!-- ===== STATS CARDS SECTION ===== -->
+    <div class="row g-3 mb-4">
+        <!-- Total Patients -->
+        <div class="col-12 col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="text-muted small">Total des Patients</div>
+                    <div class="h3 mb-0">{{ stats.total }}</div>
+                </div>
+            </div>
         </div>
-      </div>
+
+        <!-- Verified Patients -->
+        <div class="col-12 col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="text-muted small">Vérifiés</div>
+                    <div class="h3 mb-0">{{ stats.verified }}</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Unverified Patients -->
+        <div class="col-12 col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="text-muted small">Non Vérifiés</div>
+                    <div class="h3 mb-0">{{ stats.unverified }}</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Alerts Section -->
+        <div class="col-12 col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="text-muted small">Alertes (Qualité)</div>
+                    <div class="small">
+                        📵 {{ stats.phone_invalid }} Téléphones invalides • 🔒 {{ stats.blocked }} Bloqués • ⏳ {{ stats.expired_links }} Liens expirés
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
-    <div class="col-12">
-      <div class="card border-0 shadow-sm">
-        <div class="card-body">
-          <div class="fw-semibold mb-2">Qualité & Sécurité (anomalies)</div>
-          <canvas id="chartQuality" height="90"></canvas>
+    <!-- ===== CHARTS SECTION ===== -->
+    <div class="row g-3">
+        <!-- Priorities Chart -->
+        <div class="col-12 col-lg-6">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="fw-semibold mb-2">Priorités des Patients</div>
+                    <canvas id="chartPriorities" style="max-height: 300px; max-width: 100%;"></canvas>
+                </div>
+            </div>
         </div>
-      </div>
+
+        <!-- Verification Chart -->
+        <div class="col-12 col-lg-6">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="fw-semibold mb-2">Vérification des Patients</div>
+                    <canvas id="chartVerification" style="max-height: 300px; max-width: 100%;"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quality & Alerts Chart -->
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="fw-semibold mb-2">Qualité & Sécurité des Données</div>
+                    <canvas id="chartQuality" style="max-height: 300px; max-width: 100%;"></canvas>
+                </div>
+            </div>
+        </div>
     </div>
 
-    <div class="col-12">
-      <div class="card border-0 shadow-sm">
-        <div class="card-body">
-          <div class="fw-semibold mb-2">Conseils automatiques</div>
-          <ul class="mb-0">
-            {% for t in tips %}
-              <li>{{ t }}</li>
-            {% endfor %}
-          </ul>
+    <!-- ===== ACTIONABLE TIPS SECTION ===== -->
+    <div class="row g-3">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="fw-semibold mb-2">Conseils Automatiques</div>
+                    <ul class="mb-0">
+                        {% for t in tips %}
+                            <li>{{ t }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
         </div>
-      </div>
     </div>
-  </div>
 
 </div>
 
@@ -85,27 +119,45 @@
   const verification = {{ chartVerification|json_encode|raw }};
   const quality = {{ chartDataQuality|json_encode|raw }};
 
+  // Priorities Bar Chart
   new Chart(document.getElementById('chartPriorities'), {
     type: 'bar',
     data: {
       labels: ['Critique', 'Haute', 'Moyenne', 'OK'],
       datasets: [{ label: 'Patients', data: priorities }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      aspectRatio: 1.5,
     }
   });
 
+  // Verification Doughnut Chart
   new Chart(document.getElementById('chartVerification'), {
     type: 'doughnut',
     data: {
-      labels: ['Vérifiés', 'Non vérifiés'],
+      labels: ['Vérifiés', 'Non Vérifiés'],
       datasets: [{ label: 'Comptes', data: verification }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      aspectRatio: 1.2,
     }
   });
 
+  // Quality & Alerts Bar Chart
   new Chart(document.getElementById('chartQuality'), {
     type: 'bar',
     data: {
-      labels: ['Téléphones invalides', 'Comptes bloqués', 'Liens expirés'],
+      labels: ['Téléphones Invalides', 'Comptes Bloqués', 'Liens Expirés'],
       datasets: [{ label: 'Alertes', data: quality }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      aspectRatio: 1.5,
     }
   });
 </script>

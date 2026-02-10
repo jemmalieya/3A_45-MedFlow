@@ -22,14 +22,16 @@ final class UserController extends AbstractController
         $this->userService = $userService;
     }
 
-    // Affichage de la liste des utilisateurs (admin)
-    #[Route('/admin/users', name: 'admin_users_index', methods: ['GET'])]
-    public function adminIndex(UserRepository $userRepo): Response
+
+    #[Route('/admin/users', name: 'admin_users_index')]
+    public function adminIndex(Request $request, UserRepository $repo): Response
     {
-        $users = $userRepo->findAll();
+        $users = $repo->findPatientsWithFilters([
+            'q' => $request->query->get('q'),
+        ]);
 
         return $this->render('admin/index_user.html.twig', [
-            'users' => $users
+            'users' => $users,
         ]);
     }
 

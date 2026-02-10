@@ -1,85 +1,76 @@
-<!doctype html>
-<html lang="fr">
-<head>
-  <meta charset="UTF-8">
-  <style>
-    body { font-family: DejaVu Sans, sans-serif; font-size: 12px; color:#111; }
-    .header { margin-bottom: 12px; }
-    .title { font-size: 18px; font-weight: bold; }
-    .muted { color:#666; }
-    .kpi { width:100%; border-collapse: collapse; margin: 10px 0 16px; }
-    .kpi td { border:1px solid #ddd; padding:8px; }
-    .badge { padding:2px 8px; border-radius: 10px; font-weight: bold; }
-    .danger { background:#f8d7da; }
-    .warning { background:#fff3cd; }
-    .info { background:#cff4fc; }
-    .success { background:#d1e7dd; }
-    table { width:100%; border-collapse: collapse; }
-    th, td { border:1px solid #ddd; padding:6px; }
-    th { background:#f5f5f5; text-align:left; }
-  </style>
-</head>
-<body>
-  <div class="header">
-    <div class="title">Rapport Qualité & Risques — Patients</div>
-    <div class="muted">
-      Généré le {{ generatedAt|date('d/m/Y H:i') }}
-      {% if staffName %} • Par {{ staffName }}{% endif %}
-    </div>
-  </div>
 
-  <table class="kpi">
-    <tr>
-      <td><b>Total</b><br>{{ stats.total }}</td>
-      <td><b>Vérifiés</b><br>{{ stats.verified }}</td>
-      <td><b>Non vérifiés</b><br>{{ stats.unverified }}</td>
-      <td><b>Tél invalides</b><br>{{ stats.phone_invalid }}</td>
-      <td><b>Bloqués</b><br>{{ stats.blocked }}</td>
-      <td><b>Liens expirés</b><br>{{ stats.expired_links }}</td>
-    </tr>
-  </table>
+<style>
+    body { font-family: 'Roboto', sans-serif; color: #333; }
+    h1 { font-size: 24px; color: #007bff; }
+    h2 { font-size: 20px; color: #28a745; }
+    .progress-bar { background-color: #f1f1f1; border-radius: 5px; }
+    .progress-bar div { height: 20px; border-radius: 5px; }
+    .table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+    .table th, .table td { padding: 10px; text-align: left; border: 1px solid #ddd; }
+    .priority { text-transform: uppercase; padding: 5px; color: white; font-weight: bold; }
+    .priority-critique { background-color: #dc3545; }
+    .priority-haute { background-color: #ffc107; }
+    .priority-moyenne { background-color: #17a2b8; }
+    .priority-ok { background-color: #28a745; }
+    .tips { background-color: #f9f9f9; padding: 10px; border-left: 5px solid #007bff; }
+</style>
 
-  <h3>Top 10 patients à traiter en priorité</h3>
-  <table>
+<h1>Rapport des Patients - {{ staffName }}</h1>
+<p><strong>Date de génération :</strong> {{ generatedAt|date('Y-m-d') }}</p>
+
+<h2>Statut de Vérification :</h2>
+<div class="progress-bar">
+    <p>Vérifiés : {{ stats.verified ?? 0 }} sur {{ stats.total ?? 0 }} patients</p>
+    <div style="width: {{ stats.verified / stats.total * 100 }}%; background-color: #007bff;"></div>
+</div>
+
+<h2>Priorités des Patients :</h2>
+<table class="table">
     <thead>
-      <tr>
-        <th>CIN</th>
-        <th>Nom</th>
-        <th>Email</th>
-        <th>Téléphone</th>
-        <th>Priorité</th>
-        <th>Alertes</th>
-      </tr>
+        <tr>
+            <th>Nom du Patient</th>
+            <th>CIN</th>
+            <th>Niveau de Priorité</th>
+        </tr>
     </thead>
     <tbody>
-      {% for row in top %}
-        {% set p = row.p %}
-        {% set t = row.triage %}
+        {% for row in top %}
         <tr>
-          <td>{{ p.cin }}</td>
-          <td>{{ p.nom }} {{ p.prenom }}</td>
-          <td>{{ p.emailUser }}</td>
-          <td>{{ p.telephoneUser ?: '-' }}</td>
-          <td>{{ t.priority.level }}</td>
-          <td>
-            {% if t.alerts is empty %}
-              Aucune
-            {% else %}
-              {% for a in t.alerts %}
-                {{ a.label }}{% if not loop.last %}, {% endif %}
-              {% endfor %}
-            {% endif %}
-          </td>
+            <td>{{ row.p.nom }} {{ row.p.prenom }}</td>
+            <td>{{ row.p.cin }}</td>
+            <td class="priority priority-{{ row.triage.priority.level|lower }}">
+                {{ row.triage.priority.level }}
+            </td>
         </tr>
-      {% endfor %}
+        {% else %}
+        <tr>
+            <td colspan="3">Aucun patient critique trouvé</td>
+        </tr>
+        {% endfor %}
     </tbody>
-  </table>
+</table>
 
-  <h3>Recommandations</h3>
-  <ul>
-    {% for t in tips %}
-      <li>{{ t }}</li>
-    {% endfor %}
-  </ul>
-</body>
-</html>
+<h2>Conseils Actions Nécessaires :</h2>
+<div class="tips">
+    <ul>
+        {% for tip in tips %}
+        <li>{{ tip }}</li>
+        {% else %}
+        <li>Aucune action requise actuellement.</li>
+        {% endfor %}
+    </ul>
+</div>
+
+<h2>Résumé des Alertes de Santé :</h2>
+<ul>
+    <li><strong>Téléphone invalide :</strong> {{ stats.phone_invalid ?? 0 }}</li>
+    <li><strong>Comptes bloqués :</strong> {{ stats.blocked ?? 0 }}</li>
+    <li><strong>Liens expirés :</strong> {{ stats.expired_links ?? 0 }}</li>
+</ul>
+
+<p><strong>Prochaines Étapes :</strong></p>
+<ul>
+    <li>Contacter les patients avec des numéros de téléphone invalides.</li>
+    <li>Envoyer des emails de vérification aux patients non vérifiés.</li>
+    <li>Revoir les comptes bloqués pour vérifier les fraudes éventuelles.</li>
+</ul>

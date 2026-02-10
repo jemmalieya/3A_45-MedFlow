@@ -40,4 +40,24 @@ class UserRepository extends ServiceEntityRepository
     //            ->getOneOrNullResult()
     //        ;
     //    }
+    // src/Repository/UserRepository.php
+public function findPatientsWithFilters(array $filters = []): array
+{
+    $qb = $this->createQueryBuilder('u')
+        ->andWhere('u.roleSysteme = :role')
+        ->setParameter('role', 'PATIENT');
+
+    if (!empty($filters['q'])) {
+        $qb->andWhere('u.cin LIKE :q OR u.nom LIKE :q OR u.prenom LIKE :q OR u.emailUser LIKE :q')
+           ->setParameter('q', '%'.$filters['q'].'%');
+    }
+
+    if (isset($filters['verified'])) {
+        $qb->andWhere('u.isVerified = :v')
+           ->setParameter('v', $filters['verified']);
+    }
+
+    return $qb->orderBy('u.id', 'DESC')->getQuery()->getResult();
+}
+
 }

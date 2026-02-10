@@ -376,7 +376,7 @@ class CommandeController extends AbstractController
                 "Statut: " . $commande->getStatutCommande();
     
             // Envoi du message
-            //$sms->send($to, $message);
+            $sms->send($to, $message);
         } catch (\Throwable $e) {
             // Loguer ou gérer l'erreur
             $this->addFlash('error', 'Erreur lors de l\'envoi du SMS : ' . $e->getMessage());
