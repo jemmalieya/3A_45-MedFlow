@@ -1,0 +1,78 @@
+{# Basic PDF template for fiche médicale #}
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Fiche Médicale</title>
+    <style>
+        body { font-family: 'Segoe UI', 'Times New Roman', Times, serif; font-size: 15px; color: #222; margin: 0; padding: 0; background: #fff; }
+        .fiche-header {
+            background: linear-gradient(90deg, #2563eb 0%, #38bdf8 100%);
+            color: #fff;
+            padding: 24px 32px 18px 32px;
+            border-bottom: 4px solid #2563eb;
+            display: flex;
+            align-items: center;
+            border-radius: 0 0 32px 32px;
+            box-shadow: 0 4px 16px #2563eb22;
+        }
+        .fiche-header .logo {
+            width: 60px; height: 60px; margin-right: 18px;
+        }
+        .fiche-header .title {
+            font-size: 2em; font-weight: bold; letter-spacing: 0.04em; color: #111; text-shadow: none;
+        }
+        .fiche-info {
+            margin-bottom: 18px;
+        }
+        .fiche-info th {
+            text-align: left; padding-right: 12px; font-weight: 600; color: #2563eb;
+        }
+        .fiche-info td {
+            padding-bottom: 6px;
+        }
+        .section-title {
+            font-size: 1.1em; color: #2563eb; margin-top: 18px; margin-bottom: 6px; border-bottom: 1px solid #38bdf8; padding-bottom: 2px;
+        }
+        .section-content {
+            margin-bottom: 10px; background: #f0f6ff; padding: 10px 16px; border-radius: 8px; box-shadow: 0 1px 4px #2563eb11;
+        }
+        .footer {
+            margin-top: 30px; font-size: 0.95em; color: #888; text-align: right;
+        }
+    </style>
+</head>
+<body>
+    <div class="fiche-header">
+        <div class="logo">
+            <svg width="60" height="60" viewBox="0 0 60 60"><circle cx="30" cy="30" r="28" fill="#2563eb"/><text x="50%" y="54%" text-anchor="middle" fill="#fff" font-size="28" font-family="Arial" dy=".3em">🩺</text></svg>
+        </div>
+        <div class="title">Fiche Médicale</div>
+    </div>
+    <table class="fiche-info">
+        <tr><th>ID :</th><td>{{ fiche.id }}</td></tr>
+        <tr><th>Rendez-vous :</th><td>{{ fiche.getRendezVous and fiche.getRendezVous() ? fiche.getRendezVous().id : '—' }}</td></tr>
+        <tr><th>Date de création :</th><td>{{ fiche.createdAt ? fiche.createdAt|date('d/m/Y H:i') : (fiche.created_at is defined and fiche.created_at ? fiche.created_at|date('d/m/Y H:i') : '—') }}</td></tr>
+    </table>
+
+    <div class="section-title">Diagnostic</div>
+    <div class="section-content">{{ fiche.diagnostic|default('—') }}</div>
+
+    <div class="section-title">Observations</div>
+    <div class="section-content">{{ fiche.observations|default('—') }}</div>
+
+    <div class="section-title">Résultats Examens</div>
+    <div class="section-content">{{ fiche.resultatsExamens is defined ? fiche.resultatsExamens|default('—') : (fiche.resultats_examens is defined ? fiche.resultats_examens|default('—') : '—') }}</div>
+
+    <div class="section-title">Période</div>
+    <div class="section-content">
+        <strong>Début :</strong> {{ fiche.startTime is defined and fiche.startTime ? fiche.startTime|date('d/m/Y H:i') : (fiche.start_time is defined and fiche.start_time ? fiche.start_time|date('d/m/Y H:i') : '—') }}<br>
+        <strong>Fin :</strong> {{ fiche.endTime is defined and fiche.endTime ? fiche.endTime|date('d/m/Y H:i') : (fiche.end_time is defined and fiche.end_time ? fiche.end_time|date('d/m/Y H:i') : '—') }}<br>
+        <strong>Durée :</strong> {{ fiche.dureeMinutes is defined and fiche.dureeMinutes is not null ? fiche.dureeMinutes : (fiche.duree_minutes is defined and fiche.duree_minutes is not null ? fiche.duree_minutes : '—') }} minutes
+    </div>
+
+    <div class="footer">
+        Document généré le {{ "now"|date('d/m/Y H:i') }}
+    </div>
+</body>
+</html>

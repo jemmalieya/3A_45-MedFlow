@@ -25,6 +25,7 @@
         <div class="text-muted mb-4">
           {{ post.dateCreation ? post.dateCreation|date('d/m/Y H:i') : '' }}
           {% if post.localisation %} · {{ post.localisation }}{% endif %}
+          {% if post.user %} · <strong>{{ post.user.prenom }} {{ post.user.nom }}</strong>{% endif %}
         </div>
 
         {% if post.imgPost %}
@@ -51,11 +52,6 @@
 
   </div>
 </section>
-{# =========================
-   INSTAGRAM COMMENTS UI
-   À mettre dans templates/post/show.html.twig
-   juste après le contenu du post
-========================= #}
 
 <style>
   .ig-card { border-radius: 18px; overflow: hidden; }
@@ -113,7 +109,7 @@
             {% if c.estAnonyme %}
               <i class="bi bi-incognito"></i>
             {% else %}
-              U
+              {{ (c.user.prenom is defined and c.user.prenom) ? (c.user.prenom|slice(0,1)|upper) : (c.user.emailUser|slice(0,1)|upper) }}
             {% endif %}
           </div>
 
@@ -124,7 +120,7 @@
                   {% if c.estAnonyme %}
                     Anonyme
                   {% else %}
-                    Utilisateur
+                    {{ (c.user.prenom is defined and c.user.prenom) ? (c.user.prenom ~ ' ' ~ (c.user.nom is defined ? c.user.nom : '')) : c.user.emailUser }}
                   {% endif %}
                 </div>
                 <div class="ig-time">
@@ -153,7 +149,7 @@
                 <form method="post"
                       action="{{ path('commentaire_delete', {id: c.id}) }}"
                       onsubmit="return confirm('Supprimer ce commentaire ?');">
-                  <input type="hidden" name="_token" value="{{ csrf_token('del_commentaire_' ~ c.id) }}">
+                  <input type="hidden" name="token" value="{{ csrf_token('del_commentaire' ~ c.id) }}">
                   <button class="btn btn-sm btn-light" title="Supprimer">
                     <i class="bi bi-trash"></i>
                   </button>

@@ -9,6 +9,7 @@ use Doctrine\DBAL\Types\Types;
 
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Validator\Constraints as Assert;
+use App\Entity\User;
 
 #[ORM\Entity(repositoryClass: PostRepository::class)]
 class Post
@@ -106,6 +107,10 @@ private ?string $localisation = null;
     #[ORM\Column]
     #[Assert\PositiveOrZero(message: "Le nombre de commentaires doit être >= 0.")]
     private int $nbr_commentaires = 0;
+
+    #[ORM\ManyToOne(targetEntity: User::class, inversedBy: 'posts')]
+    #[ORM\JoinColumn(nullable: true, onDelete: 'CASCADE')]
+    private ?User $user = null;
 
     #[ORM\OneToMany(mappedBy: 'post', targetEntity: Commentaire::class, cascade: ['persist', 'remove'], orphanRemoval: true)]
     #[ORM\OrderBy(['date_creation' => 'DESC'])]
@@ -315,7 +320,19 @@ private ?string $localisation = null;
         }
         return $this;
     }
-  public function updateNbrCommentaires(): self
+
+    public function getUser(): ?User
+    {
+        return $this->user;
+    }
+
+    public function setUser(?User $user): static
+    {
+        $this->user = $user;
+        return $this;
+    }
+
+    public function updateNbrCommentaires(): self
 {
     $this->nbr_commentaires = $this->commentaires->count();
     return $this;

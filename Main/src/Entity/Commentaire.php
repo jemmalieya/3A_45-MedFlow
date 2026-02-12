@@ -31,11 +31,26 @@ class Commentaire
     #[ORM\Column(length: 60)]
     private ?string $parametres_confidentialite = null;
 
+    #[ORM\ManyToOne(targetEntity: User::class, inversedBy: 'commentaires')]
+    #[ORM\JoinColumn(nullable: false)]
+    private ?User $user = null;
+
     public function __construct()
     {
         $this->date_creation = new \DateTimeImmutable();
         $this->est_anonyme = false;
         $this->parametres_confidentialite = 'PUBLIC';
+    }
+
+    public function getUser(): ?User
+    {
+        return $this->user;
+    }
+
+    public function setUser(?User $user): self
+    {
+        $this->user = $user;
+        return $this;
     }
 
     public function getId(): ?int

@@ -32,7 +32,7 @@ final class PrescriptionController extends AbstractController
         $token = $request->request->get('_token');
         if (!$this->isCsrfTokenValid('edit_prescription' . $presc->getId(), $token)) {
             $this->addFlash('error', 'Invalid CSRF token.');
-            return $this->redirectToRoute('app_fiche_by_staff', ['idStaff' => $presc->getFicheMedicale()?->getRendezVous()?->getIdStaff()]);
+            return $this->redirectToRoute('app_fiche_by_staff', ['idStaff' => $presc->getFicheMedicale()?->getRendezVous()?->getStaff()?->getId()]);
         }
 
         $nom = trim((string) $request->request->get('nomMedicament', ''));
@@ -64,7 +64,7 @@ final class PrescriptionController extends AbstractController
         $em->flush();
 
         $this->addFlash('success', 'Prescription updated.');
-        return $this->redirectToRoute('app_fiche_by_staff', ['idStaff' => $presc->getFicheMedicale()?->getRendezVous()?->getIdStaff()]);
+        return $this->redirectToRoute('app_fiche_by_staff', ['idStaff' => $presc->getFicheMedicale()?->getRendezVous()?->getStaff()?->getId()]);
     }
 
     #[Route('/prescription/{id}/delete', name: 'app_prescription_delete', methods: ['POST'])]
@@ -82,7 +82,7 @@ final class PrescriptionController extends AbstractController
             return $this->redirectToRoute('app_fiche_by_staff', ['idStaff' => $presc->getFicheMedicale()?->getRendezVous()?->getIdStaff()]);
         }
 
-        $staffId = $presc->getFicheMedicale()?->getRendezVous()?->getIdStaff();
+        $staffId = $presc->getFicheMedicale()?->getRendezVous()?->getStaff()?->getId();
         $em->remove($presc);
         $em->flush();
         $this->addFlash('success', 'Prescription deleted.');

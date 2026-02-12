@@ -32,7 +32,7 @@ class PostController extends AbstractController
             $posts = $repo->findAllSorted($sort); 
             // ⚠️ mets ici le VRAI nom de ta propriété (dateCreation ou date_creation)
         }
-        $recentPosts = $repo->findBy([], ['date_creation' => 'DESC'], 5);
+        $recentPosts = $repo->findRecentWithUsers(5);
         
         // tags (simple) => depuis hashtags
         $tags = [];
@@ -61,6 +61,13 @@ class PostController extends AbstractController
   #[Route('/new', name: 'post_new', methods: ['GET', 'POST'])]
 public function new(Request $request, EntityManagerInterface $em): Response
 {
+    // ✅ Forcer l'utilisateur à être connecté
+    $user = $this->getUser();
+    if (!$user) {
+        $this->addFlash('warning', 'Vous devez être connecté pour créer un post.');
+        return $this->redirectToRoute('app_login');
+    }
+
     $post = new Post();
     $post->setDateCreation(new \DateTimeImmutable());
 
@@ -68,6 +75,9 @@ public function new(Request $request, EntityManagerInterface $em): Response
     $form->handleRequest($request);
 
     if ($form->isSubmitted() && $form->isValid()) {
+
+        // ✅ Assigner l'utilisateur APRÈS handleRequest()
+        $post->setUser($user);
 
         // ✅ URL image (champ HTML "image_url" dans twig)
         $imageUrl = trim((string) $request->request->get('image_url', ''));
@@ -101,7 +111,10 @@ public function edit(Request $request, Post $post, EntityManagerInterface $em): 
     $form->handleRequest($request);
 
     if ($form->isSubmitted() && $form->isValid()) {
-
+        // ✅ S'assurer que l'utilisateur reste assigné
+        if (!$post->getUser()) {
+            $post->setUser($this->getUser());
+        }
         // ✅ URL image (champ HTML "image_url" dans twig)
         $imageUrl = trim((string) $request->request->get('image_url', ''));
 

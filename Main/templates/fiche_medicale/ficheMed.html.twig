@@ -296,7 +296,7 @@
                     <!-- Page Heading -->
                     <div class="page-header">
                         <h1>👨‍⚕️ Appointments by Doctor</h1>
-                        <p>Showing all appointments for Doctor ID: <strong>{{ idStaff }}</strong></p>
+                        <p>Showing all appointments for Doctor ID: <strong>{{ app.session.get('doctor_id') }}</strong></p>
                     </div>
 
                     <!-- Error/Success Messages from Server Validation -->
@@ -367,8 +367,14 @@
                                                     </td>
                                                     <td>{{ appointment.mode }}</td>
                                                     <td>{{ appointment.motif }}</td>
-                                                    <td>{{ appointment.idPatient }}</td>
-                                                    <td>{{ appointment.idStaff }}</td>
+                                                    <td>{{ appointment.patient ? appointment.patient.id : 'Non défini' }}</td>
+                                                    <td>
+                                                        {% if appointment.staff and appointment.staff.id == app.session.get('doctor_id') %}
+                                                            <strong>Moi ({{ appointment.staff.id }})</strong>
+                                                        {% else %}
+                                                            {{ appointment.staff ? appointment.staff.id : 'Non défini' }}
+                                                        {% endif %}
+                                                    </td>
                                                     <td>{{ appointment.createdAt|date('Y-m-d H:i') }}</td>
                                                     <td>
                                                         <div class="d-flex gap-2" style="gap: 8px;">

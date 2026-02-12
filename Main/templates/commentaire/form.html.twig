@@ -60,4 +60,14 @@
     </div>
   </div>
 </section>
+
+{# Afficher les commentaires avec l'utilisateur #}
+<div class="comments">
+ {% for commentaire in post.commentaires %}
+    <div class="commentaire">
+        <strong>{{ commentaire.user.nom }} {{ commentaire.user.prenom }}</strong>
+        <p>{{ commentaire.contenu }}</p>
+    </div>
+{% endfor %}
+</div>
 {% endblock %}

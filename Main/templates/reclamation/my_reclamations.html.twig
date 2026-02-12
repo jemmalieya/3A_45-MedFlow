@@ -1,0 +1,165 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Mes réclamations{% endblock %}
+
+{% block body %}
+<section class="section" style="padding-top: 120px;">
+  <div class="container">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <div>
+        <h2 class="mb-1">Mes réclamations</h2>
+        <p class="text-muted mb-0">Liste des réclamations que vous avez envoyées</p>
+      </div>
+
+      <a href="{{ path('reclamation_index') }}" class="btn btn-outline-primary">
+        <i class="bi bi-plus me-1"></i> Nouvelle réclamation
+      </a>
+    </div>
+
+    {% for message in app.flashes('success') %}
+      <div class="alert alert-success alert-dismissible fade show" role="alert">
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+      </div>
+    {% endfor %}
+
+    {% for message in app.flashes('danger') %}
+      <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+      </div>
+    {% endfor %}
+
+    {% if reclamations|length == 0 %}
+      <div class="alert alert-info">
+        <i class="bi bi-info-circle me-2"></i>
+        Vous n'avez pas encore envoyé de réclamation.
+        <a href="{{ path('reclamation_index') }}" class="alert-link">Créer une réclamation</a>
+      </div>
+    {% else %}
+      <div class="table-responsive">
+        <table class="table table-hover align-middle">
+          <thead class="table-light">
+            <tr>
+              <th>Référence</th>
+              <th>Contenu</th>
+              <th>Type</th>
+              <th>Statut</th>
+              <th>Date de création</th>
+              <th class="text-end">Actions</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            {% for r in reclamations %}
+              <tr>
+                <td>
+                  <strong>{{ r.referenceReclamation }}</strong>
+                </td>
+                <td>{{ r.contenu }}</td>
+                <td>
+                  <span class="badge bg-light text-dark">{{ r.type }}</span>
+                </td>
+                <td>
+                  {% set s = r.statutReclamation %}
+                  {% if s == 'EN_ATTENTE' %}
+                    <span class="badge bg-warning text-dark">
+                      <i class="bi bi-clock me-1"></i> En attente
+                    </span>
+                  {% elseif s == 'TRAITEE' %}
+                    <span class="badge bg-success">
+                      <i class="bi bi-check-circle me-1"></i> Traitée
+                    </span>
+                  {% elseif s == 'REJETEE' %}
+                    <span class="badge bg-danger">
+                      <i class="bi bi-x-circle me-1"></i> Rejetée
+                    </span>
+                  {% else %}
+                    <span class="badge bg-secondary">{{ s }}</span>
+                  {% endif %}
+                </td>
+                <td>
+                  {{ r.dateCreationR ? r.dateCreationR|date('d/m/Y H:i') : '-' }}
+                </td>
+
+                <td class="text-end">
+                  <!-- BOUTON VOIR RÉPONSES -->
+                  <a href="{{ path('reclamation_reponses', { id: r.idReclamation }) }}"
+                     class="btn btn-info btn-sm me-2"
+                     title="Voir les réponses">
+                    <i class="bi bi-chat-left-text me-1"></i> Réponses
+                  </a>
+
+                  <!-- BOUTON MODIFIER -->
+                  <a href="{{ path('reclamation_edit', {'id': r.idReclamation}) }}"
+                     class="btn btn-sm btn-primary"
+                     title="Modifier cette réclamation">
+                    <i class="bi bi-pencil me-1"></i> Modifier
+                  </a>
+
+                  <!-- BOUTON SUPPRIMER (ouvre une modal) -->
+                  <button type="button"
+                          class="btn btn-sm btn-danger"
+                          data-bs-toggle="modal"
+                          data-bs-target="#deleteModal-{{ r.idReclamation }}"
+                          title="Supprimer cette réclamation">
+                    <i class="bi bi-trash me-1"></i> Supprimer
+                  </button>
+
+                  <!-- MODAL Bootstrap -->
+                  <div class="modal fade" id="deleteModal-{{ r.idReclamation }}" tabindex="-1" aria-hidden="true">
+                    <div class="modal-dialog modal-dialog-centered">
+                      <div class="modal-content">
+
+                        <div class="modal-header">
+                          <h5 class="modal-title">Suppression de réclamation</h5>
+                          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+
+                        <div class="modal-body">
+                          <p>Voulez-vous vraiment supprimer cette réclamation ?</p>
+                          <div class="card bg-light border-0 p-3">
+                            <strong>{{ r.referenceReclamation }}</strong> - {{ r.contenu }}
+                          </div>
+                          <div class="small text-muted mt-2">
+                            <i class="bi bi-exclamation-triangle me-1"></i>
+                            Cette action est irréversible.
+                          </div>
+                        </div>
+
+                        <div class="modal-footer">
+                          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                            Annuler
+                          </button>
+
+                          <form method="post" action="{{ path('reclamation_delete', {'id': r.idReclamation}) }}" style="display:inline;">
+                            <input type="hidden" name="_token" value="{{ csrf_token('delete' ~ r.idReclamation) }}">
+                            <button type="submit" class="btn btn-danger">
+                              <i class="bi bi-trash me-1"></i> Oui, supprimer
+                            </button>
+                          </form>
+                        </div>
+
+                      </div>
+                    </div>
+                  </div>
+
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <div class="mt-4 p-3 bg-light rounded">
+        <p class="mb-0 text-muted">
+          <strong>Total :</strong> {{ reclamations|length }} réclamation(s)
+        </p>
+      </div>
+
+    {% endif %}
+
+  </div>
+</section>
+{% endblock %}

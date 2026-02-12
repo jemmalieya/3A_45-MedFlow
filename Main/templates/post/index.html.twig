@@ -308,6 +308,7 @@
                     <small class="text-muted">
                       {{ p.dateCreation ? p.dateCreation|date('d M Y') : '' }}
                       {% if p.localisation %} · {{ p.localisation }}{% endif %}
+                      {% if p.user %} · <strong>{{ p.user.prenom }} {{ p.user.nom }}</strong>{% endif %}
                     </small>
 
                     <div class="d-flex gap-2">
@@ -315,7 +316,7 @@
 
                       <form method="post" action="{{ path('post_delete', {id: p.id}) }}"
                             onsubmit="return confirm('Supprimer ce post ?')">
-                        <input type="hidden" name="_token" value="{{ csrf_token('delete_post_' ~ p.id) }}">
+                        <input type="hidden" name="token" value="{{ csrf_token('delete_post' ~ p.id) }}">
                         <button class="btn btn-sm btn-outline-danger">Delete</button>
                       </form>
                     </div>
@@ -407,14 +408,18 @@
                   {% if c.estAnonyme %}
                     <i class="bi bi-incognito"></i>
                   {% else %}
-                    U
+                    {{ (c.user.prenom is defined and c.user.prenom) ? (c.user.prenom|slice(0,1)|upper) : (c.user.emailUser|slice(0,1)|upper) }}
                   {% endif %}
                 </div>
 
                 <div class="ig-c-bubble">
                   <div class="ig-c-meta">
                     <strong>
-                      {% if c.estAnonyme %}Anonyme{% else %}Utilisateur{% endif %}
+                      {% if c.estAnonyme %}
+                        Anonyme
+                      {% else %}
+                        {{ (c.user.prenom is defined and c.user.prenom) ? (c.user.prenom ~ ' ' ~ (c.user.nom is defined ? c.user.nom : '')) : c.user.emailUser }}
+                      {% endif %}
                     </strong>
                     · {{ c.dateCreation|date('d/m/Y H:i') }}
 
@@ -446,7 +451,7 @@
                     method="post"
                     action="{{ path('commentaire_add_inline', {id: p.id}) }}">
 
-                <input type="hidden" name="_token" value="{{ csrf_token('add_comment_' ~ p.id) }}">
+                <input type="hidden" name="token" value="{{ csrf_token('add_comment' ~ p.id) }}">
 
                 <div class="w-100">
                   <input class="form-control form-control-sm {{ errMsg ? 'is-invalid' : '' }}"

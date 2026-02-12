@@ -1,56 +1,57 @@
 {% extends 'base.html.twig' %}
+{% set patientId = app.session.get('patient_id') %}
 {% block body %}
 <style>
-    .appointment-page { min-height: 100vh; background: linear-gradient(160deg, #f0fdfa 0%, #ecfeff 35%, #f5f5f4 100%); padding: 2rem 0 4rem; }
+    .appointment-page { min-height: 100vh; background: #fff; padding: 2rem 0 4rem; }
     .appointment-hero {
-        background: linear-gradient(135deg, #0f766e 0%, #0d9488 50%, #14b8a6 100%);
-        color: #fff;
-        padding: 3rem 2rem;
-        border-radius: 24px;
-        margin-bottom: 2.5rem;
-        box-shadow: 0 20px 50px rgba(15, 118, 110, 0.25);
-        text-align: center;
+      background: linear-gradient(135deg, #2563eb 0%, #38bdf8 50%, #1e40af 100%);
+      color: #fff;
+      padding: 3rem 2rem;
+      border-radius: 24px;
+      margin-bottom: 2.5rem;
+      box-shadow: 0 20px 50px rgba(37, 99, 235, 0.25);
+      text-align: center;
     }
     .appointment-hero h1 { font-size: 2.25rem; font-weight: 800; letter-spacing: -0.02em; margin: 0 0 0.5rem; }
     .appointment-hero p { font-size: 1.1rem; opacity: 0.95; margin: 0; font-weight: 500; }
     .appointment-card {
-        background: #fff;
-        border-radius: 20px;
-        box-shadow: 0 4px 24px rgba(0,0,0,0.06), 0 1px 3px rgba(0,0,0,0.04);
-        border: 1px solid rgba(15, 118, 110, 0.08);
-        padding: 2rem 2.5rem;
-        margin-bottom: 2rem;
+      background: #e0f2fe;
+      border-radius: 20px;
+      box-shadow: 0 4px 24px rgba(37,99,235,0.08), 0 1px 3px rgba(30,64,175,0.04);
+      border: 1px solid #2563eb33;
+      padding: 2rem 2.5rem;
+      margin-bottom: 2rem;
     }
-    .appointment-card .form-label { font-weight: 600; color: #134e4a; margin-bottom: 0.5rem; }
+    .appointment-card .form-label { font-weight: 600; color: #2563eb; margin-bottom: 0.5rem; }
     .appointment-card .form-control, .appointment-card .form-select {
-        border: 2px solid #e2e8f0;
-        border-radius: 12px;
-        padding: 0.75rem 1rem;
-        font-size: 1rem;
-        transition: border-color 0.2s, box-shadow 0.2s;
+      border: 2px solid #2563eb;
+      border-radius: 12px;
+      padding: 0.75rem 1rem;
+      font-size: 1rem;
+      transition: border-color 0.2s, box-shadow 0.2s;
     }
     .appointment-card .form-control:focus, .appointment-card .form-select:focus {
-        border-color: #0d9488;
-        box-shadow: 0 0 0 4px rgba(13, 148, 136, 0.12);
-        outline: none;
+      border-color: #1e40af;
+      box-shadow: 0 0 0 4px #2563eb33;
+      outline: none;
     }
     .appointment-card .form-control[readonly], .appointment-card .form-control:disabled,
-    .appointment-card .form-control.bg-muted { background: #f1f5f9; color: #475569; }
+    .appointment-card .form-control.bg-muted { background: #dbeafe; color: #2563eb; }
     .btn-appointment {
-        background: linear-gradient(135deg, #0f766e 0%, #0d9488 100%);
-        color: #fff !important;
-        border: none;
-        border-radius: 14px;
-        padding: 1rem 2rem;
-        font-weight: 700;
-        font-size: 1.05rem;
-        letter-spacing: 0.02em;
-        transition: transform 0.2s, box-shadow 0.2s;
+      background: linear-gradient(135deg, #2563eb 0%, #38bdf8 100%);
+      color: #fff !important;
+      border: none;
+      border-radius: 14px;
+      padding: 1rem 2rem;
+      font-weight: 700;
+      font-size: 1.05rem;
+      letter-spacing: 0.02em;
+      transition: transform 0.2s, box-shadow 0.2s;
     }
-    .btn-appointment:hover { transform: translateY(-2px); box-shadow: 0 12px 28px rgba(15, 118, 110, 0.35); color: #fff !important; }
+    .btn-appointment:hover { transform: translateY(-2px); box-shadow: 0 12px 28px rgba(37, 99, 235, 0.35); color: #fff !important; }
     .alert-appointment { border: none; border-radius: 14px; padding: 1rem 1.25rem; font-weight: 500; }
     .alert-appointment.alert-danger { background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%); color: #991b1b; }
-    .alert-appointment.alert-success { background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%); color: #065f46; }
+    .alert-appointment.alert-success { background: linear-gradient(135deg, #dbeafe 0%, #bae6fd 100%); color: #2563eb; }
     #appointment-form { padding-top: 100px; }
     @media (max-width: 768px) { #appointment-form { padding-top: 80px; } .appointment-hero h1 { font-size: 1.75rem; } }
     .flatpickr-calendar { background: #fff !important; border: 2px solid #e2e8f0 !important; border-radius: 16px !important; box-shadow: 0 10px 40px rgba(0,0,0,0.08) !important; }
@@ -68,13 +69,13 @@
                 <div class="col-lg-8">
                     <div class="appointment-hero">
                         <h1>📅 Prendre rendez-vous</h1>
-                        <p>Choisissez date, heure et motif — nous nous occupons du reste.</p>
+                        <p>Choisissez la date, l'heure et le motif — nous nous occupons du reste.</p>
                     </div>
 
                     {% for label, messages in app.flashes %}
-                        {% for message in messages %}
-                            <div class="alert alert-appointment alert-{{ label == 'error' ? 'danger' : 'success' }}">{{ message }}</div>
-                        {% endfor %}
+                      {% for message in messages %}
+                        <div class="alert alert-appointment alert-{{ label == 'error' ? 'danger' : 'success' }}">{{ message }}</div>
+                      {% endfor %}
                     {% endfor %}
 
                     <div class="appointment-card">
@@ -86,25 +87,33 @@
                                 <small id="datetime-feedback" class="d-block mt-2" style="font-size:0.85rem;"></small>
                             </div>
                             <div class="mb-4">
-                                {{ form_label(form.mode) }}
+                                {{ form_label(form.mode, 'Mode') }}
                                 {{ form_widget(form.mode, {'attr': {'id': 'mode'}}) }}
                                 {{ form_errors(form.mode) }}
                                 <small id="mode-feedback" class="d-block mt-2" style="font-size:0.85rem;"></small>
                             </div>
                             <div class="mb-4">
-                                {{ form_label(form.motif) }}
+                                {{ form_label(form.motif, 'Motif') }}
                                 {{ form_widget(form.motif, {'attr': {'id': 'motif'}}) }}
                                 {{ form_errors(form.motif) }}
                                 <small id="motif-feedback" class="d-block mt-2" style="font-size:0.85rem;"></small>
                             </div>
                             <div class="row g-3 mb-4">
                                 <div class="col-md-6">
-                                    <label class="form-label">Patient (ID)</label>
-                                    <div class="form-control bg-muted" style="pointer-events: none;"><strong>1</strong></div>
+                                    <label class="form-label">Patient</label>
+                                    <div class="form-control bg-muted" style="pointer-events: none;">
+                                      <strong>
+                                        {% if form.vars.data.patient and form.vars.data.patient.id == patientId %}
+                                          Moi ({{ form.vars.data.patient.nom ~ ' ' ~ form.vars.data.patient.prenom }})
+                                        {% else %}
+                                          {{ form.vars.data.patient ? form.vars.data.patient.nom ~ ' ' ~ form.vars.data.patient.prenom : 'Non défini' }}
+                                        {% endif %}
+                                      </strong>
+                                    </div>
                                 </div>
                                 <div class="col-md-6">
-                                    <label class="form-label">Staff (ID)</label>
-                                    <div class="form-control bg-muted" style="pointer-events: none;"><strong>{{ idStaff ?? 'Non défini' }}</strong></div>
+                                    <label class="form-label">Personnel médical</label>
+                                    <div class="form-control bg-muted" style="pointer-events: none;"><strong>{{ form.vars.data.staff ? form.vars.data.staff.nom ~ ' ' ~ form.vars.data.staff.prenom : 'Non défini' }}</strong></div>
                                 </div>
                             </div>
                             <div class="d-grid">

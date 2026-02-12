@@ -9,6 +9,7 @@ use App\Repository\RendezVousRepository;
 use App\Repository\PrescriptionRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use App\Service\MailerService;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -25,23 +26,26 @@ final class FicheMedicaleController extends AbstractController
     }
 
     #[Route('/fiche/staff/{idStaff}', name: 'app_fiche_by_staff')]
-    public function byStaff(RendezVousRepository $repo, FicheMedicaleRepository $ficheRepo, PrescriptionRepository $prescRepo, int $idStaff): Response
+    public function byStaff(RendezVousRepository $repo, FicheMedicaleRepository $ficheRepo, PrescriptionRepository $prescRepo, int $idStaff, EntityManagerInterface $entityManager): Response
     {
+        // Fetch User entity for staff
+        // Use injected EntityManagerInterface
+        $staffUser = $entityManager->getRepository(\App\Entity\User::class)->find($idStaff);
         // Fetch all RendezVous for a specific staff member
-        $rendezvous = $repo->findBy(['idStaff' => $idStaff], ['datetime' => 'DESC']);
-        
+        $rendezvous = $repo->findBy(['staff' => $staffUser], ['datetime' => 'DESC']);
+
         // Fetch all FicheMedicales related to RendezVous of this staff member
-        $fiches = $ficheRepo->findFichesByStaffId($idStaff);
-        
-        // Also fetch prescriptions related to this staff's fiches (via fiche -> rendez_vous -> id_staff)
-        $prescriptions = $prescRepo->createQueryBuilder('p')
-            ->innerJoin('p.ficheMedicale', 'f')
-            ->innerJoin('f.rendezVous', 'r')
-            ->andWhere('r.idStaff = :idStaff')
-            ->setParameter('idStaff', $idStaff)
-            ->orderBy('p.createdAt', 'DESC')
-            ->getQuery()
-            ->getResult();
+        $fiches = $ficheRepo->findFichesByStaffId($idStaff); // If this uses idStaff, update to use staffUser if needed
+
+        // Also fetch prescriptions related to this staff's fiches (via fiche -> rendez_vous -> staff)
+            $prescriptions = $prescRepo->createQueryBuilder('p')
+                ->innerJoin('p.ficheMedicale', 'f')
+                ->innerJoin('f.rendezVous', 'r')
+                ->andWhere('r.staff = :staff')
+                ->setParameter('staff', $staffUser)
+                ->orderBy('p.createdAt', 'DESC')
+                ->getQuery()
+                ->getResult();
 
         return $this->render('fiche_medicale/ficheMed.html.twig', [
             'rendezvous' => $rendezvous,
@@ -76,11 +80,22 @@ final class FicheMedicaleController extends AbstractController
     }
 
     #[Route('/consultation', name: 'consultation_view', methods: ['GET','POST'])]
-    public function consultation(Request $request, FicheMedicaleRepository $ficheRepo, RendezVousRepository $rendezRepo, EntityManagerInterface $em, LoggerInterface $logger): Response
+    public function consultation(Request $request, FicheMedicaleRepository $ficheRepo, RendezVousRepository $rendezRepo, EntityManagerInterface $em, LoggerInterface $logger, MailerService $mailerService): Response
     {
         // Determine consultation type (presentiel or distanciel) - check POST first, then query params
         $type = $request->request->get('type') ?? $request->query->get('type', 'Présentiel');
         $templateName = $type === 'Distanciel' ? 'consultationOnline.html.twig' : 'consultation.html.twig';
+        // Send Jitsi link to patient if Distanciel and not already sent
+        if ($type === 'Distanciel') {
+            $rendezvousId = $request->query->get('rendezvous');
+            $rendez = $rendezRepo->find((int)$rendezvousId);
+            if ($rendez && $rendez->getPatient()) {
+                $doctorName = $rendez->getStaff() ? $rendez->getStaff()->getNom() . ' ' . $rendez->getStaff()->getPrenom() : 'Médecin';
+                // Generate room name as in JS: medflow-<timestamp>-<random>
+                $roomName = 'medflow-' . time() . '-' . rand(1000,9999);
+                $mailerService->sendJitsiLink($rendez->getPatient()->getEmailUser(), $doctorName, $roomName);
+            }
+        }
 
         // Determine whether we're working with an existing fiche or creating a new one
         $ficheId = $request->query->get('id') ?? $request->request->get('fiche_id');
@@ -149,8 +164,8 @@ final class FicheMedicaleController extends AbstractController
                     $this->addFlash('error', 'Validation failed: ' . implode('. ', $validationErrors));
                     
                     // If editing existing fiche (modal), redirect back to fiche by staff page
-                    if ($fiche && $fiche->getRendezVous()) {
-                        $staffId = $fiche->getRendezVous()->getIdStaff();
+                    if ($fiche && $fiche->getRendezVous() && $fiche->getRendezVous()->getStaff()) {
+                        $staffId = $fiche->getRendezVous()->getStaff()->getId();
                         return $this->redirectToRoute('app_fiche_by_staff', ['idStaff' => $staffId]);
                     }
                     // If creating new fiche, redirect to consultation form with same type
@@ -260,7 +275,7 @@ final class FicheMedicaleController extends AbstractController
                             $this->addFlash('error', $err);
                         }
                         if ($fiche && $fiche->getRendezVous()) {
-                            return $this->redirectToRoute('app_fiche_by_staff', ['idStaff' => $fiche->getRendezVous()->getIdStaff()]);
+                            return $this->redirectToRoute('app_fiche_by_staff', ['idStaff' => $fiche->getRendezVous()->getStaff()->getId()]);
                         }
                         return $this->redirectToRoute('consultation_view', [
                             'rendezvous' => $request->request->get('rendezvous_id'),
@@ -317,7 +332,7 @@ final class FicheMedicaleController extends AbstractController
                 }
                 $em->flush();
 
-                $staffId = $fiche->getRendezVous()?->getIdStaff();
+                $staffId = $fiche->getRendezVous()?->getStaff()?->getId();
                 return $this->redirectToRoute('app_fiche_by_staff', ['idStaff' => $staffId]);
             }
         }
@@ -329,11 +344,11 @@ final class FicheMedicaleController extends AbstractController
         // Determine idStaff for cancel button redirect
         $idStaff = null;
         if ($fiche && $fiche->getRendezVous()) {
-            $idStaff = $fiche->getRendezVous()->getIdStaff();
+            $idStaff = $fiche->getRendezVous()->getStaff()->getId();
         } elseif ($rendezvousId) {
             $rendez = $rendezRepo->find((int)$rendezvousId);
             if ($rendez) {
-                $idStaff = $rendez->getIdStaff();
+                $idStaff = $rendez->getStaff()->getId();
             }
         }
 
@@ -358,11 +373,11 @@ final class FicheMedicaleController extends AbstractController
             $rendez = $fiche->getRendezVous();
             $em->remove($fiche);
             $em->flush();
-            $staffId = $rendez?->getIdStaff();
+            $staffId = $rendez?->getStaff()?->getId();
             return $this->redirectToRoute('app_fiche_by_staff', ['idStaff' => $staffId]);
         }
 
-        $staffId = $fiche->getRendezVous()?->getIdStaff();
+        $staffId = $fiche->getRendezVous()?->getStaff()?->getId();
         return $this->redirectToRoute('app_fiche_by_staff', ['idStaff' => $staffId]);
     }
 }

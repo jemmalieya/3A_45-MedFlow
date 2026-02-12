@@ -21,7 +21,13 @@ public function search(string $q): array
     $q = trim($q);
 
     $qb = $this->createQueryBuilder('p')
-        ->orderBy('p.date_creation', 'DESC'); // ⚠️ pareil: propriété exacte
+        ->leftJoin('p.user', 'u')
+        ->addSelect('u')
+        ->leftJoin('p.commentaires', 'c')
+        ->addSelect('c')
+        ->leftJoin('c.user', 'cu')
+        ->addSelect('cu')
+        ->orderBy('p.date_creation', 'DESC');
 
     if ($q !== '') {
         $qb->andWhere('
@@ -39,7 +45,13 @@ public function search(string $q): array
 
 public function findAllSorted(string $sort): array
 {
-    $qb = $this->createQueryBuilder('p');
+    $qb = $this->createQueryBuilder('p')
+        ->leftJoin('p.user', 'u')
+        ->addSelect('u')
+        ->leftJoin('p.commentaires', 'c')
+        ->addSelect('c')
+        ->leftJoin('c.user', 'cu')
+        ->addSelect('cu');
 
     $this->applySort($qb, $sort);
 
@@ -48,7 +60,13 @@ public function findAllSorted(string $sort): array
 
 public function searchWithSort(string $q, string $sort): array
 {
-    $qb = $this->createQueryBuilder('p');
+    $qb = $this->createQueryBuilder('p')
+        ->leftJoin('p.user', 'u')
+        ->addSelect('u')
+        ->leftJoin('p.commentaires', 'c')
+        ->addSelect('c')
+        ->leftJoin('c.user', 'cu')
+        ->addSelect('cu');
 
     $qb->andWhere('p.titre LIKE :q OR p.contenu LIKE :q OR p.categorie LIKE :q')
        ->setParameter('q', '%' . $q . '%');
@@ -83,6 +101,21 @@ private function applySort($qb, string $sort): void
         default:
             $qb->orderBy('p.date_creation', 'DESC');
     }
+}
+
+public function findRecentWithUsers(int $limit = 5): array
+{
+    return $this->createQueryBuilder('p')
+        ->leftJoin('p.user', 'u')
+        ->addSelect('u')
+        ->leftJoin('p.commentaires', 'c')
+        ->addSelect('c')
+        ->leftJoin('c.user', 'cu')
+        ->addSelect('cu')
+        ->orderBy('p.date_creation', 'DESC')
+        ->setMaxResults($limit)
+        ->getQuery()
+        ->getResult();
 }
 public function getKpis(): array
 {

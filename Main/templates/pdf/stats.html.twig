@@ -1,0 +1,53 @@
+{% extends 'base_dashboard.html.twig' %}
+
+{% block body %}
+<div class="container mt-5">
+    <h2 class="mb-4 text-primary"><i class="fas fa-chart-pie me-2"></i>Statistiques des Durées des Rendez-vous</h2>
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card shadow border-0">
+                <div class="card-body text-center">
+                    <h6 class="text-muted">Nombre de rendez-vous</h6>
+                    <h2 class="text-info fw-bold">{{ count }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card shadow border-0">
+                <div class="card-body text-center">
+                    <h6 class="text-muted">Durée moyenne</h6>
+                    <h2 class="text-success fw-bold">{{ average|number_format(2) }} min</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card shadow border-0">
+                <div class="card-body text-center">
+                    <h6 class="text-muted">Durée max / min</h6>
+                    <h2 class="fw-bold"><span class="text-danger">{{ max|number_format(2) }}</span> / <span class="text-secondary">{{ min|number_format(2) }}</span> min</h2>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="card mb-4 shadow border-0">
+        <div class="card-body">
+            <h5 class="card-title mb-4">Médecin : <span class="text-primary">Dr. {{ doctor.nom }} {{ doctor.prenom }}</span></h5>
+            <ul class="list-group mb-3">
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                    <span>Présentiel</span>
+                    <span class="badge bg-primary rounded-pill">{{ modeCounts['Présentiel'] }}</span>
+                </li>
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                    <span>Distanciel</span>
+                    <span class="badge bg-danger rounded-pill">{{ modeCounts['Distanciel'] }}</span>
+                </li>
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                    <span>Autre</span>
+                    <span class="badge bg-secondary rounded-pill">{{ modeCounts['Autre'] }}</span>
+                </li>
+            </ul>
+            <p class="mt-3 text-muted">Exporté le {{ "now"|date("d/m/Y H:i") }}</p>
+        </div>
+    </div>
+</div>
+{% endblock %}

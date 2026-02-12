@@ -1,27 +1,31 @@
 {% extends 'base.html.twig' %}
+{% set patientId = app.session.get('patient_id') %}
 {% block body %}
+</style>
 <style>
-    .rv-list-page { min-height: 100vh; background: linear-gradient(160deg, #f0fdfa 0%, #ecfeff 35%, #f5f5f4 100%); padding: 2rem 0 4rem; }
+    .rv-list-page {
+        min-height: 100vh;
+        background: #fff;
+        padding: 2rem 0 4rem;
+    }
     .rv-list-hero {
-        background: linear-gradient(135deg, #0f766e 0%, #0d9488 50%, #14b8a6 100%);
+        background: linear-gradient(135deg, #2563eb 0%, #38bdf8 50%, #1e40af 100%);
         color: #fff;
         padding: 2.5rem 2rem;
         border-radius: 24px;
         margin-bottom: 2rem;
-        box-shadow: 0 20px 50px rgba(15, 118, 110, 0.25);
+        box-shadow: 0 20px 50px rgba(37, 99, 235, 0.25);
     }
-    .rv-list-hero h1 { font-size: 2rem; font-weight: 800; letter-spacing: -0.02em; margin: 0 0 0.35rem; }
-    .rv-list-hero p { font-size: 1rem; opacity: 0.9; margin: 0; }
     .rv-list-card {
-        background: #fff;
+        background: #e0f2fe;
         border-radius: 20px;
-        box-shadow: 0 4px 24px rgba(0,0,0,0.06), 0 1px 3px rgba(0,0,0,0.04);
-        border: 1px solid rgba(15, 118, 110, 0.08);
+        box-shadow: 0 4px 24px rgba(37,99,235,0.08), 0 1px 3px rgba(30,64,175,0.04);
+        border: 1px solid #2563eb33;
         overflow: hidden;
     }
     .rv-table { margin: 0; }
     .rv-table thead th {
-        background: linear-gradient(135deg, #0f766e 0%, #0d9488 100%);
+        background: linear-gradient(135deg, #2563eb 0%, #38bdf8 100%);
         color: #fff;
         font-weight: 600;
         font-size: 0.8rem;
@@ -30,31 +34,38 @@
         padding: 1rem 0.85rem;
         border: none;
     }
-    .rv-table tbody td { padding: 0.9rem 0.85rem; vertical-align: middle; border-color: #f1f5f9; }
+    .rv-table tbody td {
+        padding: 0.9rem 0.85rem;
+        vertical-align: middle;
+        border-color: #2563eb33;
+        background: #f0f9ff;
+        color: #1e40af;
+    }
     .rv-table tbody tr { transition: background 0.2s; }
-    .rv-table tbody tr:nth-child(even) { background: #f8fafc; }
-    .rv-table tbody tr:hover { background: #f0fdfa !important; }
-    .rv-table .edit-row td { background: #ecfeff !important; padding: 1.25rem; border-top: 2px solid #99f6e4; }
+    .rv-table tbody tr:nth-child(even) { background: #e0f2fe; }
+    .rv-table tbody tr:hover { background: #bae6fd !important; }
+    .rv-table .edit-row td { background: #dbeafe !important; padding: 1.25rem; border-top: 2px solid #2563eb; }
     .rv-table .edit-row .form-control, .rv-table .edit-row .form-select {
-        border: 2px solid #e2e8f0; border-radius: 10px; padding: 0.5rem 0.75rem;
+        border: 2px solid #2563eb; border-radius: 10px; padding: 0.5rem 0.75rem;
     }
     .rv-table .edit-row .form-control:focus, .rv-table .edit-row .form-select:focus {
-        border-color: #0d9488; box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.15); outline: none;
+        border-color: #1e40af; box-shadow: 0 0 0 3px #2563eb33; outline: none;
     }
-    .btn-rv-edit { background: #0d9488; color: #fff !important; border: none; border-radius: 10px; padding: 0.4rem 0.75rem; transition: background 0.2s, transform 0.2s; }
-    .btn-rv-edit:hover { background: #0f766e; color: #fff !important; transform: scale(1.05); }
-    .btn-rv-delete { background: transparent; color: #dc2626; border: 2px solid #fecaca; border-radius: 10px; padding: 0.4rem 0.75rem; transition: all 0.2s; }
-    .btn-rv-delete:hover { background: #fef2f2; border-color: #dc2626; }
-    .btn-rv-save { background: #0d9488; color: #fff !important; border: none; border-radius: 10px; padding: 0.4rem 0.75rem; }
+    .btn-rv-edit { background: #2563eb; color: #fff !important; border: none; border-radius: 10px; padding: 0.4rem 0.75rem; transition: background 0.2s, transform 0.2s; }
+    .btn-rv-edit:hover { background: #1e40af; color: #fff !important; transform: scale(1.05); }
+    .btn-rv-delete { background: transparent; color: #dc2626; border: 2px solid #2563eb; border-radius: 10px; padding: 0.4rem 0.75rem; transition: all 0.2s; }
+    .btn-rv-delete:hover { background: #dbeafe; border-color: #dc2626; }
+    .btn-rv-save { background: #2563eb; color: #fff !important; border: none; border-radius: 10px; padding: 0.4rem 0.75rem; }
     .btn-rv-cancel { background: #64748b; color: #fff !important; border: none; border-radius: 10px; padding: 0.4rem 0.75rem; }
     .alert-rv { border: none; border-radius: 14px; padding: 1rem 1.25rem; font-weight: 500; }
     .alert-rv.alert-danger { background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%); color: #991b1b; }
-    .alert-rv.alert-success { background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%); color: #065f46; }
-    .alert-rv.alert-info { background: linear-gradient(135deg, #ecfeff 0%, #cffafe 100%); color: #0e7490; }
+    .alert-rv.alert-success { background: linear-gradient(135deg, #dbeafe 0%, #bae6fd 100%); color: #2563eb; }
+    .alert-rv.alert-info { background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%); color: #2563eb; }
     .badge-rv { padding: 0.35rem 0.65rem; border-radius: 9999px; font-size: 0.8rem; font-weight: 600; }
-    .badge-rv-success { background: #d1fae5; color: #065f46; }
-    .badge-rv-warning { background: #fef3c7; color: #92400e; }
+    .badge-rv-success { background: #dbeafe; color: #2563eb; }
+    .badge-rv-warning { background: #fef3c7; color: #2563eb; }
     .badge-rv-danger { background: #fee2e2; color: #991b1b; }
+</style>
 </style>
 
 <main class="main rv-list-page">
@@ -75,7 +86,15 @@
         {% else %}
             <div class="rv-list-card">
                 <div class="table-responsive">
-                    <table class="table rv-table mb-0">
+                    <div class="mb-2 d-flex justify-content-between align-items-center">
+                        <div>
+                        </div>
+                           <input type="text" id="searchRendezvous" class="form-control rounded-pill shadow-sm border-0" placeholder="🔍 Recherche rendez-vous" style="width: 220px; background-color: #e0f2fe; font-size: 1rem; border: 2px solid #2563eb; color: #2563eb;">
+                           <button id="sortRendezvousDate" class="btn btn-primary ms-2" style="background-color: #2563eb; border-color: #2563eb; color: #fff;" data-asc="true">
+                               <i class="fas fa-sort-up"></i> Trier par date
+                           </button>
+                    </div>
+                    <table class="table rv-table mb-0" id="rendezvousTable">
                         <thead>
                             <tr>
                                 <th>ID</th>
@@ -100,8 +119,24 @@
                                     </td>
                                     <td>{{ r.mode }}</td>
                                     <td>{{ r.motif }}</td>
-                                    <td>{{ r.idPatient }}</td>
-                                    <td>{{ r.idStaff }}</td>
+                                    <td>
+                                      {% if r.getPatient and r.getPatient() %}
+                                        {% if r.getPatient().id == patientId %}
+                                          <strong>Moi ({{ r.getPatient().id }})</strong>
+                                        {% else %}
+                                          {{ r.getPatient().id }}
+                                        {% endif %}
+                                      {% else %}
+                                        —
+                                      {% endif %}
+                                    </td>
+                                    <td>
+                                      {% if r.getStaff and r.getStaff() %}
+                                        {{ r.getStaff().id }}
+                                      {% else %}
+                                        —
+                                      {% endif %}
+                                    </td>
                                     <td>{{ r.createdAt ? r.createdAt|date('Y-m-d H:i') : '—' }}</td>
                                     <td>
                                         <button type="button" class="btn btn-rv-edit" onclick="toggleEdit({{ r.id }})">📝</button>
@@ -151,89 +186,302 @@
             </div>
         {% endif %}
     </div>
-</main>
-  
-  <script>
-    function toggleEdit(id) {
-      const row = document.getElementById('edit-row-' + id);
-      if (!row) return;
-      row.style.display = row.style.display === 'none' ? 'table-row' : 'none';
-      // scroll into view when opened
-      if (row.style.display !== 'none') row.scrollIntoView({behavior: 'smooth', block: 'center'});
-    }
 
-    // Informative client-side validation for inline edit rows
-    (function(){
-      const rules = {
-        datetime: { required: true },
-        mode: { required: true },
-        motif: { minLength: 5, maxLength: 500, required: false }
-      };
+    {# ============================= #}
+    {# Fiche Médicale Table Section #}
+    {# ============================= #}
+    <div class="container py-4">
+        <div class="rv-list-hero" style="background: linear-gradient(135deg, #2563eb 0%, #38bdf8 100%);">
+            <h1>🩺 Ma fiche médicale</h1>
+            <p>Consultez vos informations médicales enregistrées.</p>
+        </div>
+        {% if fiches_medicales is defined and fiches_medicales|length > 0 %}
+            <div class="rv-list-card mb-4">
+                <div class="table-responsive">
+                    <div class="mb-2 d-flex justify-content-between align-items-center">
+                        <div>
+                        </div>
+                           <input type="text" id="searchFiche" class="form-control rounded-pill shadow-sm border-0" placeholder="🔍 Recherche fiche médicale" style="width: 220px; background-color: #e0f2fe; font-size: 1rem; border: 2px solid #2563eb; color: #2563eb;">
+                           <button id="sortFicheDate" class="btn btn-primary ms-2" style="background-color: #2563eb; border-color: #2563eb; color: #fff;" data-asc="true">
+                               <i class="fas fa-sort-up"></i> Trier par date
+                           </button>
+                    </div>
+                    <table class="table rv-table mb-0" id="ficheTable">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Rendez-vous</th>
+                                <th>Diagnostic</th>
+                                <th>Observations</th>
+                                <th>Résultats Examens</th>
+                                <th>Début</th>
+                                <th>Fin</th>
+                                <th>Durée (min)</th>
+                                <th>Date de création</th>
+                                <th>PDF</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% set foundFiche = false %}
+                            {% for fiche in fiches_medicales %}
+                                {% if fiche.getRendezVous and fiche.getRendezVous() and fiche.getRendezVous().getPatient and fiche.getRendezVous().getPatient() and fiche.getRendezVous().getPatient().id == patientId %}
+                                    {% set foundFiche = true %}
+                                    <tr>
+                                        <td>{{ fiche.id }}</td>
+                                        <td>{{ fiche.getRendezVous and fiche.getRendezVous() ? fiche.getRendezVous().id : '—' }}</td>
+                                        <td>{{ fiche.diagnostic|default('—') }}</td>
+                                        <td>{{ fiche.observations|default('—') }}</td>
+                                        <td>{{ fiche.resultatsExamens is defined ? fiche.resultatsExamens|default('—') : (fiche.resultats_examens is defined ? fiche.resultats_examens|default('—') : '—') }}</td>
+                                        <td>{{ fiche.startTime is defined and fiche.startTime ? fiche.startTime|date('Y-m-d H:i') : (fiche.start_time is defined and fiche.start_time ? fiche.start_time|date('Y-m-d H:i') : '—') }}</td>
+                                        <td>{{ fiche.endTime is defined and fiche.endTime ? fiche.endTime|date('Y-m-d H:i') : (fiche.end_time is defined and fiche.end_time ? fiche.end_time|date('Y-m-d H:i') : '—') }}</td>
+                                        <td>{{ fiche.dureeMinutes is defined and fiche.dureeMinutes is not null ? fiche.dureeMinutes : (fiche.duree_minutes is defined and fiche.duree_minutes is not null ? fiche.duree_minutes : '—') }}</td>
+                                        <td>{{ fiche.createdAt ? fiche.createdAt|date('Y-m-d H:i') : (fiche.created_at is defined and fiche.created_at ? fiche.created_at|date('Y-m-d H:i') : '—') }}</td>
+                                        <td>
+                                            <a href="{{ path('fiche_medicale_export_pdf', {'id': fiche.id}) }}" class="btn btn-sm btn-outline-primary" title="Exporter en PDF" download>PDF</a>
+                                        </td>
+                                    </tr>
+                                {% endif %}
+                            {% endfor %}
+                            {% if not foundFiche %}
+                                <tr><td colspan="9">Aucune fiche médicale trouvée.</td></tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        {% else %}
+            <div class="alert alert-rv alert-info">Aucune fiche médicale trouvée.</div>
+        {% endif %}
+    </div>
 
-      function findEl(key, id) {
-        const byId = document.getElementById(key + '-' + id);
-        if (byId) return byId;
-        return document.querySelector('[name="' + key + '"]');
-      }
+    {# ============================= #}
+    {# Prescriptions Table Section  #}
+    {# ============================= #}
+    <div class="container py-4">
+        <div class="rv-list-hero" style="background: linear-gradient(135deg, #2563eb 0%, #38bdf8 100%);">
+            <h1>💊 Mes prescriptions</h1>
+            <p>Consultez vos prescriptions médicales.</p>
+        </div>
+        {% if prescriptions is defined and prescriptions|length > 0 %}
+            <div class="rv-list-card mb-4" style="background: #e0f2fe; border: 1px solid #2563eb33;">
+                <div class="table-responsive">
+                    <div class="mb-2 d-flex justify-content-end align-items-center gap-2">
+                        <input type="text" id="searchPrescription" class="form-control rounded-pill shadow-sm border-0" placeholder="🔍 Recherche prescription" style="width: 220px; background-color: #e0f2fe; font-size: 1rem; border: 2px solid #2563eb; color: #2563eb;">
+                        <button id="sortPrescriptionDate" class="btn btn-primary ms-2" style="background-color: #2563eb; border-color: #2563eb; color: #fff;" data-asc="true">
+                            <i class="fas fa-sort-up"></i> Trier par date
+                        </button>
+                    </div>
+                    <table class="table rv-table mb-0" id="prescriptionTable" style="background: #e0f2fe;">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Date</th>
+                                <th>Médicament</th>
+                                <th>Dosage</th>
+                                <th>Fréquence</th>
+                                <th>Durée</th>
+                                <th>Instructions</th>
+                                <th>Fiche Médicale</th>
+                                <th>PDF</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% set foundPrescription = false %}
+                            {% for prescription in prescriptions %}
+                                {% set fiche = prescription.ficheMedicale is defined ? prescription.ficheMedicale : (prescription.getFicheMedicale is defined ? prescription.getFicheMedicale() : null) %}
+                                {% if fiche and fiche.getRendezVous and fiche.getRendezVous() and fiche.getRendezVous().getPatient and fiche.getRendezVous().getPatient() and fiche.getRendezVous().getPatient().id == patientId %}
+                                    {% set foundPrescription = true %}
+                                    <tr>
+                                        <td>{{ prescription.id }}</td>
+                                        <td>{{ prescription.createdAt ? prescription.createdAt|date('Y-m-d') : '—' }}</td>
+                                        <td>{{ prescription.nomMedicament|default('—') }}</td>
+                                        <td>{{ prescription.dose|default('—') }}</td>
+                                        <td>{{ prescription.frequence|default('—') }}</td>
+                                        <td>{{ prescription.duree|default('—') }}</td>
+                                        <td>{{ prescription.instructions|default('—') }}</td>
+                                        <td>{{ fiche.id }}</td>
+                                        <td>
+                                            <a href="{{ path('prescription_export_pdf', {'id': prescription.id}) }}" class="btn btn-sm btn-outline-primary" title="Exporter en PDF" download>PDF</a>
+                                        </td>
+                                    </tr>
+                                {% endif %}
+                            {% endfor %}
+                            {% if not foundPrescription %}
+                                <tr><td colspan="5">Aucune prescription trouvée.</td></tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        {% else %}
+            <div class="alert alert-rv alert-info">Aucune prescription trouvée.</div>
+        {% endif %}
+    </div>
 
-      function validateKeyFor(id, key) {
-        const el = findEl(key, id);
-        if (!el) return true;
-        let feedback = document.getElementById((el.id || (el.getAttribute('name')||key)) + '-feedback');
-        if (!feedback) {
-          feedback = document.createElement('small');
-          feedback.className = 'd-block mt-2';
-          feedback.style.fontSize = '0.85rem';
-          el.insertAdjacentElement('afterend', feedback);
+    <style>
+        .stylish-search {
+            border-radius: 18px;
+            border: 2px solid #38bdf8;
+            font-size: 1.05em;
+            padding-left: 1.5em;
+            background: linear-gradient(90deg, #f0fdfa 0%, #ecfeff 100%);
+            box-shadow: 0 2px 8px #38bdf822;
+            transition: border-color 0.2s, box-shadow 0.2s;
         }
-        const value = (el.value || '').trim();
-        const r = rules[key] || {};
-        let msg = '';
-        let valid = true;
-        if (r.required && value.length === 0) {
-          valid = false; msg = '⚠️ This field is required';
-        } else if (r.minLength && value.length > 0 && value.length < r.minLength) {
-          valid = false; msg = '⚠️ Minimum ' + r.minLength + ' characters required (' + value.length + '/' + r.minLength + ')';
-        } else if (r.maxLength && value.length > r.maxLength) {
-          valid = false; msg = '⚠️ Maximum ' + r.maxLength + ' characters allowed (' + value.length + '/' + r.maxLength + ')';
-        } else if (value.length > 0) {
-          valid = true; msg = '✓ Perfect';
+        .stylish-search:focus {
+            border-color: #2563eb;
+            box-shadow: 0 4px 16px #2563eb33;
+        }
+        .btn-sort-date {
+            border-radius: 16px;
+            font-size: 1em;
+            font-weight: 600;
+            background: linear-gradient(90deg, #ecfeff 0%, #38bdf8 100%);
+            color: #2563eb;
+            border: 2px solid #38bdf8;
+            box-shadow: 0 2px 8px #38bdf822;
+            transition: background 0.2s, color 0.2s, box-shadow 0.2s;
+        }
+        .btn-sort-date:hover {
+            background: linear-gradient(90deg, #38bdf8 0%, #2563eb 100%);
+            color: #fff;
+            box-shadow: 0 4px 16px #2563eb33;
+        }
+    </style>
+    <script>
+                // Sort by date utility
+                function setupDateSort(tableId, btnId, dateColIdx) {
+                    const table = document.getElementById(tableId);
+                    const btn = document.getElementById(btnId);
+                    if (!table || !btn) return;
+                    btn.addEventListener('click', function() {
+                        const asc = btn.dataset.asc === 'true';
+                        const rows = Array.from(table.tBodies[0].rows).filter(row => row.cells.length > dateColIdx);
+                        rows.sort((a, b) => {
+                            // Robust date parsing: fallback to 0 if invalid
+                            const aText = a.cells[dateColIdx].textContent.trim();
+                            const bText = b.cells[dateColIdx].textContent.trim();
+                            const aDate = Date.parse(aText) || 0;
+                            const bDate = Date.parse(bText) || 0;
+                            return asc ? aDate - bDate : bDate - aDate;
+                        });
+                        rows.forEach(row => table.tBodies[0].appendChild(row));
+                        btn.dataset.asc = (!asc).toString();
+                        btn.innerHTML = `<i class="fas fa-sort-${asc ? 'down' : 'up'}"></i> Trier par date`;
+                    });
+                }
+            setupDateSort('rendezvousTable', 'sortRendezvousDate', 1); // Date & Heure col
+            setupDateSort('ficheTable', 'sortFicheDate', 8); // Date de création col
+            setupDateSort('prescriptionTable', 'sortPrescriptionDate', 1); // Date col
+        function toggleEdit(id) {
+            const row = document.getElementById('edit-row-' + id);
+            if (!row) return;
+            row.style.display = row.style.display === 'none' ? 'table-row' : 'none';
+            if (row.style.display !== 'none') row.scrollIntoView({behavior: 'smooth', block: 'center'});
         }
 
-        feedback.textContent = msg;
-        if (valid && value.length > 0) { feedback.style.color = '#28a745'; el.style.borderColor = '#28a745'; }
-        else if (!valid) { feedback.style.color = '#dc3545'; el.style.borderColor = '#dc3545'; }
-        else { feedback.style.color = ''; el.style.borderColor = ''; feedback.textContent = ''; }
-        return valid;
-      }
+        // Table search and sort utility
+        function setupTableSearch(tableId, searchId) {
+            const table = document.getElementById(tableId);
+            const search = document.getElementById(searchId);
+            if (!table || !search) return;
+            search.addEventListener('input', function() {
+                const filter = search.value.toLowerCase();
+                Array.from(table.tBodies[0].rows).forEach(row => {
+                    const text = row.textContent.toLowerCase();
+                    row.style.display = text.includes(filter) ? '' : 'none';
+                });
+            });
+        }
 
-      document.addEventListener('DOMContentLoaded', function(){
-        // attach listeners for all existing rows
-        document.querySelectorAll('tr[id^="edit-row-"]').forEach(function(row){
-          const id = row.id.replace('edit-row-','');
-          ['datetime','mode','motif'].forEach(function(k){
-            const el = findEl(k, id);
-            if (!el) return;
-            // set min for datetime inputs
-            if (k === 'datetime') {
-              const now = new Date();
-              const pad = n => String(n).padStart(2,'0');
-              const minVal = now.getFullYear() + '-' + pad(now.getMonth()+1) + '-' + pad(now.getDate()) + 'T' + pad(now.getHours()) + ':' + pad(now.getMinutes());
-              try { el.setAttribute('min', minVal); } catch(e) {}
+        function setupTableSort(tableId) {
+            const table = document.getElementById(tableId);
+            if (!table) return;
+            Array.from(table.tHead.rows[0].cells).forEach((th, idx) => {
+                th.style.cursor = 'pointer';
+                th.addEventListener('click', function() {
+                    const rows = Array.from(table.tBodies[0].rows);
+                    const asc = th.dataset.asc === 'true';
+                    rows.sort((a, b) => {
+                        const aText = a.cells[idx].textContent.trim();
+                        const bText = b.cells[idx].textContent.trim();
+                        return asc ? aText.localeCompare(bText, undefined, {numeric:true}) : bText.localeCompare(aText, undefined, {numeric:true});
+                    });
+                    rows.forEach(row => table.tBodies[0].appendChild(row));
+                    th.dataset.asc = (!asc).toString();
+                });
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', function(){
+            setupTableSearch('rendezvousTable', 'searchRendezvous');
+            setupTableSort('rendezvousTable');
+            setupTableSearch('ficheTable', 'searchFiche');
+            setupTableSort('ficheTable');
+            setupTableSearch('prescriptionTable', 'searchPrescription');
+            setupTableSort('prescriptionTable');
+
+            // Inline edit validation (existing code)
+            const rules = {
+                datetime: { required: true },
+                mode: { required: true },
+                motif: { minLength: 5, maxLength: 500, required: false }
+            };
+            function findEl(key, id) {
+                const byId = document.getElementById(key + '-' + id);
+                if (byId) return byId;
+                return document.querySelector('[name="' + key + '"]');
             }
-            el.addEventListener('input', function(){ validateKeyFor(id,k); });
-            el.addEventListener('blur', function(){ validateKeyFor(id,k); });
-            el.addEventListener('focus', function(){ if (rules[k].required && (el.value||'').trim().length===0) validateKeyFor(id,k); });
-          });
+            function validateKeyFor(id, key) {
+                const el = findEl(key, id);
+                if (!el) return true;
+                let feedback = document.getElementById((el.id || (el.getAttribute('name')||key)) + '-feedback');
+                if (!feedback) {
+                    feedback = document.createElement('small');
+                    feedback.className = 'd-block mt-2';
+                    feedback.style.fontSize = '0.85rem';
+                    el.insertAdjacentElement('afterend', feedback);
+                }
+                const value = (el.value || '').trim();
+                const r = rules[key] || {};
+                let msg = '';
+                let valid = true;
+                if (r.required && value.length === 0) {
+                    valid = false; msg = '⚠️ This field is required';
+                } else if (r.minLength && value.length > 0 && value.length < r.minLength) {
+                    valid = false; msg = '⚠️ Minimum ' + r.minLength + ' characters required (' + value.length + '/' + r.minLength + ')';
+                } else if (r.maxLength && value.length > r.maxLength) {
+                    valid = false; msg = '⚠️ Maximum ' + r.maxLength + ' characters allowed (' + value.length + '/' + r.maxLength + ')';
+                } else if (value.length > 0) {
+                    valid = true; msg = '✓ Perfect';
+                }
+                feedback.textContent = msg;
+                if (valid && value.length > 0) { feedback.style.color = '#28a745'; el.style.borderColor = '#28a745'; }
+                else if (!valid) { feedback.style.color = '#dc3545'; el.style.borderColor = '#dc3545'; }
+                else { feedback.style.color = ''; el.style.borderColor = ''; feedback.textContent = ''; }
+                return valid;
+            }
+            document.querySelectorAll('tr[id^="edit-row-"]').forEach(function(row){
+                const id = row.id.replace('edit-row-','');
+                ['datetime','mode','motif'].forEach(function(k){
+                    const el = findEl(k, id);
+                    if (!el) return;
+                    if (k === 'datetime') {
+                        const now = new Date();
+                        const pad = n => String(n).padStart(2,'0');
+                        const minVal = now.getFullYear() + '-' + pad(now.getMonth()+1) + '-' + pad(now.getDate()) + 'T' + pad(now.getHours()) + ':' + pad(now.getMinutes());
+                        try { el.setAttribute('min', minVal); } catch(e) {}
+                    }
+                    el.addEventListener('input', function(){ validateKeyFor(id,k); });
+                    el.addEventListener('blur', function(){ validateKeyFor(id,k); });
+                    el.addEventListener('focus', function(){ if (rules[k].required && (el.value||'').trim().length===0) validateKeyFor(id,k); });
+                });
+            });
+            const openId = new URLSearchParams(window.location.search).get('openEdit');
+            if (openId) {
+                const row = document.getElementById('edit-row-' + openId);
+                if (row) { row.style.display = 'table-row'; row.scrollIntoView({behavior:'smooth', block:'center'}); }
+            }
         });
-
-        // if redirected with openEdit param, open that row
-        const openId = new URLSearchParams(window.location.search).get('openEdit');
-        if (openId) {
-          const row = document.getElementById('edit-row-' + openId);
-          if (row) { row.style.display = 'table-row'; row.scrollIntoView({behavior:'smooth', block:'center'}); }
-        }
-      });
-    })();
-  </script>
+    </script>
 {% endblock %}

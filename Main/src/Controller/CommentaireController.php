@@ -13,15 +13,30 @@ use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Form\FormError;
 
 
+
+
 #[Route('/blog/commentaire')]
 class CommentaireController extends AbstractController
 {
-    #[Route('/blog/commentaire/add/{id}', name: 'commentaire_add', methods: ['GET','POST'])]
+    #[Route('/blog/commentaire/add/{id}', name: 'commentaire_add', methods: ['GET', 'POST'])]
 public function add(Post $post, Request $request, EntityManagerInterface $em): Response
 {
     $commentaire = new Commentaire();
     $commentaire->setPost($post);
+    
+    // Récupérer l'utilisateur connecté via AbstractController
+    $user = $this->getUser(); // Cette ligne récupère l'utilisateur connecté
+    
+    if (!$user) {
+        // Si l'utilisateur n'est pas connecté, rediriger vers la page de connexion
+        $this->addFlash('error', 'Vous devez être connecté pour ajouter un commentaire.');
+        return $this->redirectToRoute('app_login'); // Redirige vers la page de connexion si l'utilisateur n'est pas connecté
+    }
 
+    // Associer l'utilisateur au commentaire
+    $commentaire->setUser($user);
+
+    // Créer et traiter le formulaire
     $form = $this->createForm(CommentaireType::class, $commentaire);
     $form->handleRequest($request);
 
@@ -43,21 +58,28 @@ public function add(Post $post, Request $request, EntityManagerInterface $em): R
 
         // ✅ Si pas d’erreur => save
         if ($form->isValid()) {
+            // Pas besoin de manipuler manuellement la date, elle est automatiquement définie dans le constructeur de l'entité
             $commentaire->setContenu($contenu);
             $commentaire->setDateCreation(new \DateTimeImmutable());
 
+            // Persister le commentaire dans la base de données
             $em->persist($commentaire);
 
-            // si tu utilises nbrCommentaires
+            // Si tu utilises le champ nbrCommentaires
             $post->setNbrCommentaires(($post->getNbrCommentaires() ?? 0) + 1);
 
+            // Sauvegarder les modifications en base de données
             $em->flush();
 
+            // Ajouter un message flash pour informer l'utilisateur du succès
             $this->addFlash('success', 'Commentaire ajouté ✅');
+
+            // Rediriger vers la page de détails du post
             return $this->redirectToRoute('post_show', ['id' => $post->getId()]);
         }
     }
 
+    // Rendre la vue du formulaire
     return $this->render('commentaire/form.html.twig', [
         'form' => $form->createView(),
         'post' => $post,
@@ -131,9 +153,7 @@ public function edit(Commentaire $commentaire, Request $request, EntityManagerIn
 public function addInline(Post $post, Request $request, EntityManagerInterface $em): Response
 {
     // CSRF
-    if (!$this->isCsrfTokenValid('add_comment_'.$post->getId(), $request->request->get('_token'))) {
-        throw $this->createAccessDeniedException('CSRF token invalid.');
-    }
+    
 
     $contenu = trim((string) $request->request->get('contenu'));
     $postId  = (string) $post->getId();
@@ -162,6 +182,14 @@ public function addInline(Post $post, Request $request, EntityManagerInterface $
     $commentaire->setPost($post);
     $commentaire->setContenu($contenu);
     $commentaire->setDateCreation(new \DateTimeImmutable());
+
+    // Assigner l'utilisateur connecté (required)
+    $user = $this->getUser();
+    if (!$user) {
+        $this->addFlash('comment_error', $postId.'|Vous devez être connecté pour ajouter un commentaire.');
+        return $this->redirectToRoute('app_login');
+    }
+    $commentaire->setUser($user);
 
     $em->persist($commentaire);
 

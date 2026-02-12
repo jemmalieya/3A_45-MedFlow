@@ -15,23 +15,41 @@ use Symfony\Component\HttpFoundation\File\UploadedFile;
 class RendezVousController extends AbstractController
 {
     #[Route('/homeC', name: 'rendezvous_home')]
-    public function index(): Response
+    public function index(EntityManagerInterface $em): Response
     {
+        // Fetch all users with roleSysteme = 'STAFF' or 'ADMIN'
+        $staffList = $em->getRepository(\App\Entity\User::class)
+            ->createQueryBuilder('u')
+            ->andWhere('u.roleSysteme IN (:roles)')
+            ->setParameter('roles', ['STAFF', 'ADMIN'])
+            ->orderBy('u.nom', 'ASC')
+            ->getQuery()
+            ->getResult();
+
         return $this->render('rendez_vous/index.html.twig', [
             'controller_name' => 'RendezVousController',
+            'staffList' => $staffList,
         ]);
     }
     #[Route('/appointment/{idStaff}', name: 'appointment', requirements: ['idStaff' => '\d+'])]
     public function appointment(Request $request, EntityManagerInterface $em, ?int $idStaff = null): Response
     {
         $rendezVous = new RendezVous();
-        
-        // Set idPatient to 1 (always)
-        $rendezVous->setIdPatient(1);
-        
-        // Set idStaff from URL parameter if provided
+        // Set patient from session patient_id
+        $session = $request->getSession();
+        $patientId = $session->get('patient_id');
+        if ($patientId) {
+            $patient = $em->getRepository(\App\Entity\User::class)->find($patientId);
+            if ($patient) {
+                $rendezVous->setPatient($patient);
+            }
+        }
+        // Set staff to User with idStaff if provided
         if ($idStaff !== null) {
-            $rendezVous->setIdStaff($idStaff);
+            $staff = $em->getRepository(\App\Entity\User::class)->find($idStaff);
+            if ($staff) {
+                $rendezVous->setStaff($staff);
+            }
         }
         
         $form = $this->createForm(RendezVousType::class, $rendezVous);
@@ -99,15 +117,47 @@ class RendezVousController extends AbstractController
     #[Route('/rendezvous', name: 'rendezvous_list')]
     public function list(EntityManagerInterface $em): Response
     {
-        // Static patient id (change here if you want to view another patient's appointments)
-        $patientId = 1;
-
+        // Get patient from session
+        $request = $this->container->get('request_stack')->getCurrentRequest();
+        $session = $request->getSession();
+        $patientId = $session->get('patient_id');
+        $patient = null;
+        $fiches_medicales = [];
+        $prescriptions = [];
+        if ($patientId) {
+            $patient = $em->getRepository(\App\Entity\User::class)->find($patientId);
+        }
         $repo = $em->getRepository(RendezVous::class);
-        $rendezvous = $repo->findBy(['idPatient' => $patientId], ['createdAt' => 'DESC']);
+        $ficheRepo = $em->getRepository(\App\Entity\FicheMedicale::class);
+        $prescRepo = $em->getRepository(\App\Entity\Prescription::class);
+        $rendezvous = $patient ? $repo->findBy(['patient' => $patient], ['createdAt' => 'DESC']) : [];
+
+        // Get all fiche médicales related to the user's rendezvous
+        if ($rendezvous) {
+            $fiche_med_ids = [];
+            foreach ($rendezvous as $rdv) {
+                $fiche = $ficheRepo->findOneBy(['rendezVous' => $rdv]);
+                if ($fiche) {
+                    $fiches_medicales[] = $fiche;
+                }
+            }
+        }
+
+        // Get all prescriptions related to the user's fiche médicales
+        if ($fiches_medicales) {
+            foreach ($fiches_medicales as $fiche) {
+                $fichePrescriptions = $prescRepo->findBy(['ficheMedicale' => $fiche]);
+                foreach ($fichePrescriptions as $presc) {
+                    $prescriptions[] = $presc;
+                }
+            }
+        }
 
         return $this->render('rendez_vous/rendezvous_list.html.twig', [
             'rendezvous' => $rendezvous,
             'patientId' => $patientId,
+            'fiches_medicales' => $fiches_medicales,
+            'prescriptions' => $prescriptions,
         ]);
     }
 

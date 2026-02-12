@@ -38,11 +38,13 @@ class RendezVous
     #[ORM\Column]
     private ?\DateTime $createdAt = null;
 
-    #[ORM\Column(type: Types::INTEGER)]
-    private ?int $idPatient = null;
+    #[ORM\ManyToOne(targetEntity: User::class)]
+    #[ORM\JoinColumn(name: "idPatient", referencedColumnName: "id", nullable: false, onDelete: "CASCADE")]
+    private ?User $patient = null;
 
-    #[ORM\Column(type: Types::INTEGER)]
-    private ?int $idStaff = null;
+    #[ORM\ManyToOne(targetEntity: User::class)]
+    #[ORM\JoinColumn(name: "idStaff", referencedColumnName: "id", nullable: false, onDelete: "CASCADE")]
+    private ?User $staff = null;
     public function getId(): ?int
     {
         return $this->id;
@@ -108,27 +110,25 @@ class RendezVous
         return $this;
     }
 
-    public function getIdPatient(): ?int
+    public function getPatient(): ?User
     {
-        return $this->idPatient;
+        return $this->patient;
     }
 
-    public function setIdPatient(int $idPatient): static
+    public function setPatient(?User $patient): static
     {
-        $this->idPatient = $idPatient;
-
+        $this->patient = $patient;
         return $this;
     }
 
-    public function getIdStaff(): ?int
+    public function getStaff(): ?User
     {
-        return $this->idStaff;
+        return $this->staff;
     }
 
-    public function setIdStaff(int $idStaff): static
+    public function setStaff(?User $staff): static
     {
-        $this->idStaff = $idStaff;
-
+        $this->staff = $staff;
         return $this;
     }
 }

@@ -20,10 +20,13 @@ class FicheMedicaleRepository extends ServiceEntityRepository
      */
     public function findFichesByStaffId(int $idStaff): array
     {
+        // Fetch User entity for staff
+        $entityManager = $this->getEntityManager();
+        $staffUser = $entityManager->getRepository(\App\Entity\User::class)->find($idStaff);
         return $this->createQueryBuilder('f')
             ->innerJoin('f.rendezVous', 'r')
-            ->andWhere('r.idStaff = :idStaff')
-            ->setParameter('idStaff', $idStaff)
+            ->andWhere('r.staff = :staff')
+            ->setParameter('staff', $staffUser)
             ->orderBy('f.createdAt', 'DESC')
             ->getQuery()
             ->getResult()

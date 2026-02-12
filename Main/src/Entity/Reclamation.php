@@ -78,6 +78,10 @@ class Reclamation
     #[ORM\Column(nullable: true)]
     private ?\DateTimeImmutable $date_cloture_r = null;
 
+    #[ORM\ManyToOne(targetEntity: User::class, inversedBy: 'reclamations')]
+    #[ORM\JoinColumn(nullable: false)]
+    private ?User $user = null;
+
     /**
      * @var Collection<int, ReponseReclamation>
      */
@@ -249,6 +253,17 @@ class Reclamation
             }
         }
 
+        return $this;
+    }
+
+    public function getUser(): ?User
+    {
+        return $this->user;
+    }
+
+    public function setUser(?User $user): static
+    {
+        $this->user = $user;
         return $this;
     }
 

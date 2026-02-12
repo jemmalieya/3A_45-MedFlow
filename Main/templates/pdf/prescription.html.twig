@@ -1,0 +1,106 @@
+{# Basic PDF template for prescription #}
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Ordonnance Médicale</title>
+    <style>
+        body { font-family: 'Segoe UI', 'Times New Roman', Times, serif; font-size: 15px; color: #222; margin: 0; padding: 0; background: #fff; }
+        .ord-header {
+            background: linear-gradient(90deg, #2563eb 0%, #38bdf8 100%);
+            color: #fff;
+            padding: 24px 32px 18px 32px;
+            border-bottom: 4px solid #2563eb;
+            display: flex;
+            align-items: center;
+            border-radius: 0 0 32px 32px;
+            box-shadow: 0 4px 16px #2563eb22;
+        }
+        .ord-header .logo {
+            width: 70px; height: 70px; margin-right: 22px;
+        }
+        .ord-header .title {
+            font-size: 2.2em; font-weight: bold; letter-spacing: 0.04em; color: #111; text-shadow: none;
+        }
+        .watermark {
+            position: fixed;
+            top: 40%;
+            left: 50%;
+            transform: translate(-50%, -50%) rotate(-20deg);
+            font-size: 4em;
+            color: #2563eb18;
+            z-index: 0;
+            pointer-events: none;
+            user-select: none;
+        }
+        .ord-info {
+            margin: 32px 0 24px 0;
+            width: 100%;
+            border-collapse: collapse;
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px #2563eb22;
+            overflow: hidden;
+        }
+        .ord-info th {
+            text-align: left; padding: 10px 18px 10px 18px; font-weight: 700; color: #2563eb; background: #f0f6ff; width: 180px;
+        }
+        .ord-info td {
+            padding: 10px 18px; background: #fff;
+        }
+        .section-title {
+            font-size: 1.15em; color: #2563eb; margin-top: 22px; margin-bottom: 8px; border-bottom: 2px solid #38bdf8; padding-bottom: 3px; font-weight: 700;
+        }
+        .section-content {
+            margin-bottom: 14px; background: #f0f6ff; padding: 10px 16px; border-radius: 8px; box-shadow: 0 1px 4px #2563eb11;
+        }
+        .signature {
+            margin-top: 40px; text-align: right; font-size: 1.1em; color: #222;
+        }
+        .signature .line {
+            display: inline-block; border-bottom: 2px solid #2563eb; width: 180px; margin-bottom: 4px;
+        }
+        .footer {
+            margin-top: 36px; font-size: 0.98em; color: #888; text-align: right;
+        }
+    </style>
+</head>
+<body>
+    <div class="watermark">Ordonnance</div>
+    <div class="ord-header">
+        <div class="logo">
+            <svg width="70" height="70" viewBox="0 0 60 60"><circle cx="30" cy="30" r="28" fill="#2563eb"/><text x="50%" y="54%" text-anchor="middle" fill="#fff" font-size="32" font-family="Arial" dy=".3em">💊</text></svg>
+        </div>
+        <div class="title">Ordonnance Médicale</div>
+    </div>
+    <table class="ord-info">
+        <tr><th>ID :</th><td>{{ prescription.id }}</td></tr>
+        <tr><th>Date :</th><td>{{ prescription.createdAt ? prescription.createdAt|date('d/m/Y') : '—' }}</td></tr>
+        <tr><th>Fiche Médicale :</th><td>{{ prescription.ficheMedicale is defined ? prescription.ficheMedicale.id : (prescription.getFicheMedicale is defined and prescription.getFicheMedicale ? prescription.getFicheMedicale().id : '—') }}</td></tr>
+    </table>
+
+    <div class="section-title">Médicament</div>
+    <div class="section-content">{{ prescription.nomMedicament|default('—') }}</div>
+
+    <div class="section-title">Dosage</div>
+    <div class="section-content">{{ prescription.dose|default('—') }}</div>
+
+    <div class="section-title">Fréquence</div>
+    <div class="section-content">{{ prescription.frequence|default('—') }}</div>
+
+    <div class="section-title">Durée</div>
+    <div class="section-content">{{ prescription.duree|default('—') }}</div>
+
+    <div class="section-title">Instructions</div>
+    <div class="section-content">{{ prescription.instructions|default('—') }}</div>
+
+    <div class="signature">
+        <div class="line"></div><br>
+        <span>Médecin / Signature</span>
+    </div>
+
+    <div class="footer">
+        Document généré le {{ "now"|date('d/m/Y H:i') }}
+    </div>
+</body>
+</html>

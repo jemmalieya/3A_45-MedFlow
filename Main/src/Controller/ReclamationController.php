@@ -28,6 +28,14 @@ public function index(Request $request, EntityManagerInterface $em): Response
     // valeurs automatiques
     $reclamation->setDateCreationR(new \DateTimeImmutable());
     $reclamation->setStatutReclamation('En attente');
+    
+    // ✅ Vérifier que l'utilisateur est connecté et l'assigner
+    $user = $this->getUser();
+    if (!$user) {
+        $this->addFlash('warning', 'Vous devez être connecté pour créer une réclamation.');
+        return $this->redirectToRoute('app_login');
+    }
+    $reclamation->setUser($user);
 
     if (!$reclamation->getReferenceReclamation()) {
         $reclamation->setReferenceReclamation(
@@ -71,6 +79,30 @@ public function index(Request $request, EntityManagerInterface $em): Response
     ]);
 }
 
+#[Route('/mes-reclamations', name: 'my_reclamations', methods: ['GET'])]
+public function myReclamations(ReclamationRepository $repo): Response
+{
+    // ✅ Vérifier que l'utilisateur est connecté
+    $user = $this->getUser();
+    if (!$user) {
+        $this->addFlash('warning', 'Vous devez être connecté pour voir vos réclamations.');
+        return $this->redirectToRoute('app_login');
+    }
+
+    // ✅ Récupérer UNIQUEMENT les réclamations de l'utilisateur connecté avec QueryBuilder
+    $qb = $repo->createQueryBuilder('r');
+    $reclamations = $qb
+        ->where('r.user = :userId')
+        ->setParameter('userId', $user->getId())
+        ->orderBy('r.date_creation_r', 'DESC')
+        ->getQuery()
+        ->getResult();
+
+    return $this->render('reclamation/my_reclamations.html.twig', [
+        'reclamations' => $reclamations,
+        'user' => $user,
+    ]);
+}
 
  #[Route('/reclamation/list', name: 'reclamation_list', methods: ['GET'])]
 public function list(Request $request, ReclamationRepository $reclamationRepository): Response
@@ -91,6 +123,17 @@ public function list(Request $request, ReclamationRepository $reclamationReposit
 
     // QueryBuilder
     $qb = $reclamationRepository->createQueryBuilder('r');
+
+    // If not admin, restrict to current user's reclamations
+    $user = $this->getUser();
+    if (!$this->isGranted('ROLE_ADMIN')) {
+        if (!$user) {
+            $this->addFlash('warning', 'Vous devez être connecté pour voir vos réclamations.');
+            return $this->redirectToRoute('app_login');
+        }
+        $qb->andWhere('r.user = :userId')
+           ->setParameter('userId', $user->getId());
+    }
 
     // 🔎 Recherche texte
     if ($q && trim($q) !== '') {
@@ -128,6 +171,12 @@ public function edit(
     Reclamation $reclamation,
     EntityManagerInterface $em
 ): Response {
+    // ✅ Vérifier que l'utilisateur est le propriétaire de la réclamation
+    $user = $this->getUser();
+    if (!$user || $reclamation->getUser() !== $user) {
+        $this->addFlash('error', 'Vous n\'avez pas le droit de modifier cette réclamation.');
+        return $this->redirectToRoute('my_reclamations');
+    }
 
     $form = $this->createForm(ReclamationType::class, $reclamation);
     $form->handleRequest($request);
@@ -172,6 +221,13 @@ public function delete(
     Reclamation $reclamation,
     EntityManagerInterface $em
 ): Response {
+    // ✅ Vérifier que l'utilisateur est le propriétaire de la réclamation
+    $user = $this->getUser();
+    if (!$user || $reclamation->getUser() !== $user) {
+        $this->addFlash('error', 'Vous n\'avez pas le droit de supprimer cette réclamation.');
+        return $this->redirectToRoute('my_reclamations');
+    }
+
     if ($this->isCsrfTokenValid('delete'.$reclamation->getIdReclamation(), $request->request->get('_token'))) {
         $em->remove($reclamation);
         $em->flush();
@@ -179,7 +235,7 @@ public function delete(
         $this->addFlash('success', 'Réclamation supprimée avec succès');
     }
 
-    return $this->redirectToRoute('reclamation_list');
+    return $this->redirectToRoute('my_reclamations');
 }
 
 
@@ -189,6 +245,12 @@ public function reponsesFront(
     Reclamation $reclamation,
     ReponseReclamationRepository $repo
 ): Response {
+    // ✅ Vérifier que l'utilisateur est le propriétaire de la réclamation
+    $user = $this->getUser();
+    if (!$user || $reclamation->getUser() !== $user) {
+        $this->addFlash('error', 'Vous n\'avez pas le droit d\'accéder à cette réclamation.');
+        return $this->redirectToRoute('my_reclamations');
+    }
 
     $reponses = $repo->findBy(
         ['reclamation' => $reclamation],
