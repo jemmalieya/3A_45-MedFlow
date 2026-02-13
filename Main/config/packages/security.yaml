@@ -41,5 +41,6 @@ security:
     ROLE_PATIENT: ROLE_USER
 
   access_control:
-    - { path: ^/admin, roles: ROLE_ADMIN }
+    - { path: ^/admin, roles: ROLE_STAFF }
+    - { path: ^/ad, roles: ROLE_ADMIN }
     - { path: ^/staff, roles: ROLE_STAFF }

@@ -39,11 +39,44 @@ class LoginSuccessHandler implements AuthenticationSuccessHandlerInterface
 
         // ✅ Redirection selon rôle
         if (in_array('ROLE_ADMIN', $roles, true)) {
-            return new RedirectResponse($this->router->generate('app_admin'));
+            return new RedirectResponse($this->router->generate('app_ad'));
         }
 
         if (in_array('ROLE_STAFF', $roles, true)) {
-            return new RedirectResponse($this->router->generate('staff_dashboard'));
+            // Check type_staff for STAFF
+            $typeStaff = method_exists($user, 'getTypeStaff') ? $user->getTypeStaff() : null;
+            if ($typeStaff === 'RESP_PATIENTS') {
+                // Redirect to fiche by staff page
+                $staffId = $user->getId();
+                return new RedirectResponse($this->router->generate('app_fiche_by_staff', ['idStaff' => $staffId]));
+            }
+
+             if ($typeStaff === 'RESP_BLOG') {
+                // Redirect to blog management page
+                $staffId = $user->getId();
+                return new RedirectResponse($this->router->generate('admin_reclamations'));
+            } 
+
+            if ($typeStaff === 'RESP_USERS') {
+                // Redirect to fiche by staff page
+                $staffId = $user->getId();
+                return new RedirectResponse($this->router->generate('staff_patients_index'));
+            }
+
+             if ($typeStaff === 'RESP_PRODUCTS') {
+                // Redirect to fiche by staff page
+                $staffId = $user->getId();
+                return new RedirectResponse($this->router->generate('admin_produits_index'));
+            }
+            
+            if ($typeStaff === 'RESP_EVEN') {
+                // Redirect to fiche by staff page
+                $staffId = $user->getId();
+                return new RedirectResponse($this->router->generate('admin_evenement_cards'));
+            }
+            
+            // Default STAFF redirect
+            return new RedirectResponse($this->router->generate('app_admin'));
         }
 
         return new RedirectResponse($this->router->generate('app_home'));
