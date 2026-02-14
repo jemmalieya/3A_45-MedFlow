@@ -3,21 +3,24 @@
 namespace App\Controller;
 
 use App\Entity\Produit;
+use App\Service\DrugInteractionService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\Session\SessionInterface;
 use Symfony\Component\Routing\Annotation\Route;
-use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\HttpFoundation\Request;
 
 #[Route('/panier')]
 class PanierController extends AbstractController
 {
-    // ✅ Page panier (front)
+    // ✅ Page panier
     #[Route('', name: 'panier_index', methods: ['GET'])]
-    public function index(SessionInterface $session, EntityManagerInterface $em): Response
-    {
+    public function index(
+        SessionInterface $session,
+        EntityManagerInterface $em,
+        DrugInteractionService $interactionService
+    ): Response {
         $panier = $session->get('panier', []);
 
         $produitsPanier = [];
@@ -25,17 +28,35 @@ class PanierController extends AbstractController
 
         foreach ($panier as $id => $item) {
             $produit = $em->getRepository(Produit::class)->find($id);
-            if ($produit) {
-                $produit->quantite_panier = $item['quantite'];
-                $produitsPanier[] = $produit;
-                $total += $produit->getPrixProduit() * $item['quantite'];
-            }
+            if (!$produit) continue;
+
+            $qty = (int)($item['quantite'] ?? 0);
+            if ($qty <= 0) continue;
+
+            $produit->quantite_panier = $qty;
+            $produitsPanier[] = $produit;
+
+            $total += ((float)$produit->getPrixProduit()) * $qty;
         }
+
+        // ✅ Juste pour affichage dans Twig
+        $interactionResult = $interactionService->checkCartInteractions($panier);
 
         return $this->render('panier/index.html.twig', [
             'produits' => $produitsPanier,
-            'total' => $total
+            'total' => $total,
+            'interactionResult' => $interactionResult,
         ]);
+    }
+
+    // ✅ Endpoint AJAX : recalcul interactions
+    #[Route('/check-interactions', name: 'panier_check_interactions', methods: ['GET'])]
+    public function checkInteractions(
+        SessionInterface $session,
+        DrugInteractionService $interactionService
+    ): JsonResponse {
+        $panier = $session->get('panier', []);
+        return new JsonResponse($interactionService->checkCartInteractions($panier));
     }
 
     // ✅ Badge navbar
@@ -57,13 +78,14 @@ class PanierController extends AbstractController
         ]);
     }
 
-    // ✅ Ajouter produit
-    #[Route('/ajouter/{id}', name: 'panier_ajouter', methods: ['POST', 'GET'])]
+    // ✅ Ajouter produit (NE BLOQUE PAS, juste ajoute)
+    #[Route('/ajouter/{id}', name: 'panier_ajouter', methods: ['POST','GET'])]
     public function ajouter(Produit $produit, SessionInterface $session): JsonResponse
     {
         $panier = $session->get('panier', []);
         $id = $produit->getId_produit();
 
+        // Stock check
         $stock = (int) ($produit->getQuantiteProduit() ?? 0);
         $quantiteDansPanier = isset($panier[$id]) ? (int)($panier[$id]['quantite'] ?? 0) : 0;
 
@@ -75,37 +97,50 @@ class PanierController extends AbstractController
             ], 400);
         }
 
-        $panier[$id]['quantite'] = ($panier[$id]['quantite'] ?? 0) + 1;
+        $panier[$id]['quantite'] = ((int)($panier[$id]['quantite'] ?? 0)) + 1;
         $panier[$id]['prix'] = $produit->getPrixProduit();
 
         $session->set('panier', $panier);
 
         return new JsonResponse([
             'success' => true,
-            'message' => $produit->getNomProduit() . ' ajouté au panier',
-            'count' => $this->getCount($panier)
+            'message' => $produit->getNomProduit().' ajouté au panier',
+            'count' => $this->getCount($panier),
+            'quantite' => (int)$panier[$id]['quantite'],
         ]);
     }
 
-    // ✅ Augmenter quantité
+    // ✅ Augmenter quantité (NE BLOQUE PAS)
     #[Route('/augmenter/{id}', name: 'panier_augmenter', methods: ['POST'])]
     public function augmenter(Produit $produit, SessionInterface $session): JsonResponse
     {
         $panier = $session->get('panier', []);
         $id = $produit->getId_produit();
 
+        if (!isset($panier[$id])) {
+            $panier[$id]['quantite'] = 0;
+        }
+
         $stock = (int) ($produit->getQuantiteProduit() ?? 0);
-        $panier[$id]['quantite'] = ($panier[$id]['quantite'] ?? 0) + 1;
+        $panier[$id]['quantite'] = ((int)($panier[$id]['quantite'] ?? 0)) + 1;
 
         if ($stock > 0 && $panier[$id]['quantite'] > $stock) {
-            return new JsonResponse(['success' => false, 'message' => 'Stock épuisé'], 400);
+            $panier[$id]['quantite'] = $stock;
+            $session->set('panier', $panier);
+
+            return new JsonResponse([
+                'success' => false,
+                'message' => 'Stock épuisé',
+                'quantite' => (int)$panier[$id]['quantite'],
+                'count' => $this->getCount($panier)
+            ], 400);
         }
 
         $session->set('panier', $panier);
 
         return new JsonResponse([
             'success' => true,
-            'quantite' => $panier[$id]['quantite'],
+            'quantite' => (int)$panier[$id]['quantite'],
             'count' => $this->getCount($panier)
         ]);
     }
@@ -118,19 +153,27 @@ class PanierController extends AbstractController
         $id = $produit->getId_produit();
 
         if (!isset($panier[$id])) {
-            return new JsonResponse(['success' => false], 400);
+            return new JsonResponse(['success' => false, 'message' => 'Produit absent'], 400);
         }
 
-        $panier[$id]['quantite']--;
+        $panier[$id]['quantite'] = ((int)$panier[$id]['quantite']) - 1;
 
         if ($panier[$id]['quantite'] <= 0) {
             unset($panier[$id]);
+            $session->set('panier', $panier);
+
+            return new JsonResponse([
+                'success' => true,
+                'quantite' => 0,
+                'count' => $this->getCount($panier)
+            ]);
         }
 
         $session->set('panier', $panier);
 
         return new JsonResponse([
             'success' => true,
+            'quantite' => (int)$panier[$id]['quantite'],
             'count' => $this->getCount($panier)
         ]);
     }
@@ -143,7 +186,10 @@ class PanierController extends AbstractController
         unset($panier[$produit->getId_produit()]);
         $session->set('panier', $panier);
 
-        return new JsonResponse(['success' => true, 'count' => $this->getCount($panier)]);
+        return new JsonResponse([
+            'success' => true,
+            'count' => $this->getCount($panier)
+        ]);
     }
 
     // ✅ Vider panier
@@ -156,6 +202,6 @@ class PanierController extends AbstractController
 
     private function getCount(array $panier): int
     {
-        return array_sum(array_column($panier, 'quantite'));
+        return array_sum(array_map(fn($i) => (int)($i['quantite'] ?? 0), $panier));
     }
 }

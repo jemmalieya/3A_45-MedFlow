@@ -2,7 +2,8 @@
 
 parameters:
     pieces_jointes_directory: '%kernel.project_dir%/public/uploads/pieces_jointes'
-
+    openfda.api_key: '%env(OPENFDA_API_KEY)%'
+    openfda.timeout: '%env(int:OPENFDA_TIMEOUT)%'
 
 services:
     _defaults:
@@ -21,6 +22,11 @@ services:
             $sid: '%env(TWILIO_SID)%'
             $token: '%env(TWILIO_TOKEN)%'
             $from: '%env(TWILIO_FROM)%'
+
+    # OpenFDA (Service d'interactions médicamenteuses)
+    App\Service\OpenFdaService:
+        arguments:
+            $apiKey: '%openfda.api_key%'
 
     # Auto-register services in src/
     App\:
