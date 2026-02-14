@@ -47,10 +47,11 @@
 <!-- Doctor Card 2 -->
         <div class="row" data-aos="fade-up" data-aos-delay="400">
         {% for staff in staffList %}
+          {% if staff.roleSysteme == 'STAFF' and staff.typeStaff == 'RESP_PATIENTS' %}
           <div class="col-lg-4 col-md-6 mb-4">
             <div class="doctor-card">
               <div class="doctor-image">
-                <img src="{{ staff.profilePicture ? asset(staff.profilePicture) : 'assets/img/health/default-doctor.png' }}" alt="Dr. {{ staff.nom }} {{ staff.prenom }}" class="img-fluid">
+                <img src="{{ staff.profilePicture ? asset(staff.profilePicture) : 'assets/img/health/staff-1.webp' }}" alt="Dr. {{ staff.nom }} {{ staff.prenom }}" class="img-fluid">
                 <div class="availability-badge online">Disponible</div>
               </div>
               <div class="doctor-info">
@@ -72,6 +73,7 @@
               </div>
             </div>
           </div><!-- End Doctor Card -->
+          {% endif %}
         {% endfor %}
         </div>
 

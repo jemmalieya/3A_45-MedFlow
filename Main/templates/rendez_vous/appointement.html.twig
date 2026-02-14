@@ -79,25 +79,37 @@
                     {% endfor %}
 
                     <div class="appointment-card">
-                        {{ form_start(form, {'attr': {'novalidate': 'novalidate'}}) }}
-                            <div class="mb-4">
-                                {{ form_label(form.datetime, 'Date & Heure') }}
-                                {{ form_widget(form.datetime, {'attr': {'id': 'datetime'}}) }}
-                                {{ form_errors(form.datetime) }}
-                                <small id="datetime-feedback" class="d-block mt-2" style="font-size:0.85rem;"></small>
-                            </div>
-                            <div class="mb-4">
-                                {{ form_label(form.mode, 'Mode') }}
-                                {{ form_widget(form.mode, {'attr': {'id': 'mode'}}) }}
-                                {{ form_errors(form.mode) }}
-                                <small id="mode-feedback" class="d-block mt-2" style="font-size:0.85rem;"></small>
-                            </div>
-                            <div class="mb-4">
-                                {{ form_label(form.motif, 'Motif') }}
-                                {{ form_widget(form.motif, {'attr': {'id': 'motif'}}) }}
-                                {{ form_errors(form.motif) }}
-                                <small id="motif-feedback" class="d-block mt-2" style="font-size:0.85rem;"></small>
-                            </div>
+                        {% if form.vars.errors|length > 0 %}
+                          <div style="color: #dc3545; font-size: 1em; font-weight: bold;">
+                            Erreurs du formulaire :
+                            <ul>
+                              {% for error in form.vars.errors %}<li>{{ error.message }}</li>{% endfor %}
+                            </ul>
+                          </div>
+                        {% endif %}
+                        {{ form_start(form, {'attr': {'novalidate': 'novalidate', 'id': 'appointment-form-main'}}) }}
+                        <div class="mb-4">
+                          <div id="fullcalendar"></div>
+                          <div id="selected-date-label" style="margin-top:1rem;font-weight:bold;color:#2563eb;"></div>
+                          <input type="hidden" id="calendar-datetime" name="{{ form.datetime.vars.full_name }}" value="{{ form.datetime.vars.value|default('') }}">
+                          {{ form_errors(form.datetime) }}
+                          {% if form.datetime.vars.errors|length > 0 and form.datetime.vars.value is empty %}
+                            <div style="color: #dc3545; font-size: 0.95em;">Ce champ est obligatoire. Veuillez choisir une date et une heure.</div>
+                          {% endif %}
+                        </div>
+                        {{ form_row(form.mode) }}
+                        {{ form_row(form.motif) }}
+                        {{ form_row(form._token) }}
+                        <div class="d-grid mt-4">
+                          <button type="submit" class="btn btn-appointment">Envoyer la demande</button>
+                        </div>
+                        {{ form_end(form, {'render_rest': false}) }}
+                            <style>
+                              /* Hide any default datetime widget that may be rendered by Symfony */
+                              input[type="datetime-local"], .js-datepicker, .flatpickr-input {
+                                display: none !important;
+                              }
+                            </style>
                             <div class="row g-3 mb-4">
                                 <div class="col-md-6">
                                     <label class="form-label">Patient</label>
@@ -113,119 +125,142 @@
                                 </div>
                                 <div class="col-md-6">
                                     <label class="form-label">Personnel médical</label>
-                                    <div class="form-control bg-muted" style="pointer-events: none;"><strong>{{ form.vars.data.staff ? form.vars.data.staff.nom ~ ' ' ~ form.vars.data.staff.prenom : 'Non défini' }}</strong></div>
+                                    <div class="form-control bg-muted" style="pointer-events: none;">
+                                      <strong>{{ form.vars.data.staff ? form.vars.data.staff.nom ~ ' ' ~ form.vars.data.staff.prenom : 'Non défini' }}</strong>
+                                    </div>
                                 </div>
                             </div>
-                            <div class="d-grid">
-                                <button type="submit" class="btn btn-appointment">Envoyer la demande</button>
-                            </div>
-                        {{ form_end(form) }}
+                            <!-- All form fields above -->
+                           
+                       
+                        {{ form_end(form, {'render_rest': false}) }}
                     </div>
-
-                    <script>
-              // Informative client-side validation for appointment form
-              const apptValidationRules = {
-                datetime: { required: true },
-                mode: { required: true },
-                motif: { minLength: 5, maxLength: 500, required: false }
-              };
-
-              function findFieldElement(key) {
-                let el = document.getElementById(key);
-                if (el) return el;
-                // Fallback: look for any element with name containing the key (e.g., rendez_vous[motif])
-                el = document.querySelector('[name*="' + key + '"]');
-                return el;
-              }
-
-              function getOrCreateFeedbackFor(field, key) {
-                const fid = (field.id ? field.id : (field.getAttribute('name') || key)) + '-feedback';
-                let feedback = document.getElementById(fid);
-                if (!feedback) {
-                  feedback = document.createElement('small');
-                  feedback.id = fid;
-                  feedback.className = 'd-block mt-2';
-                  feedback.style.fontSize = '0.85rem';
-                  field.insertAdjacentElement('afterend', feedback);
-                }
-                return feedback;
-              }
-
-              function validateApptField(key) {
-                const field = findFieldElement(key);
-                if (!field) return true;
-                const feedback = document.getElementById((field.id ? field.id : (field.getAttribute('name')||key)) + '-feedback') || getOrCreateFeedbackFor(field, key);
-                const value = (field.value || '').trim();
-                const rules = apptValidationRules[key] || {};
-                let isValid = true;
-                let message = '';
-
-                if (rules.required && value.length === 0) {
-                  isValid = false;
-                  message = '⚠️ This field is required';
-                } else if (rules.minLength && value.length > 0 && value.length < rules.minLength) {
-                  isValid = false;
-                  message = '⚠️ Minimum ' + rules.minLength + ' characters required (' + value.length + '/' + rules.minLength + ')';
-                } else if (rules.maxLength && value.length > rules.maxLength) {
-                  isValid = false;
-                  message = '⚠️ Maximum ' + rules.maxLength + ' characters allowed (' + value.length + '/' + rules.maxLength + ')';
-                } else if (value.length > 0) {
-                  isValid = true;
-                  message = '✓ Perfect';
-                }
-
-                feedback.textContent = message;
-                if (isValid && value.length > 0) {
-                  feedback.style.color = '#28a745';
-                  field.style.borderColor = '#28a745';
-                } else if (!isValid) {
-                  feedback.style.color = '#dc3545';
-                  field.style.borderColor = '#dc3545';
-                } else {
-                  feedback.style.color = '';
-                  field.style.borderColor = '';
-                  feedback.textContent = '';
-                }
-
-                return isValid;
-              }
-
-              document.addEventListener('DOMContentLoaded', function() {
-                const fieldIds = ['datetime','mode','motif'];
-                fieldIds.forEach(id => {
-                  const el = findFieldElement(id);
-                  if (!el) return;
-                  // set min for datetime-local inputs to now (local)
-                  if (id === 'datetime') {
-                    const now = new Date();
-                    // format YYYY-MM-DDTHH:MM
-                    const pad = n => String(n).padStart(2,'0');
-                    const minVal = now.getFullYear() + '-' + pad(now.getMonth()+1) + '-' + pad(now.getDate()) + 'T' + pad(now.getHours()) + ':' + pad(now.getMinutes());
-                    try { el.setAttribute('min', minVal); } catch(e) {}
-                  }
-                  el.addEventListener('input', () => validateApptField(id));
-                  el.addEventListener('blur', () => validateApptField(id));
-                  el.addEventListener('focus', () => {
-                    const rules = apptValidationRules[id];
-                    if (rules && rules.required && (el.value || '').trim().length === 0) {
-                      validateApptField(id);
-                    }
-                  });
-                });
-
-                const form = document.querySelector('#appointment-form form');
-                if (form) {
-                  form.addEventListener('submit', function(e) {
-                    // Informative only: show validation messages but do not prevent submit
-                    ['datetime','mode','motif'].forEach(id => validateApptField(id));
-                  });
-                }
-              });
-            </script>
 
                 </div>
             </div>
         </div>
     </section>
 </main>
+{% block javascripts %}
+  {{ parent() }}
+  <link href="https://cdn.jsdelivr.net/npm/@fullcalendar/core@6.1.11/main.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/@fullcalendar/daygrid@6.1.11/main.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/@fullcalendar/timegrid@6.1.11/main.min.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/@fullcalendar/core@6.1.11/index.global.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@fullcalendar/daygrid@6.1.11/index.global.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@fullcalendar/timegrid@6.1.11/index.global.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@fullcalendar/interaction@6.1.11/index.global.min.js"></script>
+  <script>
+  document.addEventListener('DOMContentLoaded', function() {
+    // On form submit, set hidden input from label if label exists
+    var form = document.getElementById('appointment-form-main');
+    if (form) {
+      form.addEventListener('submit', function(e) {
+        var input = document.getElementById('calendar-datetime');
+        var dateLabel = document.getElementById('selected-date-label');
+        // If label is set, set input value in 'YYYY-MM-DDTHH:mm' format
+        if (dateLabel && input && dateLabel.textContent.trim() !== '') {
+          var labelVal = dateLabel.textContent.trim();
+          // Convert 'YYYY-MM-DD HH:mm:00' to 'YYYY-MM-DDTHH:mm'
+          var match = labelVal.match(/(\d{4}-\d{2}-\d{2}) (\d{2}):(\d{2}):\d{2}/);
+          if (match) {
+            input.value = match[1] + 'T' + match[2] + ':' + match[3];
+          }
+        }
+        // DEBUG: Log to console
+        console.log('Form submit: hidden input value =', input ? input.value : 'null');
+      });
+    }
+    var calendarEl = document.getElementById('fullcalendar');
+    var input = document.getElementById('calendar-datetime');
+    var initialDate = input.value ? new Date(input.value) : new Date();
+
+    var doctorId = {{ form.vars.data.staff ? form.vars.data.staff.id : 'null' }};
+    var calendar = new FullCalendar.Calendar(calendarEl, {
+      initialView: 'timeGridWeek',
+      nowIndicator: true,
+      selectable: true,
+      allDaySlot: false,
+      weekends: false,
+      headerToolbar: {
+        left: 'prev,next today',
+        center: 'title',
+        right: 'dayGridMonth,timeGridWeek,timeGridDay'
+      },
+      height: 500,
+      slotMinTime: '08:00:00',
+      slotMaxTime: '17:00:00',
+      slotDuration: '01:00:00',
+      snapDuration: '01:00:00',
+      events: doctorId ? '/doctor/appointments/' + doctorId : [],
+      eventColor: '#dc3545', // Red
+      eventRender: function(info) {
+        info.el.style.backgroundColor = '#dc3545';
+        info.el.style.borderColor = '#dc3545';
+        info.el.style.color = '#fff';
+      },
+      eventContent: function(arg) {
+        return { html: '<div style="color:#fff;font-weight:bold">Occupé(e)</div>' };
+      },
+      businessHours: {
+        daysOfWeek: [1, 2, 3, 4, 5], // Monday to Friday
+        startTime: '08:00',
+        endTime: '17:00'
+      },
+      selectConstraint: 'businessHours',
+      eventOverlap: false,
+      selectAllow: function(selectInfo) {
+        // Prevent booking in occupied hours
+        var events = calendar.getEvents();
+        for (var i = 0; i < events.length; i++) {
+          if (
+            selectInfo.start < events[i].end &&
+            selectInfo.end > events[i].start
+          ) {
+            return false;
+          }
+        }
+        // Only allow 1 hour slots
+        var diff = (selectInfo.end - selectInfo.start) / (1000 * 60 * 60);
+        return diff === 1;
+      },
+      select: function(info) {
+        // Set the hidden input value to the selected datetime in 'YYYY-MM-DDTHH:mm' format for Symfony
+        var input = document.getElementById('calendar-datetime');
+        if (input) {
+          var dt = new Date(info.startStr);
+          var year = dt.getFullYear();
+          var month = ('0' + (dt.getMonth() + 1)).slice(-2);
+          var day = ('0' + dt.getDate()).slice(-2);
+          var hour = ('0' + dt.getHours()).slice(-2);
+          var minute = ('0' + dt.getMinutes()).slice(-2);
+          input.value = year + '-' + month + '-' + day + 'T' + hour + ':' + minute;
+        }
+        // Show selected date/time below the calendar in 'YYYY-MM-DD HH:mm:00' format
+        var dateLabel = document.getElementById('selected-date-label');
+        if (dateLabel) {
+          var dt = new Date(info.startStr);
+          var year = dt.getFullYear();
+          var month = ('0' + (dt.getMonth() + 1)).slice(-2);
+          var day = ('0' + dt.getDate()).slice(-2);
+          var hour = ('0' + dt.getHours()).slice(-2);
+          var minute = ('0' + dt.getMinutes()).slice(-2);
+          dateLabel.textContent = year + '-' + month + '-' + day + ' ' + hour + ':' + minute + ':00';
+        }
+        // Remove previous selection highlight
+        var selectedEls = document.querySelectorAll('.fc-slot-selected');
+        selectedEls.forEach(function(el) { el.classList.remove('fc-slot-selected'); });
+        // Highlight the selected slot
+        var slotSelector = '[data-time="' + info.startStr.substring(11,16) + '"]';
+        var dayCol = document.querySelector('[data-date="' + info.startStr.substring(0,10) + '"]');
+        if(dayCol) {
+          var slot = dayCol.querySelector(slotSelector);
+          if(slot) slot.classList.add('fc-slot-selected');
+        }
+      },
+    });
+    calendar.render();
+  });
+  </script>
+{% endblock %}
 {% endblock %}

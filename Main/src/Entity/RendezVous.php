@@ -16,8 +16,8 @@ class RendezVous
     #[ORM\Column]
     private ?int $id = null;
     
-    #[ORM\Column]
-    #[Assert\NotBlank(message: 'La date et l\'heure sont obligatoires')]
+    #[ORM\Column(nullable: true)]
+    #[Assert\NotNull(message: 'La date et l\'heure sont obligatoires')]
     #[Assert\GreaterThan('now', message: 'La date et l\'heure doivent être dans le futur')]
     private ?\DateTime $datetime = null;
 
@@ -55,10 +55,9 @@ class RendezVous
         return $this->datetime;
     }
 
-    public function setDatetime(\DateTime $datetime): static
+    public function setDatetime(?\DateTime $datetime): static
     {
         $this->datetime = $datetime;
-
         return $this;
     }
 

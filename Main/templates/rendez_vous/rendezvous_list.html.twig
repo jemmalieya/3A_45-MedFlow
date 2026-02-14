@@ -139,7 +139,7 @@
                                     </td>
                                     <td>{{ r.createdAt ? r.createdAt|date('Y-m-d H:i') : '—' }}</td>
                                     <td>
-                                        <button type="button" class="btn btn-rv-edit" onclick="toggleEdit({{ r.id }})">📝</button>
+                                        <a href="{{ path('rendezvous_list', {'openEdit': r.id}) }}" class="btn btn-rv-edit">📝</a>
                                     </td>
                                     <td>
                                         <form method="post" action="{{ path('rendezvous_delete', {'id': r.id}) }}" onsubmit="return confirm('Supprimer ce rendez-vous ?');" style="display:inline;">
@@ -150,33 +150,32 @@
                                 </tr>
                                 <tr id="edit-row-{{ r.id }}" class="edit-row" style="display:none;">
                                     <td colspan="10">
-                                        <form method="post" action="{{ path('rendezvous_edit', {'id': r.id}) }}">
+                                        {% if openEdit and openEdit == r.id and editForm %}
+                                            {{ form_start(editForm, {'action': path('rendezvous_edit', {'id': r.id}), 'method': 'post'}) }}
                                             <input type="hidden" name="_token" value="{{ csrf_token('edit' ~ r.id) }}">
                                             <div class="row g-2 align-items-end">
                                                 <div class="col-md-3">
-                                                    <label class="form-label small fw-bold text-secondary">Date & Heure</label>
-                                                    <input id="datetime-{{ r.id }}" name="datetime" type="datetime-local" class="form-control" value="{{ r.datetime ? r.datetime|date('Y-m-d\\TH:i') : '' }}">
-                                                    <small id="datetime-{{ r.id }}-feedback" class="d-block mt-2" style="font-size:0.85rem;"></small>
+                                                    {{ form_label(editForm.datetime, 'Date & Heure', {'label_attr': {'class': 'form-label small fw-bold text-secondary'}}) }}
+                                                    {{ form_widget(editForm.datetime, {'attr': {'class': 'form-control'}}) }}
+                                                    {{ form_errors(editForm.datetime) }}
                                                 </div>
                                                 <div class="col-md-2">
-                                                    <label class="form-label small fw-bold text-secondary">Mode</label>
-                                                    <select id="mode-{{ r.id }}" name="mode" class="form-select">
-                                                        <option value="Présentiel" {{ r.mode == 'Présentiel' ? 'selected' : '' }}>Présentiel</option>
-                                                        <option value="Distanciel" {{ r.mode == 'Distanciel' ? 'selected' : '' }}>Distanciel</option>
-                                                    </select>
-                                                    <small id="mode-{{ r.id }}-feedback" class="d-block mt-2" style="font-size:0.85rem;"></small>
+                                                    {{ form_label(editForm.mode, 'Mode', {'label_attr': {'class': 'form-label small fw-bold text-secondary'}}) }}
+                                                    {{ form_widget(editForm.mode, {'attr': {'class': 'form-select'}}) }}
+                                                    {{ form_errors(editForm.mode) }}
                                                 </div>
                                                 <div class="col-md-5">
-                                                    <label class="form-label small fw-bold text-secondary">Motif</label>
-                                                    <input id="motif-{{ r.id }}" name="motif" class="form-control" value="{{ r.motif }}">
-                                                    <small id="motif-{{ r.id }}-feedback" class="d-block mt-2" style="font-size:0.85rem;"></small>
+                                                    {{ form_label(editForm.motif, 'Motif', {'label_attr': {'class': 'form-label small fw-bold text-secondary'}}) }}
+                                                    {{ form_widget(editForm.motif, {'attr': {'class': 'form-control'}}) }}
+                                                    {{ form_errors(editForm.motif) }}
                                                 </div>
                                                 <div class="col-md-2 text-end">
                                                     <button class="btn btn-rv-save" type="submit">✅ Enregistrer</button>
                                                     <button type="button" class="btn btn-rv-cancel" onclick="toggleEdit({{ r.id }})">✖ Annuler</button>
                                                 </div>
                                             </div>
-                                        </form>
+                                            {{ form_end(editForm) }}
+                                        {% endif %}
                                     </td>
                                 </tr>
                             {% endfor %}

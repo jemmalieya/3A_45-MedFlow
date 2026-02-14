@@ -16,28 +16,18 @@ class RendezVousRepository extends ServiceEntityRepository
         parent::__construct($registry, RendezVous::class);
     }
 
-    //    /**
-    //     * @return RendezVous[] Returns an array of RendezVous objects
-    //     */
-    //    public function findByExampleField($value): array
-    //    {
-    //        return $this->createQueryBuilder('r')
-    //            ->andWhere('r.exampleField = :val')
-    //            ->setParameter('val', $value)
-    //            ->orderBy('r.id', 'ASC')
-    //            ->setMaxResults(10)
-    //            ->getQuery()
-    //            ->getResult()
-    //        ;
-    //    }
-
-    //    public function findOneBySomeField($value): ?RendezVous
-    //    {
-    //        return $this->createQueryBuilder('r')
-    //            ->andWhere('r.exampleField = :val')
-    //            ->setParameter('val', $value)
-    //            ->getQuery()
-    //            ->getOneOrNullResult()
-    //        ;
-    //    }
+    /**
+     * Find all active RendezVous for a given staff (doctor) id
+     */
+    public function findActiveByStaff(int $idStaff): array
+    {
+        return $this->createQueryBuilder('r')
+            ->andWhere('r.staff = :staff')
+            ->andWhere('r.statut != :statut')
+            ->setParameter('staff', $idStaff)
+            ->setParameter('statut', 'Terminé')
+            ->orderBy('r.datetime', 'ASC')
+            ->getQuery()
+            ->getResult();
+    }
 }

@@ -55,56 +55,22 @@ class RendezVousController extends AbstractController
         $form = $this->createForm(RendezVousType::class, $rendezVous);
         $form->handleRequest($request);
 
-        // When form submitted, perform server-side validation (PHP) and either save or re-render with errors
         if ($form->isSubmitted()) {
-            $validationErrors = [];
-
-            // Extract field values from the form
-            $dt = $form->get('datetime')->getData();
-            $mode = $form->get('mode')->getData();
-            $motif = trim((string) $form->get('motif')->getData() ?? '');
-
-            // Validate datetime (required)
-            if (empty($dt)) {
-                $validationErrors[] = 'Date & Heure is required';
-            } elseif (!($dt instanceof \DateTimeInterface)) {
-                $validationErrors[] = 'Invalid date/time format';
-            } else {
-                // ensure datetime is in the future
-                $now = new \DateTime();
-                if ($dt < $now) {
-                    $validationErrors[] = 'Date & Heure must be in the future';
-                }
-            }
-
-            // Validate mode (required)
-            if ($mode === null || trim((string)$mode) === '') {
-                $validationErrors[] = 'Mode is required';
-            }
-
-            // Validate motif (optional, but if provided must be 5-500 chars)
-            if ($motif !== '') {
-                if (strlen($motif) < 5) {
-                    $validationErrors[] = 'Motif must be at least 5 characters';
-                } elseif (strlen($motif) > 500) {
-                    $validationErrors[] = 'Motif cannot exceed 500 characters';
-                }
-            }
-
-            if (!empty($validationErrors)) {
-                // Show errors and re-render the same form so user stays on the appointment page
-                $this->addFlash('error', 'Validation failed: ' . implode('. ', $validationErrors));
-            } else {
+            if ($form->isValid()) {
+                $this->addFlash('success', 'DEBUG: Form is valid and submitted.');
                 try {
                     $rendezVous->setCreatedAt(new \DateTime());
+                    $this->addFlash('success', 'DEBUG: Before persist.');
                     $em->persist($rendezVous);
+                    $this->addFlash('success', 'DEBUG: Before flush.');
                     $em->flush();
-
                     $this->addFlash('success', 'Rendez-vous créé avec succès.');
                     return $this->redirectToRoute('rendezvous_list');
                 } catch (\Exception $e) {
                     $this->addFlash('error', 'Erreur: ' . $e->getMessage());
                 }
+            } else {
+                $this->addFlash('error', 'DEBUG: Form is submitted but NOT valid.');
             }
         }
 
@@ -115,11 +81,11 @@ class RendezVousController extends AbstractController
     }
 
     #[Route('/rendezvous', name: 'rendezvous_list')]
-    public function list(EntityManagerInterface $em): Response
+    public function list(EntityManagerInterface $em, Request $request): Response
     {
-        // Get patient from session
-        $request = $this->container->get('request_stack')->getCurrentRequest();
-        $session = $request->getSession();
+        $openEdit = $request->query->get('openEdit');
+        $requestStack = $this->container->get('request_stack');
+        $session = $requestStack->getCurrentRequest()->getSession();
         $patientId = $session->get('patient_id');
         $patient = null;
         $fiches_medicales = [];
@@ -131,6 +97,16 @@ class RendezVousController extends AbstractController
         $ficheRepo = $em->getRepository(\App\Entity\FicheMedicale::class);
         $prescRepo = $em->getRepository(\App\Entity\Prescription::class);
         $rendezvous = $patient ? $repo->findBy(['patient' => $patient], ['createdAt' => 'DESC']) : [];
+
+        // Inline edit form for the open row
+        $editForm = null;
+        if ($openEdit) {
+            $editRdv = $repo->find($openEdit);
+            if ($editRdv) {
+                $editForm = $this->createForm(\App\Form\RendezVousType::class, $editRdv);
+                $editForm->handleRequest($request);
+            }
+        }
 
         // Get all fiche médicales related to the user's rendezvous
         if ($rendezvous) {
@@ -158,6 +134,8 @@ class RendezVousController extends AbstractController
             'patientId' => $patientId,
             'fiches_medicales' => $fiches_medicales,
             'prescriptions' => $prescriptions,
+            'editForm' => isset($editForm) && $editForm ? $editForm->createView() : null,
+            'openEdit' => $openEdit,
         ]);
     }
 
@@ -202,67 +180,68 @@ class RendezVousController extends AbstractController
             return $this->redirectToRoute('rendezvous_list');
         }
 
-        $datetime = $request->request->get('datetime'); // expecting HTML datetime-local value
-        $mode = $request->request->get('mode');
-        $motif = trim((string) $request->request->get('motif'));
+        // Create a form for editing, bind to the entity
+        $form = $this->createForm(RendezVousType::class, $r);
+        $form->handleRequest($request);
 
-        // Server-side validation for edit (controle de saisie)
-        $validationErrors = [];
-
-        if (empty($datetime)) {
-            $validationErrors[] = 'Date & Heure is required';
-        } else {
+        if ($form->isSubmitted() && $form->isValid()) {
             try {
-                // Attempt to parse provided datetime-local value
-                $parsed = new \DateTime($datetime);
+                $em->persist($r);
+                $em->flush();
+                $this->addFlash('success', 'Rendez-vous mis à jour.');
+                return $this->redirectToRoute('rendezvous_list');
             } catch (\Exception $e) {
-                $validationErrors[] = 'Invalid date/time format';
-            }
-        }
-        // if parsed successfully, ensure it's in the future
-        if (isset($parsed) && $parsed instanceof \DateTimeInterface) {
-            $now = new \DateTime();
-            if ($parsed < $now) {
-                $validationErrors[] = 'Date & Heure must be in the future';
+                $this->addFlash('error', 'Erreur lors de la mise à jour: ' . $e->getMessage());
+                // Render list with edit form and errors
+                return $this->renderListWithEditForm($em, $request, $r, $form);
             }
         }
 
-        if ($mode === null || trim((string)$mode) === '') {
-            $validationErrors[] = 'Mode is required';
-        }
+        // If not valid, show errors and open the edit row
+        $this->addFlash('error', 'Erreur de validation.');
+        return $this->renderListWithEditForm($em, $request, $r, $form);
 
-        if ($motif !== '') {
-            if (strlen($motif) < 5) {
-                $validationErrors[] = 'Motif must be at least 5 characters';
-            } elseif (strlen($motif) > 500) {
-                $validationErrors[] = 'Motif cannot exceed 500 characters';
-            }
-        }
-
-        if (!empty($validationErrors)) {
-            $this->addFlash('error', 'Validation failed: ' . implode('. ', $validationErrors));
-            // Redirect back to the list and open the edit row for this id
-            return $this->redirectToRoute('rendezvous_list', ['openEdit' => $id]);
-        }
-
-        try {
-            if ($datetime) {
-                $r->setDatetime(new \DateTime($datetime));
-            }
-            if ($mode !== null) {
-                $r->setMode($mode);
-            }
-            if ($motif !== null) {
-                $r->setMotif($motif);
-            }
-
-            $em->persist($r);
-            $em->flush();
-            $this->addFlash('success', 'Rendez-vous mis à jour.');
-        } catch (\Exception $e) {
-            $this->addFlash('error', 'Erreur lors de la mise à jour: ' . $e->getMessage());
-        }
-
-        return $this->redirectToRoute('rendezvous_list');
     }
-}
+
+    // Helper to render list page with edit form and errors
+    private function renderListWithEditForm(EntityManagerInterface $em, Request $request, $editRdv, $editForm)
+    {
+        $requestStack = $this->container->get('request_stack');
+        $session = $requestStack->getCurrentRequest()->getSession();
+        $patientId = $session->get('patient_id');
+        $patient = null;
+        $fiches_medicales = [];
+        $prescriptions = [];
+        if ($patientId) {
+            $patient = $em->getRepository(\App\Entity\User::class)->find($patientId);
+        }
+        $repo = $em->getRepository(RendezVous::class);
+        $ficheRepo = $em->getRepository(\App\Entity\FicheMedicale::class);
+        $prescRepo = $em->getRepository(\App\Entity\Prescription::class);
+        $rendezvous = $patient ? $repo->findBy(['patient' => $patient], ['createdAt' => 'DESC']) : [];
+        if ($rendezvous) {
+            foreach ($rendezvous as $rdv) {
+                $fiche = $ficheRepo->findOneBy(['rendezVous' => $rdv]);
+                if ($fiche) {
+                    $fiches_medicales[] = $fiche;
+                }
+            }
+        }
+        if ($fiches_medicales) {
+            foreach ($fiches_medicales as $fiche) {
+                $fichePrescriptions = $prescRepo->findBy(['ficheMedicale' => $fiche]);
+                foreach ($fichePrescriptions as $presc) {
+                    $prescriptions[] = $presc;
+                }
+            }
+        }
+        return $this->render('rendez_vous/rendezvous_list.html.twig', [
+            'rendezvous' => $rendezvous,
+            'patientId' => $patientId,
+            'fiches_medicales' => $fiches_medicales,
+            'prescriptions' => $prescriptions,
+            'editForm' => $editForm->createView(),
+            'openEdit' => $editRdv->getId(),
+        ]);
+    }
+    }

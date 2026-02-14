@@ -108,12 +108,15 @@
     </li>
 
 
-          <li><a href="#">Contact</a></li>
+         
         </ul>
         <i class="mobile-nav-toggle d-xl-none bi bi-list"></i>
       </nav>
 
-      {% if not app.user %}
+      
+
+    </div>
+    {% if not app.user %}
   <a class="btn-getstarted" href="{{ path('app_login') }}">
     Connexion
   </a>
@@ -122,8 +125,6 @@
     Déconnexion
   </a>
 {% endif %}
-
-    </div>
   </header>
 
   {# CONTENU : pousse le footer vers le bas #}

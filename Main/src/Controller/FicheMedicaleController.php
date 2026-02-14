@@ -131,38 +131,50 @@ final class FicheMedicaleController extends AbstractController
 
                 // PHP Server-side validation (controle de saisie)
                 $validationErrors = [];
+                $fieldErrors = [
+                    'diagnostic' => [],
+                    'observations' => [],
+                    'resultatsExamens' => [],
+                ];
 
-                // Validate Diagnostic (required, min 5, max 500)
+                // Validate Diagnostic (required, min 5, max 150)
                 if (empty($diagnostic)) {
-                    $validationErrors[] = 'Diagnostic field is required';
+                    $fieldErrors['diagnostic'][] = 'Diagnostic field is required.';
                 } elseif (strlen($diagnostic) < 5) {
-                    $validationErrors[] = 'Diagnostic must be at least 5 characters (current: ' . strlen($diagnostic) . ')';
-                } elseif (strlen($diagnostic) > 500) {
-                    $validationErrors[] = 'Diagnostic cannot exceed 500 characters (current: ' . strlen($diagnostic) . ')';
+                    $fieldErrors['diagnostic'][] = 'Diagnostic must be at least 5 characters.';
+                } elseif (strlen($diagnostic) > 150) {
+                    $fieldErrors['diagnostic'][] = 'Diagnostic cannot exceed 150 characters.';
                 }
 
-                // Validate Observations (optional, but if provided min 5, max 500)
-                if (!empty($observations)) {
-                    if (strlen($observations) < 5) {
-                        $validationErrors[] = 'Observations must be at least 5 characters if provided (current: ' . strlen($observations) . ')';
-                    } elseif (strlen($observations) > 500) {
-                        $validationErrors[] = 'Observations cannot exceed 500 characters (current: ' . strlen($observations) . ')';
+                // Validate Observations (required, min 5, max 150)
+                if (empty($observations)) {
+                    $fieldErrors['observations'][] = 'Observations field is required.';
+                } elseif (strlen($observations) < 5) {
+                    $fieldErrors['observations'][] = 'Observations must be at least 5 characters.';
+                } elseif (strlen($observations) > 150) {
+                    $fieldErrors['observations'][] = 'Observations cannot exceed 150 characters.';
+                }
+
+                // Validate Exam Results (required, min 5, max 150)
+                if (empty($resultats)) {
+                    $fieldErrors['resultatsExamens'][] = 'Exam Results field is required.';
+                } elseif (strlen($resultats) < 5) {
+                    $fieldErrors['resultatsExamens'][] = 'Exam Results must be at least 5 characters.';
+                } elseif (strlen($resultats) > 150) {
+                    $fieldErrors['resultatsExamens'][] = 'Exam Results cannot exceed 150 characters.';
+                }
+
+                // Collect all errors for flash/global display if needed
+                foreach ($fieldErrors as $field => $errs) {
+                    foreach ($errs as $err) {
+                        $validationErrors[] = $err;
                     }
                 }
 
-                // Validate Exam Results (optional, but if provided min 5, max 500)
-                if (!empty($resultats)) {
-                    if (strlen($resultats) < 5) {
-                        $validationErrors[] = 'Exam Results must be at least 5 characters if provided (current: ' . strlen($resultats) . ')';
-                    } elseif (strlen($resultats) > 500) {
-                        $validationErrors[] = 'Exam Results cannot exceed 500 characters (current: ' . strlen($resultats) . ')';
-                    }
-                }
-
-                // If validation errors exist, return with error message
+                // If validation errors exist, return with error message and field errors
                 if (!empty($validationErrors)) {
-                    $this->addFlash('error', 'Validation failed: ' . implode('. ', $validationErrors));
-                    
+                    $this->addFlash('error', 'Validation failed.');
+                    $this->addFlash('fieldErrors', $fieldErrors);
                     // If editing existing fiche (modal), redirect back to fiche by staff page
                     if ($fiche && $fiche->getRendezVous() && $fiche->getRendezVous()->getStaff()) {
                         $staffId = $fiche->getRendezVous()->getStaff()->getId();
