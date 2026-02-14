@@ -1,6 +1,8 @@
 # config/services.yaml
 
 parameters:
+    pieces_jointes_directory: '%kernel.project_dir%/public/uploads/pieces_jointes'
+
 
 services:
     _defaults:

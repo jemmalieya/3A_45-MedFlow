@@ -1,0 +1,249 @@
+{% extends 'base.html.twig' %}
+{% block title %}Modifier post{% endblock %}
+
+{% block body %}
+<section class="section" style="padding-top:120px;">
+  <div class="container">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <div>
+        <h2 class="mb-1">Modifier : {{ post.titre }}</h2>
+        <p class="text-muted mb-0">Mets à jour ton article (image, catégorie et hashtags).</p>
+      </div>
+      <a href="{{ path('post_index') }}" class="btn btn-outline-secondary">
+        ← Retour au blog
+      </a>
+    </div>
+
+    <div class="row g-4">
+      <!-- Form -->
+      <div class="col-lg-8">
+        <div class="card border-0 shadow-sm">
+          <div class="card-body p-4 p-lg-5">
+
+            {{ form_start(form, {'attr': {'class': 'needs-validation'}, 'enctype': 'multipart/form-data'}) }}
+
+            <div class="mb-4">
+              <label class="form-label fw-semibold">Titre</label>
+              {{ form_widget(form.titre, {'attr': {'class': 'form-control form-control-lg', 'placeholder': 'Ex: Prise de RDV en ligne : nouvelles étapes…'}}) }}
+              {{ form_errors(form.titre) }}
+            </div>
+
+            <div class="mb-4">
+              <label class="form-label fw-semibold">Contenu</label>
+              {{ form_widget(form.contenu, {'attr': {'class': 'form-control', 'rows': 8, 'placeholder': 'Écris ton contenu ici…'}}) }}
+              <div class="form-text">Astuce : sois clair, ajoute des détails utiles (service, rdv, labo…).</div>
+              {{ form_errors(form.contenu) }}
+            </div>
+
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label class="form-label fw-semibold">Catégorie</label>
+                {# ✅ c'est un SELECT maintenant => form-select #}
+                {{ form_widget(form.categorie, {'attr': {'class': 'form-select'}}) }}
+                {{ form_errors(form.categorie) }}
+              </div>
+
+              <div class="col-md-6">
+                <label class="form-label fw-semibold">Humeur</label>
+                {# ✅ c'est un SELECT maintenant => form-select #}
+                {{ form_widget(form.humeur, {'attr': {'class': 'form-select'}}) }}
+                <div class="form-text">Optionnel</div>
+                {{ form_errors(form.humeur) }}
+              </div>
+
+              <div class="col-md-6">
+                <label class="form-label fw-semibold">Localisation</label>
+                {{ form_widget(form.localisation, {'attr': {'class': 'form-control', 'placeholder': 'Ex: Tunis, Ariana…'}}) }}
+                {{ form_errors(form.localisation) }}
+              </div>
+
+              <div class="col-md-6">
+                <label class="form-label fw-semibold">Visibilité</label>
+                {{ form_widget(form.visibilite, {'attr': {'class': 'form-select'}}) }}
+                {{ form_errors(form.visibilite) }}
+              </div>
+
+              <div class="col-md-6">
+                <label class="form-label fw-semibold">Hashtags</label>
+                {{ form_widget(form.hashtags, {'attr': {'class': 'form-control', 'placeholder': '#news #health #rdv'}}) }}
+                <div class="form-text">Sépare avec espace ou virgule.</div>
+                {{ form_errors(form.hashtags) }}
+              </div>
+
+              {# ✅ Image = FILE INPUT (upload) #}
+              <div class="col-md-6">
+                <label class="form-label fw-semibold">Image</label>
+                {{ form_widget(form.img_post, {'attr': {'class': 'form-control'}}) }}
+
+                {% if post.imgPost %}
+                  <div class="form-text mt-2">
+                    Image actuelle :
+                    <a href="{{ asset(post.imgPost) }}" target="_blank">{{ post.imgPost }}</a>
+                  </div>
+                {% else %}
+                  <div class="form-text">Choisissez une image depuis votre ordinateur (JPG/PNG/WEBP).</div>
+                {% endif %}
+
+                {{ form_errors(form.img_post) }}
+              </div>
+
+              <div class="col-12">
+                <div class="form-check mt-2">
+                  {{ form_widget(form.est_anonyme, {'attr': {'class': 'form-check-input'}}) }}
+                  <label class="form-check-label" for="{{ form.est_anonyme.vars.id }}">
+                    Publier en anonyme
+                  </label>
+                </div>
+                {{ form_errors(form.est_anonyme) }}
+              </div>
+            </div>
+
+            <hr class="my-4">
+
+            <div class="d-flex justify-content-end gap-2">
+              <a href="{{ path('post_index') }}" class="btn btn-outline-secondary px-4">
+                Annuler
+              </a>
+              <button class="btn btn-primary px-4">
+                Enregistrer
+              </button>
+            </div>
+
+            {{ form_end(form) }}
+
+          </div>
+        </div>
+      </div>
+
+      <!-- Preview card -->
+      <div class="col-lg-4">
+        <div class="card border-0 shadow-sm">
+          <div class="card-body p-4">
+            <h5 class="mb-3">Aperçu</h5>
+
+            <div class="ratio ratio-16x9 rounded overflow-hidden bg-light border">
+              <img id="imgPreview" src="" alt="preview" style="object-fit:cover; width:100%; height:100%; display:none;">
+              <div id="imgPlaceholder" class="d-flex align-items-center justify-content-center text-muted">
+                Aucune image
+              </div>
+            </div>
+
+            <div class="mt-3">
+              <div class="d-flex gap-2 mb-2">
+                <span class="badge bg-primary" id="catPreview">Catégorie</span>
+                <span class="badge bg-secondary" id="visPreview">PUBLIC</span>
+              </div>
+
+              <div class="fw-semibold" id="titlePreview">Titre du post</div>
+              <div class="text-muted small mt-1" id="subPreview">Localisation · Maintenant</div>
+
+              <div class="mt-3">
+                <div class="text-muted small">Hashtags</div>
+                <div class="d-flex flex-wrap gap-2 mt-1" id="tagsPreview"></div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <div class="alert alert-info border-0 shadow-sm mt-4">
+          <div class="fw-semibold mb-1">Conseil</div>
+          Une image claire + un titre court donnent un meilleur rendu “Latest blogs”.
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<style>
+  .card { border-radius: 14px; }
+  .btn { border-radius: 10px; }
+  .form-control, .form-select { border-radius: 10px; }
+  .form-control:focus, .form-select:focus { box-shadow: 0 0 0 .2rem rgba(13,110,253,.15); }
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const titre = document.getElementById('{{ form.titre.vars.id }}');
+  const categorie = document.getElementById('{{ form.categorie.vars.id }}');
+  const localisation = document.getElementById('{{ form.localisation.vars.id }}');
+  const hashtags = document.getElementById('{{ form.hashtags.vars.id }}');
+  const visibilite = document.getElementById('{{ form.visibilite.vars.id }}');
+  const img = document.getElementById('{{ form.img_post.vars.id }}');
+
+  const titlePreview = document.getElementById('titlePreview');
+  const catPreview = document.getElementById('catPreview');
+  const visPreview = document.getElementById('visPreview');
+  const subPreview = document.getElementById('subPreview');
+  const tagsPreview = document.getElementById('tagsPreview');
+
+  const imgPreview = document.getElementById('imgPreview');
+  const imgPlaceholder = document.getElementById('imgPlaceholder');
+
+  function setPreviewText() {
+    titlePreview.textContent = (titre.value || 'Titre du post');
+    catPreview.textContent = (categorie.value || 'Catégorie');
+    visPreview.textContent = (visibilite.value || 'PUBLIC');
+    subPreview.textContent = (localisation.value ? localisation.value + ' · ' : '') + 'Maintenant';
+
+    tagsPreview.innerHTML = '';
+    const raw = (hashtags.value || '').trim();
+    if (raw) {
+      raw.split(/[\s,]+/).filter(Boolean).slice(0, 10).forEach(t => {
+        if (!t.startsWith('#')) t = '#' + t;
+        const span = document.createElement('span');
+        span.className = 'badge bg-light text-dark border';
+        span.textContent = t;
+        tagsPreview.appendChild(span);
+      });
+    }
+  }
+
+  function setPreviewImage() {
+    // ✅ Si utilisateur choisit une nouvelle image
+    if (img && img.files && img.files[0]) {
+      const file = img.files[0];
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        imgPreview.src = e.target.result;
+        imgPreview.style.display = 'block';
+        imgPlaceholder.style.display = 'none';
+      };
+      reader.readAsDataURL(file);
+      return;
+    }
+
+    // ✅ Sinon afficher image actuelle du post (si existe)
+    {% if post.imgPost %}
+      imgPreview.src = "{{ asset(post.imgPost) }}";
+      imgPreview.style.display = 'block';
+      imgPlaceholder.style.display = 'none';
+    {% else %}
+      imgPreview.style.display = 'none';
+      imgPlaceholder.style.display = 'flex';
+    {% endif %}
+  }
+
+  [titre, categorie, localisation, hashtags, visibilite].forEach(el => {
+    if (!el) return;
+    el.addEventListener('input', setPreviewText);
+    el.addEventListener('change', setPreviewText);
+  });
+
+  if (img) img.addEventListener('change', setPreviewImage);
+
+  setPreviewText();
+  setPreviewImage();
+});
+</script>
+<style>
+  .form-error {
+    color: #dc3545;
+    font-size: 0.875rem;
+    margin-top: 4px;
+  }
+</style>
+
+{% endblock %}

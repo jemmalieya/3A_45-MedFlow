@@ -32,9 +32,9 @@
             <!-- Sidebar - Brand -->
             <a class="sidebar-brand d-flex align-items-center justify-content-center" href="index.html">
                 <div class="sidebar-brand-icon rotate-n-15">
-                    <i class="fas fa-laugh-wink"></i>
+                    
                 </div>
-                <div class="sidebar-brand-text mx-3">SB Admin <sup>2</sup></div>
+                <div class="sidebar-brand-text mx-3">MedFlow </div>
             </a>
 
             <!-- Divider -->
@@ -42,9 +42,32 @@
 
             <!-- Nav Item - Dashboard -->
             <li class="nav-item active">
-                <a class="nav-link" href="index.html">
+                <a class="nav-link" href="{{ path('app_admin') }}"
                     <i class="fas fa-fw fa-tachometer-alt"></i>
                     <span>Dashboard</span></a>
+            </li>
+<!-- Nav Item - Réclamations -->
+<li class="nav-item {{ app.request.attributes.get('_route') == 'admin_reclamations' ? 'active' : '' }}">
+  <a class="nav-link" href="{{ path('admin_reclamations') }}">
+    <i class="fas fa-fw fa-exclamation-circle"></i>
+    <span>Réclamations</span>
+  </a>
+</li>
+<!-- Nav Item - Réclamations --> 
+<li class="nav-item active">
+  <a class="nav-link" href="{{ path('app_fiche_by_staff', {'idStaff': 2}) }}">
+    <i class="fas fa-fw fa-exclamation-circle"></i>
+    <span>Consultations</span>
+  </a>
+</li>
+
+             <!-- Divider -->
+            <hr class="sidebar-divider">
+
+            <li class="nav-item active">
+                <a class="nav-link" href="{{ path('app_home') }}"
+                    <i class="fas fa-fw fa-tachometer-alt"></i>
+                    <span>FrontOffice</span></a>
             </li>
 
             <!-- Divider -->
@@ -139,7 +162,7 @@
                         <a class="collapse-item" href="forgot-password.html">Forgot Password</a>
                         <div class="collapse-divider"></div>
                         <h6 class="collapse-header">Other Pages:</h6>
-                        <a class="collapse-item" href="404.html">404 Page</a>
+                        <a class="collapse-item" href="{{ path('app_fiche_by_staff', {'idStaff': 2}) }}">Appointements</a>
                         <a class="collapse-item" href="blank.html">Blank Page</a>
                     </div>
                 </div>

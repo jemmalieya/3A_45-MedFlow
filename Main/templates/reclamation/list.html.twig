@@ -1,0 +1,215 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Mes réclamations{% endblock %}
+
+{% block body %}
+<section class="section" style="padding-top: 120px;">
+  <div class="container">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <div>
+        <h2 class="mb-1">Mes réclamations</h2>
+        <p class="text-muted mb-0">Liste des réclamations envoyées</p>
+      </div>
+
+      <a href="{{ path('reclamation_index') }}" class="btn btn-outline-primary">
+        Nouvelle réclamation
+      </a>
+    </div>
+{# 🔎 Recherche + filtres + tri (GET) #}
+<form method="get" action="{{ path('reclamation_list') }}" class="card border-0 shadow-sm mb-4">
+  <div class="card-body">
+    <div class="row g-3 align-items-end">
+
+      <div class="col-md-4">
+        <label class="form-label fw-semibold">Recherche</label>
+        <input type="text" name="q" value="{{ filters.q ?? '' }}"
+               class="form-control" placeholder="Rechercher dans le contenu...">
+      </div>
+
+      <div class="col-md-3">
+        <label class="form-label fw-semibold">Type</label>
+        <input type="text" name="type" value="{{ filters.type ?? '' }}"
+               class="form-control" placeholder="ex: rdv, service...">
+      </div>
+
+      <div class="col-md-2">
+        <label class="form-label fw-semibold">Statut</label>
+        <select name="statut" class="form-select">
+          <option value="">Tous</option>
+          <option value="EN_ATTENTE" {{ (filters.statut ?? '') == 'EN_ATTENTE' ? 'selected' : '' }}>En attente</option>
+          <option value="TRAITEE" {{ (filters.statut ?? '') == 'TRAITEE' ? 'selected' : '' }}>Traitée</option>
+          <option value="REJETEE" {{ (filters.statut ?? '') == 'REJETEE' ? 'selected' : '' }}>Rejetée</option>
+        </select>
+      </div>
+
+      <div class="col-md-3">
+        <label class="form-label fw-semibold">Tri</label>
+        <div class="d-flex gap-2">
+          <select name="sort" class="form-select">
+            <option value="date_creation_r" {{ (filters.sort ?? 'date_creation_r') == 'date_creation_r' ? 'selected' : '' }}>Date</option>
+            <option value="type_reclamation" {{ (filters.sort ?? '') == 'type_reclamation' ? 'selected' : '' }}>Type</option>
+            <option value="statut_reclamation" {{ (filters.sort ?? '') == 'statut_reclamation' ? 'selected' : '' }}>Statut</option>
+            <option value="contenu" {{ (filters.sort ?? '') == 'contenu' ? 'selected' : '' }}>Contenu</option>
+          </select>
+
+          <select name="dir" class="form-select" style="max-width:120px;">
+            <option value="DESC" {{ (filters.dir ?? 'DESC') == 'DESC' ? 'selected' : '' }}>↓ Desc</option>
+            <option value="ASC"  {{ (filters.dir ?? '') == 'ASC' ? 'selected' : '' }}>↑ Asc</option>
+          </select>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</form>
+
+    {% for message in app.flashes('success') %}
+      <div class="alert alert-success alert-dismissible fade show" role="alert">
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+      </div>
+    {% endfor %}
+
+    {% for message in app.flashes('danger') %}
+      <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+      </div>
+    {% endfor %}
+
+    {% if reclamations is empty %}
+      <div class="alert alert-info">
+        Aucune réclamation trouvée pour le moment.
+      </div>
+    {% else %}
+      <div class="table-responsive">
+        <table class="table table-hover align-middle">
+          <thead class="table-light">
+            <tr>
+              <th>Contenu</th>
+              <th>Type</th>
+              <th>Statut</th>
+              <th>Date</th>
+              <th class="text-end">Actions</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            {% for r in reclamations %}
+              <tr>
+                <td>{{ r.contenu }}</td>
+                <td>{{ r.type }}</td>
+                <td>
+                  {% set s = r.statutReclamation %}
+                  {% if s == 'EN_ATTENTE' %}
+                    <span class="badge bg-warning text-dark">En attente</span>
+                  {% elseif s == 'TRAITEE' %}
+                    <span class="badge bg-success">Traitée</span>
+                  {% elseif s == 'REJETEE' %}
+                    <span class="badge bg-danger">Rejetée</span>
+                  {% else %}
+                    <span class="badge bg-secondary">{{ s }}</span>
+                  {% endif %}
+                </td>
+                <td>
+                  {{ r.dateCreationR ? r.dateCreationR|date('d/m/Y H:i') : '-' }}
+                </td>
+
+                <td class="text-end">
+                 <a href="{{ path('reclamation_reponses', { id: r.idReclamation }) }}"
+     class="btn btn-info btn-sm me-2">
+    Voir réponses
+  </a>
+                  <!-- BOUTON MODIFIER -->
+                  <a href="{{ path('reclamation_edit', {'id': r.idReclamation}) }}"
+                     class="btn btn-sm btn-primary">
+                    Modifier
+                  </a>
+
+                  <!-- BOUTON SUPPRIMER (ouvre une modal) -->
+                  <button type="button"
+                          class="btn btn-sm btn-danger"
+                          data-bs-toggle="modal"
+                          data-bs-target="#deleteModal-{{ r.idReclamation }}">
+                    Supprimer
+                  </button>
+
+                  <!-- MODAL Bootstrap -->
+                  <div class="modal fade" id="deleteModal-{{ r.idReclamation }}" tabindex="-1" aria-hidden="true">
+                    <div class="modal-dialog modal-dialog-centered">
+                      <div class="modal-content">
+
+                        <div class="modal-header">
+                          <h5 class="modal-title">Confirmation de suppression</h5>
+                          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+
+                        <div class="modal-body">
+                          Voulez-vous vraiment supprimer cette réclamation ?
+                          <div class="small text-muted mt-2">
+                            Cette action est irréversible.
+                          </div>
+                        </div>
+
+                        <div class="modal-footer">
+                          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                            Annuler
+                          </button>
+
+                          <form method="post" action="{{ path('reclamation_delete', {'id': r.idReclamation}) }}">
+                            <input type="hidden" name="_token" value="{{ csrf_token('delete' ~ r.idReclamation) }}">
+                            <button class="btn btn-danger">
+                              Oui, supprimer
+                            </button>
+                          </form>
+                        </div>
+
+                      </div>
+                    </div>
+                  </div>
+
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% endif %}
+
+  </div>
+</section>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const form = document.querySelector('form[action="{{ path('reclamation_list') }}"]');
+
+  if (!form) return;
+
+  const inputs = form.querySelectorAll('input, select');
+
+  let timeout = null;
+
+  inputs.forEach(el => {
+
+    // 🔎 Recherche texte (debounce)
+    if (el.tagName === 'INPUT') {
+      el.addEventListener('input', () => {
+        clearTimeout(timeout);
+        timeout = setTimeout(() => {
+          form.submit();
+        }, 500); // ⏱️ 0.5s après arrêt de frappe
+      });
+    }
+
+    // 🎯 Select (statut, tri)
+    if (el.tagName === 'SELECT') {
+      el.addEventListener('change', () => {
+        form.submit();
+      });
+    }
+
+  });
+});
+</script>
+
+{% endblock %}
