@@ -2,27 +2,24 @@
 
 namespace App\Controller;
 
-use App\Service\AdminBIService;
-use App\Service\TwilioSmsService;
-
 use App\Entity\Commande;
 use App\Entity\LigneCommande;
 use App\Entity\Produit;
-
+use App\Service\AdminBIService;
+use App\Service\TwilioSmsService;
 use Doctrine\ORM\EntityManagerInterface;
-use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
-use Symfony\Component\HttpFoundation\Request;
-use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\HttpFoundation\Session\SessionInterface;
-use Symfony\Component\Routing\Annotation\Route;
-
 use Dompdf\Dompdf;
 use Dompdf\Options;
-use Symfony\Component\HttpFoundation\ResponseHeaderBag;
-
-// Stripe
-use Stripe\Stripe;
 use Stripe\Checkout\Session as StripeCheckoutSession;
+use Stripe\Stripe;
+use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpFoundation\ResponseHeaderBag;
+use Symfony\Component\HttpFoundation\Session\SessionInterface;
+use Symfony\Component\Routing\Annotation\Route;
+use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 class CommandeController extends AbstractController
 {
@@ -34,29 +31,57 @@ class CommandeController extends AbstractController
     public function adminIndex(EntityManagerInterface $em): Response
     {
         $commandes = $em->getRepository(Commande::class)->findBy([], ['date_creation_commande' => 'DESC']);
-        return $this->render('admin/commande.html.twig', ['commandes' => $commandes]);
+
+        return $this->render('admin/commande.html.twig', [
+            'commandes' => $commandes
+        ]);
     }
 
     #[Route('/admin/commandes/{id}', name: 'admin_commande_show', methods: ['GET'])]
-    public function adminShow(Commande $commande): Response
+    public function adminShow(Commande $commande, EntityManagerInterface $em): Response
     {
-        return $this->render('admin/commande.html.twig', ['commande' => $commande]);
+        $commandes = $em->getRepository(Commande::class)->findBy([], ['date_creation_commande' => 'DESC']);
+
+        return $this->render('admin/commande.html.twig', [
+            'commande'  => $commande,
+            'commandes' => $commandes,
+        ]);
     }
 
     #[Route('/admin/commandes/{id}/statut', name: 'admin_commande_statut', methods: ['POST'])]
     public function adminChangerStatut(Request $request, Commande $commande, EntityManagerInterface $em): Response
     {
         $nouveauStatut = (string) $request->request->get('statut');
-        $statutsAutorises = ['En attente', 'En cours', 'Expédiée', 'Livrée', 'Annulée'];
+
+        $statutsAutorises = ['En attente', 'En cours', 'En livraison', 'Expédiée', 'Livrée', 'Annulée'];
 
         if (in_array($nouveauStatut, $statutsAutorises, true)) {
             $commande->setStatutCommande($nouveauStatut);
             $em->flush();
             $this->addFlash('success', 'Statut mis à jour ✅');
         } else {
-            $this->addFlash('error', 'Statut invalide');
+            $this->addFlash('error', 'Statut invalide ❌');
         }
 
+        return $this->redirectToRoute('admin_commande_show', ['id' => $commande->getIdCommande()]);
+    }
+
+    /**
+     * ✅ ADMIN/STAFF : démarrer livraison (En cours -> En livraison)
+     * (tu peux ajouter un contrôle de rôle plus tard)
+     */
+    #[Route('/admin/commandes/{id}/start-livraison', name: 'admin_commande_start_livraison', methods: ['POST'])]
+    public function adminStartLivraison(Commande $commande, EntityManagerInterface $em): Response
+    {
+        if ($commande->getStatutCommande() !== 'En cours') {
+            $this->addFlash('error', 'Impossible de démarrer : statut actuel = ' . $commande->getStatutCommande());
+            return $this->redirectToRoute('admin_commande_show', ['id' => $commande->getIdCommande()]);
+        }
+
+        $commande->setStatutCommande('En livraison');
+        $em->flush();
+
+        $this->addFlash('success', 'Livraison démarrée 🚚');
         return $this->redirectToRoute('admin_commande_show', ['id' => $commande->getIdCommande()]);
     }
 
@@ -66,6 +91,7 @@ class CommandeController extends AbstractController
         foreach ($commande->getLigneCommandes() as $ligne) {
             $em->remove($ligne);
         }
+
         $em->remove($commande);
         $em->flush();
 
@@ -97,7 +123,7 @@ class CommandeController extends AbstractController
             if ($qty <= 0) continue;
 
             if ($produit->getStatusProduit() !== 'Disponible') {
-                $this->addFlash('error', $produit->getNomProduit() . ' n\'est plus disponible');
+                $this->addFlash('error', $produit->getNomProduit() . " n'est plus disponible");
                 return $this->redirectToRoute('front_produit_index');
             }
 
@@ -106,9 +132,7 @@ class CommandeController extends AbstractController
                 return $this->redirectToRoute('front_produit_index');
             }
 
-            // propriété temporaire pour Twig
             $produit->quantite_panier = $qty;
-
             $produitsPanier[] = $produit;
             $total += (float)$produit->getPrixProduit() * $qty;
         }
@@ -119,11 +143,6 @@ class CommandeController extends AbstractController
         ]);
     }
 
-    /**
-     * ✅ Stripe Checkout
-     * ✅ Crée la commande + lignes AVANT Stripe
-     * ✅ Stripe ne fait que payer cette commande
-     */
     #[Route('/stripe/checkout', name: 'commande_stripe_checkout', methods: ['POST'])]
     public function stripeCheckout(SessionInterface $session, EntityManagerInterface $em): Response
     {
@@ -141,18 +160,16 @@ class CommandeController extends AbstractController
             return $this->redirectToRoute('front_produit_index');
         }
 
-        // Stripe currency
         $stripeCurrency = 'eur';
         $dtToEurRate = 0.30;
 
         $lineItems = [];
         $totalDt = 0.0;
 
-        // 1) Créer commande (en base) + lignes (en base)
         $commande = new Commande();
         $commande->setDateCreationCommande(new \DateTimeImmutable());
         $commande->setStatutCommande('En attente');
-        $commande->setIdUser(1); // TODO: user connecté (plus tard)
+        $commande->setIdUser(1); // TODO user connecté
 
         $em->persist($commande);
 
@@ -162,9 +179,9 @@ class CommandeController extends AbstractController
 
             $qty = (int)($item['quantite'] ?? 0);
             $prixDt = (float)$produit->getPrixProduit();
+
             if ($qty <= 0 || $prixDt <= 0) continue;
 
-            // re-check stock
             if ($produit->getStatusProduit() !== 'Disponible' || (int)$produit->getQuantiteProduit() < $qty) {
                 $this->addFlash('error', 'Problème stock/disponibilité : ' . $produit->getNomProduit());
                 return $this->redirectToRoute('front_produit_index');
@@ -172,23 +189,19 @@ class CommandeController extends AbstractController
 
             $totalDt += $prixDt * $qty;
 
-            // créer ligne en base
             $ligne = new LigneCommande();
             $ligne->setProduit($produit);
             $ligne->setQuantite_commandee($qty);
             $commande->addLigneCommande($ligne);
             $em->persist($ligne);
 
-            // Stripe item
             $unitAmount = (int) round(($prixDt * $dtToEurRate) * 100);
             if ($unitAmount < 1) $unitAmount = 1;
 
             $lineItems[] = [
                 'price_data' => [
                     'currency' => $stripeCurrency,
-                    'product_data' => [
-                        'name' => $produit->getNomProduit(),
-                    ],
+                    'product_data' => ['name' => $produit->getNomProduit()],
                     'unit_amount' => $unitAmount,
                 ],
                 'quantity' => $qty,
@@ -201,11 +214,8 @@ class CommandeController extends AbstractController
         }
 
         $commande->setMontantTotal($totalDt);
+        $em->flush(); // obtenir id commande
 
-        // flush pour avoir id_commande
-        $em->flush();
-
-        // 2) Stripe session
         Stripe::setApiKey($stripeSecret);
 
         $checkout = StripeCheckoutSession::create([
@@ -219,7 +229,6 @@ class CommandeController extends AbstractController
             'cancel_url'  => $appUrl . '/commande/paiement/cancel?commande_id=' . $commande->getIdCommande(),
         ]);
 
-        // 3) Sauver stripe_session_id si l’entity a le champ
         if (method_exists($commande, 'setStripeSessionId')) {
             $commande->setStripeSessionId($checkout->id);
             if (method_exists($commande, 'setPaidAt')) {
@@ -231,11 +240,6 @@ class CommandeController extends AbstractController
         return $this->redirect($checkout->url);
     }
 
-    /**
-     * ✅ Success Stripe
-     * ✅ met paid_at + décrémente stock + statut
-     * ✅ envoie SMS Twilio (sans ajouter champ)
-     */
     #[Route('/commande/paiement/success', name: 'commande_paiement_success', methods: ['GET'])]
     public function paiementSuccess(
         Request $request,
@@ -269,28 +273,24 @@ class CommandeController extends AbstractController
             return $this->redirectToRoute('front_produit_index');
         }
 
-        /** @var Commande|null $commande */
         $commande = $em->getRepository(Commande::class)->find($commandeId);
         if (!$commande) {
             $this->addFlash('error', 'Commande introuvable en base.');
             return $this->redirectToRoute('front_produit_index');
         }
 
-        // ✅ Anti-doublon : si déjà payé => ne pas renvoyer SMS
         if (method_exists($commande, 'getPaidAt') && $commande->getPaidAt() !== null) {
             $this->addFlash('success', 'Paiement déjà confirmé ✅');
             return $this->redirectToRoute('commande_details', ['id' => $commande->getIdCommande()]);
         }
 
-        // Décrémenter stock
         foreach ($commande->getLigneCommandes() as $ligne) {
             $produit = $ligne->getProduit();
             $qty = (int)$ligne->getQuantite_commandee();
-
             if (!$produit) continue;
 
             if ($produit->getStatusProduit() !== 'Disponible' || (int)$produit->getQuantiteProduit() < $qty) {
-                $this->addFlash('error', 'Stock devenu insuffisant pour ' . $produit->getNomProduit());
+                $this->addFlash('error', 'Stock insuffisant pour ' . $produit->getNomProduit());
                 return $this->redirectToRoute('front_produit_index');
             }
 
@@ -302,7 +302,6 @@ class CommandeController extends AbstractController
             }
         }
 
-        // Mettre commande payée
         $commande->setStatutCommande('En cours');
 
         if (method_exists($commande, 'setStripeSessionId')) {
@@ -314,7 +313,6 @@ class CommandeController extends AbstractController
 
         $em->flush();
 
-        // ✅ SMS Twilio après flush (paiement confirmé)
         try {
             $to = $_ENV['TWILIO_TO'] ?? '+21654430709';
 
@@ -332,12 +330,9 @@ class CommandeController extends AbstractController
                 "Articles: " . implode(', ', $items) . "\n" .
                 "Statut: " . $commande->getStatutCommande();
 
-           $sms->send($to, $message);
-        } catch (\Throwable $e) {
-            // on ne casse pas le flow si SMS échoue
-        }
+          //  $sms->send($to, $message);
+        } catch (\Throwable $e) {}
 
-        // vider panier
         $session->remove('panier');
 
         $this->addFlash('success', 'Paiement réussi ✅ Votre commande est confirmée.');
@@ -426,7 +421,6 @@ class CommandeController extends AbstractController
             'to'   => $data['period']['to'],
             'cat'  => $data['period']['cat'],
             'categories' => $data['period']['categories'],
-
             'kpi' => $data['kpi'],
             'charts' => $data['charts'],
             'topProduits' => $data['topProduits'],
@@ -434,5 +428,84 @@ class CommandeController extends AbstractController
             'alerts' => $data['alerts'],
             'tips' => $data['tips'],
         ]);
+    }
+
+    /* =========================
+     *   LIVRAISON DEMO (MAP)
+     * ========================= */
+
+    #[Route('/commande/{id}/livraison-demo', name: 'commande_livraison_demo', methods: ['GET'])]
+    public function livraisonDemoPage(Commande $commande): Response
+    {
+        // Départ (pharmacie) : Tunis centre (démo)
+        $startLat = 36.8065;
+        $startLng = 10.1815;
+
+        // Destination démo : Ariana
+        $adresse = "Ariana, Tunisie";
+        $destLat = 36.8665;
+        $destLng = 10.1647;
+
+        return $this->render('commande/livraison_demo.html.twig', [
+            'commande' => $commande,
+            'adresse' => $adresse,
+            'startLat' => $startLat,
+            'startLng' => $startLng,
+            'destLat' => $destLat,
+            'destLng' => $destLng,
+        ]);
+    }
+
+    // ✅ API statut pour que le front sache si l'admin a démarré la livraison
+    #[Route('/api/commande/{id}/statut', name: 'api_commande_statut', methods: ['GET'])]
+    public function apiCommandeStatut(Commande $commande): JsonResponse
+    {
+        return new JsonResponse([
+            'success' => true,
+            'statut' => $commande->getStatutCommande(),
+        ]);
+    }
+
+    #[Route('/api/commande/{id}/livraison/route', name: 'api_commande_livraison_route', methods: ['GET'])]
+    public function livraisonRoute(Commande $commande, HttpClientInterface $http): JsonResponse
+    {
+        $startLat = 36.8065;
+        $startLng = 10.1815;
+
+        $destLat = 36.8665;
+        $destLng = 10.1647;
+
+        $url = sprintf(
+            'https://router.project-osrm.org/route/v1/driving/%f,%f;%f,%f?overview=full&geometries=geojson',
+            $startLng, $startLat,
+            $destLng, $destLat
+        );
+
+        try {
+            $res = $http->request('GET', $url);
+            $data = $res->toArray(false);
+
+            if (!isset($data['routes'][0]['geometry']['coordinates'])) {
+                return new JsonResponse(['success' => false, 'message' => 'Route introuvable'], 500);
+            }
+
+            $coords = array_map(fn($c) => [$c[1], $c[0]], $data['routes'][0]['geometry']['coordinates']);
+
+            return new JsonResponse([
+                'success' => true,
+                'coords' => $coords,
+            ]);
+        } catch (\Throwable $e) {
+            return new JsonResponse([
+                'success' => false,
+                'message' => 'Erreur OSRM: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    #[Route('/api/commande/{id}/livraison/ping', name: 'api_commande_livraison_ping', methods: ['GET'])]
+    public function livraisonPing(Commande $commande): JsonResponse
+    {
+        return new JsonResponse(['success' => true]);
     }
 }

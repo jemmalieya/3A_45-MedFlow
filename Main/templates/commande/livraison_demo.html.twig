@@ -1,0 +1,307 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Suivi Livraison - Commande #{{ commande.idCommande }}{% endblock %}
+
+{% block body %}
+<div class="container py-4">
+
+  <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
+    <div>
+      <h2 class="mb-1">📦 Suivi de livraison (Démo)</h2>
+      <div class="text-muted">
+        Commande <b>#{{ commande.idCommande }}</b> — Destination : <b>{{ adresse }}</b>
+      </div>
+    </div>
+    <a href="{{ path('commande_details', {id: commande.idCommande}) }}" class="btn btn-outline-secondary">
+      ← Retour détails
+    </a>
+  </div>
+
+  <div class="row g-3">
+    <div class="col-lg-8">
+      <div class="map-wrap">
+        <div id="map"></div>
+
+        <div class="map-overlay">
+          <span class="badge bg-dark">Départ: Pharmacie</span>
+          <span class="badge bg-dark">Arrivée: Client</span>
+          <span id="badgeStatus" class="badge bg-secondary">En attente du staff…</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-4">
+      <div class="card card-side">
+        <div class="card-body">
+          <h5 class="mb-2">📍 Infos livraison</h5>
+
+          <div class="small text-muted">Adresse :</div>
+          <div class="fw-semibold mb-3">{{ adresse }}</div>
+
+          <div class="small text-muted">Statut :</div>
+          <div id="statusText" class="fw-semibold mb-3">En attente du staff…</div>
+
+          <div class="small text-muted">Position actuelle :</div>
+          <div id="posText" class="fw-semibold mb-3">—</div>
+
+          <div class="small text-muted">Progression :</div>
+          <div class="progress mb-3" style="height: 10px;">
+            <div id="progressBar" class="progress-bar" role="progressbar" style="width: 0%"></div>
+          </div>
+
+          <div class="alert alert-info mb-0" id="hintBox">
+            ⏳ En attente… Le staff doit démarrer la livraison depuis le back-office.
+          </div>
+
+          <hr class="my-3">
+
+          <div class="small text-muted">
+            * Démo : mouvement simulé sur route réelle (OSRM + Leaflet).
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<style>
+  .map-wrap{
+    position: relative;
+    border-radius: 18px;
+    overflow: hidden;
+    box-shadow: 0 12px 30px rgba(0,0,0,.12);
+  }
+  #map{
+    height: 560px;
+    width: 100%;
+  }
+  .map-overlay{
+    position: absolute;
+    left: 12px;
+    top: 12px;
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    z-index: 999;
+  }
+  .card-side{
+    border-radius: 18px;
+    box-shadow: 0 12px 30px rgba(0,0,0,.10);
+    border: none;
+  }
+</style>
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script>
+document.addEventListener('DOMContentLoaded', async () => {
+
+  const cfg = {
+    commandeId: {{ commande.idCommande }},
+    start: { lat: {{ startLat }}, lng: {{ startLng }} },
+    dest:  { lat: {{ destLat }},  lng: {{ destLng }} }
+  };
+
+  // ✅ persist key par commande
+  const STORAGE_KEY = 'livraison_progress_' + cfg.commandeId;
+
+  const badgeStatus = document.getElementById('badgeStatus');
+  const statusText  = document.getElementById('statusText');
+  const posText = document.getElementById('posText');
+  const progressBar = document.getElementById('progressBar');
+  const hintBox = document.getElementById('hintBox');
+
+  const map = L.map('map').setView([cfg.start.lat, cfg.start.lng], 12);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
+
+  L.marker([cfg.start.lat, cfg.start.lng]).addTo(map).bindPopup("🏥 Pharmacie MedFlow");
+  L.marker([cfg.dest.lat, cfg.dest.lng]).addTo(map).bindPopup("📍 Client");
+
+  let coords = [];
+  let routeLine = null;
+  let colisMarker = null;
+
+  let idx = 0;
+  let timer = null;
+
+  let routeLoaded = false;
+  let started = false;
+  let arrived = false;
+
+  function setStatus(text, colorClass) {
+    badgeStatus.className = `badge ${colorClass}`;
+    badgeStatus.textContent = text;
+    statusText.textContent = text;
+  }
+
+  function stopAnimation() {
+    if (timer) clearInterval(timer);
+    timer = null;
+  }
+
+  async function loadRouteOnce() {
+    if (routeLoaded) return;
+
+    setStatus('Chargement route…', 'bg-warning');
+
+    const res = await fetch(`/api/commande/${cfg.commandeId}/livraison/route`, { cache: 'no-store' });
+    const data = await res.json();
+
+    if (!data.success) throw new Error(data.message || 'Route introuvable');
+
+    coords = data.coords;
+    if (!coords.length) throw new Error('Coordonnées route vides');
+
+    if (routeLine) map.removeLayer(routeLine);
+    routeLine = L.polyline(coords, { weight: 5 }).addTo(map);
+    map.fitBounds(routeLine.getBounds(), { padding: [20, 20] });
+
+    if (colisMarker) map.removeLayer(colisMarker);
+    colisMarker = L.marker(coords[0]).addTo(map).bindPopup("📦 Colis en route");
+
+    idx = 0;
+    arrived = false;
+    progressBar.style.width = '0%';
+    posText.textContent = `${coords[0][0].toFixed(5)}, ${coords[0][1].toFixed(5)}`;
+
+    // ✅ RESTORE PROGRESSION (si user a quitté la page)
+    const savedIdx = parseInt(localStorage.getItem(STORAGE_KEY) || '0', 10);
+    if (!isNaN(savedIdx) && savedIdx > 0 && savedIdx < coords.length) {
+      idx = savedIdx;
+      const [lat, lng] = coords[idx];
+      colisMarker.setLatLng([lat, lng]);
+
+      const p = Math.round((idx / (coords.length - 1)) * 100);
+      progressBar.style.width = `${p}%`;
+      posText.textContent = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+
+      if (idx >= coords.length - 1) {
+        arrived = true;
+        setStatus('Arrivé ✅ (attente admin)', 'bg-warning');
+        hintBox.className = 'alert alert-warning mb-0';
+        hintBox.textContent = '📍 Le colis est arrivé. En attente que le staff valide "Livrée" dans le back-office.';
+      }
+    }
+
+    routeLoaded = true;
+  }
+
+  function runAnimation() {
+    if (timer || !coords.length) return;
+
+    // on peut “repartir” même si started = true (cas reload)
+    started = true;
+
+    if (!arrived) {
+      hintBox.className = 'alert alert-success mb-0';
+      hintBox.textContent = '🚚 Livraison en cours…';
+      setStatus('En livraison', 'bg-primary');
+    }
+
+    timer = setInterval(() => {
+      if (arrived) { // sécurité
+        stopAnimation();
+        return;
+      }
+
+      idx++;
+
+      // ✅ arrivée atteinte => NE PAS METTRE "Livrée"
+      if (idx >= coords.length) {
+        stopAnimation();
+        arrived = true;
+
+        const last = coords[coords.length - 1];
+        colisMarker.setLatLng(last);
+        posText.textContent = `${last[0].toFixed(5)}, ${last[1].toFixed(5)}`;
+        progressBar.style.width = '100%';
+
+        // sauvegarde position finale
+        localStorage.setItem(STORAGE_KEY, String(coords.length - 1));
+
+        setStatus('Arrivé ✅ (attente admin)', 'bg-warning');
+        hintBox.className = 'alert alert-warning mb-0';
+        hintBox.textContent = '📍 Le colis est arrivé. En attente que le staff valide "Livrée" dans le back-office.';
+        return;
+      }
+
+      const [lat, lng] = coords[idx];
+      colisMarker.setLatLng([lat, lng]);
+
+      // 💾 Sauvegarder la progression
+      localStorage.setItem(STORAGE_KEY, String(idx));
+
+      posText.textContent = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+      const p = Math.round((idx / (coords.length - 1)) * 100);
+      progressBar.style.width = `${p}%`;
+
+      if (idx % 10 === 0) {
+        map.panTo([lat, lng], { animate: true, duration: 0.5 });
+      }
+    }, 1200);
+  }
+
+  async function fetchStatut() {
+    const res = await fetch(`/api/commande/${cfg.commandeId}/statut`, { cache: 'no-store' });
+    const data = await res.json();
+    if (!data.success) throw new Error('Erreur API statut');
+    return (data.statut || '');
+  }
+
+  async function checkAdminLoop() {
+    try {
+      const statut = await fetchStatut();
+      const st = statut.toLowerCase();
+
+      // ✅ livré confirmé par admin
+      if (st.includes('livrée') || st.includes('livree')) {
+        stopAnimation();
+        setStatus('Livrée ✅', 'bg-success');
+        hintBox.className = 'alert alert-success mb-0';
+        hintBox.textContent = '✅ Livraison confirmée par le staff.';
+        progressBar.style.width = '100%';
+
+        // ✅ on nettoie la progression stockée
+        localStorage.removeItem(STORAGE_KEY);
+        return; // stop polling
+      }
+
+      // ✅ livraison démarrée
+      if (st.includes('en livraison')) {
+        await loadRouteOnce();
+
+        // si déjà arrivé (restauré), on attend admin
+        if (arrived) {
+          setStatus('Arrivé ✅ (attente admin)', 'bg-warning');
+          hintBox.className = 'alert alert-warning mb-0';
+          hintBox.textContent = '📍 Le colis est arrivé. En attente que le staff valide "Livrée" dans le back-office.';
+        } else {
+          runAnimation();
+        }
+      } else {
+        // pas démarré
+        if (!started) {
+          setStatus('En attente du staff…', 'bg-secondary');
+          hintBox.className = 'alert alert-info mb-0';
+          hintBox.textContent = '⏳ En attente… Le staff doit démarrer la livraison depuis le back-office.';
+        } else if (arrived) {
+          setStatus('Arrivé ✅ (attente admin)', 'bg-warning');
+        }
+      }
+
+    } catch (e) {
+      // silencieux
+    }
+
+    setTimeout(checkAdminLoop, 2500);
+  }
+
+  // état initial
+  setStatus('En attente du staff…', 'bg-secondary');
+  checkAdminLoop();
+
+});
+</script>
+{% endblock %}
