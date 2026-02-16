@@ -41,7 +41,7 @@ class Post
 #[Assert\NotBlank(message: "La localisation est obligatoire.")]
 #[Assert\Length(
     min: 3,
-    max: 80,
+    max: 150,
     minMessage: "La localisation doit contenir au moins {{ limit }} caractères.",
     maxMessage: "La localisation ne doit pas dépasser {{ limit }} caractères."
 )]
@@ -107,6 +107,49 @@ private ?string $localisation = null;
     #[ORM\Column]
     #[Assert\PositiveOrZero(message: "Le nombre de commentaires doit être >= 0.")]
     private int $nbr_commentaires = 0;
+// ✅ Statut de modération : PENDING | APPROVED | REJECTED
+#[ORM\Column(type: 'string', length: 12, options: ['default' => 'PENDING'])]
+private string $moderationStatus = 'PENDING';
+
+// ✅ Message à afficher au user (SweetAlert)
+#[ORM\Column(type: 'string', length: 255, nullable: true)]
+private ?string $moderationMessage = null;
+
+// ✅ Vu par le user ?
+#[ORM\Column(type: 'boolean', options: ['default' => false])]
+private bool $moderationSeen = false;
+
+
+public function getModerationStatus(): string
+{
+    return $this->moderationStatus;
+}
+public function setModerationStatus(string $status): self
+{
+    $this->moderationStatus = $status;
+    return $this;
+}
+
+public function getModerationMessage(): ?string
+{
+    return $this->moderationMessage;
+}
+public function setModerationMessage(?string $msg): self
+{
+    $this->moderationMessage = $msg;
+    return $this;
+}
+
+public function isModerationSeen(): bool
+{
+    return $this->moderationSeen;
+}
+public function setModerationSeen(bool $seen): self
+{
+    $this->moderationSeen = $seen;
+    return $this;
+}
+
 
     #[ORM\ManyToOne(targetEntity: User::class, inversedBy: 'posts')]
     #[ORM\JoinColumn(nullable: true, onDelete: 'CASCADE')]
@@ -115,6 +158,22 @@ private ?string $localisation = null;
     #[ORM\OneToMany(mappedBy: 'post', targetEntity: Commentaire::class, cascade: ['persist', 'remove'], orphanRemoval: true)]
     #[ORM\OrderBy(['date_creation' => 'DESC'])]
     private Collection $commentaires;
+
+    // src/Entity/Post.php
+#[ORM\Column(type: 'boolean')]
+private bool $isApproved = false;
+
+public function isApproved(): bool
+{
+    return $this->isApproved;
+}
+
+public function setIsApproved(bool $isApproved): self
+{
+    $this->isApproved = $isApproved;
+    return $this;
+}
+
 
     public function __construct()
     {
@@ -337,4 +396,6 @@ private ?string $localisation = null;
     $this->nbr_commentaires = $this->commentaires->count();
     return $this;
 }
+
+
 }

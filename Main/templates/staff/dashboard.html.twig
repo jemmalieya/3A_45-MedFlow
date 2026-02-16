@@ -1,13 +1,124 @@
 
 {% extends 'base_dashboard.html.twig' %}
 
-{% block title %}Dashboard Staff{% endblock %}
+{% block title %}Patient Radar{% endblock %}
 
 {% block body %}
-<div class="container-fluid py-4">
-  <h1 class="h3 mb-2">Dashboard Staff</h1>
-  <p class="text-muted mb-0">
-    Bienvenue {{ app.user.prenom }} ({{ app.user.typeStaff ?? 'STAFF' }})
-  </p>
+<div class="container-fluid">
+  <h1 class="h3 mb-4 text-gray-800">Patient Radar</h1>
+
+  <!-- Work Queue -->
+  <div class="row">
+    <div class="col-md-3 mb-3">
+      <div class="card border-left-primary shadow h-100 py-2">
+        <div class="card-body">
+          <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">Nouveaux (24h)</div>
+          <div class="h5 mb-0 font-weight-bold text-gray-800">{{ queues.new24h|length }}</div>
+          <a href="{{ path('staff_patients_list', {queue: 'new24h'}) }}" class="mt-2 d-inline-block">Voir</a>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3 mb-3">
+      <div class="card border-left-info shadow h-100 py-2">
+        <div class="card-body">
+          <div class="text-xs font-weight-bold text-info text-uppercase mb-1">Nouveaux (7j)</div>
+          <div class="h5 mb-0 font-weight-bold text-gray-800">{{ queues.new7d|length }}</div>
+          <a href="{{ path('staff_patients_list', {queue: 'new7d'}) }}" class="mt-2 d-inline-block">Voir</a>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3 mb-3">
+      <div class="card border-left-warning shadow h-100 py-2">
+        <div class="card-body">
+          <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">Données incomplètes</div>
+          <div class="h5 mb-0 font-weight-bold text-gray-800">{{ queues.incomplete|length }}</div>
+          <a href="{{ path('staff_patients_list', {queue: 'incomplete'}) }}" class="mt-2 d-inline-block">Voir</a>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3 mb-3">
+      <div class="card border-left-danger shadow h-100 py-2">
+        <div class="card-body">
+          <div class="text-xs font-weight-bold text-danger text-uppercase mb-1">Contact difficile</div>
+          <div class="h5 mb-0 font-weight-bold text-gray-800">{{ queues.contactRisk|length }}</div>
+          <a href="{{ path('staff_patients_list', {queue: 'contactRisk'}) }}" class="mt-2 d-inline-block">Voir</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Radar KPI Cards -->
+  <div class="row mt-4">
+    <div class="col-md-3 mb-3">
+      <div class="card bg-success text-white shadow">
+        <div class="card-body">OK ✅<div class="h4">{{ counts.OK }}</div></div>
+      </div>
+    </div>
+    <div class="col-md-3 mb-3">
+      <div class="card bg-warning text-white shadow">
+        <div class="card-body">À compléter 🟡<div class="h4">{{ counts.INCOMPLETE }}</div></div>
+      </div>
+    </div>
+    <div class="col-md-3 mb-3">
+      <div class="card bg-primary text-white shadow">
+        <div class="card-body">À vérifier 🔵<div class="h4">{{ counts.UNVERIFIED }}</div></div>
+      </div>
+    </div>
+    <div class="col-md-3 mb-3">
+      <div class="card bg-danger text-white shadow">
+        <div class="card-body">Contact difficile 🔴<div class="h4">{{ counts.CONTACT_BAD }}</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Top anomalies -->
+  <div class="row mt-4">
+    <div class="col-12">
+      <div class="card shadow">
+        <div class="card-header">Top anomalies (10)</div>
+        <div class="card-body">
+          <ul class="list-group">
+            {% for row in topAnomalies %}
+              {% set p = row.p %}
+              <li class="list-group-item d-flex justify-content-between align-items-center">
+                <span>{{ p.getPrenom() }} {{ p.getNom() }} — {{ p.getEmailUser() }}</span>
+                <span>
+                  <span class="badge badge-danger mr-2">Score anomalies: {{ row.score }}</span>
+                  {% for d in row.details %}<span class="badge badge-light mr-1">{{ d }}</span>{% endfor %}
+                  <a class="btn btn-sm btn-outline-primary ml-2" href="{{ path('staff_patients_show', {id: p.getId()}) }}">Voir</a>
+                </span>
+              </li>
+            {% else %}
+              <li class="list-group-item">Aucune anomalie.</li>
+            {% endfor %}
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Stats -->
+  <div class="row mt-4">
+    <div class="col-md-6">
+      <div class="card shadow">
+        <div class="card-header">Statistiques (qualité)</div>
+        <div class="card-body">
+          <p>Patients vérifiés: <strong>{{ stats.verifiedPct }}%</strong></p>
+          <p>Dossiers complets: <strong>{{ stats.completePct }}%</strong></p>
+          <p>Champs manquants:</p>
+          <ul>
+            <li>Téléphone: {{ stats.missing.telephone }}</li>
+            <li>Adresse: {{ stats.missing.adresse }}</li>
+            <li>CIN: {{ stats.missing.cin }}</li>
+            <li>Email: {{ stats.missing.email }}</li>
+          </ul>
+          <a href="{{ path('staff_patients_export_csv') }}" class="btn btn-sm btn-outline-secondary">Exporter CSV</a>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-6">
+      <div class="alert alert-info">Objectif: améliorer la complétude et la joignabilité des patients. Pas d'actions admin ici.</div>
+    </div>
+  </div>
 </div>
 {% endblock %}

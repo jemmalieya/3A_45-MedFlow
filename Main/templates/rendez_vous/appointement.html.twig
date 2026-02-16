@@ -4,7 +4,7 @@
 <style>
     .appointment-page { min-height: 100vh; background: #fff; padding: 2rem 0 4rem; }
     .appointment-hero {
-      background: linear-gradient(135deg, #2563eb 0%, #38bdf8 50%, #1e40af 100%);
+      background: linear-gradient(135deg, #049ebb 0%, #38bdf8 50%, #049ebb 100%);
       color: #fff;
       padding: 3rem 2rem;
       border-radius: 24px;
@@ -17,28 +17,28 @@
     .appointment-card {
       background: #e0f2fe;
       border-radius: 20px;
-      box-shadow: 0 4px 24px rgba(37,99,235,0.08), 0 1px 3px rgba(30,64,175,0.04);
-      border: 1px solid #2563eb33;
+      box-shadow: 0 4px 24px rgba(4,158,187,0.08), 0 1px 3px rgba(4,158,187,0.04);
+      border: 1px solid #049ebb33;
       padding: 2rem 2.5rem;
       margin-bottom: 2rem;
     }
-    .appointment-card .form-label { font-weight: 600; color: #2563eb; margin-bottom: 0.5rem; }
+    .appointment-card .form-label { font-weight: 600; color: #049ebb; margin-bottom: 0.5rem; }
     .appointment-card .form-control, .appointment-card .form-select {
-      border: 2px solid #2563eb;
+      border: 2px solid #049ebb;
       border-radius: 12px;
       padding: 0.75rem 1rem;
       font-size: 1rem;
       transition: border-color 0.2s, box-shadow 0.2s;
     }
     .appointment-card .form-control:focus, .appointment-card .form-select:focus {
-      border-color: #1e40af;
-      box-shadow: 0 0 0 4px #2563eb33;
+      border-color: #049ebb;
+      box-shadow: 0 0 0 4px #049ebb33;
       outline: none;
     }
     .appointment-card .form-control[readonly], .appointment-card .form-control:disabled,
-    .appointment-card .form-control.bg-muted { background: #dbeafe; color: #2563eb; }
+    .appointment-card .form-control.bg-muted { background: #dbeafe; color: #049ebb; }
     .btn-appointment {
-      background: linear-gradient(135deg, #2563eb 0%, #38bdf8 100%);
+      background: linear-gradient(135deg, #049ebb 0%, #38bdf8 100%);
       color: #fff !important;
       border: none;
       border-radius: 14px;
@@ -48,10 +48,10 @@
       letter-spacing: 0.02em;
       transition: transform 0.2s, box-shadow 0.2s;
     }
-    .btn-appointment:hover { transform: translateY(-2px); box-shadow: 0 12px 28px rgba(37, 99, 235, 0.35); color: #fff !important; }
+    .btn-appointment:hover { transform: translateY(-2px); box-shadow: 0 12px 28px rgba(4, 158, 187, 0.35); color: #fff !important; }
     .alert-appointment { border: none; border-radius: 14px; padding: 1rem 1.25rem; font-weight: 500; }
     .alert-appointment.alert-danger { background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%); color: #991b1b; }
-    .alert-appointment.alert-success { background: linear-gradient(135deg, #dbeafe 0%, #bae6fd 100%); color: #2563eb; }
+    .alert-appointment.alert-success { background: linear-gradient(135deg, #dbeafe 0%, #bae6fd 100%); color: #049ebb; }
     #appointment-form { padding-top: 100px; }
     @media (max-width: 768px) { #appointment-form { padding-top: 80px; } .appointment-hero h1 { font-size: 1.75rem; } }
     .flatpickr-calendar { background: #fff !important; border: 2px solid #e2e8f0 !important; border-radius: 16px !important; box-shadow: 0 10px 40px rgba(0,0,0,0.08) !important; }
@@ -90,13 +90,123 @@
                         {{ form_start(form, {'attr': {'novalidate': 'novalidate', 'id': 'appointment-form-main'}}) }}
                         <div class="mb-4">
                           <div id="fullcalendar"></div>
-                          <div id="selected-date-label" style="margin-top:1rem;font-weight:bold;color:#2563eb;"></div>
+                          <div id="selected-date-label" style="margin-top:1rem;font-weight:bold;color:#049ebb;"></div>
                           <input type="hidden" id="calendar-datetime" name="{{ form.datetime.vars.full_name }}" value="{{ form.datetime.vars.value|default('') }}">
                           {{ form_errors(form.datetime) }}
                           {% if form.datetime.vars.errors|length > 0 and form.datetime.vars.value is empty %}
                             <div style="color: #dc3545; font-size: 0.95em;">Ce champ est obligatoire. Veuillez choisir une date et une heure.</div>
                           {% endif %}
                         </div>
+                        <style>
+                          /* FullCalendar custom design improvements */
+                          #fullcalendar {
+                            background: #f8fafc;
+                            border-radius: 18px;
+                            box-shadow: 0 6px 32px rgba(4,158,187,0.10), 0 1.5px 6px rgba(4,158,187,0.06);
+                            padding: 1.5rem 1.5rem 1rem 1.5rem;
+                            margin-bottom: 1.5rem;
+                            font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
+                          }
+                          .fc-toolbar {
+                            background: linear-gradient(90deg, #049ebb 0%, #38bdf8 100%);
+                            border-radius: 12px 12px 0 0;
+                            color: #fff;
+                            padding: 0.75rem 1rem;
+                            margin-bottom: 0.5rem;
+                          }
+                          .fc-toolbar-title {
+                            font-size: 1.25rem;
+                            font-weight: 700;
+                            color: #fff;
+                            letter-spacing: 0.01em;
+                          }
+                          .fc-button {
+                            background: #049ebb;
+                            color: #fff;
+                            border: none;
+                            border-radius: 8px;
+                            font-weight: 600;
+                            margin: 0 2px;
+                            transition: background 0.2s, box-shadow 0.2s;
+                            box-shadow: 0 2px 8px rgba(4,158,187,0.10);
+                          }
+                          .fc-button:hover, .fc-button:focus {
+                            background: #049ebb;
+                            color: #fff;
+                            box-shadow: 0 4px 16px rgba(4,158,187,0.18);
+                          }
+                          .fc-button-active, .fc-button-primary:not(:disabled).fc-button-active {
+                            background: #049ebb;
+                            color: #fff;
+                            border: none;
+                          }
+                          .fc-daygrid-day, .fc-timegrid-slot {
+                            background: #f1f5f9;
+                            border-radius: 8px;
+                            transition: background 0.2s;
+                          }
+                          .fc-day-today {
+                            background: #bae6fd !important;
+                            border-radius: 8px;
+                            box-shadow: 0 0 0 2px #38bdf8;
+                          }
+                          .fc-timegrid-slot.fc-timegrid-slot-lane {
+                            background: #f8fafc;
+                          }
+                          .fc-timegrid-slot.fc-timegrid-slot-label {
+                            background: #e0e7ef;
+                            color: #049ebb;
+                            font-weight: 600;
+                          }
+                          .fc-event {
+                            background: linear-gradient(90deg, #dc3545 0%, #f87171 100%) !important;
+                            border: none !important;
+                            border-radius: 10px !important;
+                            color: #fff !important;
+                            font-weight: 600;
+                            box-shadow: 0 2px 8px rgba(220,53,69,0.10);
+                            padding: 0.25rem 0.5rem;
+                          }
+                          .fc-slot-selected {
+                            background: #049ebb !important;
+                            border-radius: 8px !important;
+                            box-shadow: 0 0 0 2px #049ebb;
+                          }
+                          .fc .fc-col-header-cell-cushion {
+                            color: #049ebb;
+                            font-weight: 700;
+                            font-size: 1rem;
+                          }
+                          .fc .fc-timegrid-axis-cushion {
+                            color: #049ebb;
+                            font-weight: 600;
+                          }
+                          .fc .fc-scrollgrid-section-header {
+                            background: #e0f2fe;
+                          }
+                          .fc .fc-scrollgrid-section-body {
+                            background: #f8fafc;
+                          }
+                          .fc .fc-daygrid-day-number {
+                            color: #049ebb;
+                            font-weight: 700;
+                          }
+                          .fc .fc-daygrid-day.fc-day-today .fc-daygrid-day-number {
+                            color: #049ebb;
+                          }
+                          .fc .fc-timegrid-now-indicator-arrow {
+                            border-top-color: #049ebb;
+                          }
+                          .fc .fc-timegrid-now-indicator-line {
+                            background: #049ebb;
+                          }
+                          /* Responsive tweaks */
+                          @media (max-width: 768px) {
+                            #fullcalendar { padding: 0.5rem 0.25rem 0.5rem 0.25rem; }
+                            .fc-toolbar { padding: 0.5rem 0.5rem; font-size: 0.95rem; }
+                            .fc-toolbar-title { font-size: 1rem; }
+                          }
+                        </style>
                         {{ form_row(form.mode) }}
                         {{ form_row(form.motif) }}
                         {{ form_row(form._token) }}

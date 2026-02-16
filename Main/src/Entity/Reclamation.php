@@ -82,6 +82,22 @@ class Reclamation
     #[ORM\JoinColumn(nullable: false)]
     private ?User $user = null;
 
+    // Ajoute cette ligne dans l'entité Reclamation pour suivre l'état de la notification
+#[ORM\Column(type: "boolean")]
+private bool $notificationEnvoyee = false; // Par défaut, pas de notification envoyée
+
+// Getter et Setter pour la notification
+public function isNotificationEnvoyee(): bool
+{
+    return $this->notificationEnvoyee;
+}
+
+public function setNotificationEnvoyee(bool $notificationEnvoyee): static
+{
+    $this->notificationEnvoyee = $notificationEnvoyee;
+    return $this;
+}
+
     /**
      * @var Collection<int, ReponseReclamation>
      */

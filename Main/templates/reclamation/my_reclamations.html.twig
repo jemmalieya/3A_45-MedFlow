@@ -3,20 +3,30 @@
 {% block title %}Mes réclamations{% endblock %}
 
 {% block body %}
-<section class="section" style="padding-top: 120px;">
-  <div class="container">
+{% set notificationsCount = notificationsCount|default(0) %}
+{% set unreadByRec = unreadByRec|default({}) %}
 
-    <div class="d-flex justify-content-between align-items-center mb-4">
-      <div>
-        <h2 class="mb-1">Mes réclamations</h2>
-        <p class="text-muted mb-0">Liste des réclamations que vous avez envoyées</p>
+<section class="section" style="padding-top: 80px;">
+
+  <!-- BANNIERE STYLE MODERNE -->
+  <div class="row justify-content-center mb-4">
+    <div class="col-md-8 col-lg-10 text-center">
+      <div class="card" style="background-color: #1CA3B4; color: white; padding: 40px; border-radius: 20px;">
+        <h3 class="fw-bold">Mes réclamations</h3>
+        <p>Décrivez votre problème, nous vous répondrons rapidement.</p>
       </div>
-
-      <a href="{{ path('reclamation_index') }}" class="btn btn-outline-primary">
-        <i class="bi bi-plus me-1"></i> Nouvelle réclamation
+      <tr><tr><tr><tr><tr><tr><tr><tr><tr><tr><tr><tr>
+      <a href="{{ path('reclamation_index') }}" 
+         class="btn btn-gradient btn-lg text-white fw-bold"
+         style="background-image: linear-gradient(90deg, #1CA3B4, #48cae4); border: none; box-shadow: 0 4px 12px rgba(0,0,0,0.2);">
+        <i class="bi bi-plus me-2"></i> Nouvelle réclamation
       </a>
     </div>
+  </div>
 
+  <div class="container">
+
+    <!-- FLASH MESSAGES -->
     {% for message in app.flashes('success') %}
       <div class="alert alert-success alert-dismissible fade show" role="alert">
         {{ message }}
@@ -32,15 +42,17 @@
     {% endfor %}
 
     {% if reclamations|length == 0 %}
-      <div class="alert alert-info">
+      <div class="alert alert-info text-center">
         <i class="bi bi-info-circle me-2"></i>
         Vous n'avez pas encore envoyé de réclamation.
         <a href="{{ path('reclamation_index') }}" class="alert-link">Créer une réclamation</a>
       </div>
     {% else %}
-      <div class="table-responsive">
-        <table class="table table-hover align-middle">
-          <thead class="table-light">
+      <!-- TABLEAU MODERNE -->
+      <div class="table-responsive shadow-sm rounded">
+        <table class="table table-hover align-middle text-center" 
+               style="border-radius: 10px; overflow: hidden; background: #ffffff;">
+          <thead style="background: #e0f7fa; font-weight: 600;">
             <tr>
               <th>Référence</th>
               <th>Contenu</th>
@@ -53,14 +65,20 @@
 
           <tbody>
             {% for r in reclamations %}
-              <tr>
+              <tr class="align-middle" style="transition: background 0.3s;">
                 <td>
-                  <strong>{{ r.referenceReclamation }}</strong>
-                </td>
+  <strong>{{ r.referenceReclamation }}</strong>
+
+  {% set nbUnread = unreadByRec[r.idReclamation]|default(0) %}
+  {% if nbUnread > 0 %}
+    <span id="unread-badge-{{ r.idReclamation }}" class="badge bg-danger ms-2">
+      🔔 {{ nbUnread }} nouveau(x)
+    </span>
+  {% endif %}
+</td>
+
                 <td>{{ r.contenu }}</td>
-                <td>
-                  <span class="badge bg-light text-dark">{{ r.type }}</span>
-                </td>
+                <td><span class="badge bg-light text-dark">{{ r.type }}</span></td>
                 <td>
                   {% set s = r.statutReclamation %}
                   {% if s == 'EN_ATTENTE' %}
@@ -78,45 +96,48 @@
                   {% else %}
                     <span class="badge bg-secondary">{{ s }}</span>
                   {% endif %}
+              
+   
+
+
                 </td>
-                <td>
-                  {{ r.dateCreationR ? r.dateCreationR|date('d/m/Y H:i') : '-' }}
-                </td>
+                <td>{{ r.dateCreationR ? r.dateCreationR|date('d/m/Y H:i') : '-' }}</td>
 
                 <td class="text-end">
-                  <!-- BOUTON VOIR RÉPONSES -->
-                  <a href="{{ path('reclamation_reponses', { id: r.idReclamation }) }}"
-                     class="btn btn-info btn-sm me-2"
-                     title="Voir les réponses">
+
+                  <!-- BOUTON MODAL REPONSES -->
+                  <button type="button"
+                          class="btn btn-sm text-white me-2"
+                          style="background: linear-gradient(90deg, #48cae4, #00b4d8); box-shadow: 0 3px 8px rgba(0,0,0,0.2);"
+                          data-bs-toggle="modal"
+                          data-bs-target="#responsesModal-{{ r.idReclamation }}">
                     <i class="bi bi-chat-left-text me-1"></i> Réponses
-                  </a>
+                  </button>
 
                   <!-- BOUTON MODIFIER -->
                   <a href="{{ path('reclamation_edit', {'id': r.idReclamation}) }}"
-                     class="btn btn-sm btn-primary"
-                     title="Modifier cette réclamation">
+                     class="btn btn-sm text-white me-2" 
+                     style="background: linear-gradient(90deg, #0077b6, #0096c7); box-shadow: 0 3px 8px rgba(0,0,0,0.2);">
                     <i class="bi bi-pencil me-1"></i> Modifier
                   </a>
 
-                  <!-- BOUTON SUPPRIMER (ouvre une modal) -->
+                  <!-- BOUTON SUPPRIMER -->
                   <button type="button"
-                          class="btn btn-sm btn-danger"
+                          class="btn btn-sm text-white"
+                          style="background: linear-gradient(90deg, #ef233c, #d90429); box-shadow: 0 3px 8px rgba(0,0,0,0.2);"
                           data-bs-toggle="modal"
-                          data-bs-target="#deleteModal-{{ r.idReclamation }}"
-                          title="Supprimer cette réclamation">
+                          data-bs-target="#deleteModal-{{ r.idReclamation }}">
                     <i class="bi bi-trash me-1"></i> Supprimer
                   </button>
 
-                  <!-- MODAL Bootstrap -->
+                  <!-- MODAL SUPPRESSION -->
                   <div class="modal fade" id="deleteModal-{{ r.idReclamation }}" tabindex="-1" aria-hidden="true">
                     <div class="modal-dialog modal-dialog-centered">
                       <div class="modal-content">
-
                         <div class="modal-header">
                           <h5 class="modal-title">Suppression de réclamation</h5>
                           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                         </div>
-
                         <div class="modal-body">
                           <p>Voulez-vous vraiment supprimer cette réclamation ?</p>
                           <div class="card bg-light border-0 p-3">
@@ -127,12 +148,10 @@
                             Cette action est irréversible.
                           </div>
                         </div>
-
                         <div class="modal-footer">
                           <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
                             Annuler
                           </button>
-
                           <form method="post" action="{{ path('reclamation_delete', {'id': r.idReclamation}) }}" style="display:inline;">
                             <input type="hidden" name="_token" value="{{ csrf_token('delete' ~ r.idReclamation) }}">
                             <button type="submit" class="btn btn-danger">
@@ -140,10 +159,61 @@
                             </button>
                           </form>
                         </div>
-
                       </div>
                     </div>
                   </div>
+
+                  <!-- MODAL REPONSES -->
+  <!-- MODAL REPONSES MODERNE AVEC #1CA3B4 -->
+<div class="modal fade"
+     id="responsesModal-{{ r.idReclamation }}"
+     data-mark-url="{{ path('reclamation_mark_read', {'id': r.idReclamation}) }}"
+     tabindex="-1" aria-hidden="true">
+
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content shadow-lg rounded-4 border-0">
+      
+      <!-- HEADER AVEC DEGRADÉ -->
+      <div class="modal-header text-white rounded-top-4" 
+           style="background: linear-gradient(90deg, #1CA3B4, #48cae4);">
+        <h5 class="modal-title">
+          <i class="bi bi-chat-left-text me-2"></i> Réponses - {{ r.referenceReclamation }}
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+
+      <!-- BODY -->
+      <div class="modal-body" style="max-height: 60vh; overflow-y: auto; background: #f8f9fa;">
+        {% if r.reponses is empty %}
+          <div class="alert alert-info text-center m-0">
+            <i class="bi bi-info-circle me-1"></i> Aucune réponse pour le moment.
+          </div>
+        {% else %}
+          <div class="list-group">
+            {% for rep in r.reponses %}
+              <div class="list-group-item list-group-item-action mb-2 shadow-sm rounded-3 p-3" style="background: #ffffff;">
+                <div class="d-flex justify-content-between align-items-center mb-1">
+                  <!-- BADGE TYPE AVEC DEGRADÉ -->
+                  <span class="badge text-white" 
+                        style="background: linear-gradient(90deg, #1CA3B4, #48cae4);">
+                    {{ rep.typeReponse }}
+                  </span>
+                  <small class="text-muted">{{ rep.dateCreationRep|date('d/m/Y H:i') }}</small>
+                </div>
+                <div class="mt-1" style="font-size: 0.95rem; line-height: 1.4;">
+                  {{ rep.message }}
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+        {% endif %}
+      </div>
+
+    </div>
+  </div>
+</div>
+
+
 
                 </td>
               </tr>
@@ -152,14 +222,73 @@
         </table>
       </div>
 
-      <div class="mt-4 p-3 bg-light rounded">
+      <!-- TOTAL RECLAMATIONS -->
+      <div class="mt-4 p-3 bg-light rounded shadow-sm text-center">
         <p class="mb-0 text-muted">
           <strong>Total :</strong> {{ reclamations|length }} réclamation(s)
         </p>
       </div>
-
     {% endif %}
 
   </div>
 </section>
+
+<!-- CSS SUPPLEMENTAIRE -->
+<style>
+  .table-hover tbody tr:hover {
+    background: #e0f7fa;
+  }
+  .btn-gradient:hover {
+    transform: translateY(-2px);
+    transition: all 0.3s;
+  }
+</style>
+{% if notificationsCount > 0 %}
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    Swal.fire({
+        icon: 'info',
+        title: 'Nouvelle réponse',
+        text: 'Vous avez {{ notificationsCount }} nouvelle(s) réponse(s).',
+        confirmButtonColor: '#1CA3B4'
+    });
+});
+</script>
+
+{% endif %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  document.querySelectorAll('.modal[id^="responsesModal-"]').forEach(modal => {
+
+    modal.addEventListener('shown.bs.modal', async function () {
+      const url = this.getAttribute('data-mark-url');
+      if (!url) return;
+
+      try {
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        });
+
+        const data = await res.json();
+        if (!data.ok) return;
+
+        // ✅ enlever le badge "nouveau(x)" de cette réclamation sur l'UI
+        const recId = this.id.replace('responsesModal-', '');
+        const badge = document.getElementById('unread-badge-' + recId);
+        if (badge) badge.remove();
+
+      } catch (e) {
+        console.error(e);
+      }
+    });
+
+  });
+});
+</script>
+
+
+
+
 {% endblock %}

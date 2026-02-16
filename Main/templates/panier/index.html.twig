@@ -3,6 +3,38 @@
 {% block title %}Mon Panier{% endblock %}
 
 {% block body %}
+
+<style>
+/* OpenFDA UI */
+.ai-check-wrap{border-radius:18px;overflow:hidden;box-shadow:0 14px 40px rgba(16,24,40,.10);border:1px solid rgba(16,24,40,.08);margin-bottom:22px;background:#fff;}
+.ai-check-head{padding:14px 18px;display:flex;align-items:center;justify-content:space-between;gap:12px;}
+.ai-check-left{display:flex;align-items:center;gap:10px;font-weight:800;}
+.ai-pill{display:inline-flex;align-items:center;gap:8px;padding:.45rem .9rem;border-radius:999px;font-size:.85rem;font-weight:800;border:1px solid transparent;white-space:nowrap;}
+.ai-pill.online{background:#eafaf1;color:#0b6b3a;border-color:#bfe8cf;}
+.ai-pill.offline{background:#fff1f1;color:#8f1b1b;border-color:#f1b9b9;}
+.ai-body{padding:16px 18px 18px 18px;}
+.ai-alert{border-radius:16px;padding:16px;border:1px solid rgba(16,24,40,.10);}
+.ai-alert.safe{background:linear-gradient(135deg,#eafaf1 0%,#d9f7e6 100%);}
+.ai-alert.warning{background:linear-gradient(135deg,#fff7dd 0%,#ffe9ad 100%);}
+.ai-alert.danger{background:linear-gradient(135deg,#ffe8ea 0%,#ffd3d8 100%);}
+.ai-alert h5{margin:0 0 6px 0;font-weight:900;}
+.ai-alert p{margin:0;opacity:.95;}
+.ai-item{background:#fff;border-radius:14px;padding:14px;border:1px solid rgba(16,24,40,.10);box-shadow:0 6px 18px rgba(16,24,40,.06);margin-top:12px;}
+.ai-badges{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px;}
+.ai-badge{font-size:.78rem;font-weight:900;padding:.35rem .7rem;border-radius:999px;border:1px solid rgba(16,24,40,.12);background:#f8fafc;}
+.ai-badge.high{background:#ffe9ea;border-color:#f1b9b9;color:#8f1b1b;}
+.ai-badge.medium{background:#fff7dd;border-color:#ffe09b;color:#7a5a00;}
+.ai-badge.low{background:#e7f3ff;border-color:#b7d8ff;color:#0a4a8a;}
+.ai-pair{font-weight:900;font-size:1rem;}
+.ai-rec{margin-top:10px;padding:10px 12px;border-radius:12px;background:#f8fafc;border:1px dashed rgba(16,24,40,.18);font-style:italic;}
+.ai-accordion-btn{background:transparent;border:none;padding:0;font-weight:800;color:#0d6efd;cursor:pointer;}
+.ai-accordion{margin-top:10px;border-top:1px dashed rgba(16,24,40,.15);padding-top:10px;display:none;}
+.ai-accordion.show{display:block;}
+.ai-block{margin-top:14px;padding:12px 14px;border-radius:14px;border:1px solid rgba(16,24,40,.10);background:#fff;}
+.ai-block.lock{border-color:#f1b9b9;background:#fff1f1;}
+.btn-validate-blocked{opacity:.65;cursor:not-allowed !important;}
+</style>
+
 <div class="panier-page">
 
   {# Toast container #}
@@ -43,8 +75,122 @@
       </p>
     </div>
 
+    {# ✅ Bloc OpenFDA (uniquement si panier non vide et check effectué) #}
+    {% if produits is not empty and interactionResult is defined and interactionResult.checked %}
+      <div class="ai-check-wrap" id="openfda-block">
+        <div class="ai-check-head">
+          <div class="ai-check-left">
+            <i class="bi bi-cpu-fill"></i>
+            Vérification OpenFDA
+          </div>
+
+          {% if interactionResult.api_available %}
+            <span class="ai-pill online">
+              <i class="bi bi-check-circle-fill"></i> Système actif
+            </span>
+          {% else %}
+            <span class="ai-pill offline">
+              <i class="bi bi-exclamation-triangle-fill"></i> Hors ligne
+            </span>
+          {% endif %}
+        </div>
+
+        <div class="ai-body">
+
+          {% if interactionResult.interactions is defined and interactionResult.interactions is not empty %}
+
+            {% set mode = 'warning' %}
+            {% if interactionResult.severity is defined and interactionResult.severity == 'danger' %}
+              {% set mode = 'danger' %}
+            {% endif %}
+
+            <div class="ai-alert {{ mode }}">
+              <h5 class="d-flex align-items-center gap-2">
+                {% if mode == 'danger' %}
+                  <i class="bi bi-exclamation-octagon-fill"></i>
+                  {{ interactionResult.message ?? 'Alerte danger : interaction(s) détectée(s)' }}
+                {% else %}
+                  <i class="bi bi-exclamation-triangle-fill"></i>
+                  {{ interactionResult.message ?? 'Attention : interaction(s) détectée(s)' }}
+                {% endif %}
+              </h5>
+              <p>{{ interactionResult.interactions|length }} interaction(s) trouvée(s). Vérifiez les recommandations.</p>
+            </div>
+
+            {% for interaction in interactionResult.interactions %}
+              <div class="ai-item">
+                <div class="ai-badges">
+                  {% if interaction.severity == 'high' %}
+                    <span class="ai-badge high">DANGER</span>
+                  {% elseif interaction.severity == 'medium' %}
+                    <span class="ai-badge medium">ATTENTION</span>
+                  {% else %}
+                    <span class="ai-badge low">INFO</span>
+                  {% endif %}
+                  <span class="ai-badge">OpenFDA</span>
+                </div>
+
+                <div class="ai-pair">
+                  {{ interaction.drug1 }} <span class="text-muted">×</span> {{ interaction.drug2 }}
+                </div>
+
+                <div class="mt-2 text-muted">
+                  {{ interaction.description|slice(0, 250) }}{% if interaction.description|length > 250 %}...{% endif %}
+                </div>
+
+                <div class="mt-2">
+                  <button type="button" class="ai-accordion-btn" data-acc="acc-{{ loop.index }}">
+                    Voir détails
+                  </button>
+
+                  <div id="acc-{{ loop.index }}" class="ai-accordion">
+                    <div class="ai-block">
+                      {{ interaction.description }}
+                    </div>
+                  </div>
+                </div>
+
+                <div class="ai-rec">
+                  <strong>Recommandation :</strong> {{ interaction.recommendation }}
+                </div>
+              </div>
+            {% endfor %}
+
+            {% if interactionResult.severity is defined and interactionResult.severity == 'danger' %}
+              <div class="ai-block lock mt-3" id="danger-lock-block">
+                <div class="fw-bold mb-1">
+                  <i class="bi bi-lock-fill me-2"></i>Validation bloquée
+                </div>
+                <div class="small">
+                  Pour votre sécurité, vous ne pouvez pas valider cette commande. Consultez un professionnel de santé.
+                </div>
+              </div>
+            {% endif %}
+
+          {% elseif interactionResult.api_available %}
+            <div class="ai-alert safe">
+              <h5 class="d-flex align-items-center gap-2">
+                <i class="bi bi-shield-check-fill"></i>
+                Aucun risque majeur détecté
+              </h5>
+              <p>Les produits de votre panier ont été vérifiés via OpenFDA.</p>
+            </div>
+          {% else %}
+            <div class="ai-alert warning">
+              <h5 class="d-flex align-items-center gap-2">
+                <i class="bi bi-wifi-off"></i>
+                Vérification indisponible
+              </h5>
+              <p>Impossible de vérifier les interactions pour le moment (API hors ligne ou produits non trouvés).</p>
+            </div>
+          {% endif %}
+
+        </div>
+      </div>
+    {% endif %}
+
+    {# Panier vide #}
     {% if produits is empty %}
-      {# Panier vide #}
       <div class="empty-cart text-center py-5" id="empty-cart-block">
         <div class="empty-cart-icon mb-4">
           <i class="bi bi-cart-x"></i>
@@ -58,12 +204,14 @@
     {% else %}
       <div class="row g-4" id="cart-content">
 
-        {# Liste des produits #}
+        {# Liste produits #}
         <div class="col-lg-8">
           <div class="card border-0 shadow-sm">
             <div class="card-header bg-white border-0 py-3">
               <div class="d-flex justify-content-between align-items-center">
-                <h5 class="mb-0 fw-bold">Articles (<span id="cart-count-products">{{ produits|length }}</span>)</h5>
+                <h5 class="mb-0 fw-bold">
+                  Articles (<span id="cart-count-products">{{ produits|length }}</span>)
+                </h5>
 
                 <button class="btn btn-outline-danger btn-sm" id="btnViderPanier" type="button">
                   <i class="bi bi-trash me-1"></i>Vider le panier
@@ -80,29 +228,22 @@
 
                   <div class="row g-3 align-items-center">
 
-                    {# Image #}
                     <div class="col-md-2 col-3">
                       <div class="product-image">
                         <img src="{{ produit.imageProduit }}" alt="{{ produit.nomProduit }}">
                       </div>
                     </div>
 
-                    {# Infos produit #}
                     <div class="col-md-4 col-9">
                       <h6 class="mb-1 fw-bold">{{ produit.nomProduit }}</h6>
                       <p class="text-muted small mb-0">{{ produit.categorieProduit }}</p>
-                      <span class="badge bg-success-soft text-success mt-1">
-                        <i class="bi bi-check-circle me-1"></i>En stock
-                      </span>
                     </div>
 
-                    {# Prix unitaire #}
                     <div class="col-md-2 col-6 text-center">
                       <small class="text-muted d-block mb-1">Prix unitaire</small>
                       <span class="fw-bold">{{ produit.prixProduit }} DT</span>
                     </div>
 
-                    {# Quantité #}
                     <div class="col-md-2 col-6">
                       <small class="text-muted d-block mb-2 text-center">Quantité</small>
 
@@ -128,13 +269,13 @@
                       </div>
                     </div>
 
-                    {# Total ligne + supprimer #}
                     <div class="col-md-2 col-12">
                       <div class="text-center text-md-end">
                         <small class="text-muted d-block mb-1">Total</small>
                         <span class="fw-bold fs-5 text-primary line-total" id="line-{{ produit.id_produit }}">
-                          {{ produit.prixProduit * produit.quantite_panier }}
-                        </span> <span class="text-muted">DT</span>
+                          {{ (produit.prixProduit * produit.quantite_panier)|number_format(2, '.', '') }}
+                        </span>
+                        <span class="text-muted">DT</span>
                       </div>
 
                       <div class="text-center text-md-end mt-2">
@@ -153,7 +294,6 @@
             </div>
           </div>
 
-          {# Continuer les achats #}
           <div class="mt-4">
             <a href="{{ path('front_produit_index') }}" class="btn btn-outline-primary">
               <i class="bi bi-arrow-left me-2"></i>Continuer mes achats
@@ -161,7 +301,7 @@
           </div>
         </div>
 
-        {# Résumé de commande #}
+        {# Résumé #}
         <div class="col-lg-4">
           <div class="card border-0 shadow-sm sticky-top" style="top: 100px;">
             <div class="card-header bg-primary text-white py-3">
@@ -171,7 +311,7 @@
             <div class="card-body">
               <div class="summary-line">
                 <span class="text-muted">Sous-total</span>
-                <span class="fw-bold"><span id="cart-subtotal">{{ total }}</span> DT</span>
+                <span class="fw-bold"><span id="cart-subtotal">{{ total|number_format(2, '.', '') }}</span> DT</span>
               </div>
 
               <div class="summary-line">
@@ -183,12 +323,21 @@
 
               <div class="summary-total">
                 <span class="fs-5 fw-bold">Total</span>
-                <span class="fs-4 fw-bold text-primary"><span id="cart-total">{{ total }}</span> <span class="text-muted">DT</span></span>
+                <span class="fs-4 fw-bold text-primary">
+                  <span id="cart-total">{{ total|number_format(2, '.', '') }}</span>
+                  <span class="text-muted">DT</span>
+                </span>
               </div>
 
-              <a href="{{ path('commande_valider') }}" class="btn btn-success w-100 btn-lg mt-4 shadow-sm">
-                <i class="bi bi-check-circle me-2"></i>Valider la commande
-              </a>
+              {% if interactionResult is defined and interactionResult.severity is defined and interactionResult.severity == 'danger' %}
+                <button class="btn btn-success w-100 btn-lg mt-4 shadow-sm btn-validate-blocked" disabled>
+                  <i class="bi bi-lock-fill me-2"></i>Validation bloquée
+                </button>
+              {% else %}
+                <a href="{{ path('commande_valider') }}" class="btn btn-success w-100 btn-lg mt-4 shadow-sm" id="btn-valider">
+                  <i class="bi bi-check-circle me-2"></i>Valider la commande
+                </a>
+              {% endif %}
 
               <div class="mt-4 p-3 bg-light rounded">
                 <h6 class="small fw-bold mb-2">
@@ -203,6 +352,7 @@
                 </h6>
                 <p class="small text-muted mb-0">Sous 2-3 jours ouvrables</p>
               </div>
+
             </div>
           </div>
         </div>
@@ -211,7 +361,6 @@
     {% endif %}
   </div>
 </div>
-
 
 {% endblock %}
 
@@ -223,6 +372,21 @@
 {% block javascripts %}
   {{ parent() }}
   <script src="{{ asset('assets/js/panier.js') }}"></script>
+
+  {# ✅ Accordéon OpenFDA #}
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      document.querySelectorAll('.ai-accordion-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const id = btn.getAttribute('data-acc');
+          const block = document.getElementById(id);
+          if (!block) return;
+          block.classList.toggle('show');
+          btn.textContent = block.classList.contains('show') ? 'Masquer détails' : 'Voir détails';
+        });
+      });
+    });
+  </script>
 
   {# ✅ Twig -> JS (flash messages) #}
   <script>

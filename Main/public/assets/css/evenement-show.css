@@ -16,3 +16,134 @@
 .event-join-card .form-control{
   border-radius: 12px;
 }
+/* ===== Recommandations PRO ===== */
+.rec-title{
+  color:#003399;
+  letter-spacing:-.3px;
+}
+.rec-pill{
+  background: rgba(0,151,178,.12);
+  border:1px solid rgba(0,151,178,.25);
+  color:#007b8f;
+  padding:.55rem .9rem;
+}
+
+.rec-card{
+  border-radius:18px;
+  overflow:hidden;
+  transition: transform .25s ease, box-shadow .25s ease;
+}
+.rec-card:hover{
+  transform: translateY(-4px);
+  box-shadow: 0 16px 40px rgba(23, 174, 188, 0.12);
+}
+
+.rec-cover{
+  position:relative;
+  height:170px;
+  background-size:cover;
+  background-position:center;
+}
+.rec-overlay{
+  position:absolute; inset:0;
+  background: linear-gradient(180deg, rgba(0,0,0,.15), rgba(0,0,0,.55));
+}
+.rec-top{
+  position:absolute; top:12px; left:12px; right:12px;
+  z-index:2;
+}
+.rec-bottom{
+  position:absolute; bottom:12px; left:12px; right:12px;
+  z-index:2;
+}
+.rec-badge{
+  background: rgba(255,255,255,.18);
+  border:1px solid rgba(255,255,255,.25);
+  color:#fff;
+}
+.rec-score{
+  background:#ffffff;
+  border:1px solid rgba(16,24,40,.10);
+  color:#0f172a;
+  font-weight:700;
+}
+.rec-meta{
+  color:#fff;
+  font-size:.88rem;
+  opacity:.95;
+}
+.rec-reason{
+  background:#f2f7ff;
+  border:1px solid #e6f1ff;
+  color:#003399;
+  font-weight:600;
+}
+.rec-btn{
+  border-radius:12px;
+  padding:.6rem .85rem;
+}
+/* ===== SMART RECOMMENDATION ENGINE - TEAL VERSION ===== */
+
+.rec-section{
+  background: linear-gradient(145deg,#f4fcfb,#ffffff);
+  border:1px solid #d7f2ee;
+}
+
+.rec-title{
+  color:#0097B2; /* teal */
+}
+
+.rec-badge-ai{
+  background:#0097B2;
+  color:white;
+  padding:.5rem 1rem;
+  border-radius:30px;
+  font-weight:600;
+  font-size:.85rem;
+}
+
+.rec-card-pro{
+  background:white;
+  border-radius:20px;
+  box-shadow:0 10px 25px rgba(0,151,178,.08);
+  transition:.3s;
+  overflow:hidden;
+  border:1px solid #e6f7f5;
+}
+
+.rec-card-pro:hover{
+  transform:translateY(-6px);
+  box-shadow:0 20px 45px rgba(0,151,178,.18);
+}
+
+.rec-header-pro{
+  background:linear-gradient(135deg,#0097B2,#00BFA6);
+  color:white;
+  padding:1rem;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+}
+
+.rec-score-circle{
+  width:45px;
+  height:45px;
+  border-radius:50%;
+  background:white;
+  color:#0097B2;
+  font-weight:700;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:1rem;
+}
+
+.rec-reasons-pro span{
+  background:#e8f9f7;
+  color:#0097B2;
+  padding:.3rem .6rem;
+  border-radius:20px;
+  font-size:.7rem;
+  margin:.2rem;
+  display:inline-block;
+}

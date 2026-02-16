@@ -41,23 +41,38 @@ class UserRepository extends ServiceEntityRepository
     //        ;
     //    }
     // src/Repository/UserRepository.php
-public function findPatientsWithFilters(array $filters = []): array
-{
-    $qb = $this->createQueryBuilder('u')
-        ->andWhere('u.roleSysteme = :role')
-        ->setParameter('role', 'PATIENT');
-
-    if (!empty($filters['q'])) {
-        $qb->andWhere('u.cin LIKE :q OR u.nom LIKE :q OR u.prenom LIKE :q OR u.emailUser LIKE :q')
-           ->setParameter('q', '%'.$filters['q'].'%');
+    public function findPatientsWithFilters(array $filters = []): array
+    {
+        $qb = $this->createQueryBuilder('u')
+            ->andWhere('u.roleSysteme = :role')
+            ->setParameter('role', 'PATIENT');
+    
+        if (!empty($filters['q'])) {
+            $qb->andWhere('u.cin LIKE :q OR u.nom LIKE :q OR u.prenom LIKE :q OR u.emailUser LIKE :q')
+               ->setParameter('q', '%'.$filters['q'].'%');
+        }
+    
+        if (isset($filters['verified'])) {
+            $qb->andWhere('u.isVerified = :v')
+               ->setParameter('v', $filters['verified']);
+        }
+    
+        return $qb->orderBy('u.id', 'DESC')->getQuery()->getResult();
     }
-
-    if (isset($filters['verified'])) {
-        $qb->andWhere('u.isVerified = :v')
-           ->setParameter('v', $filters['verified']);
+    
+    /**
+     * @return User[] Returns an array of User objects who are doctors (STAFF, RESP_PATIENTS)
+     */
+    public function findDoctorsRespPatients(): array
+    {
+        return $this->createQueryBuilder('u')
+            ->andWhere('u.roleSysteme = :role')
+            ->andWhere('u.typeStaff = :type')
+            ->setParameter('role', 'STAFF')
+            ->setParameter('type', 'RESP_PATIENTS')
+            ->orderBy('u.nom', 'ASC')
+            ->getQuery()
+            ->getResult();
     }
-
-    return $qb->orderBy('u.id', 'DESC')->getQuery()->getResult();
-}
 
 }

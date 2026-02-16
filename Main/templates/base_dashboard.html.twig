@@ -83,6 +83,16 @@
         <span>Stat Blog</span>
     </a>
 </li>
+
+<li class="nav-item {{ app.request.attributes.get('_route') == 'admin_posts_pending' ? 'active' : '' }}">
+    <a class="nav-link" href="{{ path('admin_posts_pending') }}">
+        <i class="fas fa-fw fa-check-circle"></i>
+        <span>Posts en attente</span>
+    </a>
+</li>
+
+
+
 {% endif %}
 
 
@@ -100,45 +110,27 @@
         </a>
     </li>
 {% endif %}
-
             
 
 
 {% if app.user is defined and app.user.getRoleSysteme() == 'STAFF' and app.user.getTypeStaff() == 'RESP_USERS' %}
-
-<!-- Nav Item - Utilities Collapse Menu -->
-            <li class="nav-item">
-                <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapsePatients"
-                    aria-expanded="true" aria-controls="collapsePatients">
-                     <i class="fas fa-fw fa-user-injured"></i>
-                    <span>Patients</span>
-                </a>
-                <div id="collapsePatients" class="collapse" aria-labelledby="headingPatients"
-                    data-parent="#accordionSidebar">
-                    <div class="bg-white py-2 collapse-inner rounded">
-                        <h6 class="collapse-header">Custom Utilities:</h6>
-                        <a class="collapse-item
-               {% if app.request.attributes.get('_route') == 'staff_patients_index' %}active{% endif %}"
-               href="{{ path('staff_patients_index') }}">
-                📋 Liste des patients
-            </a>
-
-            <a class="collapse-item
-               {% if app.request.attributes.get('_route') == 'staff_patients_stats' %}active{% endif %}"
-               href="{{ path('staff_patients_stats') }}">
-                📊 Statistiques
-            </a>
-
-            <a class="collapse-item
-               {% if app.request.attributes.get('_route') == 'staff_patients_report_pdf' %}active{% endif %}"
-               href="{{ path('staff_patients_report_pdf') }}">
-                📄 Rapport PDF
-            </a>
-                    </div>
-                </div>
-            </li>
+    <li class="nav-item {{ app.request.attributes.get('route') starts with 'staff_patients' ? 'active' : '' }}">
+        <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapsePatients"
+            aria-expanded="true" aria-controls="collapsePatients">
+             <i class="fas fa-fw fa-user-injured"></i>
+            <span>Patients (Radar)</span>
+        </a>
+        <div id="collapsePatients" class="collapse" aria-labelledby="headingPatients" data-parent="#accordionSidebar">
+            <div class="bg-white py-2 collapse-inner rounded">
+                <h6 class="collapse-header">Suivi & Qualité :</h6>
+                <a class="collapse-item {{ app.request.attributes.get('_route') == 'staff_patients_radar' ? 'active' : '' }}" href="{{ path('staff_patients_radar') }}">🧭 Patient Radar</a>
+                <a class="collapse-item {{ app.request.attributes.get('_route') == 'staff_patients_list' ? 'active' : '' }}" href="{{ path('staff_patients_list') }}">📋 Liste des patients</a>
+                <a class="collapse-item {{ app.request.attributes.get('_route') == 'staff_patients_stats' ? 'active' : '' }}" href="{{ path('staff_patients_stats') }}">📊 Statistiques</a>
+                <a class="collapse-item" href="{{ path('staff_patients_export_csv') }}">⬇️ Export CSV</a>
+            </div>
+        </div>
+    </li>
 {% endif %}
-
 {% if app.user is defined and app.user.getRoleSysteme() == 'STAFF' and app.user.getTypeStaff() == 'RESP_PRODUCTS' %}
 <li class="nav-item">
     <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseProducts"

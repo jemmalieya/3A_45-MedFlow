@@ -7,37 +7,39 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
 class GeminiService
 {
     public function __construct(
-        private HttpClientInterface $http,
-        private string $apiKey,
-        private string $model
+        private HttpClientInterface $httpClient,
+        private string $geminiApiKey,
+        private string $geminiModel = 'gemini-2.5-flash'
     ) {}
 
     public function generate(string $prompt): string
     {
         $url = sprintf(
-            'https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent',
-            $this->model
+            'https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent?key=%s',
+            $this->geminiModel,
+            $this->geminiApiKey
         );
 
-        $response = $this->http->request('POST', $url, [
-            'headers' => [
-                'x-goog-api-key' => $this->apiKey, // ✅ comme doc
-                'Content-Type' => 'application/json',
-            ],
-            'json' => [
-                'contents' => [
-                    [
-                        'role' => 'user',
-                        'parts' => [
-                            ['text' => $prompt],
-                        ],
-                    ],
-                ],
-            ],
+        $payload = [
+            'contents' => [
+                [
+                    'parts' => [
+                        ['text' => $prompt]
+                    ]
+                ]
+            ]
+        ];
+
+        $response = $this->httpClient->request('POST', $url, [
+            'headers' => ['Content-Type' => 'application/json'],
+            'json' => $payload,
         ]);
 
         $data = $response->toArray(false);
 
-        return (string)($data['candidates'][0]['content']['parts'][0]['text'] ?? '');
+        // 🔥 PARSING CORRECT
+        $text = $data['candidates'][0]['content']['parts'][0]['text'] ?? '';
+
+        return trim($text);
     }
 }

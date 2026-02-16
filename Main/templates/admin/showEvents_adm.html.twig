@@ -11,6 +11,29 @@
 {% block body %}
 <div class="container-fluid evdem">
 
+{% if riskData.riskScore >= 60 %}
+    <div class="alert alert-danger mt-3">
+        ⚠️ <strong>Risque élevé d’échec</strong><br>
+        Probabilité : {{ riskData.riskScore }}%<br>
+        Causes :
+        <ul>
+            {% for r in riskData.reasons %}
+                <li>{{ r }}</li>
+            {% endfor %}
+        </ul>
+        💡 Suggestion : prolonger les inscriptions ou promouvoir davantage.
+    </div>
+{% elseif riskData.riskScore >= 30 %}
+    <div class="alert alert-warning mt-3">
+        ⚠️ Risque modéré ({{ riskData.riskScore }}%)
+    </div>
+{% else %}
+    <div class="alert alert-success mt-3">
+        ✅ Événement à faible risque ({{ riskData.riskScore }}%)
+    </div>
+{% endif %}
+
+
   {# ===== Top header ===== #}
   <div class="evdem-topbar mb-4">
     <div class="evdem-head">

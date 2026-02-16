@@ -1,0 +1,20 @@
+{% if app.user %}
+  {% set prenom = app.user.prenom ?? '' %}
+  {% set nom = app.user.nom ?? '' %}
+  {% set initials = (prenom|slice(0,1) ~ nom|slice(0,1))|upper %}
+  {% set pic = app.user.profilePicture ?? null %}
+
+  <span data-avatar-slot class="d-inline-flex align-items-center">
+    {% if pic %}
+      <img src="{{ asset('uploads/profile/' ~ pic) }}"
+           alt="Photo de profil"
+           class="rounded-circle"
+           style="width:38px;height:38px;object-fit:cover;border:2px solid rgba(255,255,255,.35);">
+    {% else %}
+      <span class="rounded-circle d-flex align-items-center justify-content-center"
+            style="width:38px;height:38px;background:#1CA3B4;color:white;font-weight:700;border:2px solid rgba(255,255,255,.35);">
+        {{ initials ?: 'U' }}
+      </span>
+    {% endif %}
+  </span>
+{% endif %}

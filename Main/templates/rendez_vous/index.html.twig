@@ -8,6 +8,7 @@
       <div class="container section-title" data-aos="fade-up">
         <h2>Trouver un médecin</h2>
         <p>Trouvez le médecin qui correspond à vos besoins</p>
+
       </div><!-- End Section Title -->
 
       <div class="container" data-aos="fade-up" data-aos-delay="100">
@@ -16,29 +17,29 @@
           <div class="col-lg-12">
             <div class="search-container">
               <form class="search-form" action="forms1/doctor-search.php" method="get">
-                <div class="row g-3">
-                  <div class="col-md-4">
-                    <input type="text" class="form-control" name="doctor_name" placeholder="Nom du médecin ou mot-clé">
-                  </div>
-                  <div class="col-md-4">
-                    <select class="form-select" name="specialty" id="specialty-select">
-                      <option value="">Sélectionner une spécialité</option>
-                      <option value="cardiology">Cardiologie</option>
-                      <option value="neurology">Neurologie</option>
-                      <option value="orthopedics">Orthopédie</option>
-                      <option value="pediatrics">Pédiatrie</option>
-                      <option value="dermatology">Dermatologie</option>
-                      <option value="oncology">Oncologie</option>
-                      <option value="surgery">Chirurgie</option>
-                      <option value="emergency">Médecine d'urgence</option>
-                    </select>
-                  </div>
-                  <div class="col-md-4">
-                    <button type="submit" class="btn btn-primary w-100">
-                      <i class="bi bi-search me-2"></i>Rechercher un médecin
-                    </button>
-                  </div>
+                <div class="d-flex align-items-center gap-2" style="gap: 8px;">
+                  <input type="text" class="form-control form-control-sm" name="doctor_name" placeholder="Nom du médecin ou mot-clé" style="flex:1;">
+                  <select class="form-select form-select-sm" name="specialty" id="specialty-select" style="flex:1;">
+                    <option value="">Sélectionner une spécialité</option>
+                    <option value="cardiology">Cardiologie</option>
+                    <option value="neurology">Neurologie</option>
+                    <option value="orthopedics">Orthopédie</option>
+                    <option value="pediatrics">Pédiatrie</option>
+                    <option value="dermatology">Dermatologie</option>
+                    <option value="oncology">Oncologie</option>
+                    <option value="surgery">Chirurgie</option>
+                    <option value="emergency">Médecine d'urgence</option>
+                  </select>
+                  <button type="submit" class="btn btn-primary btn-sm" style="flex:1;height:100%;">
+                    <i class="bi bi-search me-2"></i>Rechercher
+                  </button>
                 </div>
+              </form>
+              <div class="d-flex align-items-center gap-2 mt-2" style="gap: 8px;">
+                <button type="button" class="btn btn-primary btn-sm w-100" onclick="window.location.href='{{ path('app_ia_assistante') }}'">
+                  <i class="bi bi-robot me-2"></i>Assistante IA
+                </button>
+              </div>
               </form>
             </div>
           </div>
@@ -51,7 +52,7 @@
           <div class="col-lg-4 col-md-6 mb-4">
             <div class="doctor-card">
               <div class="doctor-image">
-                <img src="{{ staff.profilePicture ? asset(staff.profilePicture) : 'assets/img/health/staff-1.webp' }}" alt="Dr. {{ staff.nom }} {{ staff.prenom }}" class="img-fluid">
+                <img src="{{ staff.profilePicture ? asset(staff.profilePicture) : 'assets/img/health/staff-3.webp' }}" alt="Dr. {{ staff.nom }} {{ staff.prenom }}" class="img-fluid">
                 <div class="availability-badge online">Disponible</div>
               </div>
               <div class="doctor-info">

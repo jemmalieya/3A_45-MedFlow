@@ -1,0 +1,140 @@
+{% extends 'base_admin.html.twig' %}
+
+{% block title %}Statistiques Patients{% endblock %}
+
+{% block body %}
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-4">
+        <div>
+            <h1 class="h3 mb-1">Statistiques Patients</h1>
+            <div class="text-muted">Vérification, qualité des données & priorités</div>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{{ path('app_ad') }}" class="btn btn-outline-secondary btn-sm">← Dashboard</a>
+            <a href="{{ path('admin_patients_report_pdf') }}" class="btn btn-primary btn-sm">Exporter PDF</a>
+        </div>
+    </div>
+
+    <div class="row g-3 mb-3">
+        <div class="col-12 col-md-2">
+            <div class="card border-0 shadow-sm"><div class="card-body py-3 text-center">
+                <div class="text-muted small">Total</div>
+                <div class="h4 mb-0">{{ stats.total ?? 0 }}</div>
+            </div></div>
+        </div>
+        <div class="col-12 col-md-2">
+            <div class="card border-0 shadow-sm"><div class="card-body py-3 text-center">
+                <div class="text-muted small">Vérifiés</div>
+                <div class="h4 mb-0 text-success">{{ stats.verified ?? 0 }}</div>
+            </div></div>
+        </div>
+        <div class="col-12 col-md-2">
+            <div class="card border-0 shadow-sm"><div class="card-body py-3 text-center">
+                <div class="text-muted small">Non vérifiés</div>
+                <div class="h4 mb-0 text-danger">{{ stats.unverified ?? 0 }}</div>
+            </div></div>
+        </div>
+        <div class="col-12 col-md-2">
+            <div class="card border-0 shadow-sm"><div class="card-body py-3 text-center">
+                <div class="text-muted small">Téléphones invalides</div>
+                <div class="h4 mb-0 text-warning">{{ stats.phone_invalid ?? 0 }}</div>
+            </div></div>
+        </div>
+        <div class="col-12 col-md-2">
+            <div class="card border-0 shadow-sm"><div class="card-body py-3 text-center">
+                <div class="text-muted small">Bloqués</div>
+                <div class="h4 mb-0 text-dark">{{ stats.blocked ?? 0 }}</div>
+            </div></div>
+        </div>
+        <div class="col-12 col-md-2">
+            <div class="card border-0 shadow-sm"><div class="card-body py-3 text-center">
+                <div class="text-muted small">Liens expirés</div>
+                <div class="h4 mb-0 text-secondary">{{ stats.expired_links ?? 0 }}</div>
+            </div></div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-lg-6">
+            <div class="card shadow-sm border-0"><div class="card-body">
+                <h5 class="mb-3">Répartition des priorités</h5>
+                <canvas id="prioritiesDonut" height="140"></canvas>
+            </div></div>
+        </div>
+        <div class="col-lg-6">
+            <div class="card shadow-sm border-0"><div class="card-body">
+                <h5 class="mb-3">Vérification comptes</h5>
+                <canvas id="verificationPie" height="140"></canvas>
+            </div></div>
+        </div>
+        <div class="col-lg-12">
+            <div class="card shadow-sm border-0"><div class="card-body">
+                <h5 class="mb-3">Qualité des données</h5>
+                <canvas id="dataQualityBar" height="120"></canvas>
+            </div></div>
+        </div>
+    </div>
+
+    {% if tips is defined and tips %}
+    <div class="card border-0 shadow-sm mt-3">
+        <div class="card-body">
+            <h5 class="mb-2">Conseils</h5>
+            <ul class="mb-0">
+                {% for tip in tips %}<li>{{ tip }}</li>{% endfor %}
+            </ul>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block javascripts %}
+{{ parent() }}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    const priorities = {{ chartPriorities|json_encode|raw }}; // [CRITIQUE, HAUTE, MOYENNE, OK]
+    const verification = {{ chartVerification|json_encode|raw }}; // [verified, unverified]
+    const dataQuality = {{ chartDataQuality|json_encode|raw }}; // [phone_invalid, blocked, expired_links]
+
+    // Priorities Donut
+    new Chart(document.getElementById('prioritiesDonut').getContext('2d'), {
+        type: 'doughnut',
+        data: {
+            labels: ['Critique', 'Haute', 'Moyenne', 'OK'],
+            datasets: [{
+                data: priorities,
+                backgroundColor: ['#dc3545', '#ffc107', '#0dcaf0', '#198754']
+            }]
+        },
+        options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
+    });
+
+    // Verification Pie
+    new Chart(document.getElementById('verificationPie').getContext('2d'), {
+        type: 'pie',
+        data: {
+            labels: ['Vérifiés', 'Non vérifiés'],
+            datasets: [{ data: verification, backgroundColor: ['#198754', '#dc3545'] }]
+        },
+        options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
+    });
+
+    // Data Quality Bar
+    new Chart(document.getElementById('dataQualityBar').getContext('2d'), {
+        type: 'bar',
+        data: {
+            labels: ['Téléphones invalides', 'Bloqués', 'Liens expirés'],
+            datasets: [{
+                label: 'Comptes',
+                data: dataQuality,
+                backgroundColor: ['#ffc107', '#343a40', '#6c757d']
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: { legend: { display: false } },
+            scales: { y: { beginAtZero: true } }
+        }
+    });
+</script>
+{% endblock %}

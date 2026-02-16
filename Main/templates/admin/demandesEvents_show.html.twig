@@ -9,7 +9,6 @@
   <i class="fas fa-file-pdf mr-1"></i> Fiche PDF
 </a>
 
-
   <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
       <h1 class="h3 mb-1">Demandes — {{ evenement.titreEvent }}</h1>
@@ -30,6 +29,52 @@
   {% for m in app.flashes('danger') %}
     <div class="alert alert-danger">{{ m }}</div>
   {% endfor %}
+
+  {# ==========================
+     ✅ IA RISK (AFFICHAGE)
+     ========================== #}
+  {% if riskData is defined %}
+    {% set score = riskData.riskScore|default(0) %}
+    {% set level = 'success' %}
+    {% if score >= 70 %}
+      {% set level = 'danger' %}
+    {% elseif score >= 40 %}
+      {% set level = 'warning' %}
+    {% endif %}
+
+    <div class="card shadow-sm border-0 mb-3">
+      <div class="card-body d-flex align-items-center justify-content-between flex-wrap gap-3">
+        <div>
+          <h5 class="mb-1">📊 Risque d’échec</h5>
+          <div class="text-muted small">
+            Basé sur inscriptions, proximité date, popularité type/ville.
+          </div>
+
+          {% if riskData.reasons is not empty %}
+            <div class="mt-2">
+              {% for r in riskData.reasons %}
+                <span class="badge bg-warning text-dark me-1 mb-1">{{ r }}</span>
+              {% endfor %}
+            </div>
+          {% else %}
+            <div class="mt-2 text-muted small">Aucune alerte détectée ✅</div>
+          {% endif %}
+        </div>
+
+        <div class="text-end">
+          <div class="display-6 fw-bold text-{{ level }}">{{ score }}%</div>
+          <div class="small text-muted">
+            {% if score >= 70 %}Risque élevé{% elseif score >= 40 %}Risque moyen{% else %}Risque faible{% endif %}
+          </div>
+        </div>
+      </div>
+
+      <div class="progress" style="height: 10px;">
+        <div class="progress-bar bg-{{ level }}" role="progressbar"
+             style="width: {{ score }}%;" aria-valuenow="{{ score }}" aria-valuemin="0" aria-valuemax="100"></div>
+      </div>
+    </div>
+  {% endif %}
 
   <div class="card shadow-sm border-0">
     <div class="card-body">

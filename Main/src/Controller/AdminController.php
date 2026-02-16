@@ -1,6 +1,8 @@
 <?php
 
 namespace App\Controller;
+use App\Repository\EvenementRepository;
+use App\Repository\RessourceRepository;
 use App\Repository\UserRepository;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;

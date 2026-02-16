@@ -1,0 +1,278 @@
+{% extends 'base_admin.html.twig' %}
+{% block title %}Gestion Patients{% endblock %}
+
+{% block body %}
+<div class="container-fluid py-4">
+
+  {# ===== HEADER ===== #}
+  <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-4">
+    <div>
+      <h1 class="h3 mb-1">Gestion Patients</h1>
+      <div class="text-muted">Triage intelligent, alertes & suivi qualité</div>
+    </div>
+    <div class="d-flex gap-2">
+      <a href="{{ path('app_ad') }}" class="btn btn-outline-secondary btn-sm">← Dashboard</a>
+      <a href="{{ path('admin_patients_index') }}" class="btn btn-light border btn-sm">Réinitialiser</a>
+    </div>
+  </div>
+
+  {# ===== FLASHES ===== #}
+  {% for m in app.flashes('success') %}<div class="alert alert-success py-2">{{ m }}</div>{% endfor %}
+  {% for m in app.flashes('info') %}<div class="alert alert-info py-2">{{ m }}</div>{% endfor %}
+  {% for m in app.flashes('danger') %}<div class="alert alert-danger py-2">{{ m }}</div>{% endfor %}
+
+  {# ===== TOP STATS (compact) ===== #}
+  <div class="row g-3 mb-3">
+    <div class="col-12 col-md-3">
+      <div class="card border-0 shadow-sm">
+        <div class="card-body py-3">
+          <div class="d-flex justify-content-between align-items-center">
+            <div>
+              <div class="text-muted small">Patients</div>
+              <div class="h4 mb-0">{{ stats.total ?? 0 }}</div>
+            </div>
+            <span class="badge bg-light text-dark border">Total</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-12 col-md-3">
+      <div class="card border-0 shadow-sm">
+        <div class="card-body py-3">
+          <div class="d-flex justify-content-between align-items-center">
+            <div>
+              <div class="text-muted small">Vérifiés</div>
+              <div class="h4 mb-0">{{ stats.verified ?? 0 }}</div>
+            </div>
+            <span class="badge bg-success">OK</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-12 col-md-3">
+      <div class="card border-0 shadow-sm">
+        <div class="card-body py-3">
+          <div class="d-flex justify-content-between align-items-center">
+            <div>
+              <div class="text-muted small">Non vérifiés</div>
+              <div class="h4 mb-0">{{ stats.unverified ?? 0 }}</div>
+            </div>
+            <span class="badge bg-danger">À vérifier</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-12 col-md-3">
+      <div class="card border-0 shadow-sm">
+        <div class="card-body py-3">
+          <div class="d-flex justify-content-between align-items-center">
+            <div>
+              <div class="text-muted small">Critiques</div>
+              <div class="h4 mb-0">{{ stats.priorities.CRITIQUE ?? 0 }}</div>
+            </div>
+            <span class="badge bg-warning text-dark">Priorité</span>
+          </div>
+          {% if (stats.expired_links ?? 0) > 0 %}
+            <div class="small text-muted mt-1">{{ stats.expired_links }} lien(s) expiré(s)</div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {# ===== FILTER BAR (compact, 1 row) ===== #}
+  <div class="card border-0 shadow-sm mb-3">
+    <div class="card-body">
+      <form method="get" class="row g-2 align-items-center">
+
+        <div class="col-12 col-lg-4">
+          <div class="input-group">
+            <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
+            <input type="text" name="q" value="{{ q }}" class="form-control"
+                   placeholder="Rechercher CIN, nom, prénom, email...">
+          </div>
+        </div>
+
+        <div class="col-6 col-lg-3">
+          <select name="alert" class="form-select">
+            <option value="" {{ alert == '' ? 'selected' : '' }}>Triage rapide : Tout</option>
+            <option value="unverified" {{ alert == 'unverified' ? 'selected' : '' }}>À vérifier : Non vérifiés</option>
+            <option value="unverified_expired" {{ alert == 'unverified_expired' ? 'selected' : '' }}>Urgent : Lien expiré</option>
+            <option value="phone_invalid" {{ alert == 'phone_invalid' ? 'selected' : '' }}>Qualité : Téléphone invalide</option>
+            <option value="blocked" {{ alert == 'blocked' ? 'selected' : '' }}>Sécurité : Comptes bloqués</option>
+          </select>
+        </div>
+
+        <div class="col-6 col-lg-2">
+          <select name="triage" class="form-select">
+            <option value="" {{ triage == '' ? 'selected' : '' }}>Priorité : Toutes</option>
+            <option value="CRITIQUE" {{ triage == 'CRITIQUE' ? 'selected' : '' }}>Critique</option>
+            <option value="HAUTE" {{ triage == 'HAUTE' ? 'selected' : '' }}>Haute</option>
+            <option value="MOYENNE" {{ triage == 'MOYENNE' ? 'selected' : '' }}>Moyenne</option>
+            <option value="OK" {{ triage == 'OK' ? 'selected' : '' }}>OK</option>
+          </select>
+        </div>
+
+        <div class="col-6 col-lg-2">
+          <select name="sort" class="form-select">
+            <option value="recent" {{ sort == 'recent' ? 'selected' : '' }}>Tri : récents</option>
+            <option value="name" {{ sort == 'name' ? 'selected' : '' }}>Tri : nom (A-Z)</option>
+            <option value="cin" {{ sort == 'cin' ? 'selected' : '' }}>Tri : CIN</option>
+          </select>
+        </div>
+
+        <div class="col-6 col-lg-1 d-grid">
+          <button class="btn btn-primary">Go</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  {# ===== TABLE (clean) ===== #}
+  <div class="card border-0 shadow-sm">
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0">
+        <thead class="table-light">
+          <tr>
+            <th style="width:110px;">CIN</th>
+            <th>Patient</th>
+            <th style="width:170px;">Téléphone</th>
+            <th>Email</th>
+            <th style="width:120px;">Priorité</th>
+            <th style="width:140px;">Statut</th>
+            <th class="text-end" style="width:120px;">Action</th>
+          </tr>
+        </thead>
+
+        <tbody>
+        {% for row in rows %}
+          {% set p = row.p %}
+          {% set t = row.triage %}
+
+          <tr>
+            <td class="text-muted">{{ p.cin }}</td>
+            <td>
+              <div class="fw-semibold">{{ p.nom }} {{ p.prenom }}</div>
+              <div class="text-muted small">
+                {% if t.alerts is empty %}
+                  Aucun signal
+                {% else %}
+                  {# icones compactes #}
+                  {% for a in t.alerts %}
+                    {% if a.key == 'blocked' %} <span class="me-1">🔒</span> {% endif %}
+                    {% if a.key == 'phone_invalid' %} <span class="me-1">📵</span> {% endif %}
+                    {% if a.key == 'unverified_expired' %} <span class="me-1">⏳</span> {% endif %}
+                    {% if a.key == 'unverified' %} <span class="me-1">✉️</span> {% endif %}
+                  {% endfor %}
+                  <span class="ms-1">alertes</span>
+                {% endif %}
+              </div>
+            </td>
+            <td>
+              {% if p.telephoneUser %}
+                <span class="{{ t.phoneOk ? '' : 'text-danger fw-semibold' }}">{{ p.telephoneUser }}</span>
+              {% else %}
+                <span class="text-danger fw-semibold">—</span>
+              {% endif %}
+            </td>
+            <td><a href="mailto:{{ p.emailUser }}">{{ p.emailUser }}</a></td>
+            <td>
+              {% if t.priority.level == 'CRITIQUE' %} <span class="badge bg-danger">Critique</span>
+              {% elseif t.priority.level == 'HAUTE' %} <span class="badge bg-warning text-dark">Haute</span>
+              {% elseif t.priority.level == 'MOYENNE' %} <span class="badge bg-info text-dark">Moyenne</span>
+              {% else %} <span class="badge bg-success">OK</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if p.isVerified %} <span class="badge bg-success">Vérifié</span>
+              {% else %} <span class="badge bg-danger">Non vérifié</span> {% endif %}
+              {% if t.blocked %} <span class="badge bg-dark ms-1">Bloqué</span> {% endif %}
+            </td>
+            <td class="text-end">
+              <a class="btn btn-sm btn-outline-primary" href="{{ path('admin_patients_show', {id: p.id}) }}">Voir</a>
+              {% if t.blocked %}
+                <form method="post" action="{{ path('admin_patient_unblock', {id: p.id}) }}" class="d-inline">
+                  <input type="hidden" name="_token" value="{{ csrf_token('patient_unblock_' ~ p.id) }}">
+                  <button class="btn btn-sm btn-outline-success ms-1" onclick="return confirm('Débloquer ce patient ?');">Débloquer</button>
+                </form>
+              {% else %}
+                <form method="post" action="{{ path('admin_patient_block', {id: p.id}) }}" class="d-inline">
+                  <input type="hidden" name="_token" value="{{ csrf_token('patient_block_' ~ p.id) }}">
+                  <input type="hidden" name="reason" value="">
+                  <button type="button" class="btn btn-sm btn-outline-danger ms-1"
+                          data-name="{{ p.nom }} {{ p.prenom }}" data-cin="{{ p.cin }}"
+                          onclick="openBanModal(this)">Bloquer</button>
+                </form>
+              {% endif %}
+            </td>
+          </tr>
+
+        {% else %}
+          <tr>
+            <td colspan="7" class="text-center py-5 text-muted">
+              Aucun patient ne correspond aux filtres.
+              <div class="mt-2">
+                <a class="btn btn-sm btn-outline-secondary" href="{{ path('admin_patients_index') }}">Réinitialiser</a>
+              </div>
+            </td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block javascripts %}
+{{ parent() }}
+
+<!-- Ban Reason Modal -->
+<div class="modal fade" id="banReasonModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <form class="modal-content" onsubmit="return submitBanModal(event)">
+      <div class="modal-header">
+        <h5 class="modal-title">Bloquer le patient</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-2 text-muted small" id="banPatientInfo"></div>
+        <label class="form-label">Raison du blocage</label>
+        <textarea class="form-control" id="banReasonInput" rows="3" required
+                  placeholder="Ex: Tentatives de connexion suspectes, spam, faux compte..."></textarea>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-light border" data-bs-dismiss="modal">Annuler</button>
+        <button type="submit" class="btn btn-danger">Bloquer</button>
+      </div>
+    </form>
+  </div>
+  </div>
+
+<script>
+  let banModal, banTargetForm;
+  function openBanModal(btn) {
+    banTargetForm = btn.closest('form');
+    const name = btn.dataset.name || '';
+    const cin = btn.dataset.cin || '';
+    document.getElementById('banPatientInfo').textContent = `${name}${cin ? ' — CIN ' + cin : ''}`;
+    document.getElementById('banReasonInput').value = '';
+    if (!banModal) {
+      banModal = new bootstrap.Modal(document.getElementById('banReasonModal'));
+    }
+    banModal.show();
+  }
+
+  function submitBanModal(e) {
+    e.preventDefault();
+    if (!banTargetForm) return false;
+    const reason = document.getElementById('banReasonInput').value.trim();
+    if (!reason) return false;
+    const hidden = banTargetForm.querySelector('input[name="reason"]');
+    if (hidden) hidden.value = reason;
+    banModal.hide();
+    banTargetForm.submit();
+    return false;
+  }
+</script>
+{% endblock %}

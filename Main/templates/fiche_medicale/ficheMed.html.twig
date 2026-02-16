@@ -381,7 +381,14 @@
                                                             <button class="btn btn-sm btn-info js-toggle-detail" type="button" data-appointment-id="{{ appointment.id }}" aria-expanded="false" title="View Details">
                                                                 <i class="fas fa-chevron-down"></i>
                                                             </button>
-                                                            {% if appointment.statut == 'Confirmé' %}
+                                                            {% if appointment.statut == 'Demande' %}
+                                                                <form method="post" action="{{ path('confirm_appointment', {'id': appointment.id}) }}?idStaff={{ appointment.staff.id }}" style="display:inline;">
+                                                                    <input type="hidden" name="_token" value="{{ csrf_token('confirm_appointment' ~ appointment.id) }}">
+                                                                    <button type="submit" class="btn btn-sm btn-success" title="Confirm this appointment">
+                                                                        <i class="fas fa-check"></i> Confirm
+                                                                    </button>
+                                                                </form>
+                                                            {% elseif appointment.statut == 'Terminée' %}
                                                                 <button class="btn btn-sm btn-secondary" disabled title="This consultation is completed">
                                                                     <i class="fas fa-check-circle"></i> Completed
                                                                 </button>

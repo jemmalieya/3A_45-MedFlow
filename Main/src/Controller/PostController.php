@@ -13,28 +13,38 @@ use Dompdf\Dompdf;
 use Dompdf\Options;
 use App\Repository\PostRepository;
 use App\Service\GeminiService;
+use App\Repository\ReactionRepository;
+use App\Entity\Reaction;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Psr\Log\LoggerInterface;
+use App\Service\BadWordsService;
+use App\Entity\User;
+
 
 
 #[Route('/posts')]
 class PostController extends AbstractController
 {
     #[Route('', name: 'post_index', methods: ['GET', 'POST'])]
-    public function index(PostRepository $repo, Request $request): Response
+    public function index(PostRepository $repo, Request $request, EntityManagerInterface $em): Response
     {
         $q = trim((string) $request->query->get('q', ''));
         $sort = (string) $request->query->get('sort', 'date_desc');
-        // ✅ si q existe => recherche, sinon => liste normale
+
         if ($q !== '') {
             $posts = $repo->searchWithSort($q, $sort);
         } else {
-            $posts = $repo->findAllSorted($sort); 
-            // ⚠️ mets ici le VRAI nom de ta propriété (dateCreation ou date_creation)
+            $posts = $repo->findAllSorted($sort);
         }
+
+        // ✅ Afficher uniquement les posts approuvés (public)
+        $posts = array_values(array_filter($posts, fn(Post $p) => $p->isApproved()));
+
+        // ✅ recent : uniquement approuvés
         $recentPosts = $repo->findRecentWithUsers(5);
-        
-        // tags (simple) => depuis hashtags
+        $recentPosts = array_values(array_filter($recentPosts, fn(Post $p) => $p->isApproved()));
+
+        // tags
         $tags = [];
         foreach ($posts as $p) {
             if ($p->getHashtags()) {
@@ -49,22 +59,55 @@ class PostController extends AbstractController
         }
         $tags = array_slice(array_keys($tags), 0, 12);
 
+        $user = $this->getUser();
+$myPendingPosts = [];
+
+if ($user) {
+    $myPendingPosts = $repo->findBy(
+        ['user' => $user, 'isApproved' => false],
+        ['date_creation' => 'DESC']
+    );
+}
+// ✅ Notifications de modération (uniquement pour le user connecté)
+$moderationNotifs = [];
+
+if ($user) {
+    $moderationNotifs = $repo->createQueryBuilder('p')
+        ->andWhere('p.user = :u')
+        ->andWhere('p.moderationSeen = false')
+        ->andWhere('p.moderationStatus IN (:st)')
+        ->setParameter('u', $user)
+        ->setParameter('st', ['APPROVED', 'REJECTED'])
+        ->orderBy('p.date_creation', 'DESC')
+        ->getQuery()
+        ->getResult();
+
+    $em->flush();
+}
+
+
         return $this->render('post/index.html.twig', [
             'posts' => $posts,
             'recentPosts' => $recentPosts,
             'tags' => $tags,
             'q' => $q,
             'sort' => $sort,
+            'myPendingPosts' => $myPendingPosts,
+            'moderationNotifs' => $moderationNotifs,
+
+
         ]);
     }
 
-  #[Route('/new', name: 'post_new', methods: ['GET', 'POST'])]
-public function new(Request $request, EntityManagerInterface $em): Response
+
+#[Route('/new', name: 'post_new', methods: ['GET', 'POST'])]
+public function new(Request $request, EntityManagerInterface $em, BadWordsService $badWordsService): Response
 {
     // ✅ Forcer l'utilisateur à être connecté
     $user = $this->getUser();
     if (!$user) {
-        $this->addFlash('warning', 'Vous devez être connecté pour créer un post.');
+        // ✅ SweetAlert warning
+        $this->addFlash('swal_warning', 'Vous devez être connecté pour créer un post.');
         return $this->redirectToRoute('app_login');
     }
 
@@ -81,26 +124,47 @@ public function new(Request $request, EntityManagerInterface $em): Response
 
         // ✅ URL image (champ HTML "image_url" dans twig)
         $imageUrl = trim((string) $request->request->get('image_url', ''));
-
         if ($imageUrl !== '') {
             $post->setImgPost($imageUrl);
         } else {
-            // optionnel : image par défaut si tu veux
             $post->setImgPost('uploads/pieces_jointes/default-post.jpg');
         }
+
+        // ✅ Vérification BadWords (titre + contenu + localisation)
+        $textToCheck = trim(
+            (string) $post->getTitre() . ' ' .
+            (string) $post->getContenu() . ' ' .
+            (string) ($post->getLocalisation() ?? '')
+        );
+
+        $check = $badWordsService->check($textToCheck);
+
+        if ($check['hasBadWords']) {
+            // ❌ On n’enregistre PAS
+            $this->addFlash(
+                'swal_error',
+                "Post refusé : il contient des mots inappropriés. Votre publication a été annulée."
+            );
+            return $this->redirectToRoute('post_new');
+        }
+
+        // ✅ Post en attente de validation
+        $post->setIsApproved(false);
 
         $em->persist($post);
         $em->flush();
 
-        $this->addFlash('success', 'Post ajouté ✅');
+        // ✅ SweetAlert success
+        $this->addFlash('swal_success', 'Post envoyé ✅ Il sera visible après validation par un admin.');
         return $this->redirectToRoute('post_index');
     }
 
     return $this->render('post/new.html.twig', [
         'form' => $form->createView(),
-        'post' => $post, // utile pour value="{{ post.imgPost ?? '' }}"
+        'post' => $post,
     ]);
 }
+
 
 
 
@@ -157,26 +221,88 @@ public function show(Post $post): Response
         return $this->redirectToRoute('post_index');
     }
 
+    
 
 #[Route('/{id}/react', name: 'post_react', methods: ['POST'])]
-public function react(Post $post, Request $request, EntityManagerInterface $em): JsonResponse
-{
-    if (!$this->isCsrfTokenValid('react_post_'.$post->getId(), $request->request->get('_token'))) {
-        return new JsonResponse(['ok' => false, 'message' => 'CSRF invalid'], 403);
+    public function react(Post $post, Request $request, EntityManagerInterface $em): JsonResponse
+    {
+        if (!$this->isCsrfTokenValid('react_post_'.$post->getId(), $request->request->get('_token'))) {
+            return new JsonResponse(['ok' => false, 'message' => 'CSRF invalid'], 403);
+        }
+
+        $type = (string) $request->request->get('type', ''); // like, love, haha...
+
+        // require auth
+        $user = $this->getUser();
+        if (!$user) {
+            return new JsonResponse(['ok' => false, 'message' => 'Authentication required'], 403);
+        }
+
+        /** @var ReactionRepository $reactionRepo */
+        $reactionRepo = $em->getRepository(Reaction::class);
+        $existing = $reactionRepo->findOneBy(['post' => $post, 'user' => $user]);
+
+        if ($existing === null) {
+            // create
+            $r = new Reaction();
+            $r->setPost($post)->setUser($user)->setType($type);
+
+            try {
+                $em->persist($r);
+                // increment post counter
+                $post->incrementReactions(1);
+                $em->flush();
+
+                return new JsonResponse([
+                    'ok' => true,
+                    'action' => 'created',
+                    'nbrReactions' => $post->getNbrReactions(),
+                    'type' => $type,
+                    'postId' => $post->getId(),
+                ]);
+            } catch (\Throwable $e) {
+                // If Reaction table doesn't exist or DB error, fallback: still increment counter
+                try {
+                    $post->incrementReactions(1);
+                    $em->flush();
+                } catch (\Throwable $ignored) {
+                    // ignore secondary failures
+                }
+
+                return new JsonResponse([
+                    'ok' => true,
+                    'action' => 'created_fallback',
+                    'nbrReactions' => $post->getNbrReactions(),
+                    'type' => $type,
+                    'postId' => $post->getId(),
+                ]);
+            }
+        }
+
+        // already exists
+        if ($existing->getType() === $type) {
+            // same reaction clicked -> noop
+            return new JsonResponse([
+                'ok' => true,
+                'action' => 'noop',
+                'nbrReactions' => $post->getNbrReactions(),
+                'type' => $type,
+                'postId' => $post->getId(),
+            ]);
+        }
+
+        // change emoji
+        $existing->setType($type);
+        $em->flush();
+
+        return new JsonResponse([
+            'ok' => true,
+            'action' => 'updated',
+            'nbrReactions' => $post->getNbrReactions(),
+            'type' => $type,
+            'postId' => $post->getId(),
+        ]);
     }
-
-    $type = $request->request->get('type'); // like, love, haha...
-
-    $post->setNbrReactions(($post->getNbrReactions() ?? 0) + 1);
-    $em->flush();
-
-    return new JsonResponse([
-        'ok' => true,
-        'nbrReactions' => $post->getNbrReactions(),
-        'type' => $type,
-        'postId' => $post->getId(),
-    ]);
-}
 
 #[Route('/posts/export/pdf', name: 'post_export_pdf', methods: ['GET'])]
 public function exportAllPdf(PostRepository $repo, Request $request): Response
@@ -304,20 +430,142 @@ public function aiGenerate(Request $request, GeminiService $gemini, LoggerInterf
         default => "Améliore ce contenu en français: plus clair, professionnel, et garde le sens. Retourne uniquement le texte amélioré.\n\n" . $text,
     };
 
-    // Appel au service Gemini pour générer le contenu
-    try {
-        $result = $gemini->generate($prompt);
-        
-        // Retourner le résultat généré par Gemini
-        return new JsonResponse(['ok' => true, 'result' => $result]);
-        
-    } catch (\Exception $e) {
-        // Log l'erreur pour le débogage
-        $logger->error('Erreur Gemini: ' . $e->getMessage());
-        return new JsonResponse(['ok' => false, 'message' => 'Erreur lors de la génération du contenu.'], 500);
-    }
+  try {
+    $result = $gemini->generate($prompt);
+
+    return new JsonResponse([
+        'ok' => true,
+        'result' => $result,
+        'debug' => [
+            'len' => strlen((string)$result),
+            'task' => $task,
+        ],
+    ]);
+} catch (\Throwable $e) {
+    return new JsonResponse([
+        'ok' => false,
+        'message' => 'Erreur Gemini',
+        'debug' => [
+            'class' => get_class($e),
+            'msg' => $e->getMessage(),
+        ]
+    ], 500);
 }
 
+
+}
+
+  #[Route('/admin/pending', name: 'admin_posts_pending', methods: ['GET'])]
+    public function pending(PostRepository $repo): Response
+    {
+        //$this->denyAccessUnlessGranted('ROLE_ADMIN');
+
+        // ⚠️ champ DB = date_creation (pas dateCreation)
+        $posts = $repo->findBy(['isApproved' => false], ['date_creation' => 'DESC']);
+
+        return $this->render('admin/posts_pending.html.twig', [
+            'posts' => $posts,
+        ]);
+    }
+#[Route('/admin/{id}/approve', name: 'admin_post_approve', methods: ['POST'])]
+public function approve(Post $post, Request $request, EntityManagerInterface $em): Response
+{
+   // $this->denyAccessUnlessGranted('ROLE_ADMIN');
+
+    if (!$this->isCsrfTokenValid('approve_post_'.$post->getId(), $request->request->get('_token'))) {
+        $this->addFlash('danger', 'Token CSRF invalide.');
+        return $this->redirectToRoute('admin_posts_pending');
+    }
+
+    $post->setIsApproved(true);
+
+    // ✅ Notif pour le user
+    $post->setModerationStatus('APPROVED');
+    $post->setModerationMessage('Votre post "' . $post->getTitre() . '" a été approuvé ✅');
+    $post->setModerationSeen(false);
+
+    $em->flush();
+
+    $this->addFlash('success', 'Post approuvé ✅');
+    return $this->redirectToRoute('admin_posts_pending');
+}
+
+
+#[Route('/admin/{id}/reject', name: 'admin_post_reject', methods: ['POST'])]
+public function reject(Post $post, Request $request, EntityManagerInterface $em): Response
+{
+  //  $this->denyAccessUnlessGranted('ROLE_ADMIN');
+
+    if (!$this->isCsrfTokenValid('reject_post_'.$post->getId(), $request->request->get('_token'))) {
+        $this->addFlash('danger', 'Token CSRF invalide.');
+        return $this->redirectToRoute('admin_posts_pending');
+    }
+
+    // ❌ ne pas supprimer : on garde le post en "REJECTED"
+    $post->setIsApproved(false);
+
+    // ✅ Notif pour le user
+    $post->setModerationStatus('REJECTED');
+    $post->setModerationMessage('Votre post "' . $post->getTitre() . '" a été refusé ❌');
+    $post->setModerationSeen(false);
+
+    $em->flush();
+
+    $this->addFlash('success', 'Post refusé ✅');
+    return $this->redirectToRoute('admin_posts_pending');
+}
+
+    #[Route('/my/pending', name: 'post_my_pending', methods: ['GET'])]
+    public function myPending(PostRepository $repo): Response
+    {
+        $user = $this->getUser();
+        if (!$user) {
+            return $this->redirectToRoute('app_login');
+        }
+
+        // ⚠️ champ DB = date_creation
+        $posts = $repo->findBy(
+            ['user' => $user, 'isApproved' => false],
+            ['date_creation' => 'DESC']
+        );
+
+        return $this->render('post/my_pending.html.twig', [
+            'posts' => $posts
+        ]);
+    }
+
+#[Route('/moderation/{id}/ack', name: 'post_moderation_ack', methods: ['POST'])]
+public function moderationAck(Post $post, Request $request, EntityManagerInterface $em): JsonResponse
+{
+    $user = $this->getUser();
+
+    if (!$user instanceof User) {
+        return new JsonResponse(['ok' => false, 'message' => 'Unauthorized'], 403);
+    }
+
+    // sécurité : seul le propriétaire peut ack
+    if ($post->getUser()?->getId() !== $user->getId()) {
+        return new JsonResponse(['ok' => false, 'message' => 'Unauthorized'], 403);
+    }
+
+    // IMPORTANT: _token (sans espace)
+    if (!$this->isCsrfTokenValid('moderation_ack_'.$post->getId(), (string)$request->request->get('_token'))) {
+        return new JsonResponse(['ok' => false, 'message' => 'CSRF invalid'], 403);
+    }
+
+    // marquer comme vue
+    $post->setModerationSeen(true);
+
+    // si refusé => supprimer
+    if ($post->getModerationStatus() === 'REJECTED') {
+        $em->remove($post);
+        $em->flush();
+        return new JsonResponse(['ok' => true, 'deleted' => true]);
+    }
+
+    $em->flush();
+    return new JsonResponse(['ok' => true, 'deleted' => false]);
+}
 
 
 

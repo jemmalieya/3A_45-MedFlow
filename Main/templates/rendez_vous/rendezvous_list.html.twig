@@ -9,23 +9,23 @@
         padding: 2rem 0 4rem;
     }
     .rv-list-hero {
-        background: linear-gradient(135deg, #2563eb 0%, #38bdf8 50%, #1e40af 100%);
+        background: linear-gradient(135deg, #049ebb 0%, #38bdf8 50%, #049ebb 100%);
         color: #fff;
         padding: 2.5rem 2rem;
         border-radius: 24px;
         margin-bottom: 2rem;
-        box-shadow: 0 20px 50px rgba(37, 99, 235, 0.25);
+        box-shadow: 0 20px 50px rgba(4, 158, 187, 0.25);
     }
     .rv-list-card {
         background: #e0f2fe;
         border-radius: 20px;
-        box-shadow: 0 4px 24px rgba(37,99,235,0.08), 0 1px 3px rgba(30,64,175,0.04);
-        border: 1px solid #2563eb33;
+        box-shadow: 0 4px 24px rgba(4,158,187,0.08), 0 1px 3px rgba(4,158,187,0.04);
+        border: 1px solid #049ebb33;
         overflow: hidden;
     }
     .rv-table { margin: 0; }
     .rv-table thead th {
-        background: linear-gradient(135deg, #2563eb 0%, #38bdf8 100%);
+        background: linear-gradient(135deg, #049ebb 0%, #38bdf8 100%);
         color: #fff;
         font-weight: 600;
         font-size: 0.8rem;
@@ -37,33 +37,33 @@
     .rv-table tbody td {
         padding: 0.9rem 0.85rem;
         vertical-align: middle;
-        border-color: #2563eb33;
+        border-color: #049ebb33;
         background: #f0f9ff;
-        color: #1e40af;
+        color: #049ebb;
     }
     .rv-table tbody tr { transition: background 0.2s; }
     .rv-table tbody tr:nth-child(even) { background: #e0f2fe; }
     .rv-table tbody tr:hover { background: #bae6fd !important; }
-    .rv-table .edit-row td { background: #dbeafe !important; padding: 1.25rem; border-top: 2px solid #2563eb; }
+    .rv-table .edit-row td { background: #dbeafe !important; padding: 1.25rem; border-top: 2px solid #049ebb; }
     .rv-table .edit-row .form-control, .rv-table .edit-row .form-select {
-        border: 2px solid #2563eb; border-radius: 10px; padding: 0.5rem 0.75rem;
+        border: 2px solid #049ebb; border-radius: 10px; padding: 0.5rem 0.75rem;
     }
     .rv-table .edit-row .form-control:focus, .rv-table .edit-row .form-select:focus {
-        border-color: #1e40af; box-shadow: 0 0 0 3px #2563eb33; outline: none;
+        border-color: #049ebb; box-shadow: 0 0 0 3px #049ebb33; outline: none;
     }
-    .btn-rv-edit { background: #2563eb; color: #fff !important; border: none; border-radius: 10px; padding: 0.4rem 0.75rem; transition: background 0.2s, transform 0.2s; }
-    .btn-rv-edit:hover { background: #1e40af; color: #fff !important; transform: scale(1.05); }
-    .btn-rv-delete { background: transparent; color: #dc2626; border: 2px solid #2563eb; border-radius: 10px; padding: 0.4rem 0.75rem; transition: all 0.2s; }
+    .btn-rv-edit { background: #049ebb; color: #fff !important; border: none; border-radius: 10px; padding: 0.4rem 0.75rem; transition: background 0.2s, transform 0.2s; }
+    .btn-rv-edit:hover { background: #049ebb; color: #fff !important; transform: scale(1.05); }
+    .btn-rv-delete { background: transparent; color: #dc2626; border: 2px solid #049ebb; border-radius: 10px; padding: 0.4rem 0.75rem; transition: all 0.2s; }
     .btn-rv-delete:hover { background: #dbeafe; border-color: #dc2626; }
-    .btn-rv-save { background: #2563eb; color: #fff !important; border: none; border-radius: 10px; padding: 0.4rem 0.75rem; }
+    .btn-rv-save { background: #049ebb; color: #fff !important; border: none; border-radius: 10px; padding: 0.4rem 0.75rem; }
     .btn-rv-cancel { background: #64748b; color: #fff !important; border: none; border-radius: 10px; padding: 0.4rem 0.75rem; }
     .alert-rv { border: none; border-radius: 14px; padding: 1rem 1.25rem; font-weight: 500; }
     .alert-rv.alert-danger { background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%); color: #991b1b; }
-    .alert-rv.alert-success { background: linear-gradient(135deg, #dbeafe 0%, #bae6fd 100%); color: #2563eb; }
-    .alert-rv.alert-info { background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%); color: #2563eb; }
+    .alert-rv.alert-success { background: linear-gradient(135deg, #dbeafe 0%, #bae6fd 100%); color: #049ebb; }
+    .alert-rv.alert-info { background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%); color: #049ebb; }
     .badge-rv { padding: 0.35rem 0.65rem; border-radius: 9999px; font-size: 0.8rem; font-weight: 600; }
-    .badge-rv-success { background: #dbeafe; color: #2563eb; }
-    .badge-rv-warning { background: #fef3c7; color: #2563eb; }
+    .badge-rv-success { background: #dbeafe; color: #049ebb; }
+    .badge-rv-warning { background: #fef3c7; color: #049ebb; }
     .badge-rv-danger { background: #fee2e2; color: #991b1b; }
 </style>
 </style>
@@ -190,7 +190,7 @@
     {# Fiche Médicale Table Section #}
     {# ============================= #}
     <div class="container py-4">
-        <div class="rv-list-hero" style="background: linear-gradient(135deg, #2563eb 0%, #38bdf8 100%);">
+        <div class="rv-list-hero" style="background: linear-gradient(135deg, #049ebb 0%, #38bdf8 100%);">
             <h1>🩺 Ma fiche médicale</h1>
             <p>Consultez vos informations médicales enregistrées.</p>
         </div>
@@ -257,7 +257,7 @@
     {# Prescriptions Table Section  #}
     {# ============================= #}
     <div class="container py-4">
-        <div class="rv-list-hero" style="background: linear-gradient(135deg, #2563eb 0%, #38bdf8 100%);">
+        <div class="rv-list-hero" style="background: linear-gradient(135deg, #049ebb 0%, #38bdf8 100%);">
             <h1>💊 Mes prescriptions</h1>
             <p>Consultez vos prescriptions médicales.</p>
         </div>

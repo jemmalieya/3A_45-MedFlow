@@ -1,0 +1,158 @@
+/* ============================
+   MedFlow Admin — Grey/White only
+   ============================ */
+
+:root{
+  --mf-bg: #f6f7f9;
+  --mf-card: #ffffff;
+  --mf-border: #e6e8ee;
+  --mf-text: #111827;
+  --mf-muted: #6b7280;
+
+  --mf-gray-50:#f9fafb;
+  --mf-gray-100:#f3f4f6;
+  --mf-gray-200:#e5e7eb;
+  --mf-gray-300:#d1d5db;
+  --mf-gray-700:#374151;
+}
+
+/* Page background */
+.nxl-container,
+.nxl-content,
+body{
+  background: var(--mf-bg) !important;
+  color: var(--mf-text) !important;
+}
+
+/* Cards / blocks */
+.card,
+.nxl-card,
+.nxl-card-body,
+.main-content .card,
+.main-content .nxl-card{
+  background: var(--mf-card) !important;
+  border: 1px solid var(--mf-border) !important;
+  box-shadow: 0 10px 30px rgba(17,24,39,.06) !important;
+  border-radius: 16px !important;
+}
+
+/* Header / Topbar stay clean */
+.nxl-header{
+  background: #fff !important;
+  border-bottom: 1px solid var(--mf-border) !important;
+}
+
+/* Sidebar (keep white/grey) */
+.nxl-navigation{
+  background: #fff !important;
+  border-right: 1px solid var(--mf-border) !important;
+}
+
+/* Sidebar links */
+.nxl-navigation .nxl-link{
+  color: var(--mf-gray-700) !important;
+}
+
+/* Remove any blue highlight */
+.nxl-navigation .nxl-item.active > .nxl-link,
+.nxl-navigation .nxl-link.active,
+.nxl-navigation .nxl-link:hover{
+  background: var(--mf-gray-100) !important;
+  color: #111827 !important;
+  border-radius: 12px !important;
+}
+
+/* Little left indicator (optional) */
+.nxl-navigation .nxl-item.active > .nxl-link{
+  box-shadow: inset 3px 0 0 #111827 !important; /* black small line */
+}
+
+/* Buttons: grey style only */
+.btn,
+button.btn{
+  border-radius: 12px !important;
+}
+
+/* Primary becomes dark grey (no blue) */
+.btn-primary{
+  background: #111827 !important;
+  border-color: #111827 !important;
+  color: #fff !important;
+}
+.btn-primary:hover{
+  background: #0b1220 !important;
+  border-color: #0b1220 !important;
+}
+
+/* Outline buttons neutral */
+.btn-outline-primary,
+.btn-outline-secondary{
+  border-color: var(--mf-gray-300) !important;
+  color: #111827 !important;
+  background: #fff !important;
+}
+.btn-outline-primary:hover,
+.btn-outline-secondary:hover{
+  background: var(--mf-gray-100) !important;
+  border-color: var(--mf-gray-300) !important;
+  color: #111827 !important;
+}
+
+/* Badges neutral */
+.badge,
+.nxl-badge{
+  background: var(--mf-gray-100) !important;
+  border: 1px solid var(--mf-border) !important;
+  color: #111827 !important;
+}
+
+/* Tables: clean grey */
+.table,
+.table thead,
+.table tbody{
+  color: var(--mf-text) !important;
+}
+
+.table thead th{
+  background: var(--mf-gray-50) !important;
+  border-bottom: 1px solid var(--mf-border) !important;
+  color: var(--mf-muted) !important;
+  font-weight: 700 !important;
+  text-transform: uppercase !important;
+  font-size: 12px !important;
+  letter-spacing: .04em !important;
+}
+
+.table td{
+  border-color: var(--mf-border) !important;
+}
+
+.table tbody tr:hover{
+  background: var(--mf-gray-50) !important;
+}
+
+/* Dropdown / select */
+.form-select,
+.form-control{
+  border-radius: 12px !important;
+  border-color: var(--mf-border) !important;
+}
+.form-select:focus,
+.form-control:focus{
+  box-shadow: 0 0 0 .2rem rgba(17,24,39,.08) !important; /* grey focus */
+  border-color: #cfd5df !important;
+}
+
+/* Breadcrumb neutral */
+.breadcrumb a{
+  color: var(--mf-muted) !important;
+}
+.breadcrumb .breadcrumb-item.active{
+  color: #111827 !important;
+}
+
+/* Footer clean */
+.footer{
+  background: #fff !important;
+  border-top: 1px solid var(--mf-border) !important;
+}

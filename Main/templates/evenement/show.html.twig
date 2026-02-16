@@ -146,20 +146,38 @@
               <div id="participationFormWrapper" class="d-none">
                 <form method="post" action="{{ path('app_evenement_demander', {id: evenement.id}) }}" class="mt-3">
                   <div class="row g-3">
-                    <div class="col-md-4">
-                      <label class="form-label">Nom</label>
-                      <input name="nom" class="form-control" placeholder="Votre nom" >
-                    </div>
-                    <div class="col-md-4">
-                      <label class="form-label">Email</label>
-                      <input name="email" type="email" class="form-control" placeholder="ex: nom@email.com" >
-                    </div>
-                    <div class="col-md-4">
-                      <label class="form-label">Téléphone</label>
-                      <input name="tel" class="form-control" placeholder="+216 ..." >
-                    </div>
+                   {% set u = app.user %}
+
+<div class="col-md-4">
+  <label class="form-label">Nom</label>
+  <input name="nom"
+         class="form-control"
+         placeholder="Votre nom"
+         value="{{ u ? (u.nom ~ ' ' ~ u.prenom) : '' }}"
+         {{ u ? 'readonly' : '' }}>
+</div>
+
+<div class="col-md-4">
+  <label class="form-label">Email</label>
+  <input name="email"
+         type="email"
+         class="form-control"
+         placeholder="ex: nom@email.com"
+         value="{{ u ? u.emailUser : '' }}"
+         {{ u ? 'readonly' : '' }}>
+</div>
+
+<div class="col-md-4">
+  <label class="form-label">Téléphone</label>
+  <input name="tel"
+         class="form-control"
+         placeholder="+216 ..."
+         value="{{ u ? u.telephoneUser : '' }}"
+         {{ u ? 'readonly' : '' }}>
+</div>
+
                     <div class="col-12">
-                      <label class="form-label">Message</label>
+                      <label class="form-label">Motif</label>
                       <textarea name="message" class="form-control" rows="3" placeholder="Pourquoi voulez-vous participer ?"></textarea>
                     </div>
                   </div>
@@ -217,16 +235,15 @@
                     <div class="text-muted small">{{ evenement.adresseEvent }}</div>
                   </div>
                 </div>
-<section id="map-section" class="mt-4">
-  <h5 class="mb-2">Localisation</h5>
-
-  <div id="map"
-       style="height: 360px; border-radius: 16px; overflow: hidden;"
-       data-nomlieu="{{ evenement.nomLieuEvent|e('html_attr') }}"
-       data-adresse="{{ evenement.adresseEvent|e('html_attr') }}"
-       data-ville="{{ evenement.villeEvent|e('html_attr') }}">
-  </div>
-</section>
+                <section id="map-section" class="mt-4">
+                <h5 class="mb-2">Localisation</h5>
+                <div id="map"
+                style="height: 360px; border-radius: 16px; overflow: hidden;"
+                data-nomlieu="{{ evenement.nomLieuEvent|e('html_attr') }}"
+                data-adresse="{{ evenement.adresseEvent|e('html_attr') }}"
+                data-ville="{{ evenement.villeEvent|e('html_attr') }}">
+                </div>
+                </section>
 
 
                 <div class="d-flex align-items-start gap-2 mb-3">
@@ -256,14 +273,106 @@
                   </div>
                 </div>
 
+                <div class="card shadow-sm mt-4 p-3">
+                <h5 class="mb-3">🌤 Météo à {{ evenement.villeEvent }}</h5>
+                {% if meteo is defined %}
+                 <p>
+                 🌡 Température : <strong>{{ meteo.main.temp }}°C</strong><br>
+                  🌥 {{ meteo.weather[0].description }}<br>
+                  💨 Vent : {{ meteo.wind.speed }} m/s
+                  </p>
+                  {% else %}
+                  <p class="text-muted">Météo indisponible</p>
+                  {% endif %}
+                </div>
+                </div>
               </div>
-            </div>
 
-            <a href="#map-section" class="btn btn-outline-primary mt-3">
-  <i class="bi bi-geo-alt"></i> Voir la localisation
-</a>
+            
+
+
 
           </div>
+          {# ===== Recommandations ===== #}
+{# ===== Recommandations IA (PRO) ===== #}
+{% if recommended is defined and recommended|length > 0 %}
+  <div class="mt-5">
+    <hr class="mb-4">
+
+    <div class="d-flex align-items-end justify-content-between flex-wrap gap-2 mb-3">
+      <div>
+        <h4 class="fw-bold mb-1 rec-title">
+          <i class="bi bi-stars me-2"></i> Événements recommandés pour vous
+        </h4>
+        <div class="text-muted small">
+          Scoring intelligent : type, ville, proximité, popularité + préférences utilisateur.
+        </div>
+      </div>
+
+      <span class="badge rounded-pill rec-pill">
+        <i class="bi bi-lightning-charge me-1"></i> IA Scoring activé
+      </span>
+    </div>
+
+    <div class="row g-4">
+      {% for item in recommended %}
+        {% set rec = item.event %}
+        {% if rec.id != evenement.id %}
+          <div class="col-md-4">
+            <div class="card rec-card border-0 shadow-sm h-100">
+              {% set recCover = rec.imageCouvertureEvent ? rec.imageCouvertureEvent : asset('assets/img/health/showcase-1.webp') %}
+
+              <div class="rec-cover" style="background-image:url('{{ recCover }}');">
+                <div class="rec-overlay"></div>
+
+                <div class="rec-top d-flex justify-content-between align-items-center">
+                  <span class="badge rounded-pill rec-badge">
+                    <i class="bi bi-tag me-1"></i>{{ rec.typeEvent }}
+                  </span>
+
+                  <span class="badge rounded-pill rec-score">
+                    Score {{ item.score }}/8
+                  </span>
+                </div>
+
+                <div class="rec-bottom">
+                  <div class="rec-meta">
+                    <i class="bi bi-geo-alt me-1"></i>{{ rec.villeEvent }}
+                    <span class="mx-2">•</span>
+                    <i class="bi bi-calendar-event me-1"></i>{{ rec.dateDebutEvent|date('d/m/Y') }}
+                  </div>
+                </div>
+              </div>
+
+              <div class="card-body">
+                <h6 class="fw-bold mb-2">{{ rec.titreEvent }}</h6>
+
+                <div class="d-flex flex-wrap gap-2 mb-3">
+                  {% for r in item.reasons %}
+                    <span class="badge rounded-pill rec-reason">{{ r }}</span>
+                  {% endfor %}
+
+                  {% if item.accepted > 0 %}
+                    <span class="badge rounded-pill rec-reason">
+                      <i class="bi bi-people me-1"></i>{{ item.accepted }} acceptées
+                    </span>
+                  {% endif %}
+                </div>
+
+                <a href="{{ path('app_evenement_show', {id: rec.id}) }}" class="btn btn-sm btn-outline-primary w-100 rec-btn">
+                  <i class="bi bi-eye me-1"></i> Voir l’événement
+                </a>
+              </div>
+            </div>
+          </div>
+        {% endif %}
+      {% endfor %}
+    </div>
+  </div>
+{% endif %}
+
+
+
 
         </div>
       </div>
@@ -272,56 +381,33 @@
   </section>
 </main>
 {% endblock %}
-
 {% block javascripts %}
+  {{ parent() }}
 
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="{{ asset('assets/js/evenement-map.js') }}"></script>
 
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const wrapper = document.getElementById('participationFormWrapper');
+      const radios = document.querySelectorAll('.js-participate-choice');
+      const btnCancel = document.getElementById('btnCancelParticipation');
 
-  {{ parent() }}
-  form.addEventListener("submit", function(event) {
-    event.preventDefault(); // Prevent default form submission
-    console.log("Form submission caught");
+      function update() {
+        const checked = document.querySelector('.js-participate-choice:checked');
+        if (!wrapper) return;
+        if (checked && checked.value === 'oui') wrapper.classList.remove('d-none');
+        else wrapper.classList.add('d-none');
+      }
 
-    const nom = form.querySelector("input[name='nom']");
-    const email = form.querySelector("input[name='email']");
-    const tel = form.querySelector("input[name='tel']");
-    const message = form.querySelector("textarea[name='message']");
+      radios.forEach(r => r.addEventListener('change', update));
+      if (btnCancel) btnCancel.addEventListener('click', () => {
+        const non = document.getElementById('participerNon');
+        if (non) non.checked = true;
+        update();
+      });
 
-    // Basic validation checks
-    if (!nom.value || !email.value || !tel.value || !message.value) {
-        console.log("Validation failed");
-        alert("Veuillez remplir tous les champs.");
-        return;
-    } else {
-        console.log("Validation passed");
-    }
-
-    
-    const formData = new FormData(form);
-
-    // Send the data via AJAX
-    fetch("{{ path('app_evenement_demander', {id: evenement.id}) }}", {
-        method: 'POST',
-        body: formData
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            console.log("Form successfully submitted");
-            alert("Demande envoyée avec succès.");
-            form.reset(); // Reset form after submission
-            participateFormWrapper.classList.add("d-none");
-        } else {
-            console.log("Error response:", data.message);
-            alert("Une erreur est survenue, veuillez réessayer.");
-        }
-    })
-    .catch(error => {
-        console.error("Erreur AJAX:", error);
-        alert("Une erreur est survenue.");
+      update();
     });
-});
-
+  </script>
 {% endblock %}

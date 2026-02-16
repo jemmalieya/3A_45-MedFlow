@@ -42,30 +42,23 @@
           <p class="mb-0 text-dark-50">Remplissez les informations du nouveau produit</p>
         </div>
 
-        <a href="{{ path('admin_produits_index') }}" class="btn btn-outline-secondary">
+        <a href="{{ path('admin_produits_index') }}" class="btn btn-outline-secondary btn-lg">
           <i class="bi bi-arrow-left me-2"></i>Retour
         </a>
       </div>
 
-      {# ====== FLASH ====== #}
-      <div id="flash-messages-container">
+      {# ====== FLASH (on garde pour compat, mais on affiche aussi en Swal) ====== #}
+      <div id="flash-messages-container" class="d-none">
         {% for message in app.flashes('success') %}
-          <div class="alert alert-success alert-dismissible fade show flash-message shadow-sm" role="alert">
-            <i class="bi bi-check-circle-fill me-2"></i>{{ message }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-          </div>
+          <div class="flash-success" data-message="{{ message|e('html_attr') }}"></div>
         {% endfor %}
-
         {% for message in app.flashes('error') %}
-          <div class="alert alert-danger alert-dismissible fade show flash-message shadow-sm" role="alert">
-            <i class="bi bi-x-circle-fill me-2"></i>{{ message }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-          </div>
+          <div class="flash-error" data-message="{{ message|e('html_attr') }}"></div>
         {% endfor %}
       </div>
 
       {# ====== FORM ====== #}
-      {{ form_start(form, {'attr': {'novalidate': 'novalidate'}}) }}
+      {{ form_start(form, {'attr': {'novalidate': 'novalidate', 'id': 'addProduitForm'}}) }}
 
       <div class="row g-4">
 
@@ -115,7 +108,7 @@
 
                   <div class="input-group input-group-lg">
                     {{ form_widget(form.prix_produit, {'attr': {'class': ui.addClass(form.prix_produit, 'form-control')}}) }}
-                    <span class="input-group-text bg-success text-white">
+                    <span class="input-group-text bg-primary-soft text-primary">
                       <i class="bi bi-cash-coin me-1"></i>DT
                     </span>
                   </div>
@@ -221,7 +214,7 @@
                 <i class="bi bi-x-circle me-2"></i>Annuler
               </a>
 
-              <button type="submit" class="btn btn-primary btn-lg px-5">
+              <button type="submit" class="btn btn-primary btn-lg px-5" id="btnSubmitAddProduit">
                 <i class="bi bi-check-circle me-2"></i>Ajouter le produit
               </button>
             </div>
@@ -237,46 +230,91 @@
 
 {% endblock %}
 
-{# ====== STYLES ====== #}
 {% block stylesheets %}
   {{ parent() }}
   <style>
-    .add-produit-page, .add-produit-page *{ color:#111827; }
-    .text-dark-50{ color:#6b7280 !important; }
-    .bg-gradient-primary{
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    /* ================================
+       ✅ SAME BLUE THEME AS LIST PAGE
+       ================================ */
+    :root{
+      --blue-50:#eff6ff;
+      --blue-100:#dbeafe;
+      --blue-200:#bfdbfe;
+      --blue-300:#93c5fd;
+      --blue-400:#60a5fa;
+      --blue-500:#3b82f6;
+      --blue-600:#2563eb;
+      --blue-700:#1d4ed8;
+      --blue-800:#1e40af;
+      --blue-900:#1e3a8a;
     }
 
-    /* Bootstrap already styles is-valid/is-invalid
-       We just make feedback visible */
+    .add-produit-page{
+      min-height: 100vh;
+      background: linear-gradient(135deg, #f9fafb 0%, var(--blue-50) 100%);
+    }
+    .text-dark-50{ color:#6b7280 !important; }
+
+    /* Header gradient like list */
+    .bg-gradient-primary{
+      background: linear-gradient(135deg, var(--blue-600) 0%, var(--blue-800) 100%) !important;
+    }
+
+    /* Cards */
+    .card{
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 4px 20px rgba(59,130,246,0.10);
+    }
+    .card-header{
+      border-bottom: 2px solid var(--blue-200);
+    }
+
+    /* Inputs focus */
+    .form-control:focus, .form-select:focus{
+      border-color: var(--blue-500);
+      box-shadow: 0 0 0 3px rgba(59,130,246,0.12);
+    }
+
+    /* Replace any "green" UI -> blue */
+    .bg-primary-soft{
+      background: linear-gradient(135deg, var(--blue-50) 0%, var(--blue-100) 100%) !important;
+      border: 2px solid var(--blue-200) !important;
+    }
+    .text-primary{
+      color: var(--blue-700) !important;
+    }
+
+    /* Feedback */
     .invalid-feedback{ font-weight:600; }
     .valid-feedback{ font-weight:600; }
 
-    /* Status radios cards */
+    /* Status radios (blue selection) */
     .status-radio-group input[type="radio"]{ display:none; }
 
     .status-radio-group label{
-      border:1px solid #e5e7eb;
-      padding:14px 14px;
-      border-radius:14px;
+      border: 1px solid #e5e7eb;
+      padding: 14px;
+      border-radius: 14px;
       display:block;
-      margin-bottom:12px;
+      margin-bottom: 12px;
       cursor:pointer;
       background:#fff;
       transition: .2s ease;
-      font-weight:600;
+      font-weight:700;
       color:#111827 !important;
     }
 
     .status-radio-group label:hover{
       transform: translateY(-1px);
-      box-shadow: 0 8px 20px rgba(0,0,0,.08);
+      box-shadow: 0 8px 20px rgba(59,130,246,.12);
+      border-color: var(--blue-300);
     }
 
     .status-radio-group input[type="radio"]:checked + label{
-      border-color:#667eea;
-      box-shadow: 0 0 0 4px rgba(102,126,234,.18);
-      background: #f5f7ff;
+      border-color: var(--blue-500);
+      box-shadow: 0 0 0 4px rgba(59,130,246,.16);
+      background: linear-gradient(135deg, #ffffff 0%, var(--blue-50) 100%);
     }
 
     .status-radio-group label::after{
@@ -287,24 +325,78 @@
       background:#d1d5db;
       margin-top:6px;
     }
-
     .status-radio-group input[type="radio"]:checked + label::after{
-      background:#667eea;
+      background: var(--blue-600);
     }
   </style>
 {% endblock %}
 
-{# ====== JS (just flash hide) ====== #}
 {% block javascripts %}
   {{ parent() }}
   <script>
     document.addEventListener('DOMContentLoaded', function() {
-      document.querySelectorAll('.flash-message').forEach(msg => {
-        setTimeout(() => {
-          msg.classList.add('slide-out');
-          setTimeout(() => msg.remove(), 350);
-        }, 3000);
+
+      // ===========
+      // ✅ Toast (3s) après ajout/erreur via flash
+      // ===========
+      const successNodes = document.querySelectorAll('#flash-messages-container .flash-success');
+      const errorNodes   = document.querySelectorAll('#flash-messages-container .flash-error');
+
+      // Util petit helper
+      function toast(icon, title) {
+        if (typeof Swal === 'undefined') return;
+        Swal.fire({
+          position: "top-end",
+          icon: icon,
+          title: title,
+          showConfirmButton: false,
+          timer: 3000,
+          timerProgressBar: true
+        });
+      }
+
+      successNodes.forEach(n => toast('success', n.dataset.message || 'Ajouté avec succès ✅'));
+      errorNodes.forEach(n => toast('error', n.dataset.message || 'Une erreur est survenue'));
+
+      // ===========
+      // ✅ Confirmation avant submit (SweetAlert2)
+      // ===========
+      const form = document.getElementById('addProduitForm');
+      if (!form) return;
+
+      form.addEventListener('submit', function(e) {
+        // si Swal pas chargé => submit normal
+        if (typeof Swal === 'undefined') return;
+
+        e.preventDefault();
+
+        const swalWithBootstrapButtons = Swal.mixin({
+          customClass: {
+            confirmButton: "btn btn-primary px-4",
+            cancelButton: "btn btn-outline-secondary px-4"
+          },
+          buttonsStyling: false
+        });
+
+        swalWithBootstrapButtons.fire({
+          title: "Confirmer l'ajout ?",
+          text: "Le produit sera ajouté à votre inventaire.",
+          icon: "warning",
+          showCancelButton: true,
+          confirmButtonText: "Oui, ajouter",
+          cancelButtonText: "Non, annuler",
+          reverseButtons: true
+        }).then((result) => {
+          if (result.isConfirmed) {
+            // Optionnel: mini toast immédiat avant submit
+            toast('info', 'Ajout en cours...');
+            form.submit();
+          } else if (result.dismiss === Swal.DismissReason.cancel) {
+            toast('error', 'Ajout annulé');
+          }
+        });
       });
+
     });
   </script>
 {% endblock %}

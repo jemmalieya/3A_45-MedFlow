@@ -5,23 +5,23 @@
 {% block body %}
 {# Messages Flash #}
 <div id="flash-messages-container">
-    {% for label, messages in app.flashes %}
-        {% for message in messages %}
-            <div class="alert-custom alert-{{ label }} show" role="alert">
-                <i class="bi bi-{% if label == 'success' %}check{% else %}x{% endif %}-circle-fill"></i>
-                <span>{{ message }}</span>
-                <button type="button" class="btn-close-custom" onclick="this.parentElement.remove()">×</button>
-            </div>
-        {% endfor %}
+  {% for label, messages in app.flashes %}
+    {% for message in messages %}
+      <div class="alert-custom alert-{{ label }} show" role="alert">
+        <i class="bi bi-{% if label == 'success' %}check{% else %}x{% endif %}-circle-fill"></i>
+        <span>{{ message }}</span>
+        <button type="button" class="btn-close-custom" onclick="this.parentElement.remove()">×</button>
+      </div>
     {% endfor %}
+  {% endfor %}
 </div>
 
 {# Header #}
 <div class="page-header">
-    <div class="container text-center">
-        <h1><i class="bi bi-shop me-3"></i>Notre Pharmacie</h1>
-        <p>Découvrez notre sélection de produits de santé et bien-être</p>
-    </div>
+  <div class="container text-center">
+    <h1><i class="bi bi-shop me-3"></i>Notre Pharmacie</h1>
+    <p>Découvrez notre sélection de produits de santé et bien-être</p>
+  </div>
 </div>
 
 {# Accès rapide commandes #}
@@ -39,190 +39,806 @@
 </div>
 
 <div class="container mb-5">
-    
-    {# Barre de recherche et filtres #}
-    <div class="search-filter-section mb-4">
-        <div class="row g-3">
-            {# Recherche #}
-            <div class="col-md-6">
-                <div class="search-box">
-                    <i class="bi bi-search"></i>
-                    <input type="text" 
-                           id="searchInput" 
-                           class="form-control" 
-                           placeholder="Rechercher un produit (nom, catégorie...)">
-                    <button id="clearSearch" class="btn-clear" style="display: none;">
-                        <i class="bi bi-x-circle-fill"></i>
-                    </button>
-                </div>
-            </div>
-
-            <div class="col-md-3">
-                <select id="sortPrice" class="form-select">
-                    <option value="">Trier par prix</option>
-                    <option value="asc" {% if currentSort == 'asc' %}selected{% endif %}>Prix croissant</option>
-                    <option value="desc" {% if currentSort == 'desc' %}selected{% endif %}>Prix décroissant</option>
-                </select>
-            </div>
-
-            <!-- Nouveau select pour trier par stock -->
-            <div class="col-md-3">
-                <select id="sortStock" class="form-select">
-                    <option value="">Trier par stock</option>
-                    <option value="asc" {% if currentSortStock == 'asc' %}selected{% endif %}>Stock croissant</option>
-                    <option value="desc" {% if currentSortStock == 'desc' %}selected{% endif %}>Stock décroissant</option>
-                </select>
-            </div>
-
-            {# Filtre par catégorie #}
-            <div class="col-md-3">
-                <select id="filterCategory" class="form-select">
-                    <option value="">Toutes catégories</option>
-                    {% set categories = [] %}
-                    {% for produit in produits %}
-                        {% if produit.categorieProduit not in categories %}
-                            {% set categories = categories|merge([produit.categorieProduit]) %}
-                        {% endif %}
-                    {% endfor %}
-                    {% for categorie in categories|sort %}
-                        <option value="{{ categorie }}">{{ categorie }}</option>
-                    {% endfor %}
-                </select>
-            </div>
+  {# Barre de recherche et filtres #}
+  <div class="search-filter-section mb-4">
+    <div class="row g-3">
+      {# Recherche #}
+      <div class="col-md-6">
+        <div class="search-box">
+          <i class="bi bi-search"></i>
+          <input type="text"
+                 id="searchInput"
+                 class="form-control"
+                 placeholder="Rechercher un produit (nom, catégorie...)">
+          <button id="clearSearch" class="btn-clear" style="display: none;">
+            <i class="bi bi-x-circle-fill"></i>
+          </button>
         </div>
+      </div>
 
-        {# Compteur de résultats #}
-        <div class="mt-3">
-            <span id="resultCount" class="text-muted">
-                <i class="bi bi-bag"></i>
-                <span id="count">{{ produits|length }}</span> produit(s) trouvé(s)
-            </span>
-        </div>
+      <div class="col-md-3">
+        <select id="sortPrice" class="form-select">
+          <option value="">Trier par prix</option>
+          <option value="asc" {% if currentSort == 'asc' %}selected{% endif %}>Prix croissant</option>
+          <option value="desc" {% if currentSort == 'desc' %}selected{% endif %}>Prix décroissant</option>
+        </select>
+      </div>
+
+      <div class="col-md-3">
+        <select id="sortStock" class="form-select">
+          <option value="">Trier par stock</option>
+          <option value="asc" {% if currentSortStock == 'asc' %}selected{% endif %}>Stock croissant</option>
+          <option value="desc" {% if currentSortStock == 'desc' %}selected{% endif %}>Stock décroissant</option>
+        </select>
+      </div>
+
+      {# Filtre par catégorie #}
+      <div class="col-md-3">
+        <select id="filterCategory" class="form-select">
+          <option value="">Toutes catégories</option>
+          {% set categories = [] %}
+          {% for produit in produits %}
+            {% if produit.categorieProduit not in categories %}
+              {% set categories = categories|merge([produit.categorieProduit]) %}
+            {% endif %}
+          {% endfor %}
+          {% for categorie in categories|sort %}
+            <option value="{{ categorie }}">{{ categorie }}</option>
+          {% endfor %}
+        </select>
+      </div>
     </div>
-    
-    {# Grille Produits #}
-    {% if produits is not empty %}
-        <div class="row g-4" id="produitsContainer">
-            {% for produit in produits %}
-                <div class="col-lg-3 col-md-4 col-sm-6 produit-item" 
-                     data-nom="{{ produit.nomProduit|lower }}"
-                     data-categorie="{{ produit.categorieProduit|lower }}"
-                     data-prix="{{ produit.prixProduit }}"
-                     data-stock="{{ produit.quantiteProduit }}"
-                     data-description="{{ produit.descriptionProduit|lower }}">
-                    <div class="produit-card {% if produit.statusProduit != 'Disponible' %}unavailable{% endif %}">
-                        
-                        {# Image #}
-                        <div class="produit-image-container">
-                            {% if produit.statusProduit != 'Disponible' %}
-                                <div class="badge-indisponible">{{ produit.statusProduit }}</div>
-                            {% else %}
-                                <div class="price-badge">{{ produit.prixProduit }} DT</div>
-                            {% endif %}
-                            <img src="{{ produit.imageProduit }}" 
-                                 class="produit-img {% if produit.statusProduit != 'Disponible' %}img-grayscale{% endif %}" 
-                                 alt="{{ produit.nomProduit }}">
-                        </div>
 
-                        {# Body #}
-                        <div class="card-body">
-                            <h5 class="card-title">{{ produit.nomProduit }}</h5>
-                             <span class="card-category">
-                                <i class="bi bi-tag me-1"></i>{{ produit.categorieProduit }}
-                            </span>
-                            <div class="card-stock">
-                                <i class="bi bi-box-seam"></i>
-                                <span>{{ produit.quantiteProduit }} en stock</span>
-                            </div>
-                            <span class="status-badge {% if produit.statusProduit == 'Disponible' %}available{% else %}unavailable{% endif %}">
-                                <i class="bi bi-{% if produit.statusProduit == 'Disponible' %}check{% else %}x{% endif %}-circle"></i>
-                                {{ produit.statusProduit }}
-                            </span>
-                            {# Actions #}
-                            <div class="card-actions">
-                                {% if produit.statusProduit == 'Disponible' %}
-                                    <button class="btn-add-cart" 
-                                            data-id="{{ produit.id_produit }}" 
-                                            data-nom="{{ produit.nomProduit }}"
-                                            data-stock="{{ produit.quantiteProduit }}">
-                                        <i class="bi bi-cart-plus"></i>
-                                        <span>Ajouter</span>
-                                    </button>
-                                {% else %}
-                                    <button class="btn-unavailable" disabled>
-                                        <i class="bi bi-cart-x"></i>
-                                        <span>Indisponible</span>
-                                    </button>
-                                {% endif %}
-                                
-                                <button class="btn-details" data-bs-toggle="modal" data-bs-target="#modal-{{ produit.id_produit }}">
-                                    <i class="bi bi-info-circle"></i>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
+    {# Compteur de résultats #}
+    <div class="mt-3">
+      <span id="resultCount" class="text-muted">
+        <i class="bi bi-bag"></i>
+        <span id="count">{{ produits|length }}</span> produit(s) trouvé(s)
+      </span>
+    </div>
+  </div>
+
+  {# Grille Produits #}
+  {% if produits is not empty %}
+    <div class="row g-4" id="produitsContainer">
+      {% for produit in produits %}
+        <div class="col-lg-3 col-md-4 col-sm-6 produit-item"
+             data-nom="{{ produit.nomProduit|lower }}"
+             data-categorie="{{ produit.categorieProduit|lower }}"
+             data-prix="{{ produit.prixProduit }}"
+             data-stock="{{ produit.quantiteProduit }}"
+             data-description="{{ produit.descriptionProduit|lower }}">
+          <div class="produit-card {% if produit.statusProduit != 'Disponible' %}unavailable{% endif %}">
+
+            {# Image #}
+            <div class="produit-image-container">
+              {% if produit.statusProduit != 'Disponible' %}
+                <div class="badge-indisponible">{{ produit.statusProduit }}</div>
+              {% else %}
+                <div class="price-badge">{{ produit.prixProduit }} DT</div>
+              {% endif %}
+
+              <img src="{{ produit.imageProduit }}"
+                   class="produit-img {% if produit.statusProduit != 'Disponible' %}img-grayscale{% endif %}"
+                   alt="{{ produit.nomProduit }}">
+            </div>
+
+            {# Body #}
+            <div class="card-body">
+              <h5 class="card-title">{{ produit.nomProduit }}</h5>
+
+              <span class="card-category">
+                <i class="bi bi-tag me-1"></i>{{ produit.categorieProduit }}
+              </span>
+
+              <div class="card-stock">
+                <i class="bi bi-box-seam"></i>
+                <span>{{ produit.quantiteProduit }} en stock</span>
+              </div>
+
+              <span class="status-badge {% if produit.statusProduit == 'Disponible' %}available{% else %}unavailable{% endif %}">
+                <i class="bi bi-{% if produit.statusProduit == 'Disponible' %}check{% else %}x{% endif %}-circle"></i>
+                {{ produit.statusProduit }}
+              </span>
+
+              {# Actions #}
+              <div class="card-actions">
+                {% if produit.statusProduit == 'Disponible' %}
+                  <button class="btn-add-cart"
+                          data-id="{{ produit.id_produit }}"
+                          data-nom="{{ produit.nomProduit }}"
+                          data-stock="{{ produit.quantiteProduit }}">
+                    <i class="bi bi-cart-plus"></i>
+                    <span>Ajouter</span>
+                  </button>
+                {% else %}
+                  <button class="btn-unavailable" disabled>
+                    <i class="bi bi-cart-x"></i>
+                    <span>Indisponible</span>
+                  </button>
+                {% endif %}
+
+                {# ✅ NOUVEAU : Lire détails (TTS) #}
+                <button type="button"
+                        class="btn-tts"
+                        data-tts-title="{{ produit.nomProduit|e('html_attr') }}"
+                        data-tts-desc="{{ produit.descriptionProduit|e('html_attr') }}"
+                        data-tts-price="{{ produit.prixProduit }}"
+                        data-tts-stock="{{ produit.quantiteProduit }}"
+                        data-tts-status="{{ produit.statusProduit|e('html_attr') }}"
+                        aria-label="Lire les détails du produit">
+                  <i class="bi bi-volume-up-fill"></i>
+                </button>
+
+                <button class="btn-details" data-bs-toggle="modal" data-bs-target="#modal-{{ produit.id_produit }}">
+                  <i class="bi bi-info-circle"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {# Modal détails #}
+        <div class="modal fade" id="modal-{{ produit.id_produit }}" tabindex="-1" aria-hidden="true">
+          <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content">
+              <div class="modal-header">
+                <h5 class="modal-title">{{ produit.nomProduit }}</h5>
+
+                <div class="d-flex align-items-center gap-2">
+                  {# ✅ NOUVEAU : Lire dans le modal #}
+                  <button type="button"
+                          class="btn-tts btn-tts-modal"
+                          data-tts-title="{{ produit.nomProduit|e('html_attr') }}"
+                          data-tts-desc="{{ produit.descriptionProduit|e('html_attr') }}"
+                          data-tts-price="{{ produit.prixProduit }}"
+                          data-tts-stock="{{ produit.quantiteProduit }}"
+                          data-tts-status="{{ produit.statusProduit|e('html_attr') }}">
+                    <i class="bi bi-volume-up-fill"></i>
+                    <span class="d-none d-md-inline">Lire</span>
+                  </button>
+
+                  <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
+              </div>
 
-                {# Modal détails #}
-                <div class="modal fade" id="modal-{{ produit.id_produit }}" tabindex="-1" aria-hidden="true">
-                    <div class="modal-dialog modal-dialog-centered modal-lg">
-                        <div class="modal-content">
-                            <div class="modal-header">
-                                <h5 class="modal-title">{{ produit.nomProduit }}</h5>
-                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                            </div>
-                            <div class="modal-body">
-                                <div class="row">
-                                    <div class="col-md-5 text-center mb-4 mb-md-0">
-                                        <img src="{{ produit.imageProduit }}" class="img-fluid" style="max-height:300px;">
-                                    </div>
-                                    <div class="col-md-7">
-                                        <div class="detail-row">
-                                            <span class="detail-label">Description</span>
-                                            <span class="detail-value">{{ produit.descriptionProduit }}</span>
-                                        </div>
-                                        <div class="detail-row">
-                                            <span class="detail-label">Prix</span>
-                                            <span class="detail-value fw-bold text-success">{{ produit.prixProduit }} DT</span>
-                                        </div>
-                                        <div class="detail-row">
-                                            <span class="detail-label">Quantité en stock</span>
-                                            <span class="detail-value">{{ produit.quantiteProduit }}</span>
-                                        </div>
-                                        <div class="detail-row">
-                                            <span class="detail-label">Catégorie</span>
-                                            <span class="detail-value">{{ produit.categorieProduit }}</span>
-                                        </div>
-                                        <div class="detail-row">
-                                            <span class="detail-label">Statut</span>
-                                            <span class="badge {% if produit.statusProduit == 'Disponible' %}bg-success{% else %}bg-danger{% endif %}">
-                                                {{ produit.statusProduit }}
-                                            </span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+              <div class="modal-body">
+                <div class="row">
+                  <div class="col-md-5 text-center mb-4 mb-md-0">
+                    <img src="{{ produit.imageProduit }}" class="img-fluid" style="max-height:300px;">
+                  </div>
+                  <div class="col-md-7">
+                    <div class="detail-row">
+                      <span class="detail-label">Description</span>
+                      <span class="detail-value">{{ produit.descriptionProduit }}</span>
                     </div>
+
+                    <div class="detail-row">
+                      <span class="detail-label">Prix</span>
+                      <span class="detail-value fw-bold text-primary">{{ produit.prixProduit }} DT</span>
+                    </div>
+
+                    <div class="detail-row">
+                      <span class="detail-label">Quantité en stock</span>
+                      <span class="detail-value">{{ produit.quantiteProduit }}</span>
+                    </div>
+
+                    <div class="detail-row">
+                      <span class="detail-label">Catégorie</span>
+                      <span class="detail-value">{{ produit.categorieProduit }}</span>
+                    </div>
+
+                    <div class="detail-row">
+                      <span class="detail-label">Statut</span>
+                      <span class="badge {% if produit.statusProduit == 'Disponible' %}bg-success{% else %}bg-danger{% endif %}">
+                        {{ produit.statusProduit }}
+                      </span>
+                    </div>
+                  </div>
                 </div>
-            {% endfor %}
+              </div>
+            </div>
+          </div>
         </div>
+      {% endfor %}
+    </div>
 
-        {# Message aucun résultat #}
-        <div id="noResults" class="empty-state" style="display: none;">
-            <i class="bi bi-search"></i>
-            <h3>Aucun produit trouvé</h3>
-            <p>Essayez avec d'autres mots-clés ou filtres</p>
-        </div>
-    {% else %}
-        <div class="empty-state">
-            <i class="bi bi-inbox"></i>
-            <h3>Aucun produit disponible</h3>
-            <p>Revenez plus tard pour découvrir nos nouveaux produits</p>
-        </div>
-    {% endif %}
-
+    {# Message aucun résultat #}
+    <div id="noResults" class="empty-state" style="display: none;">
+      <i class="bi bi-search"></i>
+      <h3>Aucun produit trouvé</h3>
+      <p>Essayez avec d'autres mots-clés ou filtres</p>
+    </div>
+  {% else %}
+    <div class="empty-state">
+      <i class="bi bi-inbox"></i>
+      <h3>Aucun produit disponible</h3>
+      <p>Revenez plus tard pour découvrir nos nouveaux produits</p>
+    </div>
+  {% endif %}
 </div>
+
+<style>
+/* ===========================
+   ✅ THEME BLEU (Connexion-like)
+   =========================== */
+:root{
+  --primary:#0d6efd;
+  --primary-dark:#0b5ed7;
+  --success:#10b981;
+  --danger:#ef4444;
+  --warning:#f59e0b;
+  --gray-50:#f9fafb;
+  --gray-100:#f3f4f6;
+  --gray-200:#e5e7eb;
+  --gray-800:#1f2937;
+  --shadow-sm:0 2px 8px rgba(0,0,0,.08);
+  --shadow-md:0 4px 16px rgba(0,0,0,.12);
+  --shadow-lg:0 8px 32px rgba(0,0,0,.15);
+}
+
+/* ===== HEADER ===== */
+.page-header{
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+  color:#fff;
+  padding:60px 0;
+  margin-bottom:60px;
+  border-radius:0 0 50px 50px;
+  box-shadow: var(--shadow-lg);
+}
+.page-header h1{
+  font-size:3rem;
+  font-weight:800;
+  margin-bottom:10px;
+  text-shadow:0 2px 4px rgba(0,0,0,.12);
+}
+.page-header p{ font-size:1.2rem; opacity:.95; }
+
+/* ===== BTN MES COMMANDES (BLEU) ===== */
+.btn-orders{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  padding:12px 18px;
+  border-radius:14px;
+  border:none;
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+  color:#fff;
+  font-weight:800;
+  box-shadow:0 10px 22px rgba(13,110,253,.35);
+  transition: all .25s ease;
+  text-decoration:none;
+}
+.btn-orders:hover{
+  transform: translateY(-2px);
+  box-shadow:0 14px 28px rgba(13,110,253,.5);
+  color:#fff;
+}
+
+/* ===== BADGE PRIX (BLEU) ===== */
+.price-badge{
+  position:absolute;
+  top:16px; right:16px;
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+  color:#fff;
+  padding:8px 16px;
+  border-radius:50px;
+  font-weight:800;
+  font-size:1.05rem;
+  box-shadow:0 4px 12px rgba(13,110,253,.35);
+  z-index:10;
+}
+
+/* ===== Cartes ===== */
+.produit-card{
+  background:#fff;
+  border-radius:20px;
+  overflow:hidden;
+  transition: all .25s ease;
+  border:2px solid var(--gray-100);
+  height:100%;
+  display:flex;
+  flex-direction:column;
+}
+.produit-card:hover{
+  transform: translateY(-8px);
+  box-shadow: var(--shadow-lg);
+  border-color: var(--primary);
+}
+.produit-image-container{
+  position:relative;
+  width:100%;
+  height:240px;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  overflow:hidden;
+}
+.produit-img{
+  width:100%;
+  height:100%;
+  object-fit:contain;
+  padding:20px;
+  transition:transform .25s ease;
+}
+.produit-card:hover .produit-img:not(.img-grayscale){ transform: scale(1.08); }
+.img-grayscale{ filter: grayscale(100%) opacity(.5); }
+
+.badge-indisponible{
+  position:absolute; top:16px; left:16px;
+  background: linear-gradient(135deg, var(--danger) 0%, #dc2626 100%);
+  color:#fff;
+  padding:8px 16px;
+  border-radius:50px;
+  font-weight:700;
+  font-size:.85rem;
+  text-transform:uppercase;
+  letter-spacing:.5px;
+  box-shadow:0 4px 12px rgba(239,68,68,.35);
+  z-index:10;
+}
+
+.card-body{
+  padding:24px;
+  display:flex;
+  flex-direction:column;
+  flex-grow:1;
+}
+.card-title{
+  font-size:1.2rem;
+  font-weight:800;
+  color:var(--gray-800);
+  margin-bottom:12px;
+  line-height:1.35;
+  display:-webkit-box;
+  -webkit-line-clamp:2;
+  -webkit-box-orient:vertical;
+  overflow:hidden;
+}
+.card-category{
+  display:inline-block;
+  padding:6px 12px;
+  background: var(--gray-100);
+  color: var(--gray-800);
+  border-radius:10px;
+  font-size:.85rem;
+  font-weight:600;
+  margin-bottom:12px;
+}
+.card-stock{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  font-size:.9rem;
+  color:#6b7280;
+  margin-bottom:16px;
+}
+
+.status-badge{
+  padding:8px 16px;
+  border-radius:50px;
+  font-weight:700;
+  font-size:.85rem;
+  margin-bottom:16px;
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+}
+.status-badge.available{ background:#dbeafe; color:#1e40af; }
+.status-badge.unavailable{ background:#fee2e2; color:#991b1b; }
+
+/* Actions */
+.card-actions{ display:flex; gap:10px; margin-top:auto; }
+
+.btn-add-cart{
+  flex:1;
+  padding:12px;
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+  color:#fff;
+  border:none;
+  border-radius:12px;
+  font-weight:800;
+  cursor:pointer;
+  transition: all .25s ease;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+}
+.btn-add-cart:hover{
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(13,110,253,.35);
+}
+.btn-details{
+  padding:12px 20px;
+  background:#fff;
+  color: var(--primary);
+  border:2px solid var(--primary);
+  border-radius:12px;
+  font-weight:800;
+  cursor:pointer;
+  transition: all .2s ease;
+}
+.btn-details:hover{ background: var(--primary); color:#fff; }
+
+.btn-unavailable{
+  flex:1;
+  padding:12px;
+  background: var(--gray-200);
+  color:#6b7280;
+  border:none;
+  border-radius:12px;
+  font-weight:700;
+  cursor:not-allowed;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+}
+
+/* ✅ BTN LIRE (TTS) */
+.btn-tts{
+  width: 46px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  border-radius:12px;
+  border:2px solid rgba(13,110,253,.25);
+  background: #fff;
+  color: var(--primary);
+  font-weight: 900;
+  cursor:pointer;
+  transition: all .2s ease;
+}
+.btn-tts:hover{
+  background: var(--primary);
+  color:#fff;
+  transform: translateY(-2px);
+  box-shadow: 0 10px 22px rgba(13,110,253,.20);
+}
+.btn-tts:active{ transform: translateY(0); }
+.btn-tts.is-speaking{
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+  color:#fff;
+  border-color: transparent;
+}
+.btn-tts-modal{
+  width:auto;
+  padding: 10px 14px;
+  gap: 8px;
+}
+
+/* Modal */
+.modal-content{ border-radius:20px; border:none; overflow:hidden; }
+.modal-header{
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+  color:#fff;
+  border:none;
+  padding:24px;
+}
+.modal-title{ font-weight:900; font-size:1.3rem; }
+.modal-body{ padding:32px; }
+.modal-body img{ border-radius:12px; box-shadow: var(--shadow-md); }
+
+.detail-row{
+  display:flex;
+  justify-content:space-between;
+  gap:12px;
+  padding:12px 0;
+  border-bottom:1px solid var(--gray-200);
+}
+.detail-row:last-child{ border-bottom:none; }
+.detail-label{ font-weight:800; color: var(--gray-800); }
+.detail-value{ color:#6b7280; }
+
+/* Search box */
+.search-filter-section{
+  background:#fff;
+  padding:20px;
+  border-radius:14px;
+  box-shadow: var(--shadow-sm);
+}
+.search-box{ position:relative; }
+.search-box i.bi-search{
+  position:absolute;
+  left:15px;
+  top:50%;
+  transform: translateY(-50%);
+  color:#6c757d;
+  font-size:18px;
+}
+.search-box input{
+  padding-left:45px;
+  padding-right:40px;
+  height:45px;
+  border:2px solid #e9ecef;
+  border-radius:10px;
+  transition: all .2s ease;
+}
+.search-box input:focus{
+  border-color: var(--primary);
+  box-shadow: 0 0 0 .2rem rgba(13,110,253,.15);
+}
+.search-box .btn-clear{
+  position:absolute;
+  right:10px;
+  top:50%;
+  transform: translateY(-50%);
+  background:none;
+  border:none;
+  color:#6c757d;
+  cursor:pointer;
+  padding:5px;
+  transition: color .2s ease;
+}
+.search-box .btn-clear:hover{ color: var(--danger); }
+.form-select{
+  height:45px;
+  border:2px solid #e9ecef;
+  border-radius:10px;
+}
+.form-select:focus{
+  border-color: var(--primary);
+  box-shadow: 0 0 0 .2rem rgba(13,110,253,.15);
+}
+
+#resultCount #count{ color: var(--primary); font-weight:900; }
+
+/* Empty */
+.empty-state{ text-align:center; padding:80px 20px; }
+.empty-state i{ font-size:5rem; color: var(--gray-200); margin-bottom:22px; }
+.empty-state h3{ color: var(--gray-800); margin-bottom:10px; font-weight:900; }
+.empty-state p{ color:#6b7280; }
+
+@media (max-width:768px){
+  .page-header h1{ font-size:2rem; }
+  .produit-image-container{ height:200px; }
+  .card-actions{ flex-direction:column; }
+  #flash-messages-container{ left:20px; right:20px; max-width:none; }
+}
+</style>
+
+{# =========================
+   AI Assistant Groq (Pharmacie)
+   ========================= #}
+<div id="aiFab" class="ai-fab" title="Assistant Pharmacie">
+  <i class="bi bi-stars"></i>
+</div>
+
+<div id="aiPanel" class="ai-panel d-none">
+  <div class="ai-head">
+    <div class="ai-title">
+      <span class="ai-dot"></span> Assistant Pharmacie
+    </div>
+    <button type="button" id="aiClose" class="ai-x">×</button>
+  </div>
+
+  <div id="aiBody" class="ai-body">
+    <div class="ai-msg ai-bot">
+      Salut 👋 Pose-moi une question sur les produits, précautions, utilisation générale.
+    </div>
+  </div>
+
+  <div class="ai-foot">
+    <input id="aiInput" class="ai-input" placeholder="Ex: Que faire contre la toux ?" maxlength="600">
+    <button id="aiSend" class="ai-send"><i class="bi bi-send-fill"></i></button>
+  </div>
+</div>
+
+<style>
+  /* BLUE THEME */
+  .ai-fab{
+    position: fixed; right: 22px; bottom: 22px;
+    width: 56px; height: 56px; border-radius: 18px;
+    display:flex; align-items:center; justify-content:center;
+    cursor:pointer; z-index: 9999;
+    color:#fff;
+    background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
+    box-shadow: 0 14px 30px rgba(37,99,235,.28);
+    transition: .2s ease;
+  }
+  .ai-fab:hover{ transform: translateY(-2px); box-shadow: 0 18px 40px rgba(37,99,235,.35); }
+
+  .ai-panel{
+    position: fixed; right: 22px; bottom: 90px;
+    width: 360px; max-width: calc(100vw - 44px);
+    background: #fff; border-radius: 18px;
+    box-shadow: 0 20px 60px rgba(15,23,42,.25);
+    overflow: hidden; z-index: 9999;
+    border: 1px solid rgba(37,99,235,.15);
+  }
+  .ai-panel.d-none{ display:none; }
+
+  .ai-head{
+    padding: 12px 14px;
+    background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
+    color:#fff;
+    display:flex; align-items:center; justify-content:space-between;
+  }
+  .ai-title{ font-weight: 800; display:flex; align-items:center; gap:10px; }
+  .ai-dot{ width:10px; height:10px; border-radius:50%; background:#22c55e; box-shadow:0 0 0 4px rgba(34,197,94,.18); }
+  .ai-x{
+    background: rgba(255,255,255,.18);
+    border: 1px solid rgba(255,255,255,.28);
+    color:#fff; width: 34px; height: 34px;
+    border-radius: 12px; font-size: 20px; line-height: 1;
+    cursor:pointer;
+  }
+
+  .ai-body{
+    padding: 14px;
+    height: 320px;
+    overflow: auto;
+    background: linear-gradient(180deg, #eff6ff 0%, #ffffff 60%);
+  }
+  .ai-msg{
+    padding: 10px 12px;
+    border-radius: 14px;
+    margin: 10px 0;
+    max-width: 92%;
+    font-size: .95rem;
+    line-height: 1.35;
+    box-shadow: 0 8px 18px rgba(15,23,42,.08);
+  }
+  .ai-user{
+    margin-left: auto;
+    background: #2563eb;
+    color: #fff;
+    border-bottom-right-radius: 6px;
+  }
+  .ai-bot{
+    background: #fff;
+    color: #0f172a;
+    border-bottom-left-radius: 6px;
+    border: 1px solid rgba(37,99,235,.12);
+  }
+
+  .ai-foot{
+    padding: 12px;
+    display:flex; gap: 10px;
+    border-top: 1px solid rgba(37,99,235,.12);
+    background: #fff;
+  }
+  .ai-input{
+    flex:1;
+    border: 2px solid rgba(37,99,235,.18);
+    border-radius: 14px;
+    padding: 10px 12px;
+    outline: none;
+  }
+  .ai-input:focus{ border-color: rgba(37,99,235,.55); box-shadow: 0 0 0 4px rgba(37,99,235,.12); }
+  .ai-send{
+    width: 44px; height: 44px;
+    border-radius: 14px;
+    border: none;
+    color:#fff;
+    background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
+    box-shadow: 0 10px 22px rgba(37,99,235,.22);
+    cursor:pointer;
+    transition: .2s ease;
+  }
+  .ai-send:hover{ transform: translateY(-1px); }
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  // ====== GROQ CHAT UI ======
+  const fab = document.getElementById('aiFab');
+  const panel = document.getElementById('aiPanel');
+  const closeBtn = document.getElementById('aiClose');
+  const body = document.getElementById('aiBody');
+  const input = document.getElementById('aiInput');
+  const send = document.getElementById('aiSend');
+
+  const addMsg = (text, who) => {
+    const div = document.createElement('div');
+    div.className = 'ai-msg ' + (who === 'user' ? 'ai-user' : 'ai-bot');
+    div.textContent = text;
+    body.appendChild(div);
+    body.scrollTop = body.scrollHeight;
+  };
+
+  fab.addEventListener('click', () => {
+    panel.classList.toggle('d-none');
+    setTimeout(() => input.focus(), 50);
+  });
+  closeBtn.addEventListener('click', () => panel.classList.add('d-none'));
+
+  const ask = async () => {
+    const message = (input.value || '').trim();
+    if (!message) return;
+
+    input.value = '';
+    addMsg(message, 'user');
+
+    send.disabled = true;
+    input.disabled = true;
+
+    try {
+      const res = await fetch('{{ path("api_pharmacie_ai") }}', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ message })
+      });
+
+      const data = await res.json().catch(() => null);
+
+      if (!res.ok || !data || !data.ok) {
+        addMsg((data && data.reply) ? data.reply : "Erreur IA. Réessaie.", 'bot');
+      } else {
+        addMsg(data.reply, 'bot');
+      }
+    } catch (e) {
+      addMsg("Erreur réseau. Vérifie ta connexion.", 'bot');
+    } finally {
+      send.disabled = false;
+      input.disabled = false;
+      input.focus();
+    }
+  };
+
+  send.addEventListener('click', ask);
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') ask();
+  });
+
+  // ====== TTS (Lire détails produit) ======
+  const canSpeak = ('speechSynthesis' in window) && ('SpeechSynthesisUtterance' in window);
+
+  const stopSpeak = () => {
+    if (!canSpeak) return;
+    window.speechSynthesis.cancel();
+    document.querySelectorAll('.btn-tts.is-speaking').forEach(b => b.classList.remove('is-speaking'));
+  };
+
+  const speak = (btn) => {
+    if (!canSpeak) {
+      alert("Ton navigateur ne supporte pas la lecture audio (TTS). Essaie Chrome/Edge.");
+      return;
+    }
+
+    if (btn.classList.contains('is-speaking')) {
+      stopSpeak();
+      return;
+    }
+
+    stopSpeak();
+    btn.classList.add('is-speaking');
+
+    const title  = btn.dataset.ttsTitle  || '';
+    const desc   = btn.dataset.ttsDesc   || '';
+    const price  = btn.dataset.ttsPrice  || '';
+    const stock  = btn.dataset.ttsStock  || '';
+    const status = btn.dataset.ttsStatus || '';
+
+    const text =
+      `Produit : ${title}. ` +
+      (desc ? `Description : ${desc}. ` : '') +
+      (price ? `Prix : ${price} dinars. ` : '') +
+      (stock ? `Stock : ${stock}. ` : '') +
+      (status ? `Statut : ${status}.` : '');
+
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = 'fr-FR';
+    u.rate = 1;
+    u.pitch = 1;
+
+    u.onend = () => btn.classList.remove('is-speaking');
+    u.onerror = () => btn.classList.remove('is-speaking');
+
+    window.speechSynthesis.speak(u);
+  };
+
+  document.querySelectorAll('.btn-tts').forEach(btn => {
+    btn.addEventListener('click', () => speak(btn));
+  });
+
+  document.querySelectorAll('.modal').forEach(m => {
+    m.addEventListener('hidden.bs.modal', stopSpeak);
+  });
+
+  window.addEventListener('beforeunload', stopSpeak);
+});
+</script>
+
 {% endblock %}
 
 {% block stylesheets %}

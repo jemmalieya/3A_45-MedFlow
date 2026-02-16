@@ -2,6 +2,12 @@
 {% block title %}Nouveau post{% endblock %}
 
 {% block body %}
+{# ✅ Leaflet CSS #}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+
+{# ✅ Leaflet JS #}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
 <section class="section" style="padding-top:120px;">
   <div class="container">
 
@@ -107,11 +113,12 @@
                 </div>
               </div>
 
-             <div class="col-md-6">
+            <div class="col-md-6">
   <label class="form-label fw-semibold">Localisation</label>
 
   {{ form_widget(form.localisation, {
     'attr': {
+      'id': 'post_localisation',
       'class': 'form-control',
       'placeholder': 'Ex : Tunis, Ariana, Sousse…'
     }
@@ -120,7 +127,23 @@
   <div class="form-error">
     {{ form_errors(form.localisation) }}
   </div>
+
+  <div class="d-flex gap-2 mt-2">
+    <button type="button" class="btn btn-outline-primary btn-sm" id="btnGeo">
+      <i class="bi bi-crosshair"></i> Utiliser ma position
+    </button>
+
+    <button type="button" class="btn btn-outline-success btn-sm"
+            data-bs-toggle="modal" data-bs-target="#mapModal">
+      <i class="bi bi-geo-alt"></i> Choisir sur la carte
+    </button>
+  </div>
+
+  <small class="text-muted d-block mt-2" id="geoStatus"></small>
 </div>
+
+
+
 
 
               <div class="col-md-6">
@@ -192,6 +215,36 @@
             </div>
 
             {{ form_end(form) }}
+            {# ✅ MODAL CARTE #}
+<div class="modal fade" id="mapModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+
+      <div class="modal-header text-white"
+           style="background: linear-gradient(90deg, #0d6efd, #20c997);">
+        <h5 class="modal-title">
+          <i class="bi bi-geo-alt me-2"></i> Choisir une localisation
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+
+      <div class="modal-body p-0">
+        <div id="leafletMap" style="height: 60vh; width: 100%;"></div>
+      </div>
+
+      <div class="modal-footer d-flex justify-content-between">
+        <small class="text-muted" id="mapHint">
+          Clique sur la carte pour placer un point.
+        </small>
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+          Fermer
+        </button>
+      </div>
+
+    </div>
+  </div>
+</div>
+
 
 
           </div>
@@ -292,7 +345,8 @@ document.addEventListener('DOMContentLoaded', () => {
     contenu: document.getElementById('{{ form.contenu.vars.id }}'),
     categorie: document.getElementById('{{ form.categorie.vars.id }}'),
     humeur: document.getElementById('{{ form.humeur.vars.id }}'),
-    localisation: document.getElementById('{{ form.localisation.vars.id }}'),
+    localisation: document.getElementById('post_localisation'),
+
     hashtags: document.getElementById('{{ form.hashtags.vars.id }}'),
   };
 
@@ -439,6 +493,153 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   close?.addEventListener('click', () => box.style.display = 'none');
+});
+(function(){
+  const input = document.getElementById('post_localisation');
+  const btn = document.getElementById('btnGeo');
+  const status = document.getElementById('geoStatus');
+
+  if(!input || !btn) return;
+
+  function setStatus(msg){ if(status) status.textContent = msg || ''; }
+
+  btn.addEventListener('click', async () => {
+    setStatus('');
+    if(!navigator.geolocation){
+      setStatus("La géolocalisation n'est pas supportée par ce navigateur.");
+      return;
+    }
+
+    setStatus("Localisation en cours...");
+    navigator.geolocation.getCurrentPosition(async (pos) => {
+      const lat = pos.coords.latitude;
+      const lon = pos.coords.longitude;
+
+      // On met déjà lat/lon (utile même si l'API de geocoding échoue)
+      input.value = `${lat.toFixed(5)}, ${lon.toFixed(5)}`;
+
+      // Optionnel: reverse geocoding (adresse) via Nominatim (OpenStreetMap)
+      try{
+        const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lon}`;
+        const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+        const data = await res.json();
+        if(data && data.display_name){
+          input.value = data.display_name;
+        }
+        setStatus("Position récupérée ✅");
+      }catch(e){
+        setStatus("Position récupérée ✅ (adresse non disponible)");
+      }
+    }, (err) => {
+      setStatus("Impossible d'accéder à la position (permission refusée ou GPS désactivé).");
+    }, { enableHighAccuracy: true, timeout: 8000 });
+  });
+})();
+
+// ✅ MAP MODAL (Leaflet) : choisir sur carte -> remplit le champ localisation
+(function(){
+  const input = document.getElementById('post_localisation');
+  const hint = document.getElementById('mapHint');
+  const modalEl = document.getElementById('mapModal');
+  const mapDiv = document.getElementById('leafletMap');
+
+  if(!input || !modalEl || !mapDiv || typeof L === 'undefined') return;
+
+  let map = null;
+  let marker = null;
+
+  function setHint(msg){ if(hint) hint.textContent = msg || ''; }
+
+  async function reverseGeocode(lat, lon){
+    // Optionnel : convertir lat/lon en adresse (OpenStreetMap Nominatim)
+    try{
+      const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lon}`;
+      const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+      const data = await res.json();
+      return data?.display_name || null;
+    }catch(e){
+      return null;
+    }
+  }
+
+  modalEl.addEventListener('shown.bs.modal', async () => {
+    // Crée la map une seule fois
+    if(!map){
+      map = L.map('leafletMap', { zoomControl: true });
+
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap contributors'
+      }).addTo(map);
+
+      // Position par défaut : Tunis
+      map.setView([36.8065, 10.1815], 12);
+
+      // Click sur carte
+      map.on('click', async (e) => {
+        const lat = e.latlng.lat;
+        const lon = e.latlng.lng;
+
+        if(!marker){
+          marker = L.marker([lat, lon], { draggable: true }).addTo(map);
+          marker.on('dragend', async () => {
+            const p = marker.getLatLng();
+            input.value = `${p.lat.toFixed(5)}, ${p.lng.toFixed(5)}`;
+            input.dispatchEvent(new Event('input'));
+            setHint("Position mise à jour (drag) ✅");
+
+            const addr = await reverseGeocode(p.lat, p.lng);
+            if(addr){
+              input.value = addr;
+              input.dispatchEvent(new Event('input'));
+            }
+          });
+        } else {
+          marker.setLatLng([lat, lon]);
+        }
+
+        // met au moins les coordonnées
+        input.value = `${lat.toFixed(5)}, ${lon.toFixed(5)}`;
+        input.dispatchEvent(new Event('input'));
+        setHint("Position choisie ✅ (conversion en adresse...)");
+
+        // tente une adresse
+        const addr = await reverseGeocode(lat, lon);
+        if(addr){
+          input.value = addr;
+          input.dispatchEvent(new Event('input'));
+          setHint("Adresse récupérée ✅");
+        }else{
+          setHint("Coordonnées enregistrées ✅ (adresse non dispo)");
+        }
+      });
+
+    } else {
+      // Très important : Leaflet doit recalculer la taille dans un modal
+      setTimeout(() => map.invalidateSize(), 200);
+    }
+
+    // Si possible, centre sur la position de l’utilisateur
+    if(navigator.geolocation){
+      navigator.geolocation.getCurrentPosition((pos)=>{
+        map.setView([pos.coords.latitude, pos.coords.longitude], 14);
+      });
+    }
+  });
+
+})();
+
+</script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  {% for msg in app.flashes('swal_error') %}
+    Swal.fire({
+      icon: 'error',
+      title: 'Publication refusée',
+      text: "{{ msg|e('js') }}",
+      confirmButtonText: 'OK'
+    });
+  {% endfor %}
 });
 </script>
 

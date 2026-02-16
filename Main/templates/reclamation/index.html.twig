@@ -3,31 +3,52 @@
 {% block title %}Réclamations{% endblock %}
 
 {% block body %}
-<section class="section" style="padding-top: 120px;">
+<section class="section py-5" style="background-color: #fff;">
   <div class="container">
+
+    {# ===== Rectangle avec texte "Ajouter une réclamation" ===== #}
+    <div class="row justify-content-center mb-4">
+      <div class="col-12 text-center">
+        <div class="card" style="background-color: #1CA3B4; color: white; padding: 40px; border-radius: 20px;">
+          <h3 class="fw-bold">Ajouter une réclamation</h3>
+          <p>Décrivez votre problème, nous vous répondrons rapidement.</p>
+        </div>
+      </div>
+    </div>
+
+    {# ===== Icône "Voir mes réclamations" ===== #}
+    <div class="text-center mb-4">
+      <a href="{{ path('my_reclamations') }}" class="btn btn-outline-primary" style="border-radius: 20px; padding: 12px 25px; color: #1CA3B4; border: 2px solid #1CA3B4;">
+        <i class="bi bi-folder-open"></i> Voir mes réclamations
+      </a>
+    </div>
 
     <div class="row justify-content-center">
       <div class="col-lg-8">
 
-        <div class="section-title mb-4 d-flex justify-content-between align-items-center">
-          <div>
-            <h2>Ajouter une réclamation</h2>
-            <p>Décrivez votre problème, nous vous répondrons rapidement.</p>
-          </div>
-
-          <a href="{{ path('reclamation_list') }}"
-             class="btn btn-outline-primary"
-             title="Voir mes réclamations">
-            <i class="bi bi-inbox"></i>
-          </a>
-        </div>
-
-        {# ===== Messages succès ===== #}
+        {# ===== Affichage du message de succès avec SweetAlert ===== #}
         {% for message in app.flashes('success') %}
-          <div class="alert alert-success alert-dismissible fade show" role="alert">
-            {{ message }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-          </div>
+          <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+          <script>
+            Swal.fire({
+              icon: 'success',
+              title: 'Réclamation ajoutée avec succès!',
+              text: 'Merci pour votre réclamation, nous la traiterons le plus tôt possible.',
+              showConfirmButton: false,
+              timer: 3000, // Disparaît après 3 secondes
+              timerProgressBar: true,
+              position: 'top',
+              toast: true,
+              background: '#fff',
+              color: '#155724',
+              iconColor: '#155724',
+              customClass: {
+                popup: 'swal2-popup',
+                title: 'swal2-title',
+                icon: 'swal2-icon',
+              }
+            });
+          </script>
         {% endfor %}
 
         {# (optionnel) afficher erreurs globales du form #}
@@ -37,23 +58,24 @@
           </div>
         {% endif %}
 
-        <div class="card shadow-sm border-0">
-          <div class="card-body p-4">
+        <div class="card shadow-lg border-0 rounded-4" style="box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);">
+          <div class="card-body p-5">
 
             {{ form_start(form, {
               attr: {
-                class: 'row g-3',
+                class: 'row g-4',
                 novalidate: 'novalidate'
               }
             }) }}
 
               {# ===== CONTENU ===== #}
               <div class="col-12">
-                {{ form_label(form.contenu, 'Contenu', {'label_attr': {'class': 'form-label'}}) }}
+                {{ form_label(form.contenu, 'Contenu', {'label_attr': {'class': 'form-label text-dark'}}) }}
                 {{ form_widget(form.contenu, {
                   attr: {
                     class: 'form-control ' ~ (form_errors(form.contenu) ? 'is-invalid' : ''),
-                    placeholder: 'Ex: Problème de rendez-vous...'
+                    placeholder: 'Ex: Problème de rendez-vous...',
+                    style: 'border-radius: 15px; padding: 15px; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); transition: all 0.3s ease;'
                   }
                 }) }}
                 {% if form_errors(form.contenu) %}
@@ -65,12 +87,13 @@
 
               {# ===== DESCRIPTION ===== #}
               <div class="col-12">
-                {{ form_label(form.description, 'Description', {'label_attr': {'class': 'form-label'}}) }}
+                {{ form_label(form.description, 'Description', {'label_attr': {'class': 'form-label text-dark'}}) }}
                 {{ form_widget(form.description, {
                   attr: {
                     class: 'form-control ' ~ (form_errors(form.description) ? 'is-invalid' : ''),
                     rows: 5,
-                    placeholder: 'Décrivez votre réclamation en détail...'
+                    placeholder: 'Décrivez votre réclamation en détail...',
+                    style: 'border-radius: 15px; padding: 15px; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); transition: all 0.3s ease;'
                   }
                 }) }}
                 {% if form_errors(form.description) %}
@@ -82,10 +105,11 @@
 
               {# ===== TYPE (select) ===== #}
               <div class="col-md-6">
-                {{ form_label(form.type, 'Type', {'label_attr': {'class': 'form-label'}}) }}
+                {{ form_label(form.type, 'Type', {'label_attr': {'class': 'form-label text-dark'}}) }}
                 {{ form_widget(form.type, {
                   attr: {
-                    class: 'form-select ' ~ (form_errors(form.type) ? 'is-invalid' : '')
+                    class: 'form-select ' ~ (form_errors(form.type) ? 'is-invalid' : ''),
+                    style: 'border-radius: 15px; padding: 15px; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); transition: all 0.3s ease;'
                   }
                 }) }}
                 {% if form_errors(form.type) %}
@@ -97,10 +121,11 @@
 
               {# ===== PIÈCE JOINTE (AVANT BOUTON) ===== #}
               <div class="col-12">
-                {{ form_label(form.pieceJointePath, 'Pièce jointe (optionnelle)', {'label_attr': {'class': 'form-label'}}) }}
+                {{ form_label(form.pieceJointePath, 'Pièce jointe (optionnelle)', {'label_attr': {'class': 'form-label text-dark'}}) }}
                 {{ form_widget(form.pieceJointePath, {
                   attr: {
-                    class: 'form-control ' ~ (form_errors(form.pieceJointePath) ? 'is-invalid' : '')
+                    class: 'form-control ' ~ (form_errors(form.pieceJointePath) ? 'is-invalid' : ''),
+                    style: 'border-radius: 15px; padding: 15px; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); transition: all 0.3s ease;'
                   }
                 }) }}
                 {% if form_errors(form.pieceJointePath) %}
@@ -113,18 +138,21 @@
                   Formats conseillés : PDF, JPG, PNG. (Taille limitée selon config)
                 </div>
               </div>
+<!-- Bouton pour reformuler le contenu sans soumettre -->
+<button type="button" id="reformulateReclamationButton" class="btn btn-outline-primary" style="border-radius: 20px; padding: 12px 25px; color: #1CA3B4; border: 2px solid #1CA3B4;">
+  <i class="bi bi-lightbulb"></i> Reformuler la réclamation
+</button>
 
               {# ===== ACTIONS ===== #}
-              <div class="col-12 d-flex gap-2 mt-2">
-                <button type="submit" class="btn btn-primary px-4">
-                  Envoyer la réclamation
+              <div class="col-12 d-flex gap-3 mt-4 justify-content-center">
+                <button type="submit" class="btn" style="background-color: #1CA3B4; color: white; padding: 15px 30px; border-radius: 20px; transition: all 0.3s ease;">
+                  <i class="bi bi-send"></i> Envoyer la réclamation
                 </button>
-                <button type="reset" class="btn btn-outline-secondary px-4">
+                <button type="reset" class="btn btn-outline-secondary px-5 py-3" style="border-radius: 20px; transition: all 0.3s ease;">
                   Annuler
                 </button>
               </div>
 
-            {# ✅ IMPORTANT: garder render_rest pour CSRF (_token) #}
             {{ form_end(form) }}
 
           </div>
@@ -135,4 +163,54 @@
 
   </div>
 </section>
+<script>
+document.getElementById('reformulateReclamationButton').addEventListener('click', async function () {
+    const contenuField = document.getElementById('reclamation_contenu');
+    const descriptionField = document.getElementById('reclamation_description');
+    const button = this;
+
+    if (!contenuField.value.trim() && !descriptionField.value.trim()) {
+        alert("Veuillez saisir du contenu ou une description.");
+        return;
+    }
+
+    button.disabled = true;
+    button.innerHTML = '<i class="bi bi-clock"></i> Reformulation en cours...';
+
+    try {
+        const response = await fetch('{{ path("reformuler") }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: JSON.stringify({
+                content: contenuField.value,
+                description: descriptionField.value
+            })
+        });
+
+        const data = await response.json();
+
+        if (data.error) {
+            alert('Erreur lors de la reformulation : ' + data.error);
+        } else {
+            contenuField.value = data.reformulated_content || contenuField.value;
+            descriptionField.value = data.reformulated_description || descriptionField.value;
+        }
+
+    } catch (error) {
+        console.error('Erreur lors de la reformulation :', error);
+        alert('Erreur lors de la reformulation.');
+    } finally {
+        button.disabled = false;
+        button.innerHTML = '<i class="bi bi-lightbulb"></i> Reformuler la réclamation';
+    }
+});
+</script>
+
+
+
+
 {% endblock %}
+ 

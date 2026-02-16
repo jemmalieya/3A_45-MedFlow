@@ -323,7 +323,7 @@ final class FicheMedicaleController extends AbstractController
 
                 $rendez = $fiche->getRendezVous();
                 if ($rendez) {
-                    $rendez->setStatut('Confirmé');
+                    $rendez->setStatut('Terminée');
                     $em->persist($rendez);
                 }
 

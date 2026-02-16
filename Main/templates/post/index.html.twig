@@ -1,70 +1,133 @@
 {% extends 'base.html.twig' %}
+
 {% block title %}Blog{% endblock %}
 
 {% block body %}
-<section class="section" style="padding-top:120px;">
- <div class="container-lg py-4">
-  <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
-    <div>
-      <h2 class="mb-1">Latest blogs</h2>
-      <p class="text-muted mb-0">Découvrez les derniers posts</p>
-    </div>
+{% set swal_success = app.flashes('success') %}
+{% set swal_error   = app.flashes('error') %}
+{% set swal_warning = app.flashes('warning') %}
 
-    <div class="d-flex align-items-center gap-2">
-      <form method="get" action="{{ path('post_index') }}" class="d-flex">
-        <div class="input-group" style="min-width:320px; max-width:520px;">
-          <span class="input-group-text bg-white">
-            <i class="bi bi-search"></i>
-          </span>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
-          <input id="postSearch"
-                 type="text"
-                 name="q"
-                 value="{{ q|default('') }}"
-                 class="form-control"
-                 placeholder="Rechercher...">
+{% if app.user and moderationNotifs is defined and moderationNotifs|length > 0 %}
+<script>
+document.addEventListener('DOMContentLoaded', async () => {
+  const notifs = [
+    {% for n in moderationNotifs %}
+      {
+        id: {{ n.id }},
+        status: "{{ n.moderationStatus }}",
+        msg: {{ (n.moderationMessage ?? '')|json_encode|raw }},
+        csrf: "{{ csrf_token('moderation_ack_' ~ n.id) }}"
+      }{{ not loop.last ? ',' : '' }}
+    {% endfor %}
+  ];
 
-          <!-- TRI auto -->
-          <select name="sort" class="form-select" onchange="this.form.submit()">
-            <option value="">Trier par</option>
-            <option value="date_desc" {{ app.request.get('sort') == 'date_desc' ? 'selected' : '' }}>Plus récents</option>
-            <option value="date_asc" {{ app.request.get('sort') == 'date_asc' ? 'selected' : '' }}>Plus anciens</option>
-            <option value="reactions_desc" {{ app.request.get('sort') == 'reactions_desc' ? 'selected' : '' }}>Plus de réactions</option>
-            <option value="categorie_asc" {{ app.request.get('sort') == 'categorie_asc' ? 'selected' : '' }}>Catégorie (A → Z)</option>
-          </select>
+  for (const n of notifs) {
+    await Swal.fire({
+      icon: (n.status === 'APPROVED') ? 'success' : 'error',
+      title: (n.status === 'APPROVED') ? 'Post approuvé ✅' : 'Post refusé ❌',
+      text: n.msg || '',
+      confirmButtonText: 'OK',
+      allowOutsideClick: false
+    });
 
-          {% if q is defined and q|trim != '' %}
-            <a class="btn btn-outline-secondary" href="{{ path('post_index') }}" title="Effacer">
-              <i class="bi bi-x-lg"></i>
-            </a>
-          {% else %}
-            <button class="btn btn-outline-secondary" type="submit" title="Rechercher">
-              <i class="bi bi-arrow-return-left"></i>
+    const fd = new FormData();
+    fd.append('_token', n.csrf);
+
+    await fetch(`/posts/moderation/${n.id}/ack`, {
+      method: 'POST',
+      body: fd,
+      headers: {'X-Requested-With': 'XMLHttpRequest'}
+    });
+
+    location.reload();
+    return;
+  }
+});
+</script>
+{% endif %}
+
+
+
+<section class="section blog-page" style="padding-top:120px;">
+  <div class="container-lg py-4">
+
+    {# ======================
+       ✅ HEADER / HERO BAR
+       ====================== #}
+    <div class="blog-hero mb-4">
+      <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+        <div class="d-flex align-items-center gap-3">
+          <div class="hero-icon">
+            <i class="bi bi-journal-richtext"></i>
+          </div>
+          <div>
+            <h2 class="mb-1 hero-title">Latest blogs</h2>
+            <p class="mb-0 hero-sub">Découvrez les derniers posts</p>
+          </div>
+        </div>
+
+        <div class="d-flex align-items-center gap-2 flex-wrap">
+          {% if app.user %}
+            <button type="button" class="btn btn-warning-soft fw-bold" data-bs-toggle="modal" data-bs-target="#pendingPostsModal">
+              <i class="bi bi-hourglass-split me-2"></i>
+              Mes posts en attente
+              <span class="badge rounded-pill bg-warning text-dark ms-2">{{ myPendingPosts|length }}</span>
             </button>
           {% endif %}
+
+          <a href="{{ path('post_export_pdf', { q: q|default(''), sort: sort|default('date_desc') }) }}" class="btn btn-outline-dark btn-pill">
+            <i class="bi bi-file-earmark-pdf me-1"></i> Export PDF
+          </a>
+
+          <a href="{{ path('post_new') }}" class="btn btn-primary btn-pill">
+            <i class="bi bi-plus-circle me-1"></i> Nouveau post
+          </a>
         </div>
-      </form>
-      <a href="{{ path('post_export_pdf', { q: q|default(''), sort: sort|default('date_desc') }) }}"
-   class="btn btn-outline-dark">
-  Export PDF
-</a>
-
-
-      <a href="{{ path('post_new') }}" class="btn btn-outline-primary">Nouveau post</a>
-    </div>
-  </div>
-</div>
-
-
-
-
-    {% for m in app.flashes('success') %}
-      <div class="alert alert-success alert-dismissible fade show">
-        {{ m }}
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
       </div>
-    {% endfor %}
+<button class="btn btn-outline-secondary btn-sm rounded-pill" id="btnShowHidden">
+  <i class="bi bi-eye me-1"></i> Réinitialiser les posts masqués
+</button>
 
+      {# ===== Search + sort (style amélioré) ===== #}
+      <div class="mt-3">
+        <form method="get" action="{{ path('post_index') }}" class="d-flex">
+          <div class="input-group blog-search">
+            <span class="input-group-text bg-white border-0">
+              <i class="bi bi-search"></i>
+            </span>
+
+            <input id="postSearch"
+                   type="text"
+                   name="q"
+                   value="{{ q|default('') }}"
+                   class="form-control border-0"
+                   placeholder="Rechercher un post, une catégorie, une localisation...">
+
+            <select name="sort" class="form-select border-0" onchange="this.form.submit()">
+              <option value="">Trier par</option>
+              <option value="date_desc" {{ app.request.get('sort') == 'date_desc' ? 'selected' : '' }}>Plus récents</option>
+              <option value="date_asc" {{ app.request.get('sort') == 'date_asc' ? 'selected' : '' }}>Plus anciens</option>
+              <option value="reactions_desc" {{ app.request.get('sort') == 'reactions_desc' ? 'selected' : '' }}>Plus de réactions</option>
+              <option value="categorie_asc" {{ app.request.get('sort') == 'categorie_asc' ? 'selected' : '' }}>Catégorie (A → Z)</option>
+            </select>
+
+            {% if q is defined and q|trim != '' %}
+              <a class="btn btn-light border-0" href="{{ path('post_index') }}" title="Effacer">
+                <i class="bi bi-x-lg"></i>
+              </a>
+            {% else %}
+              <button class="btn btn-light border-0" type="submit" title="Rechercher">
+                <i class="bi bi-arrow-return-left"></i>
+              </button>
+            {% endif %}
+          </div>
+        </form>
+      </div>
+    </div>
+
+  
     {# ✅ Construire un "dictionnaire" des erreurs commentaire par Post ID #}
     {% set commentErrors = {} %}
     {% for e in app.flashes('comment_error') %}
@@ -76,442 +139,597 @@
       {% endif %}
     {% endfor %}
 
-<style>
-  /* Container commentaires (comme une sous-card) */
-  .ig-comments {
-    margin-top: 16px;
-    padding: 14px 16px;
-    border-radius: 16px;
-    background: rgba(13,110,253,.03);
-    border: 1px solid rgba(0,0,0,.06);
-  }
+    <style>
+      /* =========================
+         ✅ BLOG – DESIGN UPGRADE
+         ========================= */
 
-  .ig-comments-top{
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-    gap:10px;
-    margin-bottom: 10px;
-  }
+      .blog-page{
+        background:
+          radial-gradient(1200px 380px at 10% -10%, rgba(13,110,253,.10), transparent 60%),
+          radial-gradient(900px 320px at 95% 0%, rgba(32,201,151,.10), transparent 55%);
+      }
 
-  .ig-chip{
-    display:inline-flex;
-    align-items:center;
-    gap:8px;
-    padding: 6px 10px;
-    border-radius: 999px;
-    background: #fff;
-    border: 1px solid rgba(0,0,0,.06);
-    font-size: .88rem;
-  }
+      .blog-hero{
+        border-radius: 22px;
+        padding: 18px 18px;
+        border: 1px solid rgba(16,24,40,.08);
+        background: rgba(255,255,255,.92);
+        box-shadow: 0 16px 40px rgba(16,24,40,.08);
+        backdrop-filter: blur(10px);
+      }
+      .hero-icon{
+        width: 48px; height: 48px;
+        border-radius: 16px;
+        display:flex; align-items:center; justify-content:center;
+        background: linear-gradient(135deg, rgba(13,110,253,.16), rgba(32,201,151,.16));
+        border: 1px solid rgba(16,24,40,.08);
+        box-shadow: 0 10px 24px rgba(16,24,40,.08);
+        font-size: 1.3rem;
+      }
+      .hero-title{ font-weight: 900; letter-spacing: -.2px; }
+      .hero-sub{ color:#6c757d; }
 
-  .ig-c-list{ margin-top: 8px; display:flex; flex-direction:column; gap:10px; }
+      .btn-pill{ border-radius: 999px !important; padding-left: 14px; padding-right: 14px; }
+      .btn-warning-soft{
+        border-radius: 999px;
+        background: rgba(255,193,7,.14);
+        border: 1px solid rgba(255,193,7,.35);
+        color: #8a6d00;
+        padding: 10px 14px;
+        transition: transform .12s ease, box-shadow .12s ease;
+      }
+      .btn-warning-soft:hover{
+        transform: translateY(-1px);
+        box-shadow: 0 12px 28px rgba(16,24,40,.10);
+      }
 
-  .ig-c-row{
-    display:flex;
-    gap:10px;
-    align-items:flex-start;
-    padding: 10px 10px;
-    border-radius: 14px;
-    background:#fff;
-    border:1px solid rgba(0,0,0,.06);
-    box-shadow: 0 4px 12px rgba(0,0,0,.03);
-  }
+      .blog-search{
+        border-radius: 999px;
+        overflow: hidden;
+        border: 1px solid rgba(16,24,40,.10);
+        background: #fff;
+        box-shadow: 0 10px 26px rgba(16,24,40,.06);
+        min-width: 320px;
+        max-width: 820px;
+      }
+      .blog-search .form-control{ padding: 12px 10px; }
+      .blog-search .form-select{
+        min-width: 210px;
+        padding-top: 12px;
+        padding-bottom: 12px;
+        background-color: #fff;
+      }
+      .blog-search .input-group-text,
+      .blog-search .btn{ padding: 12px 14px; }
 
-  .ig-c-ava{
-    width:38px;height:38px;border-radius:50%;
-    display:inline-flex;align-items:center;justify-content:center;
-    background: linear-gradient(135deg, rgba(13,110,253,.18), rgba(32,201,151,.18));
-    border: 1px solid rgba(0,0,0,.06);
-    font-weight:700;
-    flex: 0 0 38px;
-  }
+      /* Layout */
+      .blog-grid{
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 18px;
+      }
+      @media (min-width: 992px){
+        .blog-grid{
+          grid-template-columns: 1.65fr .95fr;
+          align-items: start;
+        }
+      }
 
-  .ig-c-body{ width:100%; }
+      /* Sidebar */
+      .blog-side{
+        position: relative;
+      }
+      @media (min-width: 992px){
+        .blog-side{
+          position: sticky;
+          top: 120px;
+        }
+      }
+      .side-card{
+        border: 1px solid rgba(16,24,40,.08);
+        border-radius: 18px;
+        box-shadow: 0 16px 36px rgba(16,24,40,.08);
+        overflow: hidden;
+        background: rgba(255,255,255,.92);
+        backdrop-filter: blur(10px);
+      }
+      .side-card .card-body{ padding: 16px; }
+      .side-title{
+        font-weight: 900;
+        letter-spacing: -.2px;
+        display:flex; align-items:center; gap:10px;
+      }
+      .side-title i{ opacity: .8; }
 
-  .ig-c-meta{
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-    gap:10px;
-    font-size:.82rem;
-    color:#6c757d;
-    margin-bottom: 4px;
-  }
+      /* Post card */
+      .post-card{
+        border-radius: 22px;
+        overflow: hidden;
+        border: 1px solid rgba(16,24,40,.08);
+        box-shadow: 0 18px 42px rgba(16,24,40,.08);
+        transition: transform .14s ease, box-shadow .14s ease, border-color .14s ease;
+        background: rgba(255,255,255,.94);
+        backdrop-filter: blur(10px);
+      }
+      .post-card:hover{
+        transform: translateY(-2px);
+        box-shadow: 0 24px 56px rgba(16,24,40,.12);
+        border-color: rgba(13,110,253,.22);
+      }
+      .post-media{
+        border-radius: 18px;
+        overflow: hidden;
+        border: 1px solid rgba(16,24,40,.08);
+        box-shadow: 0 14px 34px rgba(16,24,40,.10);
+        background:#fff;
+      }
+      .post-img{
+        width:100%;
+        height: 220px;
+        object-fit: cover;
+        display:block;
+      }
+      @media (min-width: 768px){
+        .post-img{ height: 210px; }
+      }
 
-  .ig-c-name{
-    font-weight:700;
-    color:#212529;
-    font-size:.92rem;
-  }
+      .post-title{
+        font-size: 1.6rem;
+        font-weight: 950;
+        line-height: 1.15;
+        letter-spacing: -.3px;
+        margin-bottom: 8px;
+      }
+      .post-title a{ color:#101828; }
+      .post-title a:hover{ color:#0d6efd; }
 
-  .ig-c-text{ font-size:.95rem; color:#212529; line-height:1.35; }
+      .meta-line{
+        color:#6c757d;
+        font-size: .92rem;
+        display:flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        align-items:center;
+      }
+      .meta-dot{
+        width: 5px; height: 5px;
+        border-radius: 999px;
+        background: rgba(108,117,125,.55);
+        display:inline-block;
+      }
 
-  .ig-badge{
-    font-size:.70rem;
-    border-radius: 999px;
-    padding: .25rem .5rem;
-  }
+      .badge-soft{
+        border-radius: 999px;
+        padding: .35rem .65rem;
+        font-weight: 700;
+        border: 1px solid rgba(16,24,40,.10);
+        background: rgba(13,110,253,.08);
+        color: #0d6efd;
+      }
+      .badge-soft-muted{
+        background: rgba(108,117,125,.10);
+        color: #6c757d;
+      }
 
-  .ig-c-actions{
-    margin-top: 6px;
-    display:flex;
-    gap:14px;
-    font-size:.85rem;
-    color:#6c757d;
-  }
-  .ig-c-actions span{ cursor:pointer; }
-  .ig-c-actions span:hover{ color:#0d6efd; }
+      .post-excerpt{
+        color:#344054;
+        margin-bottom: 10px;
+        line-height: 1.5;
+      }
 
-  /* Barre d'ajout */
-  .ig-addbar{
-    margin-top: 12px;
-    display:flex;
-    gap:10px;
-    align-items:center;
-    padding-top: 12px;
-    border-top: 1px dashed rgba(0,0,0,.10);
-  }
-  .ig-addbar input{
-    border-radius: 999px !important;
-    padding-left: 14px !important;
-    background:#fff;
-  }
+      /* Reaction bar */
+      .react-bar{
+        margin-top: 14px;
+        padding-top: 12px;
+        border-top: 1px solid rgba(16,24,40,.08);
+      }
+      .emoji-btn{
+        border: 1px solid rgba(16,24,40,.10);
+        background: #fff;
+        border-radius: 999px;
+        padding: 7px 11px;
+        cursor: pointer;
+        transition: transform .08s ease, box-shadow .08s ease;
+        font-size: 1.05rem;
+        line-height: 1;
+      }
+      .emoji-btn:hover{
+        transform: translateY(-1px);
+        box-shadow: 0 10px 22px rgba(16,24,40,.08);
+      }
+      .react-count{
+        color:#6c757d;
+        font-size:.92rem;
+      }
+      .react-count .pill{
+        background: rgba(13,110,253,.08);
+        border:1px solid rgba(13,110,253,.15);
+        color:#0d6efd;
+        border-radius:999px;
+        padding:4px 10px;
+        font-weight:800;
+      }
+      .pill-comment{
+        background: rgba(32,201,151,.10) !important;
+        border-color: rgba(32,201,151,.18) !important;
+        color: #0f8d67 !important;
+      }
 
-  .react-bar{
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-    gap:10px;
-    margin-top: 12px;
-    padding-top: 10px;
-    border-top: 1px solid rgba(0,0,0,.06);
-  }
-  .react-emojis{
-    display:flex;
-    gap:8px;
-    align-items:center;
-  }
-  .emoji-btn{
-    border:1px solid rgba(0,0,0,.08);
-    background:#fff;
-    border-radius:999px;
-    padding:6px 10px;
-    cursor:pointer;
-    transition: transform .08s ease, box-shadow .08s ease;
-    font-size: 1.05rem;
-    line-height: 1;
-  }
-  .emoji-btn:hover{
-    transform: translateY(-1px);
-    box-shadow: 0 6px 14px rgba(0,0,0,.06);
-  }
-  .react-count{
-    display:flex;
-    align-items:center;
-    gap:8px;
-    color:#6c757d;
-    font-size:.9rem;
-    white-space:nowrap;
-  }
-  .react-count .pill{
-    background: rgba(13,110,253,.08);
-    border:1px solid rgba(13,110,253,.15);
-    color:#0d6efd;
-    border-radius:999px;
-    padding:4px 10px;
-    font-weight:600;
-  }
+      /* Comments container */
+      .ig-comments{
+        margin-top: 16px;
+        padding: 14px 16px;
+        border-radius: 18px;
+        background: rgba(13,110,253,.02);
+        border: 1px solid rgba(16,24,40,.08);
+        max-height: 360px;
+        overflow: auto;
+      }
+      .ig-comments::-webkit-scrollbar{ width: 8px; }
+      .ig-comments::-webkit-scrollbar-thumb{ background: rgba(0,0,0,.14); border-radius: 999px; }
 
-  .reaction-zone{
-    position: relative;
-    overflow: visible !important;
-    z-index: 20;
-  }
+      .ig-c-row{
+        display:flex;
+        gap:10px;
+        align-items:flex-start;
+        padding: 10px 10px;
+        border-radius: 16px;
+        background:#fff;
+        border:1px solid rgba(16,24,40,.08);
+        box-shadow: 0 10px 22px rgba(16,24,40,.06);
+      }
+      .ig-c-ava{
+        width:38px;height:38px;border-radius:50%;
+        display:inline-flex;align-items:center;justify-content:center;
+        background: linear-gradient(135deg, rgba(13,110,253,.18), rgba(32,201,151,.18));
+        border: 1px solid rgba(16,24,40,.10);
+        font-weight:900;
+        flex: 0 0 38px;
+        color:#101828;
+      }
+      .ig-addbar{
+        margin-top: 12px;
+        display:flex;
+        gap:10px;
+        align-items:center;
+        padding-top: 12px;
+        border-top: 1px dashed rgba(16,24,40,.18);
+      }
+      .ig-addbar input{
+        border-radius: 999px !important;
+        padding-left: 14px !important;
+        background:#fff;
+        border: 1px solid rgba(16,24,40,.12);
+      }
 
-  .reaction-float{
-    position: absolute;
-    bottom: 14px;
-    left: var(--x, 50%);
-    font-size: var(--size, 22px);
-    opacity: 0;
-    transform: translate(-50%, 0) scale(1);
-    animation: floatUp var(--dur, 900ms) ease-out forwards;
-    pointer-events: none;
-    filter: drop-shadow(0 6px 10px rgba(0,0,0,.12));
-    z-index: 9999 !important;
-  }
+      /* Reaction floating animation */
+      .reaction-zone{ position: relative; overflow: visible !important; z-index: 20; }
+      .reaction-float{
+        position: absolute;
+        bottom: 14px;
+        left: var(--x, 50%);
+        font-size: var(--size, 22px);
+        opacity: 0;
+        transform: translate(-50%, 0) scale(1);
+        animation: floatUp var(--dur, 900ms) ease-out forwards;
+        pointer-events: none;
+        filter: drop-shadow(0 10px 14px rgba(0,0,0,.14));
+        z-index: 9999 !important;
+      }
+      @keyframes floatUp{
+        0% { opacity: 0; transform: translate(-50%, 8px) scale(.85); }
+        10% { opacity: 1; }
+        100% { opacity: 0; transform: translate(calc(-50% + var(--dx, 0px)), -120px) scale(1.25); }
+      }
+    </style>
 
-  @keyframes floatUp{
-    0%   { opacity: 0; transform: translate(-50%, 8px) scale(.85); }
-    10%  { opacity: 1; }
-    100% { opacity: 0; transform: translate(calc(-50% + var(--dx, 0px)), -120px) scale(1.25); }
-  }
+    {# ======================
+       ✅ MAIN GRID
+       ====================== #}
+    <div class="blog-grid mt-4">
 
-  /* ✅ POST = HÉROS */
-  .post-card{ border-radius: 18px; overflow: hidden; }
-  .post-img{
-    width:100%;
-    height: 220px;
-    object-fit: cover;
-    border-radius: 14px;
-    box-shadow: 0 10px 24px rgba(0,0,0,.06);
-  }
-  .post-title{ font-size: 1.55rem; font-weight: 800; line-height: 1.2; }
-
-  /* ✅ COMMENTAIRES = secondaire */
-  .ig-comments{
-    background: rgba(13,110,253,.02);
-    border: 1px solid rgba(0,0,0,.05);
-    max-height: 360px;
-    overflow: auto;
-  }
-  .ig-comments::-webkit-scrollbar{ width: 8px; }
-  .ig-comments::-webkit-scrollbar-thumb{ background: rgba(0,0,0,.12); border-radius: 999px; }
-</style>
-  <div class="container my-5">
-    <div class="row justify-content-center">
-
-    <!-- largeur contrôlée -->
-    <div class="col-12 col-lg-9 col-xl-8">
-
-        {% for p in posts %}
-
-          <div class="card border-0 shadow-sm mb-4 post-card">
-            <div class="card-body">
-              <div class="row g-3">
-                <div class="col-md-4">
-                  <a href="{{ path('post_show', {id: p.id}) }}">
-                    <img src="{{ asset(p.imgPost) }}" class="img-fluid post-img" alt="post">
-                  </a>
-                </div>
-
-                <div class="col-md-8">
-                  <div class="d-flex gap-2 align-items-center mb-2">
-                    <span class="badge bg-primary">{{ p.categorie }}</span>
-                    {% if p.visibilite != 'PUBLIC' %}
-                      <span class="badge bg-secondary">{{ p.visibilite }}</span>
-                    {% endif %}
-                  </div>
-
-                  <h3 class="mb-2 post-title">
-                    <a class="text-decoration-none" href="{{ path('post_show', {id: p.id}) }}">
-                      {{ p.titre }}
-                    </a>
-                  </h3>
-
-                  <p class="text-muted mb-2">
-                    {{ p.contenu|striptags|slice(0, 130) ~ '...' }}
-                  </p>
-
-                  <div class="d-flex justify-content-between align-items-center">
-                    <small class="text-muted">
-                      {{ p.dateCreation ? p.dateCreation|date('d M Y') : '' }}
-                      {% if p.localisation %} · {{ p.localisation }}{% endif %}
-                      {% if p.user %} · <strong>{{ p.user.prenom }} {{ p.user.nom }}</strong>{% endif %}
-                    </small>
-
-                    <div class="d-flex gap-2">
-                      <a class="btn btn-sm btn-outline-primary" href="{{ path('post_edit', {id: p.id}) }}">Edit</a>
-
-                      <form method="post" action="{{ path('post_delete', {id: p.id}) }}"
-                            onsubmit="return confirm('Supprimer ce post ?')">
-                        <input type="hidden" name="token" value="{{ csrf_token('delete_post' ~ p.id) }}">
-                        <button class="btn btn-sm btn-outline-danger">Delete</button>
-                      </form>
-                    </div>
-                  </div>
-
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div class="reaction-zone" data-zone>
-            <div class="react-bar">
-              <div class="react-emojis">
-                {% set token = csrf_token('react_post_' ~ p.id) %}
-
-                <form class="react-form" method="post" action="{{ path('post_react', {id: p.id}) }}">
-                  <input type="hidden" name="_token" value="{{ token }}">
-                  <input type="hidden" name="type" value="like">
-                  <button class="emoji-btn" type="submit" title="J'aime" data-emoji="👍">👍</button>
-                </form>
-
-                <form class="react-form" method="post" action="{{ path('post_react', {id: p.id}) }}">
-                  <input type="hidden" name="_token" value="{{ token }}">
-                  <input type="hidden" name="type" value="love">
-                  <button class="emoji-btn" type="submit" title="J'adore" data-emoji="❤️">❤️</button>
-                </form>
-
-                <form class="react-form" method="post" action="{{ path('post_react', {id: p.id}) }}">
-                  <input type="hidden" name="_token" value="{{ token }}">
-                  <input type="hidden" name="type" value="haha">
-                  <button class="emoji-btn" type="submit" title="Haha" data-emoji="😂">😂</button>
-                </form>
-
-                <form class="react-form" method="post" action="{{ path('post_react', {id: p.id}) }}">
-                  <input type="hidden" name="_token" value="{{ token }}">
-                  <input type="hidden" name="type" value="wow">
-                  <button class="emoji-btn" type="submit" title="Wow" data-emoji="😮">😮</button>
-                </form>
-
-                <form class="react-form" method="post" action="{{ path('post_react', {id: p.id}) }}">
-                  <input type="hidden" name="_token" value="{{ token }}">
-                  <input type="hidden" name="type" value="sad">
-                  <button class="emoji-btn" type="submit" title="Triste" data-emoji="😢">😢</button>
-                </form>
-
-                <form class="react-form" method="post" action="{{ path('post_react', {id: p.id}) }}">
-                  <input type="hidden" name="_token" value="{{ token }}">
-                  <input type="hidden" name="type" value="angry">
-                  <button class="emoji-btn" type="submit" title="Grr" data-emoji="😡">😡</button>
-                </form>
-              </div>
-
-              <div class="react-count">
-                <i class="bi bi-hand-thumbs-up"></i>
-                <span class="pill" data-count>{{ p.nbrReactions ?? 0 }}</span>
-                <span>réaction(s)</span>
-                <span class="mx-2 text-muted">•</span>
-                <span class="d-inline-flex align-items-center gap-2">
-                  <i class="bi bi-chat-dots"></i>
-                  <span class="pill pill-comment" data-comment-count>{{ p.nbrCommentaires ?? 0 }}</span>
-                  <span>commentaire(s)</span>
-                </span>
-              </div>
-            </div>
-          </div>
-
-          <div class="ig-comments">
-
-            <div class="d-flex justify-content-between align-items-center">
-              <div class="text-muted small">
-                <i class="bi bi-chat-dots"></i>
-                {{ p.commentaires|length }} commentaire(s)
-                {% if p.commentaires|length > 2 %}
-                  · <a class="text-decoration-none" href="{{ path('post_show', {id: p.id}) }}">Voir tous</a>
-                {% endif %}
-              </div>
-
-              <a class="btn btn-sm btn-outline-primary"
-                 href="{{ path('commentaire_add', {id: p.id}) }}">
-                <i class="bi bi-plus-circle"></i> Ajouter
-              </a>
-            </div>
-
-            {% set lastTwo = p.commentaires|sort((a,b) => b.dateCreation <=> a.dateCreation)|slice(0,2) %}
-
-            {% for c in lastTwo %}
-              <div class="ig-c-row">
-                <div class="ig-c-ava">
-                  {% if c.estAnonyme %}
-                    <i class="bi bi-incognito"></i>
-                  {% else %}
-                    {{ (c.user.prenom is defined and c.user.prenom) ? (c.user.prenom|slice(0,1)|upper) : (c.user.emailUser|slice(0,1)|upper) }}
-                  {% endif %}
-                </div>
-
-                <div class="ig-c-bubble">
-                  <div class="ig-c-meta">
-                    <strong>
-                      {% if c.estAnonyme %}
-                        Anonyme
-                      {% else %}
-                        {{ (c.user.prenom is defined and c.user.prenom) ? (c.user.prenom ~ ' ' ~ (c.user.nom is defined ? c.user.nom : '')) : c.user.emailUser }}
-                      {% endif %}
-                    </strong>
-                    · {{ c.dateCreation|date('d/m/Y H:i') }}
-
-                    {% set badge =
-                      c.parametresConfidentialite == 'PRIVE' ? 'danger' :
-                      (c.parametresConfidentialite == 'AMIS' ? 'info' : 'success')
-                    %}
-                    <span class="badge bg-{{ badge }} ms-2" style="font-size:.7rem;border-radius:999px;">
-                      {{ c.parametresConfidentialite }}
-                    </span>
-                  </div>
-
-                  <div>{{ c.contenu }}</div>
-                </div>
-              </div>
-            {% else %}
-              <div class="text-muted small mt-2">Aucun commentaire pour le moment.</div>
-            {% endfor %}
-
-            {# ✅ Erreur du post courant (clé string) #}
-            {% set postKey = p.id ~ '' %}
-            {% set errMsg = commentErrors[postKey] is defined ? commentErrors[postKey] : null %}
-
-            <div class="ig-addbar">
-              <div class="ig-c-ava" style="width:32px;height:32px;flex:0 0 32px;">U</div>
-
-              <form id="comment-form-{{ p.id }}"
-                    class="comment-inline-form w-100 d-flex gap-2"
-                    method="post"
-                    action="{{ path('commentaire_add_inline', {id: p.id}) }}">
-
-                <input type="hidden" name="token" value="{{ csrf_token('add_comment' ~ p.id) }}">
-
-                <div class="w-100">
-                  <input class="form-control form-control-sm {{ errMsg ? 'is-invalid' : '' }}"
-                         name="contenu"
-                         placeholder="Ajouter un commentaire…">
-
-                  {# ✅ Erreur PHP affichée sous l’input du BON POST #}
-                  {% if errMsg %}
-                    <div class="invalid-feedback d-block">
-                      {{ errMsg }}
-                    </div>
-                  {% endif %}
-                </div>
-
-                <button class="btn btn-sm btn-primary rounded-pill" type="submit">
-                  Publier
-                </button>
-              </form>
-            </div>
-
-          </div>
-
-        {% else %}
+      {# ===== LEFT : POSTS ===== #}
+      <div>
+        {% if posts is empty %}
           <div class="alert alert-info">Aucun post pour le moment.</div>
-        {% endfor %}
+        {% else %}
+          {% for p in posts %}
+            <div class="card post-card mb-4" data-post-id="{{ p.id }}">
 
+              <div class="card-body p-3 p-md-4">
+              <div class="d-flex justify-content-end">
+  <div class="dropdown">
+    <button class="btn btn-light btn-sm rounded-pill" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="Options">
+      <i class="bi bi-three-dots"></i>
+    </button>
+
+    <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+      <li>
+        <button class="dropdown-item text-danger js-hide-post" type="button" data-post="{{ p.id }}">
+          <i class="bi bi-eye-slash me-2"></i> Masquer ce post
+        </button>
+      </li>
+    </ul>
+  </div>
+</div>
+
+
+                <div class="row g-3 align-items-stretch">
+                  <div class="col-md-4">
+                    <a href="{{ path('post_show', {id: p.id}) }}" class="d-block text-decoration-none">
+                      <div class="post-media">
+                        <img src="{{ asset(p.imgPost) }}" class="post-img" alt="post">
+                      </div>
+                    </a>
+                  </div>
+
+                  <div class="col-md-8">
+                    <div class="d-flex flex-wrap gap-2 align-items-center mb-2">
+                      <span class="badge-soft">
+                        <i class="bi bi-tag me-1"></i>{{ p.categorie }}
+                      </span>
+                      {% if p.visibilite != 'PUBLIC' %}
+                        <span class="badge-soft badge-soft-muted">
+                          <i class="bi bi-shield-lock me-1"></i>{{ p.visibilite }}
+                        </span>
+                      {% endif %}
+                    </div>
+
+                    <h3 class="post-title">
+                      <a class="text-decoration-none" href="{{ path('post_show', {id: p.id}) }}">
+                        {{ p.titre }}
+                      </a>
+                    </h3>
+
+                    <p class="post-excerpt mb-2">
+                      {{ p.contenu|striptags|slice(0, 160) ~ '...' }}
+                    </p>
+
+                    <div class="d-flex justify-content-between align-items-end flex-wrap gap-2">
+                      <div class="meta-line">
+                        <span><i class="bi bi-calendar3 me-1"></i>{{ p.dateCreation ? p.dateCreation|date('d M Y') : '' }}</span>
+                        {% if p.localisation %}
+                          <span class="meta-dot"></span>
+                          <span><i class="bi bi-geo-alt me-1"></i>{{ p.localisation }}</span>
+                        {% endif %}
+                        {% if p.user %}
+                          <span class="meta-dot"></span>
+                          <span><i class="bi bi-person-circle me-1"></i><strong>{{ p.user.prenom }} {{ p.user.nom }}</strong></span>
+                        {% endif %}
+                      </div>
+
+                      {% if app.user and p.user and p.user.id == app.user.id %}
+                        <div class="d-flex gap-2">
+                          <a class="btn btn-sm btn-outline-primary btn-pill" href="{{ path('post_edit', {id: p.id}) }}">
+                            <i class="bi bi-pencil-square me-1"></i>Edit
+                          </a>
+                          <form method="post" action="{{ path('post_delete', {id: p.id}) }}" onsubmit="return confirm('Supprimer ce post ?')">
+                            <input type="hidden" name="_token" value="{{ csrf_token('delete_post_' ~ p.id) }}">
+                            <button class="btn btn-sm btn-outline-danger btn-pill">
+                              <i class="bi bi-trash me-1"></i>Delete
+                            </button>
+                          </form>
+                        </div>
+                      {% endif %}
+                    </div>
+
+                    {# ===== reactions ===== #}
+                    <div class="reaction-zone mt-2" data-zone>
+                      <div class="react-bar">
+                        <div class="d-flex align-items-center justify-content-between gap-2 flex-wrap">
+                          <div class="react-emojis d-flex gap-2 align-items-center">
+                            {% set token = csrf_token('react_post_' ~ p.id) %}
+                            <form class="react-form" method="post" action="{{ path('post_react', {id: p.id}) }}">
+                              <input type="hidden" name="_token" value="{{ token }}">
+                              <input type="hidden" name="type" value="like">
+                              <button class="emoji-btn" type="submit" title="J'aime" data-emoji="👍">👍</button>
+                            </form>
+                            <form class="react-form" method="post" action="{{ path('post_react', {id: p.id}) }}">
+                              <input type="hidden" name="_token" value="{{ token }}">
+                              <input type="hidden" name="type" value="love">
+                              <button class="emoji-btn" type="submit" title="J'adore" data-emoji="❤️">❤️</button>
+                            </form>
+                            <form class="react-form" method="post" action="{{ path('post_react', {id: p.id}) }}">
+                              <input type="hidden" name="_token" value="{{ token }}">
+                              <input type="hidden" name="type" value="haha">
+                              <button class="emoji-btn" type="submit" title="Haha" data-emoji="😂">😂</button>
+                            </form>
+                            <form class="react-form" method="post" action="{{ path('post_react', {id: p.id}) }}">
+                              <input type="hidden" name="_token" value="{{ token }}">
+                              <input type="hidden" name="type" value="wow">
+                              <button class="emoji-btn" type="submit" title="Wow" data-emoji="😮">😮</button>
+                            </form>
+                            <form class="react-form" method="post" action="{{ path('post_react', {id: p.id}) }}">
+                              <input type="hidden" name="_token" value="{{ token }}">
+                              <input type="hidden" name="type" value="sad">
+                              <button class="emoji-btn" type="submit" title="Triste" data-emoji="😢">😢</button>
+                            </form>
+                            <form class="react-form" method="post" action="{{ path('post_react', {id: p.id}) }}">
+                              <input type="hidden" name="_token" value="{{ token }}">
+                              <input type="hidden" name="type" value="angry">
+                              <button class="emoji-btn" type="submit" title="Grr" data-emoji="😡">😡</button>
+                            </form>
+                          </div>
+
+                          <div class="react-count d-flex align-items-center gap-2">
+                            <i class="bi bi-hand-thumbs-up"></i>
+                            <span class="pill" data-count>{{ p.nbrReactions ?? 0 }}</span>
+                            <span>réaction(s)</span>
+                            <span class="mx-2 text-muted">•</span>
+                            <span class="d-inline-flex align-items-center gap-2">
+                              <i class="bi bi-chat-dots"></i>
+                              <span class="pill pill-comment" data-comment-count data-post="{{ p.id }}">
+                                {{ p.nbrCommentaires ?? 0 }}
+                              </span>
+                              <span>commentaire(s)</span>
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {# ===== comments preview ===== #}
+                    <div class="ig-comments">
+                      <div class="d-flex justify-content-between align-items-center">
+                        <div class="text-muted small">
+                          <i class="bi bi-chat-dots"></i>
+                          {{ p.commentaires|length }} commentaire(s)
+                          {% if p.commentaires|length > 2 %}
+                            ·
+                            <button type="button" class="btn btn-link p-0 text-decoration-none" data-bs-toggle="modal" data-bs-target="#commentsModal-{{ p.id }}">
+                              Voir tous
+                            </button>
+                          {% endif %}
+                        </div>
+                      </div>
+
+                      {% set lastTwo = p.commentaires|sort((a,b) => b.dateCreation <=> a.dateCreation)|slice(0,2) %}
+                      {% if lastTwo is empty %}
+                        <div class="text-muted small mt-2">Aucun commentaire pour le moment.</div>
+                      {% else %}
+                        {% for c in lastTwo %}
+                          <div class="ig-c-row mt-2" data-comment-id="{{ c.id }}">
+                            <div class="ig-c-ava">
+                              {% if c.estAnonyme %}
+                                <i class="bi bi-incognito"></i>
+                              {% else %}
+                                {{ (c.user.prenom is defined and c.user.prenom) ? (c.user.prenom|slice(0,1)|upper) : (c.user.emailUser|slice(0,1)|upper) }}
+                              {% endif %}
+                            </div>
+
+                            <div class="w-100">
+                              <div class="d-flex justify-content-between align-items-center gap-2 flex-wrap" style="font-size:.86rem;color:#6c757d;">
+                                <strong style="color:#101828;">
+                                  {% if c.estAnonyme %}
+                                    Anonyme
+                                  {% else %}
+                                    {{ (c.user.prenom is defined and c.user.prenom) ? (c.user.prenom ~ ' ' ~ (c.user.nom is defined ? c.user.nom : '')) : c.user.emailUser }}
+                                  {% endif %}
+                                </strong>
+
+                                <span>
+                                  {{ c.dateCreation|date('d/m/Y H:i') }}
+                                  {% set badge = c.parametresConfidentialite == 'PRIVE' ? 'danger' : (c.parametresConfidentialite == 'AMIS' ? 'info' : 'success') %}
+                                  <span class="badge bg-{{ badge }} ms-2" style="font-size:.7rem;border-radius:999px;">
+                                    {{ c.parametresConfidentialite }}
+                                  </span>
+                                </span>
+                              </div>
+
+                              <div class="mt-1">{{ c.contenu }}</div>
+
+                              {% if app.user and c.user and (c.user.id == app.user.id or is_granted('ROLE_ADMIN')) %}
+                                <div class="mt-2 d-flex gap-2 justify-content-end">
+                                  {# ✅ Inline edit (sans redirection) #}
+                                  <button type="button"
+                                          class="btn btn-sm btn-light js-edit-comment"
+                                          title="Modifier"
+                                          data-id="{{ c.id }}"
+                                          data-url="{{ path('commentaire_inline_edit', {id: c.id}) }}"
+                                          data-token="{{ csrf_token('edit_commentaire_' ~ c.id) }}">
+                                    <i class="bi bi-pencil"></i>
+                                  </button>
+
+                                  <form class="delete-comment-form" method="post" action="{{ path('commentaire_delete', {id: c.id}) }}">
+                                    <input type="hidden" name="_token" value="{{ csrf_token('del_commentaire_' ~ c.id) }}">
+                                    <button class="btn btn-sm btn-light" type="submit" title="Supprimer">
+                                      <i class="bi bi-trash"></i>
+                                    </button>
+                                  </form>
+                                </div>
+                              {% endif %}
+
+                              <div class="js-inline-edit-area mt-2 d-none"></div>
+                            </div>
+                          </div>
+                        {% endfor %}
+                      {% endif %}
+
+                      {# ✅ Erreur du post courant (clé string) #}
+                      {% set postKey = p.id ~ '' %}
+                      {% set errMsg = commentErrors[postKey] is defined ? commentErrors[postKey] : null %}
+
+                      <div class="ig-addbar">
+                        <div class="ig-c-ava" style="width:32px;height:32px;flex:0 0 32px;">U</div>
+                        <form id="comment-form-{{ p.id }}" class="comment-inline-form w-100 d-flex gap-2" method="post" action="{{ path('commentaire_add_inline', {id: p.id}) }}">
+                          <input type="hidden" name="_token" value="{{ csrf_token('add_comment_' ~ p.id) }}">
+                          <div class="w-100">
+                            <input class="form-control form-control-sm {{ errMsg ? 'is-invalid' : '' }}" name="contenu" placeholder="Ajouter un commentaire…">
+                            {% if errMsg %}
+                              <div class="invalid-feedback d-block">
+                                {{ errMsg }}
+                              </div>
+                            {% endif %}
+                          </div>
+                          <button class="btn btn-sm btn-primary btn-pill" type="submit">
+                            Publier
+                          </button>
+                        </form>
+                      </div>
+
+                    </div>
+
+                  </div>
+                </div>
+
+              </div>
+            </div>
+          {% endfor %}
+        {% endif %}
       </div>
 
-      <div class="col-lg-4">
-        <div class="card border-0 shadow-sm mb-4 post-card">
+      {# ===== RIGHT : SIDEBAR ===== #}
+      <aside class="blog-side">
+        <div class="card side-card mb-4">
           <div class="card-body">
-            <h5 class="mb-3">Recent post</h5>
+            <div class="side-title mb-3">
+              <i class="bi bi-lightning-charge"></i>
+              <span>Posts récents</span>
+            </div>
+
             {% for rp in recentPosts %}
-              <div class="mb-3">
-                <a class="fw-semibold text-decoration-none d-block"
-                   href="{{ path('post_show', {id: rp.id}) }}">
+              <div class="py-2">
+                <a class="fw-semibold text-decoration-none d-block" href="{{ path('post_show', {id: rp.id}) }}">
                   {{ rp.titre }}
                 </a>
                 <small class="text-muted">
+                  <i class="bi bi-clock me-1"></i>
                   {{ rp.dateCreation ? rp.dateCreation|date('d/m/Y H:i') : '' }}
                 </small>
               </div>
+              {% if not loop.last %}<hr class="my-2" style="opacity:.08;">{% endif %}
+            {% else %}
+              <span class="text-muted small">Aucun post récent</span>
             {% endfor %}
-            <a class="text-decoration-none" href="{{ path('post_index') }}">View all latest news</a>
+
+            <div class="mt-3">
+              <a class="text-decoration-none fw-semibold" href="{{ path('post_index') }}">
+                Voir tous les posts <i class="bi bi-arrow-right ms-1"></i>
+              </a>
+            </div>
           </div>
         </div>
 
-        <div class="card border-0 shadow-sm">
+        <div class="card side-card">
           <div class="card-body">
-            <h5 class="mb-3">Tags</h5>
+            <div class="side-title mb-3">
+              <i class="bi bi-hash"></i>
+              <span>Tags</span>
+            </div>
+
             <div class="d-flex flex-wrap gap-2">
               {% for t in tags %}
-                <span class="badge bg-light text-dark border">{{ t }}</span>
+                <span class="badge bg-light text-dark border" style="border-radius:999px;padding:.45rem .7rem;">
+                  #{{ t }}
+                </span>
               {% else %}
                 <span class="text-muted small">Aucun tag</span>
               {% endfor %}
             </div>
           </div>
         </div>
-      </div>
+      </aside>
 
     </div>
 
@@ -519,19 +737,48 @@
 </section>
 
 <script>
-(function () {
+/* ==============================
+   ✅ SweetAlert2 Helpers
+   ============================== */
+function swalConfirm({ title, text, confirmText = "Oui", cancelText = "Annuler", icon = "warning" }) {
+  return Swal.fire({
+    title,
+    text,
+    icon,
+    showCancelButton: true,
+    confirmButtonText: confirmText,
+    cancelButtonText: cancelText,
+    reverseButtons: true,
+    allowOutsideClick: false,
+  });
+}
 
+function swalToast({ title, icon = "success" }) {
+  return Swal.fire({
+    toast: true,
+    position: "top-end",
+    icon,
+    title,
+    showConfirmButton: false,
+    timer: 2000,
+    timerProgressBar: true
+  });
+}
+
+/* ==============================
+   ✅ Reactions (inchangé)
+   ============================== */
+(function () {
   function burst(zone, emoji, count) {
     const baseX = Math.random() * 70 + 15;
-
     for (let i = 0; i < count; i++) {
       const el = document.createElement("span");
       el.className = "reaction-float";
       el.textContent = emoji;
 
-      const dx  = (Math.random() * 80 - 40).toFixed(0) + "px";
+      const dx = (Math.random() * 80 - 40).toFixed(0) + "px";
       const size = (Math.random() * 10 + 18).toFixed(0) + "px";
-      const dur  = (Math.random() * 500 + 700).toFixed(0) + "ms";
+      const dur = (Math.random() * 500 + 700).toFixed(0) + "ms";
 
       el.style.setProperty("--dx", dx);
       el.style.setProperty("--size", size);
@@ -543,15 +790,13 @@
     }
   }
 
-  // ✅ submit AJAX pour réactions (inchangé)
   document.addEventListener("submit", async function (e) {
     const form = e.target.closest(".react-form");
     if (!form) return;
-
     e.preventDefault();
 
     const zone = form.closest("[data-zone]");
-    const btn  = form.querySelector(".emoji-btn");
+    const btn = form.querySelector(".emoji-btn");
     const emoji = btn?.dataset.emoji || btn?.textContent?.trim() || "👍";
 
     burst(zone, emoji, emoji === "❤️" ? 14 : 10);
@@ -562,33 +807,419 @@
         body: new FormData(form),
         headers: { "X-Requested-With": "XMLHttpRequest" }
       });
-
       const data = await res.json();
-
       if (data && data.ok) {
         const countEl = zone.querySelector("[data-count]");
         if (countEl) countEl.textContent = data.nbrReactions;
       }
     } catch (err) {
       console.error("React AJAX error:", err);
+      swalToast({ title: "Erreur réaction.", icon: "error" });
     }
   });
-
 })();
 
+/* ==============================
+   ✅ Auto-submit Search
+   ============================== */
 (function () {
   const input = document.getElementById('postSearch');
   if (!input) return;
-
   let t = null;
   input.addEventListener('input', () => {
     clearTimeout(t);
-    t = setTimeout(() => {
-      input.closest('form').submit();
-    }, 350);
+    t = setTimeout(() => input.closest('form').submit(), 350);
   });
+})();
+
+/* ==============================
+   ✅ DELETE commentaire (AJAX) + SweetAlert
+   ============================== */
+document.addEventListener("submit", async function (e) {
+  const form = e.target.closest(".delete-comment-form");
+  if (!form) return;
+  e.preventDefault();
+
+  const result = await swalConfirm({
+    title: "Supprimer ce commentaire ?",
+    text: "Cette action est irréversible.",
+    confirmText: "Supprimer",
+    cancelText: "Annuler",
+    icon: "warning"
+  });
+
+  if (!result.isConfirmed) return;
+
+  try {
+    const res = await fetch(form.action, {
+      method: "POST",
+      body: new FormData(form),
+      headers: { "X-Requested-With": "XMLHttpRequest" }
+    });
+
+    const data = await res.json();
+
+    if (!data.ok) {
+      await Swal.fire("Erreur", data.message || "Suppression impossible.", "error");
+      return;
+    }
+
+    // ✅ supprimer du DOM
+    const row = form.closest("[data-comment-id]");
+    if (row) row.remove();
+
+    // ✅ update compteur
+    const counter = document.querySelector(`[data-comment-count][data-post="${data.postId}"]`);
+    if (counter) counter.textContent = data.nbrCommentaires;
+
+    swalToast({ title: "Commentaire supprimé ✅", icon: "success" });
+
+  } catch (err) {
+    console.error(err);
+    await Swal.fire("Erreur", "Erreur réseau lors de la suppression.", "error");
+  }
+});
+
+/* ==============================
+   ✅ INLINE EDIT commentaire (AJAX) + SweetAlert
+   ============================== */
+document.addEventListener("click", async function (e) {
+  const btn = e.target.closest(".js-edit-comment");
+  if (!btn) return;
+
+  const item = btn.closest("[data-comment-id]");
+  if (!item) return;
+
+  const editArea = item.querySelector(".js-inline-edit-area");
+  if (!editArea) return;
+
+  // toggle
+  if (!editArea.classList.contains("d-none")) {
+    editArea.classList.add("d-none");
+    editArea.innerHTML = "";
+    return;
+  }
+
+  let textEl = item.querySelector(".js-comment-text");
+  if (!textEl) textEl = item.querySelector(".mt-1, .mt-2");
+  const oldText = (textEl?.textContent || "").trim();
+
+  const url = btn.dataset.url;
+  const token = btn.dataset.token;
+
+  editArea.classList.remove("d-none");
+  editArea.innerHTML = `
+    <form class="js-inline-edit-form">
+      <div class="mb-2">
+        <textarea class="form-control" name="contenu" rows="3" style="border-radius:14px;">${oldText}</textarea>
+        <div class="text-danger small mt-1 d-none js-inline-error"></div>
+      </div>
+      <input type="hidden" name="_token" value="${token}">
+      <div class="d-flex justify-content-end gap-2">
+        <button type="button" class="btn btn-light btn-sm rounded-pill js-cancel-inline">Annuler</button>
+        <button type="submit" class="btn btn-primary btn-sm rounded-pill">Enregistrer</button>
+      </div>
+    </form>
+  `;
+
+  const form = editArea.querySelector(".js-inline-edit-form");
+  const errorBox = editArea.querySelector(".js-inline-error");
+  const cancelBtn = editArea.querySelector(".js-cancel-inline");
+
+  cancelBtn.addEventListener("click", () => {
+    editArea.classList.add("d-none");
+    editArea.innerHTML = "";
+  });
+
+  form.addEventListener("submit", async (ev) => {
+    ev.preventDefault();
+    errorBox.classList.add("d-none");
+    errorBox.textContent = "";
+
+    const fd = new FormData(form);
+
+    try {
+      const res = await fetch(url, {
+        method: "POST",
+        body: fd,
+        headers: { "X-Requested-With": "XMLHttpRequest" }
+      });
+
+      const data = await res.json();
+
+      if (!data.ok) {
+        errorBox.textContent = data.message || "Erreur.";
+        errorBox.classList.remove("d-none");
+        return;
+      }
+
+      // ✅ update UI
+      if (textEl) textEl.textContent = data.contenu;
+
+      editArea.classList.add("d-none");
+      editArea.innerHTML = "";
+
+      swalToast({ title: "Commentaire modifié ✅", icon: "success" });
+
+    } catch (err) {
+      console.error(err);
+      await Swal.fire("Erreur", "Erreur réseau.", "error");
+    }
+  });
+});
+
+/* ==============================
+   ✅ Masquer post (localStorage) + SweetAlert
+   ============================== */
+(function(){
+  // cacher déjà masqués
+  const hidden = JSON.parse(localStorage.getItem("hidden_posts") || "[]");
+  hidden.forEach(id => {
+    const card = document.querySelector(`[data-post-id="${id}"]`);
+    if (card) card.remove();
+  });
+
+  // click masquer
+  document.addEventListener("click", async (e) => {
+    const btn = e.target.closest(".js-hide-post");
+    if (!btn) return;
+
+    const postId = btn.dataset.post;
+    const card = document.querySelector(`[data-post-id="${postId}"]`);
+    if (!card) return;
+
+    const result = await swalConfirm({
+      title: "Masquer ce post ?",
+      text: "Il ne sera plus affiché sur votre navigateur (vous pouvez réinitialiser).",
+      confirmText: "Masquer",
+      cancelText: "Annuler",
+      icon: "question"
+    });
+
+    if (!result.isConfirmed) return;
+
+    const list = new Set(JSON.parse(localStorage.getItem("hidden_posts") || "[]"));
+    list.add(postId);
+    localStorage.setItem("hidden_posts", JSON.stringify(Array.from(list)));
+
+    card.remove();
+    swalToast({ title: "Post masqué ✅", icon: "success" });
+  });
+
+  // reset
+  document.getElementById("btnShowHidden")?.addEventListener("click", async () => {
+    const result = await swalConfirm({
+      title: "Réinitialiser ?",
+      text: "Tous les posts masqués vont réapparaître.",
+      confirmText: "Réinitialiser",
+      cancelText: "Annuler",
+      icon: "warning"
+    });
+
+    if (!result.isConfirmed) return;
+
+    localStorage.removeItem("hidden_posts");
+    swalToast({ title: "Réinitialisé ✅", icon: "success" });
+    setTimeout(() => location.reload(), 600);
+  });
+
 })();
 </script>
 
+
+{% if app.user %}
+  <div class="modal fade" id="pendingPostsModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+      <div class="modal-content shadow-lg rounded-4 border-0">
+        <div class="modal-header text-white rounded-top-4" style="background: linear-gradient(90deg, #f9c74f, #f9844a);">
+          <h5 class="modal-title">
+            <i class="bi bi-hourglass-split me-2"></i>
+            Mes posts en attente de validation
+          </h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body" style="max-height: 60vh; overflow-y: auto; background: #f8f9fa;">
+          {% if myPendingPosts is empty %}
+            <div class="alert alert-success text-center m-0">
+              ✅ Aucun post en attente.
+            </div>
+          {% else %}
+            <div class="list-group">
+              {% for p in myPendingPosts %}
+                <div class="list-group-item mb-2 shadow-sm rounded-3 p-3">
+                  <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                      <div class="fw-bold">{{ p.titre }}</div>
+                      <small class="text-muted">
+                        Envoyé le {{ p.dateCreation ? p.dateCreation|date('d/m/Y H:i') : '-' }} • Catégorie : {{ p.categorie }}
+                      </small>
+                    </div>
+                    <span class="badge bg-warning text-dark">En attente</span>
+                  </div>
+                  <div class="mt-2 text-muted" style="font-size: .95rem;">
+                    {{ p.contenu|slice(0, 140) }}{% if p.contenu|length > 140 %}...{% endif %}
+                  </div>
+                  <div class="mt-2">
+                    <a href="{{ path('post_edit', {id: p.id}) }}" class="btn btn-sm btn-outline-primary btn-pill">
+                      <i class="bi bi-pencil me-1"></i> Modifier
+                    </a>
+                  </div>
+                </div>
+              {% endfor %}
+            </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+{% endif %}
+
+{# =========================
+   ✅ MODALS (en dehors du grid)
+   ========================= #}
+{% for p in posts %}
+  <div class="modal fade" id="commentsModal-{{ p.id }}" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg">
+      <div class="modal-content border-0 shadow-lg rounded-4">
+        <div class="modal-header rounded-top-4 text-white" style="background: linear-gradient(90deg, #0d6efd, #20c997);">
+          <h5 class="modal-title">
+            <i class="bi bi-chat-dots me-2"></i> Tous les commentaires ({{ p.commentaires|length }})
+          </h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+
+        <div class="modal-body" style="background:#f8f9fa;">
+          {% set allComments = p.commentaires|sort((a,b) => b.dateCreation <=> a.dateCreation) %}
+          {% if allComments is empty %}
+            <div class="alert alert-info m-0">Aucun commentaire pour le moment.</div>
+          {% else %}
+            <div class="list-group">
+              {% for c in allComments %}
+                <div class="list-group-item mb-2 rounded-3 shadow-sm" data-comment-id="{{ c.id }}">
+                  <div class="d-flex justify-content-between align-items-start">
+                    <div class="d-flex gap-2 align-items-center">
+                      <div class="ig-c-ava">
+                        {% if c.estAnonyme %}
+                          <i class="bi bi-incognito"></i>
+                        {% else %}
+                          {{ (c.user.prenom is defined and c.user.prenom) ? (c.user.prenom|slice(0,1)|upper) : (c.user.emailUser|slice(0,1)|upper) }}
+                        {% endif %}
+                      </div>
+                      <div>
+                        <div class="fw-bold">
+                          {% if c.estAnonyme %}
+                            Anonyme
+                          {% else %}
+                            {{ (c.user.prenom is defined and c.user.prenom) ? (c.user.prenom ~ ' ' ~ (c.user.nom is defined ? c.user.nom : '')) : c.user.emailUser }}
+                          {% endif %}
+                        </div>
+                        <small class="text-muted">{{ c.dateCreation|date('d/m/Y H:i') }}</small>
+                      </div>
+                    </div>
+
+                    <div class="d-flex align-items-center gap-2">
+                      {% set badge = c.parametresConfidentialite == 'PRIVE' ? 'danger' : (c.parametresConfidentialite == 'AMIS' ? 'info' : 'success') %}
+                      <span class="badge bg-{{ badge }}" style="font-size:.7rem;border-radius:999px;">
+                        {{ c.parametresConfidentialite }}
+                      </span>
+
+                      {% if app.user and c.user and (c.user.id == app.user.id or is_granted('ROLE_ADMIN')) %}
+                        <button type="button"
+                          class="btn btn-sm btn-light js-edit-comment"
+                          title="Modifier"
+                          data-id="{{ c.id }}"
+                          data-url="{{ path('commentaire_inline_edit', {id: c.id}) }}"
+                          data-token="{{ csrf_token('edit_commentaire_' ~ c.id) }}"
+                        >
+                          <i class="bi bi-pencil"></i>
+                        </button>
+
+                        <form class="delete-comment-form" method="post" action="{{ path('commentaire_delete', {id: c.id}) }}">
+                          <input type="hidden" name="_token" value="{{ csrf_token('del_commentaire_' ~ c.id) }}">
+                          <button class="btn btn-sm btn-light" title="Supprimer" type="submit">
+                            <i class="bi bi-trash"></i>
+                          </button>
+                        </form>
+                      {% endif %}
+                    </div>
+                  </div>
+
+                  <div class="mt-2">
+                    <span class="js-comment-text">{{ c.contenu }}</span>
+                  </div>
+                  <div class="js-inline-edit-area mt-2 d-none"></div>
+                </div>
+              {% endfor %}
+            </div>
+          {% endif %}
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary rounded-pill" data-bs-dismiss="modal">
+            Fermer
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+{% endfor %}
+<script>
+  // ✅ Helper Toast (en haut à droite)
+  function swalToast({title, icon="success"}) {
+    Swal.fire({
+      toast: true,
+      position: 'top-end',
+      icon,
+      title,
+      showConfirmButton: false,
+      timer: 2600,
+      timerProgressBar: true
+    });
+  }
+
+  // ✅ Flash Symfony -> SweetAlert
+  (function(){
+    const success = {{ swal_success|json_encode|raw }};
+    const error   = {{ swal_error|json_encode|raw }};
+    const warning = {{ swal_warning|json_encode|raw }};
+
+    if (success.length) swalToast({ title: success.join(" • "), icon: "success" });
+    if (warning.length) swalToast({ title: warning.join(" • "), icon: "warning" });
+    if (error.length) {
+      Swal.fire({
+        icon: "error",
+        title: "Erreur",
+        html: error.join("<br>"),
+        confirmButtonText: "OK"
+      });
+    }
+  })();
+
+(function(){
+  const success = {{ swal_success|json_encode|raw }};
+  const error = {{ swal_error|json_encode|raw }};
+
+  if (success.length) {
+    Swal.fire({
+      toast:true,
+      position:'top-end',
+      icon:'success',
+      title: success.join(" • "),
+      showConfirmButton:false,
+      timer:2600,
+      timerProgressBar:true
+    });
+  }
+
+  if (error.length) {
+    Swal.fire({
+      icon:'error',
+      title:'Post refusé',
+      text: error.join(" • "),
+      confirmButtonText:'OK'
+    });
+  }
+})();
+</script>
 
 {% endblock %}

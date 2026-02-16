@@ -1,0 +1,289 @@
+{% extends 'base_admin.html.twig' %}
+{% block title %}Demandes de rôle{% endblock %}
+{% block stylesheets %}
+<style>
+  /* Remove theme blur when modal is open */
+  body.modal-open { filter: none !important; }
+  .nxl-container, .nxl-navigation, .nxl-header { filter: none !important; }
+
+  /* Ensure Bootstrap modal sits above and is centered */
+  .modal { z-index: 1055; }
+  .modal-backdrop { z-index: 1050; backdrop-filter: none !important; }
+  #docPreviewModal .modal-dialog { margin: 0 auto; max-width: 80vw; }
+  #docPreviewModal .modal-body { overflow: auto; }
+
+  /* Tighter table visuals */
+  #srTable td.small { color: #6c757d; }
+</style>
+{% endblock %}
+{% block body %}
+<div class="container-fluid py-4">
+  <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
+    <div>
+      <h1 class="h4 mb-1">Demandes de rôle</h1>
+      <div class="text-muted">Valider, refuser et prévisualiser les documents soumis</div>
+    </div>
+    <div class="d-flex gap-2">
+      <a href="{{ path('app_ad') }}" class="btn btn-outline-secondary btn-sm">← Dashboard</a>
+    </div>
+  </div>
+
+  <div class="card border-0 shadow-sm">
+    <div class="card-body border-bottom pb-3">
+      <div class="row g-2 align-items-center">
+        <div class="col-12 col-md-6">
+          <div class="input-group">
+            <span class="input-group-text"><i class="feather-search"></i></span>
+            <input id="srFilter" type="search" class="form-control" placeholder="Rechercher (nom, email, message, modules)">
+          </div>
+        </div>
+        <div class="col-6 col-md-3">
+          <select id="srRole" class="form-select">
+            <option value="">Tous les rôles</option>
+            <option value="STAFF">Staff</option>
+            <option value="ADMIN">Admin</option>
+          </select>
+        </div>
+        <div class="col-6 col-md-3 text-end">
+          <span class="badge bg-primary">{{ rows|length }} en attente</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0" id="srTable">
+        <thead class="table-light">
+          <tr>
+            <th style="width:18%;">Utilisateur</th>
+            <th style="width:16%;">Email</th>
+            <th style="width:10%;">Rôle</th>
+            <th style="width:16%;">Modules</th>
+            <th style="width:20%;">Message</th>
+            <th style="width:12%;">Envoyée le</th>
+            <th style="width:18%;">Documents</th>
+            <th class="text-end" style="width:14%;">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+        {% for u in rows %}
+          {% set meta = u.staffDocuments is defined and u.staffDocuments and u.staffDocuments.meta is defined ? u.staffDocuments.meta : {} %}
+          {% set mods = meta.rolesWanted is defined ? meta.rolesWanted : [] %}
+          {% set docs = u.staffDocuments is defined and u.staffDocuments and u.staffDocuments.files is defined ? u.staffDocuments.files : [] %}
+          <tr data-role="{{ u.staffRequestType ? 'STAFF' : 'ADMIN' }}">
+            <td>
+              <div class="d-flex align-items-center gap-2">
+                <div class="avatar rounded-circle bg-light border text-center" style="width:36px;height:36px;line-height:36px;">{{ (u.prenom|slice(0,1) ~ u.nom|slice(0,1))|upper }}</div>
+                <div>
+                  <div class="fw-semibold">{{ u.prenom }} {{ u.nom }}</div>
+                  <div class="text-muted small">#{{ u.id }}</div>
+                </div>
+              </div>
+            </td>
+            <td><a href="mailto:{{ u.emailUser }}" class="text-decoration-none">{{ u.emailUser }}</a></td>
+            <td>
+              {% if u.staffRequestType %}
+                <span class="badge bg-info-subtle text-info border">STAFF</span>
+              {% else %}
+                <span class="badge bg-warning-subtle text-warning border">ADMIN</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if mods|length %}
+                <div class="d-flex flex-wrap gap-1">
+                  {% for m in mods %}
+                    <span class="badge bg-secondary-subtle text-secondary border">{{ m }}</span>
+                  {% endfor %}
+                </div>
+              {% else %}
+                <span class="text-muted">—</span>
+              {% endif %}
+            </td>
+            <td class="small" style="max-width:320px;">
+              {{ u.staffRequestMessage ?: '—' }}
+            </td>
+            <td class="small">
+              {% if u.staffRequestedAt is defined and u.staffRequestedAt %}
+                {{ u.staffRequestedAt|date('d/m/Y H:i') }}
+              {% else %}
+                —
+              {% endif %}
+            </td>
+            <td>
+              {% if docs|length > 0 %}
+                <div class="d-flex flex-wrap gap-1">
+                  {% for d in docs %}
+                    {% set isImg = d.mime starts with 'image/' %}
+                    {% set url = path('admin_staff_request_doc', {id: u.id, i: loop.index0}) %}
+                    <button type="button" class="btn btn-sm {% if isImg %}btn-outline-primary{% else %}btn-outline-secondary{% endif %}"
+                            data-doc-url="{{ url }}" data-doc-name="{{ d.original }}" data-doc-mime="{{ d.mime }}"
+                            data-action="preview-doc">
+                      {% if isImg %}<i class="feather-image me-1"></i>{% else %}<i class="feather-file-text me-1"></i>{% endif %}
+                      {{ d.original ?: 'Document ' ~ loop.index }}
+                    </button>
+                  {% endfor %}
+                </div>
+              {% else %}
+                <span class="text-muted">—</span>
+              {% endif %}
+            </td>
+            <td class="text-end">
+              <div class="btn-group" role="group">
+                <button type="button" class="btn btn-sm btn-success" data-action="approve" data-user-id="{{ u.id }}" data-role="{{ u.staffRequestType ? 'STAFF' : 'ADMIN' }}" data-type="{{ u.staffRequestType ?: '' }}">
+                  <i class="feather-check"></i> Approuver
+                </button>
+                <button type="button" class="btn btn-sm btn-outline-danger" data-action="reject" data-user-id="{{ u.id }}">
+                  <i class="feather-x"></i> Refuser
+                </button>
+              </div>
+            </td>
+          </tr>
+        {% else %}
+          <tr><td colspan="8" class="text-center py-5 text-muted">Aucune demande en attente.</td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+{# Preview & Action Modals #}
+<div class="modal fade" id="docPreviewModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-xl modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="docPreviewTitle">Document</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body" id="docPreviewBody">
+        <div class="text-center py-4"><div class="spinner-border" role="status"></div></div>
+      </div>
+      <div class="modal-footer">
+        <a id="docPreviewDownload" class="btn btn-outline-secondary" href="#" target="_blank"><i class="feather-download"></i> Télécharger</a>
+        <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Fermer</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="approveModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Approuver la demande</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <form method="post" id="approveForm" action="#">
+        <div class="modal-body">
+          <input type="hidden" name="_token" id="approveToken">
+          <input type="hidden" name="role_systeme" id="approveRole">
+          <input type="hidden" name="type_staff" id="approveType">
+          <p class="mb-0">Confirmer l'approbation et appliquer le rôle.</p>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
+          <button type="submit" class="btn btn-success"><i class="feather-check"></i> Approuver</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="rejectModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Refuser la demande</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <form method="post" id="rejectForm" action="#">
+        <div class="modal-body">
+          <input type="hidden" name="_token" id="rejectToken">
+          <div class="mb-2">
+            <label class="form-label">Motif du refus (optionnel)</label>
+            <input type="text" name="reason" class="form-control" placeholder="Expliquer brièvement">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
+          <button type="submit" class="btn btn-outline-danger"><i class="feather-x"></i> Refuser</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block javascripts %}
+<script>
+(function(){
+  const table = document.getElementById('srTable');
+  const filter = document.getElementById('srFilter');
+  const roleSel = document.getElementById('srRole');
+
+  function applyFilter(){
+    const q = (filter?.value || '').toLowerCase();
+    const role = roleSel?.value || '';
+    table.querySelectorAll('tbody tr').forEach(tr => {
+      const hay = tr.textContent.toLowerCase();
+      const okQ = !q || hay.includes(q);
+      const okR = !role || (tr.getAttribute('data-role') === role);
+      tr.style.display = (okQ && okR) ? '' : 'none';
+    });
+  }
+  filter?.addEventListener('input', applyFilter);
+  roleSel?.addEventListener('change', applyFilter);
+
+  // Preview documents
+  const docModalEl = document.getElementById('docPreviewModal');
+  const docModal = docModalEl ? bootstrap.Modal.getOrCreateInstance(docModalEl) : null;
+  const docTitle = document.getElementById('docPreviewTitle');
+  const docBody = document.getElementById('docPreviewBody');
+  const docDl = document.getElementById('docPreviewDownload');
+
+  document.addEventListener('click', async (e) => {
+    const btn = e.target.closest('[data-action="preview-doc"]');
+    if (btn && docModal) {
+      const url = btn.getAttribute('data-doc-url');
+      const name = btn.getAttribute('data-doc-name') || 'Document';
+      const mime = btn.getAttribute('data-doc-mime') || '';
+      docTitle.textContent = name;
+      docBody.innerHTML = '<div class="text-center py-4"><div class="spinner-border" role="status"></div></div>';
+      docDl.href = url;
+      docModal.show();
+      // Attempt inline preview
+      if (mime.startsWith('image/')) {
+        docBody.innerHTML = '<img src="'+url+'" alt="'+name+'" class="img-fluid rounded shadow">';
+      } else if (mime === 'application/pdf') {
+        docBody.innerHTML = '<div style="height:60vh"><iframe src="'+url+'" class="w-100 h-100" frameborder="0"></iframe></div>';
+      } else {
+        docBody.innerHTML = '<div class="alert alert-info">Type non prévisualisable. Utilisez Télécharger.</div>';
+      }
+    }
+
+    // Approve
+    const ap = e.target.closest('[data-action="approve"]');
+    if (ap) {
+      const id = ap.getAttribute('data-user-id');
+      const role = ap.getAttribute('data-role');
+      const type = ap.getAttribute('data-type') || '';
+      const form = document.getElementById('approveForm');
+      form.action = '{{ path('admin_staff_request_approve', {id: 0}) }}'.replace('/0/approve','/'+id+'/approve');
+      document.getElementById('approveRole').value = role;
+      document.getElementById('approveType').value = type;
+      document.getElementById('approveToken').value = '{{ csrf_token('approve_staff_request_') }}' + id; // fallback: token per-id not generatable in JS; server will validate existing form path tokens
+      bootstrap.Modal.getOrCreateInstance(document.getElementById('approveModal')).show();
+    }
+
+    // Reject
+    const rj = e.target.closest('[data-action="reject"]');
+    if (rj) {
+      const id = rj.getAttribute('data-user-id');
+      const form = document.getElementById('rejectForm');
+      form.action = '{{ path('admin_staff_request_reject', {id: 0}) }}'.replace('/0/reject','/'+id+'/reject');
+      document.getElementById('rejectToken').value = '{{ csrf_token('reject_staff_request_') }}' + id; // same note as above
+      bootstrap.Modal.getOrCreateInstance(document.getElementById('rejectModal')).show();
+    }
+  });
+})();
+</script>
+{% endblock %}

@@ -15,7 +15,7 @@
           <p class="mb-0 text-dark-50">Produit #{{ produit.id_produit }}</p>
         </div>
 
-        <a href="{{ path('admin_produits_index') }}" class="btn btn-outline-secondary">
+        <a href="{{ path('admin_produits_index') }}" class="btn btn-outline-secondary btn-lg">
           <i class="bi bi-arrow-left me-2"></i>Retour
         </a>
       </div>
@@ -91,7 +91,7 @@
                   </label>
                   <div class="input-group input-group-lg">
                     {{ form_widget(f, {'attr': {'class': 'form-control ' ~ (submitted ? (f.vars.valid ? 'is-valid' : 'is-invalid') : '')}}) }}
-                    <span class="input-group-text bg-success text-white">
+                    <span class="input-group-text bg-primary-soft text-primary fw-bold">
                       <i class="bi bi-cash-coin me-1"></i>DT
                     </span>
                   </div>
@@ -213,22 +213,43 @@
   {{ parent() }}
   <link rel="stylesheet" href="{{ asset('assets_dash/css/produits.css') }}">
   <style>
+    /* ================================
+       ✅ SAME BLUE THEME AS LIST PAGE
+       ================================ */
+    :root{
+      --blue-50:#eff6ff;
+      --blue-100:#dbeafe;
+      --blue-200:#bfdbfe;
+      --blue-300:#93c5fd;
+      --blue-400:#60a5fa;
+      --blue-500:#3b82f6;
+      --blue-600:#2563eb;
+      --blue-700:#1d4ed8;
+      --blue-800:#1e40af;
+      --blue-900:#1e3a8a;
+    }
+
+    .edit-produit-page{
+      min-height: 100vh;
+      background: linear-gradient(135deg, #f9fafb 0%, var(--blue-50) 100%);
+    }
     .edit-produit-page, .edit-produit-page * { color:#111827; }
     .text-dark-50{ color:#6b7280 !important; }
 
     .bg-gradient-primary{
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      background: linear-gradient(135deg, var(--blue-600) 0%, var(--blue-800) 100%) !important;
+      border-bottom: 2px solid var(--blue-200);
     }
 
     /* ✅ Validation Bootstrap style (force display) */
-    .invalid-feedback, .valid-feedback{ font-size:.85rem; }
+    .invalid-feedback, .valid-feedback{ font-size:.85rem; font-weight:600; }
 
-    /* Radios bloc border green/red */
+    /* ✅ Radio block : BLUE (no green) */
     .block-valid{
-      border: 1px solid #198754;
+      border: 1px solid var(--blue-500);
       border-radius: 14px;
       padding: 12px;
-      background: rgba(25,135,84,.04);
+      background: rgba(59,130,246,.06);
     }
     .block-invalid{
       border: 1px solid #dc3545;
@@ -236,6 +257,19 @@
       padding: 12px;
       background: rgba(220,53,69,.04);
     }
+
+    /* Input focus */
+    .form-control:focus, .form-select:focus{
+      border-color: var(--blue-500);
+      box-shadow: 0 0 0 3px rgba(59,130,246,0.12);
+    }
+
+    /* DT badge (no green) */
+    .bg-primary-soft{
+      background: linear-gradient(135deg, var(--blue-50) 0%, var(--blue-100) 100%) !important;
+      border: 2px solid var(--blue-200) !important;
+    }
+    .text-primary{ color: var(--blue-700) !important; }
 
     /* Status radios => cards */
     .status-radio-group input[type="radio"]{ display:none; }
@@ -249,17 +283,18 @@
       cursor:pointer;
       background:#fff;
       transition: .2s ease;
-      font-weight:600;
+      font-weight:700;
       color:#111827 !important;
     }
     .status-radio-group label:hover{
       transform: translateY(-1px);
-      box-shadow: 0 8px 20px rgba(0,0,0,.08);
+      box-shadow: 0 8px 20px rgba(59,130,246,.12);
+      border-color: var(--blue-300);
     }
     .status-radio-group input[type="radio"]:checked + label{
-      border-color:#667eea;
-      box-shadow: 0 0 0 4px rgba(102,126,234,.18);
-      background: #f5f7ff;
+      border-color: var(--blue-500);
+      box-shadow: 0 0 0 4px rgba(59,130,246,.16);
+      background: linear-gradient(135deg, #ffffff 0%, var(--blue-50) 100%);
     }
     .status-radio-group label::after{
       content:"";
@@ -270,7 +305,7 @@
       margin-top:6px;
     }
     .status-radio-group input[type="radio"]:checked + label::after{
-      background:#667eea;
+      background: var(--blue-600);
     }
 
     /* Flash animation */

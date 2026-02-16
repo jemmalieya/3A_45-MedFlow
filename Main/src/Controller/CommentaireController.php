@@ -11,7 +11,7 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Form\FormError;
-
+use Symfony\Component\HttpFoundation\JsonResponse;
 
 
 
@@ -91,6 +91,13 @@ public function add(Post $post, Request $request, EntityManagerInterface $em): R
 #[Route('/commentaire/edit/{id}', name: 'commentaire_edit', methods: ['GET', 'POST'])]
 public function edit(Commentaire $commentaire, Request $request, EntityManagerInterface $em): Response
 {
+
+$user = $this->getUser();
+if (!$user || $commentaire->getUser() !== $user) {
+    $this->addFlash('error', 'Accès refusé.');
+    return $this->redirectToRoute('post_show', ['id' => $commentaire->getPost()->getId()]);
+}
+
     $form = $this->createForm(CommentaireType::class, $commentaire, [
         'attr' => ['novalidate' => 'novalidate'] // ✅ désactive HTML5
     ]);
@@ -135,19 +142,36 @@ public function edit(Commentaire $commentaire, Request $request, EntityManagerIn
 
 
 
-    #[Route('/delete/{id}', name: 'commentaire_delete', methods: ['POST'])]
-    public function delete(Commentaire $commentaire, Request $request, EntityManagerInterface $em): Response
-    {
-        $post = $commentaire->getPost();
-
-        if ($this->isCsrfTokenValid('del_commentaire_'.$commentaire->getId(), $request->request->get('_token'))) {
-            $em->remove($commentaire);
-            $em->flush();
-            $this->addFlash('success', 'Commentaire supprimé 🗑️');
-        }
-
-        return $this->redirectToRoute('post_show', ['id' => $post->getId()]);
+#[Route('/commentaires/{id}/delete', name: 'commentaire_delete', methods: ['POST'])]
+public function delete(Request $request, Commentaire $commentaire, EntityManagerInterface $em): JsonResponse
+{
+    if (!$this->isCsrfTokenValid('del_commentaire_' . $commentaire->getId(), $request->request->get('_token'))) {
+        return new JsonResponse(['ok' => false, 'message' => 'CSRF invalide'], 403);
     }
+
+    // ✅ Sauver les IDs AVANT suppression
+    $commentId = $commentaire->getId();
+    $post = $commentaire->getPost();
+    $postId = $post?->getId();
+
+    // décrémenter compteur
+    if ($post) {
+        $post->setNbrCommentaires(max(0, ($post->getNbrCommentaires() ?? 0) - 1));
+    }
+
+    $em->remove($commentaire);
+    $em->flush();
+
+    return new JsonResponse([
+        'ok' => true,
+        'postId' => $postId,
+        'nbrCommentaires' => $post?->getNbrCommentaires() ?? 0,
+        'commentId' => $commentId, // ✅ plus jamais null
+    ]);
+}
+
+
+
 
     #[Route('/add-inline/{id}', name: 'commentaire_add_inline', methods: ['POST'])]
 public function addInline(Post $post, Request $request, EntityManagerInterface $em): Response
@@ -202,6 +226,44 @@ public function addInline(Post $post, Request $request, EntityManagerInterface $
     return $this->redirectToRoute('post_index');
 }
 
+#[Route('/inline-edit/{id}', name: 'commentaire_inline_edit', methods: ['POST'])]
+public function inlineEdit(Request $request, Commentaire $commentaire, EntityManagerInterface $em): JsonResponse
+{
+    $user = $this->getUser();
+
+    // ✅ Autorisation : propriétaire OU admin
+    if (!$user || (!$this->isGranted('ROLE_ADMIN') && $commentaire->getUser() !== $user)) {
+        return new JsonResponse(['ok' => false, 'message' => 'Accès refusé.'], 403);
+    }
+
+    // ✅ CSRF
+    if (!$this->isCsrfTokenValid('edit_commentaire_' . $commentaire->getId(), (string)$request->request->get('_token'))) {
+        return new JsonResponse(['ok' => false, 'message' => 'CSRF invalide.'], 403);
+    }
+
+    $contenu = trim((string) $request->request->get('contenu'));
+
+    // ✅ mêmes validations que chez toi
+    if ($contenu === '') {
+        return new JsonResponse(['ok' => false, 'message' => 'Le commentaire ne peut pas être vide.'], 422);
+    }
+    if (!preg_match('/^\p{L}/u', $contenu)) {
+        return new JsonResponse(['ok' => false, 'message' => 'Le commentaire doit commencer par une lettre.'], 422);
+    }
+    preg_match_all('/\p{L}/u', $contenu, $matches);
+    if (count($matches[0]) < 2) {
+        return new JsonResponse(['ok' => false, 'message' => 'Le commentaire doit contenir au moins 2 lettres.'], 422);
+    }
+
+    $commentaire->setContenu($contenu);
+    $em->flush();
+
+    return new JsonResponse([
+        'ok' => true,
+        'commentId' => $commentaire->getId(),
+        'contenu' => $commentaire->getContenu(),
+    ]);
+}
 
 
 }

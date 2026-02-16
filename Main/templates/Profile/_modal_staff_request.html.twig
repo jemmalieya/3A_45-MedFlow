@@ -1,0 +1,110 @@
+{# Staff Request Modal Content #}
+<div class="modal-header">
+  <h5 class="modal-title">Demande de changement de rôle</h5>
+  <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+</div>
+<div class="modal-body">
+  <form id="staffRequestForm" enctype="multipart/form-data" action="{{ path('profile_modal_staff_request_submit') }}" method="post" data-action="{{ path('profile_modal_staff_request_submit') }}">
+    <input type="hidden" name="_token" value="{{ csrf_token('staff_request') }}">
+    <div class="mb-3">
+      <label class="form-label">Rôle souhaité</label>
+      <select name="role_systeme" class="form-select" required>
+        <option value="">Choisir…</option>
+        <option value="ADMIN">Administrateur</option>
+        <option value="STAFF">Personnel médical / Staff</option>
+      </select>
+      <div class="form-text">Si vous choisissez Staff, sélectionnez une spécialité.</div>
+    </div>
+
+    <div class="mb-3" id="typeStaffGroup" style="display:none;">
+      <label class="form-label">Spécialité Staff</label>
+      <select name="type_staff" class="form-select">
+        <option value="">Choisir…</option>
+        <option value="MEDECIN">Médecin</option>
+        <option value="PHARMACIEN">Pharmacien</option>
+        <option value="RESP_USERS">Responsable Utilisateurs</option>
+        <option value="RESP_CONSULTATIONS">Responsable Consultations</option>
+        <option value="RESP_PRODUCTS">Responsable Produits</option>
+        <option value="RESP_EVEN">Responsable Événements</option>
+        <option value="RESP_RECLAMATIONS">Responsable Réclamations</option>
+      </select>
+      <div class="form-text">Sélectionner une seule spécialité/module.</div>
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label">Message (motivation)</label>
+      <textarea name="message" class="form-control" rows="3" placeholder="Décrivez votre expérience, motivations et besoin d'accès."></textarea>
+    </div>
+
+    <div class="row g-3">
+      <div class="col-md-6">
+        <label class="form-label">Spécialité</label>
+        <select name="doc_specialite" class="form-select">
+          <option value="">Choisir…</option>
+          <option value="Médecine générale">Médecine générale</option>
+          <option value="Cardiologie">Cardiologie</option>
+          <option value="Pédiatrie">Pédiatrie</option>
+          <option value="Gynécologie">Gynécologie</option>
+          <option value="Dermatologie">Dermatologie</option>
+          <option value="Radiologie">Radiologie</option>
+          <option value="Laboratoire">Laboratoire</option>
+          <option value="Pharmacie">Pharmacie</option>
+          <option value="Infirmier">Infirmier</option>
+          <option value="Autre">Autre</option>
+        </select>
+      </div>
+      <div class="col-md-6">
+        <label class="form-label">Années d’expérience</label>
+        <input type="number" name="doc_experience" min="0" class="form-control" placeholder="Ex: 5">
+      </div>
+      <div class="col-md-6">
+        <label class="form-label">Établissement actuel</label>
+        <input type="text" name="doc_etablissement" class="form-control" placeholder="Clinique / Hôpital / Pharmacie">
+      </div>
+      <div class="col-md-6">
+        <label class="form-label">Numéro d’autorisation d'exercice</label>
+        <input type="text" name="doc_numero" class="form-control" placeholder="N° d'autorisation d'exercice" required>
+      </div>
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label">Carte d'identité (CIN / passeport) *</label>
+      <input type="file" name="id_doc" class="form-control" accept="image/*,.pdf" required>
+    </div>
+    <div class="mb-3">
+      <label class="form-label">Diplôme médical *</label>
+      <input type="file" name="diploma" class="form-control" accept="image/*,.pdf" required>
+    </div>
+    <div class="mb-3">
+      <label class="form-label">Attestation d’inscription à l’ordre professionnel *</label>
+      <input type="file" name="attestation" class="form-control" accept="image/*,.pdf" required>
+    </div>
+    <div class="mb-3">
+      <label class="form-label">Photo professionnelle *</label>
+      <input type="file" name="pro_photo" class="form-control" accept="image/*" required>
+    </div>
+    <div class="mb-3">
+      <label class="form-label">Autres documents (optionnel, PDF/JPG/PNG, 5MB max)</label>
+      <input type="file" name="proofs[]" class="form-control" accept="image/*,.pdf" multiple>
+    </div>
+
+    <div class="alert d-none" id="staffRequestAlert"></div>
+  </form>
+</div>
+<div class="modal-footer">
+  <button type="button" class="btn btn-light border" data-bs-dismiss="modal">Annuler</button>
+  <button type="submit" form="staffRequestForm" class="btn btn-primary" data-action-submit="staff-request">Envoyer la demande</button>
+</div>
+
+<script>
+(function(){
+  const roleSel = document.querySelector('#staffRequestForm select[name="role_systeme"]');
+  const typeGrp = document.getElementById('typeStaffGroup');
+  if (roleSel && typeGrp) {
+    typeGrp.style.display = roleSel.value === 'STAFF' ? '' : 'none';
+    roleSel.addEventListener('change', () => {
+      typeGrp.style.display = roleSel.value === 'STAFF' ? '' : 'none';
+    });
+  }
+})();
+</script>

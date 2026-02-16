@@ -26,5 +26,16 @@ class UserChecker implements UserCheckerInterface
                 'Veuillez vérifier votre email avant de vous connecter.'
             );
         }
+
+
+
+      // ✅ Blocage login si compte bloqué (affiche la raison écrite par l'admin)
+      $status = strtoupper((string) $user->getStatutCompte());
+      if ($status === 'BLOQUE') {
+          $reason = trim((string) $user->getBanReason());
+          $msg = $reason !== '' ? ('Compte bloqué: '.$reason) : 'Compte bloqué.';
+          throw new CustomUserMessageAuthenticationException($msg);
+      }
+
     }
 }

@@ -1,0 +1,337 @@
+{% extends 'base.html.twig' %}
+{% set patientId = app.session.get('patient_id') %}
+{% block body %}
+
+
+
+<!-- Find A Doctor Section -->
+
+
+
+      <style>
+        .chat-container {
+          max-width: 1100px;
+          margin: 40px auto;
+          background: #fff;
+          border-radius: 16px;
+          box-shadow: 0 8px 32px rgba(60, 72, 88, 0.15);
+          display: flex;
+          flex-direction: column;
+          height: 70vh;
+          overflow: hidden;
+        }
+        .chat-header {
+          background: linear-gradient(135deg, #049ebb 0%, #764ba2 100%);
+          color: #fff;
+          padding: 28px 32px 18px 32px;
+          border-bottom: 1px solid #e5e7eb;
+        }
+        .chat-header h2 {
+          margin: 0;
+          font-size: 2.2rem;
+          font-weight: 700;
+        }
+        .chat-header p {
+          margin: 0;
+          font-size: 1.1rem;
+          opacity: 0.95;
+        }
+        .chat-messages {
+          flex: 1;
+          padding: 24px 32px;
+          overflow-y: auto;
+          background: linear-gradient(270deg, #f7f8fa, #e0e7ff, #f3e8ff, #f7f8fa);
+          background-size: 600% 600%;
+          animation: animatedGradient 12s ease-in-out infinite;
+          display: flex;
+          flex-direction: column;
+          gap: 18px;
+        }
+        @keyframes animatedGradient {
+          0% { background-position: 0% 50%; }
+          50% { background-position: 100% 50%; }
+          100% { background-position: 0% 50%; }
+        }
+        .chat-message {
+          display: flex;
+          align-items: flex-end;
+          gap: 12px;
+        }
+        .chat-message.user .bubble {
+          background: #049ebb;
+          color: #fff;
+          align-self: flex-end;
+        }
+        .chat-message.ia .bubble {
+          background: #e5e7eb;
+          color: #333;
+          align-self: flex-start;
+        }
+        .bubble {
+          padding: 12px 18px;
+          border-radius: 18px;
+          max-width: 70%;
+          font-size: 1.05rem;
+          box-shadow: 0 2px 8px rgba(4,158,187,0.07);
+          word-break: break-word;
+        }
+        .chat-input-area {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          padding: 18px 32px;
+          border-top: 1px solid #e5e7eb;
+          background: #f7f8fa;
+        }
+        .chat-input {
+          flex: 1;
+          border: 1.5px solid #d1d5db;
+          border-radius: 10px;
+          padding: 10px 14px;
+          font-size: 1rem;
+          outline: none;
+          transition: border 0.2s;
+        }
+        .chat-input:focus {
+          border-color: #049ebb;
+        }
+        .send-btn, .record-btn {
+          border: none;
+          background: linear-gradient(135deg, #049ebb 0%, #764ba2 100%);
+          color: #fff;
+          border-radius: 8px;
+          padding: 8px 16px;
+          font-weight: 600;
+          font-size: 1.1rem;
+          cursor: pointer;
+          transition: background 0.2s, box-shadow 0.2s;
+          display: flex;
+          align-items: center;
+          gap: 6px;
+        }
+        .send-btn:hover, .record-btn:hover {
+          background: linear-gradient(135deg, #764ba2 0%, #049ebb 100%);
+          box-shadow: 0 4px 16px rgba(4,158,187,0.15);
+        }
+        .recording {
+          background: #dc2626 !important;
+          color: #fff !important;
+          animation: pulse 1s infinite;
+        }
+        @keyframes pulse {
+          0% { box-shadow: 0 0 0 0 rgba(220,38,38,0.4); }
+          70% { box-shadow: 0 0 0 10px rgba(220,38,38,0); }
+          100% { box-shadow: 0 0 0 0 rgba(220,38,38,0); }
+        }
+      </style>
+
+      <div id="startConversationWrapper" class="start-conversation-wrapper">
+        <button id="startConversationBtn" class="btn btn-lg btn-primary start-conversation-btn">🚀 Démarrer la conversation</button>
+      </div>
+      <div class="chat-container chat-container-hidden" id="chatContainer">
+              <style>
+                .start-conversation-wrapper {
+                  display: flex;
+                  justify-content: center;
+                  align-items: center;
+                  height: 70vh;
+                  transition: opacity 0.7s, transform 0.7s;
+                }
+                .start-conversation-wrapper.fade-out {
+                  opacity: 0;
+                  transform: scale(0.95);
+                  pointer-events: none;
+                }
+                .start-conversation-btn {
+                  font-size: 2rem;
+                  padding: 2rem 3rem;
+                  border-radius: 2rem;
+                  box-shadow: 0 8px 32px rgba(60, 72, 88, 0.15);
+                  transition: box-shadow 0.3s, background 0.3s;
+                }
+                .start-conversation-btn:hover {
+                  background: linear-gradient(135deg, #764ba2 0%, #049ebb 100%);
+                  box-shadow: 0 12px 40px rgba(4,158,187,0.18);
+                }
+                .chat-container-hidden {
+                  opacity: 0;
+                  transform: scale(0.97);
+                  pointer-events: none;
+                  transition: opacity 0.7s, transform 0.7s;
+                }
+                .chat-container-visible {
+                  opacity: 1;
+                  transform: scale(1);
+                  pointer-events: auto;
+                  transition: opacity 0.7s, transform 0.7s;
+                }
+              </style>
+        <div class="chat-header">
+          <h2>Assistante IA</h2>
+          <p>Demander de notre assistante IA de vous aider</p>
+        </div>
+        <div class="chat-messages" id="chatMessages">
+          <!-- Conversation bubbles will appear here -->
+        </div>
+        <div class="chat-input-area">
+          <input type="text" class="chat-input" id="chatInput" placeholder="Écrivez votre question..." autocomplete="off">
+          <button class="send-btn" id="sendBtn"><i class="bi bi-send"></i>Envoyer</button>
+          <button class="record-btn" id="recordBtn"><i class="bi bi-mic"></i>Enregistrer</button>
+        </div>
+      </div>
+
+
+
+      <script>
+      const chatMessages = document.getElementById('chatMessages');
+      const chatInput = document.getElementById('chatInput');
+      const sendBtn = document.getElementById('sendBtn');
+      const recordBtn = document.getElementById('recordBtn');
+      const replayWelcomeBtn = document.getElementById('replayWelcomeBtn');
+      let isRecording = false;
+      const welcomeText = "Bonjour, je suis votre assistante IA. Comment puis-je vous aider à trouver le médecin idéal aujourd'hui ?";
+
+
+      function speakText(text) {
+        if ('speechSynthesis' in window) {
+          window.speechSynthesis.cancel(); // Stop any ongoing speech
+          const utter = new SpeechSynthesisUtterance(text);
+          utter.lang = 'fr-FR';
+          utter.rate = 1;
+          utter.pitch = 1;
+          window.speechSynthesis.speak(utter);
+        }
+      }
+
+      function appendMessage(text, sender) {
+        const msgDiv = document.createElement('div');
+        msgDiv.className = 'chat-message ' + sender;
+        msgDiv.innerHTML = `<div class="bubble">${text}</div>`;
+        chatMessages.appendChild(msgDiv);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+        if (sender === 'ia') {
+          speakText(text);
+        }
+      }
+
+      function speakWelcome() {
+        if ('speechSynthesis' in window) {
+          window.speechSynthesis.cancel(); // Stop any ongoing speech
+          const utter = new SpeechSynthesisUtterance(welcomeText);
+          utter.lang = 'fr-FR';
+          utter.rate = 1;
+          utter.pitch = 1;
+          window.speechSynthesis.speak(utter);
+        }
+      }
+
+      // Welcome voice and message on page load
+      document.addEventListener('DOMContentLoaded', function() {
+        const startBtn = document.getElementById('startConversationBtn');
+        const startWrapper = document.getElementById('startConversationWrapper');
+        const chatContainer = document.getElementById('chatContainer');
+        startBtn.addEventListener('click', function() {
+          startWrapper.classList.add('fade-out');
+          setTimeout(() => {
+            startWrapper.style.display = 'none';
+            chatContainer.classList.remove('chat-container-hidden');
+            chatContainer.classList.add('chat-container-visible');
+            appendMessage(welcomeText, 'ia');
+            speakWelcome();
+          }, 700);
+        });
+        replayWelcomeBtn.addEventListener('click', speakWelcome);
+      });
+
+
+      sendBtn.addEventListener('click', function() {
+        const text = chatInput.value.trim();
+        if (!text) return;
+        appendMessage(text, 'user');
+        chatInput.value = '';
+        fetch('/dialogflow/webhook', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message: text })
+        })
+        .then(res => res.json())
+        .then(data => {
+          appendMessage(data.fulfillmentText || 'Aucune réponse IA.', 'ia');
+        })
+        .catch(() => {
+          appendMessage('Erreur lors de la communication avec l’IA.', 'ia');
+        });
+      });
+
+      chatInput.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') sendBtn.click();
+      });
+
+      // Voice-to-text functionality for the record button
+      let recognition;
+      if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        recognition = new SpeechRecognition();
+        recognition.lang = 'fr-FR';
+        recognition.interimResults = false;
+        recognition.maxAlternatives = 1;
+      }
+
+      recordBtn.addEventListener('click', function() {
+        if (!recognition) {
+          appendMessage('La reconnaissance vocale n\'est pas supportée sur ce navigateur.', 'ia');
+          return;
+        }
+        if (!isRecording) {
+          isRecording = true;
+          recordBtn.classList.add('recording');
+          recordBtn.innerHTML = '<i class="bi bi-mic-fill"></i>Enregistrement...';
+          recognition.start();
+        } else {
+          isRecording = false;
+          recordBtn.classList.remove('recording');
+          recordBtn.innerHTML = '<i class="bi bi-mic"></i>Enregistrer';
+          recognition.stop();
+        }
+      });
+
+      if (recognition) {
+        recognition.onresult = function(event) {
+          const transcript = event.results[0][0].transcript;
+          appendMessage(transcript, 'user');
+          chatInput.value = '';
+          fetch('/dialogflow/webhook', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ message: transcript })
+          })
+          .then(res => res.json())
+          .then(data => {
+            appendMessage(data.fulfillmentText || 'Aucune réponse IA.', 'ia');
+          })
+          .catch(() => {
+            appendMessage('Erreur lors de la communication avec l’IA.', 'ia');
+          });
+          isRecording = false;
+          recordBtn.classList.remove('recording');
+          recordBtn.innerHTML = '<i class="bi bi-mic"></i>Enregistrer';
+        };
+        recognition.onerror = function(event) {
+          appendMessage('Erreur de reconnaissance vocale : ' + event.error, 'ia');
+          isRecording = false;
+          recordBtn.classList.remove('recording');
+          recordBtn.innerHTML = '<i class="bi bi-mic"></i>Enregistrer';
+        };
+        recognition.onend = function() {
+          if (isRecording) {
+            isRecording = false;
+            recordBtn.classList.remove('recording');
+            recordBtn.innerHTML = '<i class="bi bi-mic"></i>Enregistrer';
+          }
+        };
+      }
+      </script>
+
+      
+
+{% endblock %}

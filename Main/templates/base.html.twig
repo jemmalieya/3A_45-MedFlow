@@ -24,9 +24,15 @@
   <link href="{{ asset('assets/vendor/fontawesome-free/css/all.min.css') }}" rel="stylesheet">
   <link href="{{ asset('assets/vendor/swiper/swiper-bundle.min.css') }}" rel="stylesheet">
   <link href="{{ asset('assets/vendor/glightbox/css/glightbox.min.css') }}" rel="stylesheet">
+
   <!-- css events -->
   <link rel="stylesheet" href="{{ asset('assets/css/events.css') }}">
-   <script src="{{ asset('assets/js/evenement-show.js') }}"></script>
+  <script src="{{ asset('assets/js/evenement-show.js') }}"></script>
+
+
+  <link rel="stylesheet" href="{{ asset('assets/css/profile-dropdown.css') }}">
+
+
   <!-- Main CSS File -->
   <link href="{{ asset('assets/css/main.css') }}" rel="stylesheet">
 
@@ -41,16 +47,15 @@
     <div class="header-container container-fluid container-xl position-relative d-flex align-items-center justify-content-between">
 
       <a href="{{ path('app_home') }}" class="logo d-flex align-items-center me-auto me-xl-0">
-        {# logo svg conservé #}
         <img src="{{ asset('assets/img/img.png') }}" alt="Health Icon" class="medflow-logo" style="width: 40px; height: 40px; margin-left: 10px; transform: rotate(0deg);">
-
         <h1 class="sitename">MedFlow</h1>
       </a>
 
       <nav id="navmenu" class="navmenu">
         <ul>
           <li><a href="{{ path('app_home') }}" class="{{ app.request.attributes.get('_route') == 'app_home' ? 'active' : '' }}">Home</a></li>
-             {% if app.user %}
+
+          {% if app.user %}
             <li class="dropdown">
               <a href="#"><span>Réclamations</span> <i class="bi bi-chevron-down toggle-dropdown"></i></a>
               <ul>
@@ -61,6 +66,7 @@
           {% else %}
             <li><a href="{{ path('reclamation_index') }}">Réclamations</a></li>
           {% endif %}
+
           <li><a href="{{ path('post_index') }}">Blog</a></li>
 
           <li class="dropdown"><a href="#"><span>Consultations</span> <i class="bi bi-chevron-down toggle-dropdown"></i></a>
@@ -69,14 +75,11 @@
               <li><a href="{{ path('rendezvous_list') }}">Mes Appointments</a></li>
             </ul>
           </li>
-           <li><a href="{{ path('app_evenements') }}" class="{% if app.request.attributes.get('_route') == 'app_evenements' %}active{% endif %}">Événements</a></li>
 
+          <li><a href="{{ path('app_evenements') }}" class="{% if app.request.attributes.get('_route') == 'app_evenements' %}active{% endif %}">Événements</a></li>
 
-          {# Liens template laissés en statique pour l’instant #}
           <li><a href="#">About</a></li>
           <li><a href="#">Services</a></li>
-          <li><a href="#">Doctors</a></li>
-
           <li class="dropdown"><a href="#"><span>More Pages</span> <i class="bi bi-chevron-down toggle-dropdown"></i></a>
             <ul>
               <li><a href="#">Department Details</a></li>
@@ -90,42 +93,205 @@
               <li><a href="#">404</a></li>
             </ul>
           </li>
-              <li>
-      <a href="{{ path('front_produit_index') }}" 
-         class="{{ app.request.attributes.get('_route') starts with 'front_produit' ? 'active' : '' }}">
-         Pharmacie
-      </a>
-    </li>
 
-    <li>
-      <a href="{{ path('panier_index') }}" 
-         class="{{ app.request.attributes.get('_route') == 'panier_index' ? 'active' : '' }} position-relative">
-        <i class="bi bi-cart-fill fs-4"></i>
-        <span id="cart-count" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
-          {{ app.session.get('panier') ? app.session.get('panier')|length : 0 }}
-        </span>
-      </a>
-    </li>
+          <li>
+            <a href="{{ path('front_produit_index') }}"
+               class="{{ app.request.attributes.get('_route') starts with 'front_produit' ? 'active' : '' }}">
+               Pharmacie
+            </a>
+          </li>
 
-
-         
+          <li>
+            <a href="{{ path('panier_index') }}"
+               class="{{ app.request.attributes.get('_route') == 'panier_index' ? 'active' : '' }} position-relative">
+              <i class="bi bi-cart-fill fs-4"></i>
+              <span id="cart-count" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                {{ app.session.get('panier') ? app.session.get('panier')|length : 0 }}
+              </span>
+            </a>
+          </li>
         </ul>
+
         <i class="mobile-nav-toggle d-xl-none bi bi-list"></i>
       </nav>
 
-      
+{# ====== PROFILE DROPDOWN (Avatar) ====== #}
+{% if app.user %}
+  {% set prenom = app.user.prenom ?? '' %}
+  {% set nom = app.user.nom ?? '' %}
+  {% set initials = (prenom|slice(0,1) ~ nom|slice(0,1))|upper %}
+  {% set pic = app.user.profilePicture ?? null %}
+
+  <div class="dropdown ms-3">
+
+    {# ===== Trigger (haut) ===== #}
+    <button class="btn border-0 bg-transparent p-0 dropdown-toggle profile-trigger"
+            type="button"
+            data-bs-toggle="dropdown"
+            aria-expanded="false">
+
+      <div class="profile-trigger__container">
+
+        <div class="profile-trigger__avatar">
+          {% if pic %}
+            <img src="{{ asset('uploads/profile/' ~ pic) }}" alt="Photo de profil">
+          {% else %}
+            <span class="profile-trigger__initials">{{ initials ?: 'U' }}</span>
+          {% endif %}
+
+          <span class="profile-trigger__dot {{ app.user.isVerified ? 'is-ok' : 'is-warn' }}"></span>
+        </div>
+
+        <span class="profile-trigger__name d-none d-lg-inline">
+          {{ prenom ?: 'Utilisateur' }}
+        </span>
+
+        <i class="bi bi-chevron-down profile-trigger__chev"></i>
+      </div>
+    </button>
+
+    {# ===== Dropdown menu ===== #}
+    <ul class="dropdown-menu dropdown-menu-end shadow profile-dd" style="min-width: 320px;">
+
+      {# ===== Header ===== #}
+      <li class="profile-dd__header">
+        <div class="d-flex align-items-center gap-3">
+          <div class="profile-dd__avatar">
+            {% if pic %}
+              <img src="{{ asset('uploads/profile/' ~ pic) }}" alt="Photo de profil">
+            {% else %}
+              <span class="profile-dd__initials">{{ initials ?: 'U' }}</span>
+            {% endif %}
+            <span class="profile-dd__dot {{ app.user.isVerified ? 'is-ok' : 'is-warn' }}"></span>
+          </div>
+
+          <div class="flex-grow-1">
+            <div class="profile-dd__name">
+              {{ prenom ?: 'Utilisateur' }} {{ nom ?: '' }}
+            </div>
+            <div class="profile-dd__mail">{{ app.user.emailUser }}</div>
+
+            <div class="profile-dd__chips mt-2">
+              {% if app.user.isVerified %}
+                <span class="chip chip--ok">
+                  <i class="bi bi-patch-check-fill"></i> Compte vérifié
+                </span>
+              {% else %}
+                <span class="chip chip--warn">
+                  <i class="bi bi-exclamation-triangle-fill"></i> Non vérifié
+                </span>
+              {% endif %}
+
+              <span class="chip chip--info">
+                <i class="bi bi-person-badge-fill"></i>
+                {{ app.user.roleSysteme ?? app.user.typeStaff ?? 'Utilisateur' }}
+              </span>
+            </div>
+          </div>
+        </div>
+      </li>
+
+      {# ===== Mini infos ===== #}
+      <li class="profile-dd__meta">
+        <div class="meta-row">
+          <span class="meta-label"><i class="bi bi-shield-lock"></i> Statut</span>
+          <span class="meta-value">{{ app.user.statutCompte ?? 'Actif' }}</span>
+        </div>
+
+        <div class="meta-row">
+          <span class="meta-label"><i class="bi bi-clock-history"></i> Dernière connexion</span>
+          <span class="meta-value">
+            {% if app.user.derniereConnexion is defined and app.user.derniereConnexion %}
+              {{ app.user.derniereConnexion|date('d/m/Y H:i') }}
+            {% else %}
+              —
+            {% endif %}
+          </span>
+        </div>
+      </li>
+
+      <li><hr class="dropdown-divider profile-dd__divider"></li>
+
+      {# ===== Actions ===== #}
+      <li>
+        <button type="button" class="dropdown-item profile-dd__item js-open-modal"
+                data-url="{{ path('profile_modal_show') }}"
+                data-title="Mon profil">
+          <span class="profile-dd__icon"><i class="bi bi-person"></i></span>
+          <span class="profile-dd__text">Mon profil</span>
+          <span class="profile-dd__chev"><i class="bi bi-chevron-right"></i></span>
+        </button>
+      </li>
+
+      <li>
+        <button type="button" class="dropdown-item profile-dd__item js-open-modal"
+                data-url="{{ path('profile_modal_edit') }}"
+                data-title="Modifier mon profil">
+          <span class="profile-dd__icon"><i class="bi bi-pencil-square"></i></span>
+          <span class="profile-dd__text">Modifier profil</span>
+          <span class="profile-dd__chev"><i class="bi bi-chevron-right"></i></span>
+        </button>
+      </li>
+
+      <li>
+        <button type="button" class="dropdown-item profile-dd__item js-open-modal"
+                data-url="{{ path('profile_modal_password') }}"
+                data-title="Changer mon mot de passe">
+          <span class="profile-dd__icon"><i class="bi bi-shield-lock"></i></span>
+          <span class="profile-dd__text">Mot de passe</span>
+          <span class="profile-dd__chev"><i class="bi bi-chevron-right"></i></span>
+        </button>
+      </li>
+
+      <li>
+        <button type="button" class="dropdown-item profile-dd__item js-open-modal"
+                data-url="{{ path('profile_modal_staff_request') }}"
+                data-title="Demande de rôle">
+          <span class="profile-dd__icon"><i class="bi bi-briefcase"></i></span>
+          <span class="profile-dd__text">Demander un rôle / accès</span>
+          <span class="profile-dd__chev"><i class="bi bi-chevron-right"></i></span>
+        </button>
+      </li>
+
+      <li><hr class="dropdown-divider profile-dd__divider"></li>
+
+      <li>
+        <a class="dropdown-item profile-dd__item profile-dd__logout" href="{{ path('app_logout') }}">
+          <span class="profile-dd__icon"><i class="bi bi-box-arrow-right"></i></span>
+          <span class="profile-dd__text">Déconnexion</span>
+        </a>
+      </li>
+
+    </ul>
+  </div>
+
+{% else %}
+  <a class="btn-getstarted ms-3" href="{{ path('app_register') }}"><i class="bi bi-person-plus me-1"></i> Inscription</a>
+{% endif %}
+{# ====== /PROFILE DROPDOWN ====== #}
+
 
     </div>
-    {% if not app.user %}
-  <a class="btn-getstarted" href="{{ path('app_login') }}">
-    Connexion
-  </a>
-{% else %}
-  <a class="btn-getstarted" href="{{ path('app_logout') }}">
-    Déconnexion
-  </a>
-{% endif %}
   </header>
+
+  {# ====== GLOBAL MODAL (PROFILE) ====== #}
+  <div class="modal fade" id="globalModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="globalModalTitle">...</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+
+        <div class="modal-body" id="globalModalBody">
+          <div class="text-center py-4">
+            <div class="spinner-border" role="status"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  {# ====== /GLOBAL MODAL ====== #}
 
   {# CONTENU : pousse le footer vers le bas #}
   <main class="flex-fill mt-5 pt-5">
@@ -134,7 +300,6 @@
 
   <!-- FOOTER -->
   <footer id="footer" class="footer position-relative light-background mt-auto">
-
     <div class="container footer-top">
       <div class="row gy-4">
         <div class="col-lg-4 col-md-6 footer-about">
@@ -198,7 +363,6 @@
             <li><a href="#">Flexo</a></li>
           </ul>
         </div>
-
       </div>
     </div>
 
@@ -208,15 +372,12 @@
         Designed by <a href="https://bootstrapmade.com/">BootstrapMade</a> | <a href="https://bootstrapmade.com/tools/">DevTools</a>
       </div>
     </div>
-
   </footer>
 
   <!-- Scroll Top -->
   <a href="#" id="scroll-top" class="scroll-top d-flex align-items-center justify-content-center">
     <i class="bi bi-arrow-up-short"></i>
   </a>
-
-  <!-- Preloader  <div id="preloader"></div> -->
 
   <!-- Vendor JS Files -->
   <script src="{{ asset('assets/vendor/bootstrap/js/bootstrap.bundle.min.js') }}"></script>
@@ -228,10 +389,184 @@
   <script src="{{ asset('assets/vendor/isotope-layout/isotope.pkgd.min.js') }}"></script>
   <script src="{{ asset('assets/vendor/glightbox/js/glightbox.min.js') }}"></script>
 
+  {# ✅ SweetAlert + toast functions (avant le JS modal) #}
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <script>
+    window.toastSuccess = function(title, text) {
+      Swal.fire({
+        icon: 'success',
+        title: title || 'Succès',
+        text: text || '',
+        showConfirmButton: false,
+        timer: 3000,
+        timerProgressBar: true,
+        position: 'top',
+        toast: true
+      });
+    };
+
+    window.toastError = function(title, text) {
+      Swal.fire({
+        icon: 'error',
+        title: title || 'Erreur',
+        text: text || '',
+        showConfirmButton: false,
+        timer: 3500,
+        timerProgressBar: true,
+        position: 'top',
+        toast: true
+      });
+    };
+  </script>
+
+  <script>
+    document.addEventListener('click', async (e) => {
+      const btn = e.target.closest('.js-open-modal');
+      if (!btn) return;
+
+      const url = btn.dataset.url;
+      const title = btn.dataset.title || 'Profil';
+
+      const modalEl = document.getElementById('globalModal');
+      const modalTitle = document.getElementById('globalModalTitle');
+      const modalBody = document.getElementById('globalModalBody');
+
+      // ✅ évite crash silencieux si modal introuvable
+      if (!modalEl || !modalTitle || !modalBody) {
+        console.error('Modal elements missing');
+        toastError('Erreur', 'Le modal global est manquant dans base.html.twig');
+        return;
+      }
+
+      modalTitle.textContent = title;
+      modalBody.innerHTML = `<div class="text-center py-4"><div class="spinner-border" role="status"></div></div>`;
+
+      const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+      modal.show();
+
+      try {
+        // Force fresh fetch of modal content by appending a cache-busting param
+        let reqUrl;
+        try {
+          const u = new URL(url, window.location.origin);
+          u.searchParams.set('_t', Date.now().toString());
+          reqUrl = u.toString();
+        } catch (e) {
+          reqUrl = url + (url.includes('?') ? '&' : '?') + '_t=' + Date.now();
+        }
+
+        const res = await fetch(reqUrl, { headers: { 'X-Requested-With': 'XMLHttpRequest', 'Cache-Control': 'no-cache', 'Pragma': 'no-cache', 'Accept': 'text/html' } });
+        const html = await res.text();
+
+        if (!res.ok) {
+          modalBody.innerHTML = `<div class="alert alert-danger">Erreur serveur (${res.status})</div>`;
+          toastError('Erreur', 'Le serveur a renvoyé une erreur.');
+          return;
+        }
+
+        modalBody.innerHTML = html;
+        // ✅ Preview instantané photo (dans le modal edit)
+const fileInput = modalBody.querySelector('input[type="file"]');
+const previewImg = modalBody.querySelector('.js-profile-preview');
+
+if (fileInput && previewImg) {
+  fileInput.addEventListener('change', function () {
+    const file = this.files && this.files[0];
+    if (!file) return;
+
+    // optionnel: refuser fichiers non images
+    if (!file.type.startsWith('image/')) {
+      toastError('Erreur', 'Veuillez choisir une image (JPG/PNG).');
+      this.value = '';
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      previewImg.src = e.target.result;
+      previewImg.classList.remove('preview-animate');
+      void previewImg.offsetWidth; // re-trigger animation
+      previewImg.classList.add('preview-animate');
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+      } catch (err) {
+        console.error(err);
+        modalBody.innerHTML = `<div class="alert alert-danger">Erreur lors du chargement.</div>`;
+        toastError('Erreur', "Impossible de charger le contenu.");
+        return;
+      }
+
+      const form = modalBody.querySelector('form');
+      // Skip attaching generic handler for staff request form; dedicated JS handles it
+      if (form && form.id !== 'staffRequestForm') {
+        form.addEventListener('submit', async (ev) => {
+          ev.preventDefault();
+
+          try {
+            const formData = new FormData(form);
+
+            const postRes = await fetch(form.action, {
+              method: 'POST',
+              body: formData,
+              headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            });
+
+            // ✅ si pas JSON (erreur twig/redirect), on affiche HTML au lieu de casser le JS
+            const contentType = postRes.headers.get('content-type') || '';
+            if (!contentType.includes('application/json')) {
+              const txt = await postRes.text();
+              modalBody.innerHTML = txt;
+              toastError('Erreur', 'Réponse inattendue (pas JSON).');
+              return;
+            }
+
+            const data = await postRes.json();
+
+            if (data.success) {
+              // ✅ Update avatar in navbar
+              if (data.avatarHtml) {
+                const avatarSlot = document.querySelector('[data-avatar-slot]');
+                if (avatarSlot) {
+                  avatarSlot.outerHTML = data.avatarHtml;
+                } else {
+                  console.warn("Avatar slot not found in DOM");
+                }
+              } else {
+                console.warn("No avatarHtml in response");
+              }
+
+              modal.hide();
+
+              // Nettoyer backdrop bloqué si jamais
+              document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
+              document.body.classList.remove('modal-open');
+              document.body.style.removeProperty('padding-right');
+
+              // ✅ SweetAlert
+              toastSuccess('Succès', data.message || 'Mise à jour réussie ✅');
+
+            } else {
+              modalBody.innerHTML = data.formHtml || '<div class="alert alert-danger">Erreur</div>';
+              toastError('Erreur', 'Veuillez corriger les champs.');
+            }
+
+          } catch (err) {  // ✅ catch manquant (BUG bloquant chez toi)
+            console.error(err);
+            toastError('Erreur', "Une erreur s'est produite.");
+          }
+        }, { once: true });
+      }
+    });
+  </script>
+
   <!-- Main JS File -->
   <script src="{{ asset('assets/js/main.js') }}"></script>
 
   {% block javascripts %}{% endblock %}
-            {% block importmap %}{{ importmap('app') }}{% endblock %}
+  {% block importmap %}{{ importmap('app') }}{% endblock %}
+
 </body>
 </html>

@@ -1,0 +1,586 @@
+{% extends 'base_admin.html.twig' %}
+
+{% block title %}Liste Commandes{% endblock %}
+{% block page_title %}Gestion des Commandes{% endblock %}
+
+{% block breadcrumb %}
+  <li class="breadcrumb-item">Commandes</li>
+{% endblock %}
+
+{% block body %}
+
+{# ========== STATISTIQUES COMMANDES ========== #}
+<div class="row g-4 mb-4">
+  <div class="col-lg-2 col-md-4">
+    <div class="card stretch stretch-full">
+      <div class="card-body text-center">
+        <div class="avatar-text avatar-lg bg-soft-primary text-primary mx-auto mb-3">
+          <i class="feather-shopping-cart"></i>
+        </div>
+        <h3 class="mb-0 fw-bold">{{ totalCommandes }}</h3>
+        <p class="text-muted mb-0 fs-12">Total</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-2 col-md-4">
+    <div class="card stretch stretch-full">
+      <div class="card-body text-center">
+        <div class="avatar-text avatar-lg bg-soft-warning text-warning mx-auto mb-3">
+          <i class="feather-clock"></i>
+        </div>
+        <h3 class="mb-0 fw-bold">{{ enAttente }}</h3>
+        <p class="text-muted mb-0 fs-12">En Attente</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-2 col-md-4">
+    <div class="card stretch stretch-full">
+      <div class="card-body text-center">
+        <div class="avatar-text avatar-lg bg-soft-info text-info mx-auto mb-3">
+          <i class="feather-loader"></i>
+        </div>
+        <h3 class="mb-0 fw-bold">{{ enCours }}</h3>
+        <p class="text-muted mb-0 fs-12">En Cours</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-2 col-md-4">
+    <div class="card stretch stretch-full">
+      <div class="card-body text-center">
+        <div class="avatar-text avatar-lg bg-soft-primary text-primary mx-auto mb-3">
+          <i class="feather-truck"></i>
+        </div>
+        <h3 class="mb-0 fw-bold">{{ enLivraison }}</h3>
+        <p class="text-muted mb-0 fs-12">En Livraison</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-2 col-md-4">
+    <div class="card stretch stretch-full">
+      <div class="card-body text-center">
+        <div class="avatar-text avatar-lg bg-soft-success text-success mx-auto mb-3">
+          <i class="feather-check-circle"></i>
+        </div>
+        <h3 class="mb-0 fw-bold">{{ livrees }}</h3>
+        <p class="text-muted mb-0 fs-12">Livrées</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-2 col-md-4">
+    <div class="card stretch stretch-full">
+      <div class="card-body text-center">
+        <div class="avatar-text avatar-lg bg-soft-danger text-danger mx-auto mb-3">
+          <i class="feather-x-circle"></i>
+        </div>
+        <h3 class="mb-0 fw-bold">{{ annulees }}</h3>
+        <p class="text-muted mb-0 fs-12">Annulées</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+{# ========== CHIFFRE D'AFFAIRES ========== #}
+<div class="row g-4 mb-4">
+  <div class="col-md-6">
+    <div class="card stretch stretch-full" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+      <div class="card-body text-white">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <h6 class="text-white-50 mb-2 fw-semibold">
+              <i class="feather-dollar-sign me-2"></i> Chiffre d'Affaires Total
+            </h6>
+            <h2 class="mb-0 fw-bold">{{ caTotal|number_format(2, ',', ' ') }} DT</h2>
+            <p class="text-white-50 mb-0 mt-2 fs-12">Toutes les commandes payées</p>
+          </div>
+          <div class="avatar-text avatar-xl bg-white text-primary opacity-75">
+            <i class="feather-trending-up"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-6">
+    <div class="card stretch stretch-full" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+      <div class="card-body text-white">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <h6 class="text-white-50 mb-2 fw-semibold">
+              <i class="feather-calendar me-2"></i> CA ce Mois
+            </h6>
+            <h2 class="mb-0 fw-bold">{{ caMois|number_format(2, ',', ' ') }} DT</h2>
+            <p class="text-white-50 mb-0 mt-2 fs-12">{{ "now"|date('F Y') }}</p>
+          </div>
+          <div class="avatar-text avatar-xl bg-white text-danger opacity-75">
+            <i class="feather-bar-chart-2"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{# ========== TABLEAU COMMANDES ========== #}
+<div class="row">
+  <div class="col-12">
+    <div class="card stretch stretch-full">
+
+      <div class="card-header">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+          <h5 class="card-title mb-0">
+            <i class="feather-shopping-bag me-2"></i> Liste Complète des Commandes
+          </h5>
+          <span class="badge bg-soft-primary text-primary px-3 py-2">
+            <i class="feather-eye me-1"></i> Cliquez sur 👁️ pour voir les détails
+          </span>
+        </div>
+      </div>
+
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-hover mb-0 align-middle">
+            <thead>
+              <tr class="border-b">
+                <th style="width: 90px;">#ID</th>
+                <th>Client</th>
+                <th>Date</th>
+                <th>Montant</th>
+                <th>Statut</th>
+                <th>Paiement</th>
+                <th class="text-end" style="width: 120px;">Détails</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {% for commande in commandes %}
+                {% set statutClass = 'secondary' %}
+                {% set icon = 'circle' %}
+
+                {% if commande.statutCommande == 'Livrée' %}
+                  {% set statutClass = 'success' %}
+                  {% set icon = 'check-circle' %}
+                {% elseif commande.statutCommande == 'En livraison' %}
+                  {% set statutClass = 'primary' %}
+                  {% set icon = 'truck' %}
+                {% elseif commande.statutCommande == 'En cours' %}
+                  {% set statutClass = 'info' %}
+                  {% set icon = 'loader' %}
+                {% elseif commande.statutCommande == 'En attente' %}
+                  {% set statutClass = 'warning' %}
+                  {% set icon = 'clock' %}
+                {% elseif commande.statutCommande == 'Annulée' %}
+                  {% set statutClass = 'danger' %}
+                  {% set icon = 'x-circle' %}
+                {% endif %}
+
+                <tr>
+                  <td><strong class="text-primary">#{{ commande.idCommande }}</strong></td>
+
+                  <td>
+                    <div class="d-flex align-items-center gap-2">
+                      <div class="avatar-text avatar-sm bg-soft-primary text-primary">
+                        <i class="feather-user"></i>
+                      </div>
+                      <div class="min-w-0">
+                        <span class="d-block fw-semibold" style="max-width: 260px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                          {{ commande.user ? commande.user.emailUser : 'Invité' }}
+                        </span>
+                        <span class="fs-11 text-muted">ID User: {{ commande.user ? commande.user.id : 'N/A' }}</span>
+                      </div>
+                    </div>
+                  </td>
+
+                  <td>
+                    <span class="d-block fw-semibold">{{ commande.dateCreationCommande|date('d/m/Y') }}</span>
+                    <span class="fs-11 text-muted"><i class="feather-clock"></i> {{ commande.dateCreationCommande|date('H:i') }}</span>
+                  </td>
+
+                  <td><strong class="text-dark">{{ commande.montantTotal|number_format(2, ',', ' ') }} DT</strong></td>
+
+                  <td>
+                    <span class="badge bg-soft-{{ statutClass }} text-{{ statutClass }} px-3 py-2">
+                      <i class="feather-{{ icon }} me-1"></i>{{ commande.statutCommande }}
+                    </span>
+                  </td>
+
+                  <td>
+                    {% if commande.paidAt %}
+                      <span class="badge bg-soft-success text-success px-3 py-2">
+                        <i class="feather-check me-1"></i>Payée
+                      </span>
+                      <div class="fs-11 text-muted mt-1">{{ commande.paidAt|date('d/m/Y H:i') }}</div>
+                    {% else %}
+                      <span class="badge bg-soft-danger text-danger px-3 py-2">
+                        <i class="feather-x me-1"></i>Non payée
+                      </span>
+                    {% endif %}
+                  </td>
+
+                  <td class="text-end">
+                    <button
+                      type="button"
+                      class="avatar-text avatar-md"
+                      data-bs-toggle="modal"
+                      data-bs-target="#commandeModal"
+                      title="Voir détails"
+
+                      data-id="{{ commande.idCommande }}"
+                      data-email="{{ commande.user ? commande.user.emailUser : 'Invité' }}"
+                      data-userid="{{ commande.user ? commande.user.id : 'N/A' }}"
+                      data-date="{{ commande.dateCreationCommande|date('d/m/Y') }}"
+                      data-time="{{ commande.dateCreationCommande|date('H:i') }}"
+                      data-montant="{{ commande.montantTotal|number_format(2, '.', '') }}"
+                      data-statut="{{ commande.statutCommande }}"
+                      data-paid="{{ commande.paidAt ? '1' : '0' }}"
+                      data-paidat="{{ commande.paidAt ? commande.paidAt|date('d/m/Y H:i') : '' }}"
+
+                      data-items='[
+                        {% for lc in commande.ligneCommandes %}
+                          {% set qte = 0 %}
+                          {% if lc.quantiteCommandee is defined %}
+                            {% set qte = lc.quantiteCommandee %}
+                          {% elseif lc.quantite_commandee is defined %}
+                            {% set qte = lc.quantite_commandee %}
+                          {% elseif lc.quantite is defined %}
+                            {% set qte = lc.quantite %}
+                          {% endif %}
+
+                          {% set prix = 0 %}
+                          {% if lc.prixUnitaire is defined %}
+                            {% set prix = lc.prixUnitaire %}
+                          {% elseif lc.prix_unitaire is defined %}
+                            {% set prix = lc.prix_unitaire %}
+                          {% elseif lc.produit and lc.produit.prixProduit is defined %}
+                            {% set prix = lc.produit.prixProduit %}
+                          {% endif %}
+
+                          {
+                            "produit": "{{ lc.produit ? lc.produit.nomProduit|e('js') : 'Produit supprimé' }}",
+                            "quantite": {{ qte|default(0) }},
+                            "prix": {{ prix|default(0) }}
+                          }{% if not loop.last %},{% endif %}
+                        {% endfor %}
+                      ]'
+                    >
+                      <i class="feather-eye"></i>
+                    </button>
+                  </td>
+                </tr>
+
+              {% else %}
+                <tr>
+                  <td colspan="7" class="text-center text-muted py-5">
+                    <div class="py-4">
+                      <i class="feather-inbox fs-1 d-block mb-3 text-gray-400"></i>
+                      <h5 class="text-muted">Aucune commande trouvée</h5>
+                      <p class="text-muted fs-13">Les commandes apparaîtront ici une fois passées</p>
+                    </div>
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+
+          </table>
+        </div>
+      </div>
+
+      {% if commandes|length > 0 %}
+        <div class="card-footer">
+          <div class="d-flex justify-content-between align-items-center">
+            <p class="text-muted mb-0 fs-13">Affichage de {{ commandes|length }} commande(s)</p>
+            <p class="text-muted mb-0 fs-13">
+              <i class="feather-dollar-sign me-1"></i> CA Total: {{ caTotal|number_format(2, ',', ' ') }} DT
+            </p>
+          </div>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block javascripts %}
+{{ parent() }}
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+
+  // ✅ Inject modal dans <body>
+  if (!document.getElementById('commandeModal')) {
+    const modalHtml = `
+<div class="modal fade" id="commandeModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-xl">
+    <div class="modal-content cm-card">
+
+      <div class="modal-header cm-header">
+        <div class="d-flex align-items-center gap-3">
+          <div class="cm-ico"><i class="feather-shopping-bag"></i></div>
+
+          <div class="min-w-0">
+            <div class="d-flex align-items-center gap-2 flex-wrap">
+              <h5 class="modal-title cm-title mb-0">Détails commande</h5>
+              <span class="cm-pill" id="cmId"></span>
+              <span class="cm-pill cm-pill-money" id="cmMontant"></span>
+            </div>
+
+            <div class="d-flex align-items-center gap-2 flex-wrap mt-2">
+              <span class="cm-badge" id="cmStatut"></span>
+              <span class="cm-badge" id="cmPaiement"></span>
+              <span class="cm-badge cm-badge-muted" id="cmDate"></span>
+            </div>
+          </div>
+        </div>
+
+        <button type="button" class="cm-close" data-bs-dismiss="modal" aria-label="Fermer">
+          <i class="feather-x"></i>
+        </button>
+      </div>
+
+      <div class="modal-body cm-body">
+        <div class="row g-4">
+
+          <div class="col-lg-4">
+            <div class="cm-cardbox">
+              <div class="cm-cardbox-title">
+                <i class="feather-user"></i><span>Client</span>
+              </div>
+
+              <div class="cm-client">
+                <div class="cm-avatar"><i class="feather-mail"></i></div>
+                <div class="min-w-0">
+                  <div class="cm-client-name" id="cmEmail">—</div>
+                  <div class="cm-client-sub">ID User: <span id="cmUserId">—</span></div>
+                </div>
+              </div>
+
+              <div class="cm-sep"></div>
+
+              <div class="cm-kv">
+                <div class="cm-k">Date de paiement</div>
+                <div class="cm-v" id="cmPaidAt">—</div>
+              </div>
+            </div>
+
+            <div class="cm-tip mt-3">
+              <i class="feather-check-square"></i>
+              <div>
+                <div class="cm-tip-title">Conseil</div>
+                <div class="cm-tip-text">Vérifie les quantités et le statut avant de valider la livraison.</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-lg-8">
+            <div class="cm-cardbox">
+              <div class="cm-cardbox-title">
+                <i class="feather-list"></i><span>Articles commandés</span>
+              </div>
+
+              <div class="table-responsive">
+                <table class="table mb-0 cm-table">
+                  <thead>
+                    <tr>
+                      <th>Produit</th>
+                      <th style="width: 120px;">Qté</th>
+                      <th style="width: 160px;">Prix</th>
+                      <th class="text-end" style="width: 180px;">Sous-total</th>
+                    </tr>
+                  </thead>
+                  <tbody id="cmItems">
+                    <tr><td colspan="4" class="text-muted py-4 text-center">Aucun article</td></tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <div class="cm-total">
+                <div class="cm-total-left">
+                  <div class="cm-total-label">Total commande</div>
+                  <div class="cm-total-sub">Montant total (DT)</div>
+                </div>
+                <div class="cm-total-right" id="cmTotalRight">0.00 DT</div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer cm-footer">
+        <button type="button" class="btn btn-light cm-btn" data-bs-dismiss="modal">
+          <i class="feather-x me-2"></i>Fermer
+        </button>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<style>
+  .cm-card{border-radius:18px;overflow:hidden;border:1px solid rgba(16,24,40,.08);box-shadow:0 18px 50px rgba(16,24,40,.18);background:#fff;}
+  .cm-header{background:linear-gradient(180deg, rgba(16,24,40,.04), rgba(16,24,40,0));border-bottom:1px solid rgba(16,24,40,.08);padding:16px 18px;}
+  .cm-ico{width:56px;height:56px;border-radius:16px;display:flex;align-items:center;justify-content:center;background:rgba(13,110,253,.10);border:1px solid rgba(13,110,253,.18);color:#0d6efd;font-size:22px;}
+  .cm-title{font-weight:900;letter-spacing:.2px;}
+  .cm-pill{display:inline-flex;align-items:center;font-size:12px;font-weight:900;padding:6px 10px;border-radius:999px;background:rgba(13,110,253,.10);color:#0d6efd;}
+  .cm-pill-money{background:rgba(25,135,84,.10);color:#198754;}
+  .cm-badge{display:inline-flex;align-items:center;padding:7px 12px;border-radius:999px;font-size:12px;font-weight:900;border:1px solid rgba(16,24,40,.08);background:rgba(16,24,40,.03);color:#111827;}
+  .cm-badge-muted{background:rgba(108,117,125,.10);border-color:rgba(108,117,125,.18);color:#6c757d;}
+  .cm-close{border:0;background:rgba(16,24,40,.06);width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;transition:.2s;}
+  .cm-close:hover{background:rgba(16,24,40,.10);transform:scale(1.03);}
+  .cm-body{padding:18px;}
+  .cm-cardbox{border:1px solid rgba(16,24,40,.08);background:rgba(16,24,40,.02);border-radius:16px;padding:14px;}
+  .cm-cardbox-title{display:flex;align-items:center;gap:8px;font-weight:900;color:#111827;margin-bottom:12px;}
+  .cm-client{display:flex;align-items:center;gap:10px;padding:10px;border-radius:14px;background:#fff;border:1px solid rgba(16,24,40,.08);}
+  .cm-avatar{width:44px;height:44px;border-radius:14px;display:flex;align-items:center;justify-content:center;background:rgba(16,24,40,.04);border:1px solid rgba(16,24,40,.08);color:#111827;}
+  .cm-client-name{font-weight:900;color:#111827;max-width:260px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .cm-client-sub{font-size:12px;color:#6b7280;font-weight:800;}
+  .cm-sep{height:1px;background:rgba(16,24,40,.08);margin:12px 0;}
+  .cm-kv{display:flex;justify-content:space-between;gap:10px;margin-top:10px;}
+  .cm-k{font-size:12px;color:#6b7280;font-weight:900;}
+  .cm-v{font-size:12px;color:#111827;font-weight:800;text-align:right;max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .cm-table thead th{font-size:12px;color:#6b7280;font-weight:900;border-bottom:1px solid rgba(16,24,40,.08);}
+  .cm-total{display:flex;justify-content:space-between;align-items:center;margin-top:12px;padding:12px 14px;border-radius:14px;background:#fff;border:1px solid rgba(16,24,40,.08);}
+  .cm-total-label{font-weight:900;color:#111827;}
+  .cm-total-sub{font-size:12px;color:#6b7280;font-weight:800;}
+  .cm-total-right{font-size:18px;font-weight:1000;color:#111827;}
+  .cm-tip{display:flex;gap:10px;align-items:flex-start;border:1px dashed rgba(13,110,253,.35);background:rgba(13,110,253,.06);border-radius:16px;padding:12px 14px;}
+  .cm-tip-title{font-weight:1000;color:#0d6efd;}
+  .cm-tip-text{font-size:13px;color:#0b4db3;font-weight:700;}
+  .cm-footer{border-top:1px solid rgba(16,24,40,.08);background:rgba(16,24,40,.02);padding:14px 18px;}
+  .cm-btn{border-radius:12px;padding:10px 14px;font-weight:900;}
+</style>
+`;
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+  }
+
+  const modalEl = document.getElementById('commandeModal');
+
+  function moneyDT(n){
+    const x = Number(n || 0);
+    return x.toFixed(2) + ' DT';
+  }
+
+  function setBadge(el, text, theme){
+    el.textContent = text || '—';
+    el.className = 'cm-badge';
+    el.style.background = '';
+    el.style.borderColor = '';
+    el.style.color = '';
+
+    if (theme === 'success') {
+      el.style.background = 'rgba(25,135,84,.10)';
+      el.style.borderColor = 'rgba(25,135,84,.18)';
+      el.style.color = '#198754';
+    } else if (theme === 'danger') {
+      el.style.background = 'rgba(220,53,69,.10)';
+      el.style.borderColor = 'rgba(220,53,69,.18)';
+      el.style.color = '#dc3545';
+    } else if (theme === 'warning') {
+      el.style.background = 'rgba(255,193,7,.18)';
+      el.style.borderColor = 'rgba(255,193,7,.28)';
+      el.style.color = '#7a5b00';
+    } else if (theme === 'info') {
+      el.style.background = 'rgba(13,202,240,.14)';
+      el.style.borderColor = 'rgba(13,202,240,.26)';
+      el.style.color = '#087990';
+    } else if (theme === 'primary') {
+      el.style.background = 'rgba(13,110,253,.10)';
+      el.style.borderColor = 'rgba(13,110,253,.18)';
+      el.style.color = '#0d6efd';
+    } else {
+      el.style.background = 'rgba(108,117,125,.12)';
+      el.style.borderColor = 'rgba(108,117,125,.20)';
+      el.style.color = '#6c757d';
+    }
+  }
+
+  function statutTheme(statut){
+    if (statut === 'Livrée') return 'success';
+    if (statut === 'En livraison') return 'primary';
+    if (statut === 'En cours') return 'info';
+    if (statut === 'En attente') return 'warning';
+    if (statut === 'Annulée') return 'danger';
+    return 'secondary';
+  }
+
+  modalEl.addEventListener('show.bs.modal', function (event) {
+    const btn = event.relatedTarget;
+    if (!btn) return;
+
+    const id = btn.getAttribute('data-id') || '';
+    const email = btn.getAttribute('data-email') || 'Invité';
+    const userId = btn.getAttribute('data-userid') || 'N/A';
+    const date = btn.getAttribute('data-date') || '';
+    const time = btn.getAttribute('data-time') || '';
+    const montant = btn.getAttribute('data-montant') || '0';
+    const statut = btn.getAttribute('data-statut') || '';
+    const paid = btn.getAttribute('data-paid') === '1';
+    const paidAt = btn.getAttribute('data-paidat') || '';
+
+    document.getElementById('cmId').textContent = 'Commande #' + id;
+    document.getElementById('cmMontant').textContent = moneyDT(montant);
+    document.getElementById('cmDate').textContent = (date ? (date + (time ? ' • ' + time : '')) : '—');
+
+    document.getElementById('cmEmail').textContent = email;
+    document.getElementById('cmUserId').textContent = userId;
+    document.getElementById('cmPaidAt').textContent = paidAt ? paidAt : '—';
+
+    setBadge(document.getElementById('cmStatut'), statut || '—', statutTheme(statut));
+    setBadge(document.getElementById('cmPaiement'), paid ? 'Payée' : 'Non payée', paid ? 'success' : 'danger');
+
+    const itemsTbody = document.getElementById('cmItems');
+    let items = [];
+    try {
+      items = JSON.parse(btn.getAttribute('data-items') || '[]');
+      if (!Array.isArray(items)) items = [];
+    } catch(e) {
+      items = [];
+    }
+
+    if (!items.length) {
+      itemsTbody.innerHTML = `<tr><td colspan="4" class="text-muted py-4 text-center">Aucun article</td></tr>`;
+      document.getElementById('cmTotalRight').textContent = moneyDT(montant);
+      return;
+    }
+
+    let totalCalc = 0;
+
+    itemsTbody.innerHTML = items.map(it => {
+      const q = Number(it.quantite || 0);
+      const p = Number(it.prix || 0);
+      const sub = q * p;
+      totalCalc += sub;
+
+      const prod = (it.produit || '—');
+      return `
+        <tr>
+          <td style="font-weight:900;color:#111827;">${prod}</td>
+          <td><span class="badge bg-soft-primary text-primary px-3 py-2">${q}</span></td>
+          <td>${moneyDT(p)}</td>
+          <td class="text-end" style="font-weight:1000;">${moneyDT(sub)}</td>
+        </tr>
+      `;
+    }).join('');
+
+    // Total = si calcul valide sinon montant commande
+    const finalTotal = (totalCalc > 0 ? totalCalc : Number(montant || 0));
+    document.getElementById('cmTotalRight').textContent = moneyDT(finalTotal);
+  });
+
+  // ✅ Anti-blocage overlay
+  modalEl.addEventListener('hidden.bs.modal', function () {
+    document.querySelectorAll('.modal-backdrop').forEach(b => b.remove());
+    document.body.classList.remove('modal-open');
+    document.body.style.removeProperty('overflow');
+    document.body.style.removeProperty('padding-right');
+  });
+
+});
+</script>
+
+{% endblock %}

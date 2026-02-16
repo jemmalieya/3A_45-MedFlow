@@ -2,7 +2,14 @@
 
 parameters:
     pieces_jointes_directory: '%kernel.project_dir%/public/uploads/pieces_jointes'
+    profile_pictures_directory: '%kernel.project_dir%/public/uploads/profile'
+    openfda.api_key: '%env(OPENFDA_API_KEY)%'
+    openfda.timeout: '%env(int:OPENFDA_TIMEOUT)%'
+    groq.api_key: '%env(GROQ_API_KEY)%'
+    groq.model: '%env(GROQ_MODEL)%'
+    gemini_api_key: '%env(GEMINI_API_KEY)%'
 
+  
 
 services:
     _defaults:
@@ -30,7 +37,35 @@ services:
             - '../src/Entity/'
             - '../src/Kernel.php'
     # Gemini Service
+    # Gemini Service
     App\Service\GeminiService:
         arguments:
-            $apiKey: '%env(GEMINI_API_KEY)%'
-            $model: '%env(GEMINI_MODEL)%'
+            $geminiApiKey: '%gemini_api_key%'
+            $geminiModel: 'gemini-2.5-flash'
+
+    # OpenFDA (Service d'interactions médicamenteuses)
+    App\Service\OpenFdaService:
+        arguments:
+            $apiKey: '%openfda.api_key%'
+            
+    App\Service\GroqService:
+        arguments:
+            $apiKey: '%groq.api_key%'
+            $model: '%groq.model%'
+
+
+    mailer.transports.my:
+        class: Symfony\Component\Mailer\Transport\TransportInterface
+        factory: ['@mailer.transport_factory', 'fromDsn']
+        arguments:
+            - '%env(MY_MAILER_DSN)%'
+
+    mailer.my:
+        class: Symfony\Component\Mailer\Mailer
+        arguments:
+            - '@mailer.transports.my'
+            
+    App\Service\DialogflowService:
+        arguments:
+            $projectId: 'medflow-ai-assistant' # Replace with your Dialogflow project ID
+            $credentialsPath: '%kernel.project_dir%/config/medflow-ai-assistant-ba2dd08bcd44.json'

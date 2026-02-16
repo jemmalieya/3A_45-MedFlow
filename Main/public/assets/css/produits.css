@@ -192,7 +192,7 @@
             position: absolute;
             top: 16px;
             right: 16px;
-            background: linear-gradient(135deg, var(--success) 0%, #059669 100%);
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
             color: white;
             padding: 8px 16px;
             border-radius: 50px;
@@ -602,4 +602,49 @@
         opacity: 1;
         transform: translateY(0);
     }
+}
+/* ===========================
+   ✅ OVERRIDE BLEU (prix + mes commandes + boutons)
+   Colle ceci TOUT À LA FIN du CSS
+   =========================== */
+
+/* 1) Palette BLEU comme "Prendre rendez-vous" / Connexion */
+:root{
+  --primary: #0ea5e9;        /* bleu clair */
+  --primary-dark: #2563eb;   /* bleu profond */
+}
+
+/* 2) Header (si tu veux qu'il suive aussi le bleu) */
+.page-header{
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%) !important;
+}
+
+/* 3) ✅ Badge Prix -> BLEU (plus de vert) */
+.price-badge{
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%) !important;
+  box-shadow: 0 4px 12px rgba(37,99,235,0.28) !important;
+}
+
+/* 4) ✅ Bouton "Mes commandes" -> BLEU (plus de vert) */
+.btn-orders{
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%) !important;
+  border: 2px solid rgba(255,255,255,0.25) !important;
+  color:#fff !important;
+  box-shadow: 0 10px 22px rgba(37,99,235,0.22) !important;
+}
+.btn-orders:hover{
+  transform: translateY(-2px);
+  box-shadow: 0 14px 28px rgba(37,99,235,0.30) !important;
+  color:#fff !important;
+}
+
+/* 5) ✅ Si tu as un bouton Connexion en Bootstrap primary, il devient bleu aussi */
+.btn.btn-primary{
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%) !important;
+  border-color: transparent !important;
+}
+
+/* 6) Effet hover cohérent sur Add to cart */
+.btn-add-cart:hover{
+  box-shadow: 0 8px 20px rgba(37,99,235,0.30) !important;
 }

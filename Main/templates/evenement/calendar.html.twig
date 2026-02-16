@@ -1,0 +1,184 @@
+{% extends 'base.html.twig' %}
+{% block title %}Agenda Événements - MedFlow{% endblock %}
+
+{% block stylesheets %}
+  {{ parent() }}
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.css">
+  <style>
+    .cal-wrap{background:#fff;border:1px solid rgba(16,24,40,.08);border-radius:18px;box-shadow:0 14px 40px rgba(16,24,40,.08);overflow:hidden}
+    .cal-head{padding:16px 18px;background:linear-gradient(135deg,#0097B2,#00BFA6);color:#fff;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
+    .cal-filters{padding:14px 18px;border-bottom:1px solid rgba(16,24,40,.08);background:#f4fcfb}
+    #calendar{padding:14px 18px}
+    .fc .fc-button-primary{background:#0097B2!important;border-color:#0097B2!important}
+    .fc .fc-button-primary:disabled{opacity:.6}
+  </style>
+{% endblock %}
+
+{% block body %}
+<main class="main">
+  <section class="section" style="padding-top:120px;">
+    <div class="container">
+
+      <div class="cal-wrap">
+        <div class="cal-head">
+          <div>
+            <h3 class="mb-0 fw-bold"><i class="bi bi-calendar3 me-2"></i> Agenda Événements</h3>
+            <div class="small opacity-75">Mois/Semaine/Jour + filtres + recherche + popup</div>
+          </div>
+          <a href="{{ path('app_evenements') }}" class="btn btn-light btn-sm fw-bold">
+            <i class="bi bi-arrow-left me-1"></i> Retour
+          </a>
+        </div>
+
+        <div class="cal-filters">
+          <div class="row g-2 align-items-end">
+            <div class="col-md-3">
+              <label class="form-label mb-1 fw-semibold">Ville</label>
+              <select id="filterVille" class="form-select">
+                <option value="">Toutes</option>
+                {% for v in villes %}<option value="{{ v }}">{{ v }}</option>{% endfor %}
+              </select>
+            </div>
+            <div class="col-md-3">
+              <label class="form-label mb-1 fw-semibold">Type</label>
+              <select id="filterType" class="form-select">
+                <option value="">Tous</option>
+                {% for t in types %}<option value="{{ t }}">{{ t }}</option>{% endfor %}
+              </select>
+            </div>
+            <div class="col-md-3">
+              <label class="form-label mb-1 fw-semibold">Statut</label>
+              <select id="filterStatut" class="form-select">
+                <option value="">Tous</option>
+                {% for s in statuts %}<option value="{{ s }}">{{ s }}</option>{% endfor %}
+              </select>
+            </div>
+            <div class="col-md-3">
+              <label class="form-label mb-1 fw-semibold">Recherche</label>
+              <input id="filterQ" class="form-control" placeholder="Titre, ville, type, lieu...">
+            </div>
+          </div>
+          <div class="d-flex gap-2 mt-3">
+            <button id="btnReset" class="btn btn-outline-secondary">Réinitialiser</button>
+          </div>
+        </div>
+
+        <div id="calendar"></div>
+      </div>
+
+    </div>
+  </section>
+</main>
+
+{# ===== MODAL DETAILS ===== #}
+<div class="modal fade" id="eventModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content" style="border-radius:18px; overflow:hidden;">
+      <div class="modal-header" style="background:linear-gradient(135deg,#0097B2,#00BFA6); color:#fff;">
+        <h5 class="modal-title fw-bold" id="mTitle">Détails</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="d-flex flex-wrap gap-2 mb-3">
+          <span class="badge rounded-pill" id="mStatut" style="background:#0097B2;"></span>
+          <span class="badge rounded-pill bg-light text-dark border" id="mType"></span>
+        </div>
+
+        <div class="row g-3">
+          <div class="col-md-6">
+            <div class="fw-semibold mb-1"><i class="bi bi-geo-alt me-1"></i> Lieu</div>
+            <div class="text-muted" id="mLieu"></div>
+            <div class="text-muted small" id="mAdresse"></div>
+          </div>
+          <div class="col-md-6">
+            <div class="fw-semibold mb-1"><i class="bi bi-calendar-event me-1"></i> Dates</div>
+            <div class="text-muted" id="mDates"></div>
+            <div class="text-muted small"><i class="bi bi-pin-map me-1"></i><span id="mVille"></span></div>
+          </div>
+        </div>
+
+        <hr>
+        <a id="mGo" class="btn btn-primary w-100" href="#">
+          <i class="bi bi-eye me-1"></i> Voir la page de l'événement
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block javascripts %}
+  {{ parent() }}
+  <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.js"></script>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const villeEl  = document.getElementById('filterVille');
+      const typeEl   = document.getElementById('filterType');
+      const statutEl = document.getElementById('filterStatut');
+      const qEl      = document.getElementById('filterQ');
+
+      const modalEl = document.getElementById('eventModal');
+      const modal = new bootstrap.Modal(modalEl);
+
+      const calendar = new FullCalendar.Calendar(document.getElementById('calendar'), {
+        initialView: 'dayGridMonth',
+        height: 'auto',
+        locale: 'fr',
+        headerToolbar: { left: 'prev,next today', center: 'title', right: 'dayGridMonth,timeGridWeek,timeGridDay' },
+
+        eventClick: (info) => {
+          info.jsEvent.preventDefault();
+
+          const p = info.event.extendedProps || {};
+          document.getElementById('mTitle').textContent = info.event.title || 'Événement';
+          document.getElementById('mStatut').textContent = p.statut || 'N/A';
+          document.getElementById('mType').textContent = p.type || 'N/A';
+          document.getElementById('mLieu').textContent = p.lieu || '-';
+          document.getElementById('mAdresse').textContent = p.adresse || '';
+          document.getElementById('mDates').textContent = (p.debut || '') + ' → ' + (p.fin || '');
+          document.getElementById('mVille').textContent = p.ville || '-';
+          document.getElementById('mGo').href = p.url || '#';
+
+          // couleur badge statut selon event color
+          const bg = info.event.backgroundColor || '#0097B2';
+          document.getElementById('mStatut').style.background = bg;
+
+          modal.show();
+        },
+
+        events: (fetchInfo, success, failure) => {
+          const params = new URLSearchParams();
+          params.set('start', fetchInfo.startStr);
+          params.set('end', fetchInfo.endStr);
+          if (villeEl.value)  params.set('ville', villeEl.value);
+          if (typeEl.value)   params.set('type', typeEl.value);
+          if (statutEl.value) params.set('statut', statutEl.value);
+          if (qEl.value.trim()) params.set('q', qEl.value.trim());
+
+          fetch('{{ path("app_evenements_calendar_data") }}?' + params.toString())
+            .then(r => r.json())
+            .then(success)
+            .catch(failure);
+        }
+      });
+
+      calendar.render();
+
+      // live search + filtres live (debounce)
+      let t = null;
+      function refetchSoon(){
+        clearTimeout(t);
+        t = setTimeout(() => calendar.refetchEvents(), 250);
+      }
+
+      [villeEl, typeEl, statutEl].forEach(el => el.addEventListener('change', refetchSoon));
+      qEl.addEventListener('input', refetchSoon);
+
+      document.getElementById('btnReset').addEventListener('click', () => {
+        villeEl.value=''; typeEl.value=''; statutEl.value=''; qEl.value='';
+        calendar.refetchEvents();
+      });
+    });
+  </script>
+{% endblock %}

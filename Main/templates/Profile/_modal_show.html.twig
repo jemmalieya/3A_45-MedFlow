@@ -1,0 +1,98 @@
+{# templates/profile/modal_show.html.twig #}
+
+<style>
+  .pf-wrap{animation:pfIn .28s ease-out both}
+  @keyframes pfIn{from{opacity:0;transform:translateY(10px) scale(.99)}to{opacity:1;transform:none}}
+  .pf-hero{
+    border-radius:18px;
+    background: linear-gradient(135deg, rgba(28,163,180,.18), rgba(13,110,253,.10));
+    border:1px solid rgba(0,0,0,.06);
+    overflow:hidden;
+  }
+  .pf-avatar{
+    width:78px;height:78px;object-fit:cover;border-radius:999px;
+    border:3px solid rgba(255,255,255,.9);
+    box-shadow:0 10px 22px rgba(0,0,0,.10);
+    animation:pfFloat 2.6s ease-in-out infinite;
+  }
+  @keyframes pfFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+  .pf-chip{border-radius:999px;padding:.35rem .7rem;font-weight:600;font-size:.82rem}
+  .pf-kv{border:1px solid rgba(0,0,0,.06);border-radius:14px;padding:12px 14px;background:#fff}
+  .pf-k{font-size:.78rem;color:#6c757d;margin-bottom:2px}
+  .pf-v{font-weight:700}
+</style>
+
+{% set prenom = app.user.prenom ?? '' %}
+{% set nom = app.user.nom ?? '' %}
+{% set initials = ((prenom|slice(0,1)) ~ (nom|slice(0,1)))|upper %}
+{% set pic = app.user.profilePicture ?? null %}
+
+<div class="pf-wrap">
+
+  <div class="pf-hero p-3 p-md-4 mb-3">
+    <div class="d-flex align-items-center gap-3">
+      {% if pic %}
+        <img class="pf-avatar" src="{{ asset('uploads/profile/' ~ pic) }}" alt="Photo de profil">
+      {% else %}
+        <div class="pf-avatar d-flex align-items-center justify-content-center"
+             style="background:#1CA3B4;color:#fff;font-weight:900;font-size:24px;">
+          {{ initials ?: 'U' }}
+        </div>
+      {% endif %}
+
+      <div class="flex-grow-1">
+        <div class="d-flex align-items-center flex-wrap gap-2">
+          <h4 class="mb-0 fw-bold">{{ prenom }} {{ nom }}</h4>
+          <span class="pf-chip bg-light text-dark">
+            <i class="bi bi-shield-check me-1"></i>
+            Compte sécurisé
+          </span>
+        </div>
+        <div class="text-muted mt-1">
+          <i class="bi bi-envelope me-1"></i> {{ app.user.emailUser }}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-3">
+    <div class="col-md-6">
+      <div class="pf-kv">
+        <div class="pf-k"><i class="bi bi-person-badge me-1"></i> Nom</div>
+        <div class="pf-v">{{ nom ?: '—' }}</div>
+      </div>
+    </div>
+    <div class="col-md-6">
+      <div class="pf-kv">
+        <div class="pf-k"><i class="bi bi-person me-1"></i> Prénom</div>
+        <div class="pf-v">{{ prenom ?: '—' }}</div>
+      </div>
+    </div>
+
+    <div class="col-md-6">
+      <div class="pf-kv">
+        <div class="pf-k"><i class="bi bi-telephone me-1"></i> Téléphone</div>
+        <div class="pf-v">{{ app.user.telephoneUser ?? '—' }}</div>
+      </div>
+    </div>
+    <div class="col-md-6">
+      <div class="pf-kv">
+        <div class="pf-k"><i class="bi bi-geo-alt me-1"></i> Adresse</div>
+        <div class="pf-v">{{ app.user.adresseUser ?? '—' }}</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="d-flex justify-content-end gap-2 mt-4">
+    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+      Fermer
+    </button>
+
+    <button type="button" class="btn btn-primary js-open-modal"
+            data-url="{{ path('profile_modal_edit') }}"
+            data-title="Modifier mon profil">
+      <i class="bi bi-pencil-square me-1"></i> Modifier
+    </button>
+  </div>
+
+</div>

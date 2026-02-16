@@ -1,0 +1,557 @@
+{% extends 'base_admin.html.twig' %}
+
+{% block title %}Liste Produits{% endblock %}
+{% block page_title %}Gestion des Produits{% endblock %}
+
+{% block breadcrumb %}
+  <li class="breadcrumb-item">Produits</li>
+{% endblock %}
+
+{% block body %}
+
+{# ========== STATISTIQUES PRODUITS ========== #}
+<div class="row g-4 mb-4">
+  <div class="col-lg-3 col-md-6">
+    <div class="card stretch stretch-full">
+      <div class="card-body">
+        <div class="d-flex align-items-center gap-3">
+          <div class="avatar-text avatar-lg bg-soft-primary text-primary">
+            <i class="feather-box"></i>
+          </div>
+          <div>
+            <h3 class="mb-0 fw-bold">{{ totalProduits }}</h3>
+            <p class="text-muted mb-0 fs-13">Total Produits</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-3 col-md-6">
+    <div class="card stretch stretch-full">
+      <div class="card-body">
+        <div class="d-flex align-items-center gap-3">
+          <div class="avatar-text avatar-lg bg-soft-success text-success">
+            <i class="feather-check-circle"></i>
+          </div>
+          <div>
+            <h3 class="mb-0 fw-bold">{{ produitsDisponibles }}</h3>
+            <p class="text-muted mb-0 fs-13">Disponibles</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-3 col-md-6">
+    <div class="card stretch stretch-full">
+      <div class="card-body">
+        <div class="d-flex align-items-center gap-3">
+          <div class="avatar-text avatar-lg bg-soft-danger text-danger">
+            <i class="feather-alert-circle"></i>
+          </div>
+          <div>
+            <h3 class="mb-0 fw-bold">{{ produitsRupture }}</h3>
+            <p class="text-muted mb-0 fs-13">En Rupture</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-3 col-md-6">
+    <div class="card stretch stretch-full">
+      <div class="card-body">
+        <div class="d-flex align-items-center gap-3">
+          <div class="avatar-text avatar-lg bg-soft-warning text-warning">
+            <i class="feather-package"></i>
+          </div>
+          <div>
+            <h3 class="mb-0 fw-bold">{{ stockTotal }}</h3>
+            <p class="text-muted mb-0 fs-13">Unités en Stock</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{# ========== LISTE PRODUITS (TABLE) ========== #}
+<div class="row">
+  <div class="col-12">
+    <div class="card stretch stretch-full">
+
+      <div class="card-header">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+          <h5 class="card-title mb-0">
+            <i class="feather-box me-2"></i>
+            Liste Complète des Produits
+          </h5>
+
+          <span class="badge bg-soft-primary text-primary px-3 py-2">
+            <i class="feather-eye me-1"></i> Cliquez sur 👁️ pour voir les détails
+          </span>
+        </div>
+      </div>
+
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-hover mb-0 align-middle">
+            <thead>
+              <tr class="border-b">
+                <th style="width: 80px;">Image</th>
+                <th>Produit</th>
+                <th>Catégorie</th>
+                <th>Prix</th>
+                <th>Stock</th>
+                <th>Statut</th>
+                <th class="text-end" style="width: 120px;">Détails</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {% for produit in produits %}
+                <tr>
+                  <td>
+                    <img
+                      src="{{ produit.imageProduit }}"
+                      alt="{{ produit.nomProduit }}"
+                      class="rounded"
+                      width="52"
+                      height="52"
+                      style="object-fit: cover; border: 1px solid rgba(0,0,0,.08);"
+                    >
+                  </td>
+
+                  <td>
+                    <div class="d-flex flex-column">
+                      <span class="fw-semibold d-block">{{ produit.nomProduit }}</span>
+                      <span class="fs-11 text-muted">ID: #{{ produit.id_produit }}</span>
+                      <span class="fs-12 text-muted mt-1"
+                            style="max-width: 460px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                        {{ produit.descriptionProduit }}
+                      </span>
+                    </div>
+                  </td>
+
+                  <td>
+                    <span class="badge bg-gray-200 text-dark px-3 py-2">
+                      {{ produit.categorieProduit }}
+                    </span>
+                  </td>
+
+                  <td>
+                    <span class="fw-bold text-primary fs-14">{{ produit.prixProduit }} DT</span>
+                  </td>
+
+                  <td>
+                    {% if produit.quantiteProduit == 0 %}
+                      <span class="badge bg-danger">
+                        <i class="feather-alert-triangle me-1"></i>0 unité
+                      </span>
+                    {% elseif produit.quantiteProduit <= 5 %}
+                      <span class="badge bg-warning text-dark">
+                        <i class="feather-alert-circle me-1"></i>{{ produit.quantiteProduit }} unités
+                      </span>
+                    {% else %}
+                      <span class="badge bg-success">
+                        <i class="feather-check me-1"></i>{{ produit.quantiteProduit }} unités
+                      </span>
+                    {% endif %}
+                  </td>
+
+                  <td>
+                    {% if produit.statusProduit == 'Disponible' %}
+                      <span class="badge bg-soft-success text-success px-3 py-2">
+                        <i class="feather-check-circle me-1"></i>Disponible
+                      </span>
+                    {% elseif produit.statusProduit == 'Indisponible' %}
+                      <span class="badge bg-soft-secondary text-secondary px-3 py-2">
+                        <i class="feather-slash me-1"></i>Indisponible
+                      </span>
+                    {% else %}
+                      <span class="badge bg-soft-danger text-danger px-3 py-2">
+                        <i class="feather-x-circle me-1"></i>Rupture
+                      </span>
+                    {% endif %}
+                  </td>
+
+                  <td class="text-end">
+                    <button
+                      type="button"
+                      class="avatar-text avatar-md"
+                      data-bs-toggle="modal"
+                      data-bs-target="#produitModal"
+                      title="Voir détails"
+
+                      data-id="{{ produit.id_produit }}"
+                      data-nom="{{ produit.nomProduit|e('html_attr') }}"
+                      data-image="{{ produit.imageProduit|e('html_attr') }}"
+                      data-categorie="{{ produit.categorieProduit|e('html_attr') }}"
+                      data-prix="{{ produit.prixProduit }}"
+                      data-quantite="{{ produit.quantiteProduit }}"
+                      data-statut="{{ produit.statusProduit|e('html_attr') }}"
+                      data-description="{{ produit.descriptionProduit|e('html_attr') }}"
+                    >
+                      <i class="feather-eye"></i>
+                    </button>
+                  </td>
+                </tr>
+              {% else %}
+                <tr>
+                  <td colspan="7" class="text-center text-muted py-5">
+                    <div class="py-4">
+                      <i class="feather-inbox fs-1 d-block mb-3 text-gray-400"></i>
+                      <h5 class="text-muted">Aucun produit trouvé</h5>
+                      <p class="text-muted fs-13">Aucun produit n’est disponible pour le moment.</p>
+                    </div>
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+
+          </table>
+        </div>
+      </div>
+
+      {% if produits|length > 0 %}
+        <div class="card-footer">
+          <div class="d-flex justify-content-between align-items-center">
+            <p class="text-muted mb-0 fs-13">
+              Affichage de {{ produits|length }} produit(s)
+            </p>
+            <p class="text-muted mb-0 fs-13">
+              <i class="feather-database me-1"></i>
+              Stock total: {{ stockTotal }} unités
+            </p>
+          </div>
+        </div>
+      {% endif %}
+
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block javascripts %}
+{{ parent() }}
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+
+  // ✅ Injecter le modal dans <body> (solution stable avec layouts admin)
+  if (!document.getElementById('produitModal')) {
+    const modalHtml = `
+<div class="modal fade" id="produitModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content pm-card">
+
+      <div class="modal-header pm-header">
+        <div class="d-flex align-items-center gap-3">
+          <div class="pm-thumb">
+            <img id="pmImageSmall" src="" alt="">
+          </div>
+          <div class="min-w-0">
+            <div class="d-flex align-items-center gap-2 flex-wrap">
+              <h5 class="modal-title pm-title mb-0" id="pmNom">Détails produit</h5>
+              <span class="pm-pill" id="pmId"></span>
+            </div>
+            <div class="d-flex align-items-center gap-2 flex-wrap mt-2">
+              <span class="pm-badge pm-badge-cat" id="pmCategorie"></span>
+              <span class="pm-badge" id="pmStatut"></span>
+            </div>
+          </div>
+        </div>
+
+        <button type="button" class="pm-close" data-bs-dismiss="modal" aria-label="Fermer">
+          <i class="feather-x"></i>
+        </button>
+      </div>
+
+      <div class="modal-body pm-body">
+        <div class="row g-4">
+
+          <div class="col-lg-5">
+            <div class="pm-media">
+              <img id="pmImage" src="" alt="">
+            </div>
+
+            <div class="pm-mini-stats mt-3">
+              <div class="pm-mini">
+                <span class="pm-mini-label">Prix</span>
+                <span class="pm-mini-value" id="pmPrix">—</span>
+              </div>
+              <div class="pm-mini">
+                <span class="pm-mini-label">Stock</span>
+                <span class="pm-mini-value" id="pmStock">—</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-lg-7">
+            <div class="pm-section">
+              <div class="pm-section-title">
+                <i class="feather-align-left"></i>
+                <span>Description</span>
+              </div>
+              <p class="pm-desc" id="pmDescription"></p>
+            </div>
+
+            <div class="pm-section mt-3">
+              <div class="pm-section-title">
+                <i class="feather-info"></i>
+                <span>Résumé rapide</span>
+              </div>
+
+              <div class="pm-grid">
+                <div class="pm-kv">
+                  <span class="pm-k">Catégorie</span>
+                  <span class="pm-v" id="pmCategorie2">—</span>
+                </div>
+                <div class="pm-kv">
+                  <span class="pm-k">Statut</span>
+                  <span class="pm-v" id="pmStatut2">—</span>
+                </div>
+                <div class="pm-kv">
+                  <span class="pm-k">Prix</span>
+                  <span class="pm-v" id="pmPrix2">—</span>
+                </div>
+                <div class="pm-kv">
+                  <span class="pm-k">Stock</span>
+                  <span class="pm-v" id="pmStock2">—</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="pm-tip mt-3">
+              <i class="feather-shield"></i>
+              <div>
+                <div class="pm-tip-title">Conseil</div>
+                <div class="pm-tip-text">Vérifie le stock faible (≤ 5) pour éviter la rupture.</div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer pm-footer">
+        <button type="button" class="btn btn-light pm-btn" data-bs-dismiss="modal">
+          <i class="feather-x me-2"></i>Fermer
+        </button>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<style>
+  .pm-card{
+    border-radius:18px;
+    overflow:hidden;
+    border:1px solid rgba(16,24,40,.08);
+    box-shadow: 0 18px 50px rgba(16,24,40,.18);
+    background:#fff;
+  }
+  .pm-header{
+    background: linear-gradient(180deg, rgba(16,24,40,.04), rgba(16,24,40,0));
+    border-bottom:1px solid rgba(16,24,40,.08);
+    padding:16px 18px;
+  }
+  .pm-title{
+    font-weight:900;
+    letter-spacing:.2px;
+    max-width: 420px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .pm-thumb{
+    width:58px;height:58px;border-radius:14px;
+    border:1px solid rgba(16,24,40,.10);
+    background:rgba(16,24,40,.03);
+    display:flex;align-items:center;justify-content:center;
+    overflow:hidden;
+  }
+  .pm-thumb img{width:100%;height:100%;object-fit:cover;}
+  .pm-pill{
+    display:inline-flex;align-items:center;gap:6px;
+    font-size:12px;font-weight:800;
+    padding:6px 10px;border-radius:999px;
+    background: rgba(13,110,253,.10);
+    color:#0d6efd;
+  }
+  .pm-badge{
+    display:inline-flex;align-items:center;
+    padding:7px 12px;border-radius:999px;
+    font-size:12px;font-weight:800;
+    border:1px solid rgba(16,24,40,.08);
+    background:rgba(16,24,40,.03);
+    color:#111827;
+  }
+  .pm-badge-cat{
+    background: rgba(25,135,84,.10);
+    border-color: rgba(25,135,84,.18);
+    color:#198754;
+  }
+  .pm-close{
+    border:0;background:rgba(16,24,40,.06);
+    width:40px;height:40px;border-radius:12px;
+    display:flex;align-items:center;justify-content:center;
+    transition:.2s;
+  }
+  .pm-close:hover{background:rgba(16,24,40,.10);transform:scale(1.03);}
+  .pm-body{padding:18px;}
+  .pm-media{
+    border-radius:16px;
+    border:1px solid rgba(16,24,40,.10);
+    background:rgba(16,24,40,.03);
+    padding:12px;
+  }
+  .pm-media img{
+    width:100%;height:260px;border-radius:12px;
+    object-fit:cover;background:#fff;
+  }
+  .pm-mini-stats{
+    display:grid;grid-template-columns:1fr 1fr;gap:10px;
+  }
+  .pm-mini{
+    border:1px solid rgba(16,24,40,.08);
+    background:rgba(16,24,40,.03);
+    border-radius:14px;
+    padding:12px;
+  }
+  .pm-mini-label{font-size:12px;color:#6b7280;font-weight:800;}
+  .pm-mini-value{display:block;margin-top:4px;font-size:18px;font-weight:900;color:#111827;}
+  .pm-section{
+    border:1px solid rgba(16,24,40,.08);
+    background:rgba(16,24,40,.02);
+    border-radius:16px;
+    padding:14px;
+  }
+  .pm-section-title{
+    display:flex;align-items:center;gap:8px;
+    font-weight:900;color:#111827;
+    margin-bottom:10px;
+  }
+  .pm-desc{
+    margin:0;color:#374151;line-height:1.65;
+    min-height: 70px;
+  }
+  .pm-grid{
+    display:grid;grid-template-columns:1fr 1fr;gap:10px;
+  }
+  .pm-kv{
+    border:1px solid rgba(16,24,40,.08);
+    background:#fff;border-radius:14px;padding:10px 12px;
+  }
+  .pm-k{font-size:12px;color:#6b7280;font-weight:900;}
+  .pm-v{display:block;margin-top:4px;font-size:14px;font-weight:900;color:#111827;}
+  .pm-tip{
+    display:flex;gap:10px;align-items:flex-start;
+    border:1px dashed rgba(245,158,11,.45);
+    background: rgba(245,158,11,.08);
+    border-radius:16px;padding:12px 14px;
+  }
+  .pm-tip i{margin-top:3px;}
+  .pm-tip-title{font-weight:900;color:#92400e;}
+  .pm-tip-text{font-size:13px;color:#78350f;}
+  .pm-footer{
+    border-top:1px solid rgba(16,24,40,.08);
+    background:rgba(16,24,40,.02);
+    padding:14px 18px;
+  }
+  .pm-btn{
+    border-radius:12px;
+    padding:10px 14px;
+    font-weight:900;
+  }
+</style>
+`;
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+  }
+
+  const modalEl = document.getElementById('produitModal');
+
+  // ✅ Remplir le modal à l’ouverture
+  modalEl.addEventListener('show.bs.modal', function (event) {
+    const btn = event.relatedTarget;
+    if (!btn) return;
+
+    const id = btn.getAttribute('data-id') || '';
+    const nom = btn.getAttribute('data-nom') || '';
+    const image = btn.getAttribute('data-image') || '';
+    const categorie = btn.getAttribute('data-categorie') || '';
+    const prix = btn.getAttribute('data-prix') || '';
+    const quantite = parseInt(btn.getAttribute('data-quantite') || '0', 10);
+    const statut = btn.getAttribute('data-statut') || '';
+    const description = btn.getAttribute('data-description') || '';
+
+    document.getElementById('pmNom').textContent = nom;
+    document.getElementById('pmId').textContent = 'ID: #' + id;
+
+    document.getElementById('pmCategorie').textContent = categorie;
+    document.getElementById('pmCategorie2').textContent = categorie;
+
+    document.getElementById('pmImage').src = image;
+    document.getElementById('pmImageSmall').src = image;
+    document.getElementById('pmImage').alt = nom;
+    document.getElementById('pmImageSmall').alt = nom;
+
+    document.getElementById('pmPrix').textContent = prix + ' DT';
+    document.getElementById('pmPrix2').textContent = prix + ' DT';
+
+    // Stock en couleur
+    const stockEl = document.getElementById('pmStock');
+    const stock2El = document.getElementById('pmStock2');
+    if (quantite === 0) {
+      stockEl.innerHTML = '<span class="text-danger">0 unité</span>';
+      stock2El.textContent = '0 unité';
+    } else if (quantite <= 5) {
+      stockEl.innerHTML = '<span class="text-warning">' + quantite + ' unités</span>';
+      stock2El.textContent = quantite + ' unités';
+    } else {
+      stockEl.innerHTML = '<span class="text-success">' + quantite + ' unités</span>';
+      stock2El.textContent = quantite + ' unités';
+    }
+
+    document.getElementById('pmDescription').textContent = description;
+
+    // Statut badge premium
+    const statutEl = document.getElementById('pmStatut');
+    const statut2El = document.getElementById('pmStatut2');
+    statutEl.textContent = statut;
+    statut2El.textContent = statut;
+
+    // reset style
+    statutEl.style.background = '';
+    statutEl.style.borderColor = '';
+    statutEl.style.color = '';
+
+    if (statut === 'Disponible') {
+      statutEl.style.background = 'rgba(25,135,84,.10)';
+      statutEl.style.borderColor = 'rgba(25,135,84,.18)';
+      statutEl.style.color = '#198754';
+    } else if (statut === 'Indisponible') {
+      statutEl.style.background = 'rgba(108,117,125,.12)';
+      statutEl.style.borderColor = 'rgba(108,117,125,.20)';
+      statutEl.style.color = '#6c757d';
+    } else {
+      statutEl.style.background = 'rgba(220,53,69,.10)';
+      statutEl.style.borderColor = 'rgba(220,53,69,.18)';
+      statutEl.style.color = '#dc3545';
+    }
+  });
+
+  // ✅ Anti-blocage overlay (au cas où)
+  modalEl.addEventListener('hidden.bs.modal', function () {
+    document.querySelectorAll('.modal-backdrop').forEach(b => b.remove());
+    document.body.classList.remove('modal-open');
+    document.body.style.removeProperty('overflow');
+    document.body.style.removeProperty('padding-right');
+  });
+
+});
+</script>
+{% endblock %}

@@ -81,6 +81,12 @@ private ?string $googleId = null;
 
     #[ORM\Column(length: 30, nullable: true)]
     private ?string $statutCompte = null;
+    
+    #[ORM\Column(type: Types::TEXT, nullable: true)]
+    private ?string $banReason = null;
+
+    #[ORM\Column(type: Types::DATETIME_MUTABLE, nullable: true)]
+    private ?\DateTimeInterface $bannedAt = null;
         // ===== Sécurité / rôles système =====
 
     #[ORM\Column(length: 20)]
@@ -118,6 +124,14 @@ private ?string $googleId = null;
 
     #[ORM\Column(type: Types::DATETIME_MUTABLE, nullable: true)]
     private ?\DateTimeInterface $staffReviewedAt = null;
+    #[ORM\Column(length: 255, nullable: true)]
+    private ?string $staffRequestProofPath = null;
+
+    #[ORM\Column(type: Types::JSON, nullable: true)]
+    private ?array $staffDocuments = null; // Professional: metadata + files for staff request
+    
+    #[ORM\Column(type: Types::TEXT, nullable: true)]
+    private ?string $staffRequestReason = null;
 
 #[ORM\OneToMany(mappedBy: 'user', targetEntity: Post::class)]
 private Collection $posts;
@@ -271,6 +285,28 @@ private Collection $posts;
     public function setStatutCompte(?string $statutCompte): self
     {
         $this->statutCompte = $statutCompte;
+        return $this;
+    }
+
+    public function getBanReason(): ?string
+    {
+        return $this->banReason;
+    }
+
+    public function setBanReason(?string $banReason): self
+    {
+        $this->banReason = $banReason;
+        return $this;
+    }
+
+    public function getBannedAt(): ?\DateTimeInterface
+    {
+        return $this->bannedAt;
+    }
+
+    public function setBannedAt(?\DateTimeInterface $bannedAt): self
+    {
+        $this->bannedAt = $bannedAt;
         return $this;
     }
 
@@ -439,6 +475,39 @@ private Collection $posts;
     public function setStaffReviewedBy(?int $staffReviewedBy): self
     {
         $this->staffReviewedBy = $staffReviewedBy;
+        return $this;
+    }
+
+    public function getStaffRequestProofPath(): ?string
+    {
+        return $this->staffRequestProofPath;
+    }
+
+    public function setStaffRequestProofPath(?string $path): self
+    {
+        $this->staffRequestProofPath = $path;
+        return $this;
+    }
+
+    public function getStaffDocuments(): ?array
+    {
+        return $this->staffDocuments;
+    }
+
+    public function setStaffDocuments(?array $docs): self
+    {
+        $this->staffDocuments = $docs;
+        return $this;
+    }
+
+    public function getStaffRequestReason(): ?string
+    {
+        return $this->staffRequestReason;
+    }
+
+    public function setStaffRequestReason(?string $reason): self
+    {
+        $this->staffRequestReason = $reason;
         return $this;
     }
 

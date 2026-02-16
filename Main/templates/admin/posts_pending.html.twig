@@ -1,0 +1,47 @@
+{% extends 'base_dashboard.html.twig' %}
+{% block title %}Posts en attente{% endblock %}
+
+{% block body %}
+<div class="container py-5">
+  <h2 class="mb-4">🕒 Posts en attente de validation</h2>
+
+  {% if posts is empty %}
+    <div class="alert alert-success">Aucun post en attente ✅</div>
+  {% else %}
+    <div class="table-responsive">
+      <table class="table table-hover align-middle">
+        <thead>
+          <tr>
+            <th>Titre</th>
+            <th>Auteur</th>
+            <th>Date</th>
+            <th class="text-end">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for p in posts %}
+            <tr>
+              <td>{{ p.titre }}</td>
+              <td>{{ p.user ? p.user.emailUser : '—' }}</td>
+              <td>{{ p.dateCreation ? p.dateCreation|date('d/m/Y H:i') : '-' }}</td>
+              <td class="text-end">
+
+                <form method="post" action="{{ path('admin_post_approve', {id: p.id}) }}" class="d-inline">
+                  <input type="hidden" name="_token" value="{{ csrf_token('approve_post_' ~ p.id) }}">
+                  <button class="btn btn-success btn-sm">Approuver</button>
+                </form>
+
+                <form method="post" action="{{ path('admin_post_reject', {id: p.id}) }}" class="d-inline">
+                  <input type="hidden" name="_token" value="{{ csrf_token('reject_post_' ~ p.id) }}">
+                  <button class="btn btn-danger btn-sm">Refuser</button>
+                </form>
+
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

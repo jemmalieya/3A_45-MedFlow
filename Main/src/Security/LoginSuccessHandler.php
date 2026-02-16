@@ -39,7 +39,7 @@ class LoginSuccessHandler implements AuthenticationSuccessHandlerInterface
 
         // ✅ Redirection selon rôle
         if (in_array('ROLE_ADMIN', $roles, true)) {
-            return new RedirectResponse($this->router->generate('app_ad'));
+            return new RedirectResponse($this->router->generate('ad_commandes_liste'));
         }
 
         if (in_array('ROLE_STAFF', $roles, true)) {
@@ -60,7 +60,7 @@ class LoginSuccessHandler implements AuthenticationSuccessHandlerInterface
             if ($typeStaff === 'RESP_USERS') {
                 // Redirect to fiche by staff page
                 $staffId = $user->getId();
-                return new RedirectResponse($this->router->generate('staff_patients_index'));
+                return new RedirectResponse($this->router->generate('staff_patients_list'));
             }
 
              if ($typeStaff === 'RESP_PRODUCTS') {

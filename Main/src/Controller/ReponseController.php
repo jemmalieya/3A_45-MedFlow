@@ -85,6 +85,7 @@ public function index(EntityManagerInterface $em): Response
 
     $reclamation->setStatutReclamation($hasReponse ? 'TRAITEE' : 'En attente');
 
+$reponse->setIsRead(false);
 
             $em->persist($reponse);
             $em->flush();

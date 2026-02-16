@@ -45,6 +45,20 @@ class ReponseReclamation
         }
         $this->date_modification_rep = $now;
     }
+    #[ORM\Column(type: 'boolean')]
+private bool $isRead = false;
+
+public function isRead(): bool
+{
+    return $this->isRead;
+}
+
+public function setIsRead(bool $isRead): self
+{
+    $this->isRead = $isRead;
+    return $this;
+}
+
 
     // ✅ lifecycle update
     #[ORM\PreUpdate]

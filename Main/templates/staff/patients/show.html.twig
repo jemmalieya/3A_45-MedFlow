@@ -1,216 +1,37 @@
 {% extends 'base_dashboard.html.twig' %}
-{% block title %}Fiche patient{% endblock %}
+
+{% block title %}Patient{% endblock %}
 
 {% block body %}
-<div class="container-fluid py-4">
-
-  {# ===== HEADER ===== #}
-  <div class="d-flex justify-content-between align-items-center mb-4">
-    <div>
-      <h1 class="h3 mb-1">Fiche patient</h1>
-      <p class="text-muted mb-0">{{ patient.nom }} {{ patient.prenom }}</p>
-    </div>
-    <a href="{{ path('staff_patients_index') }}" class="btn btn-outline-secondary">
-      ← Liste
-    </a>
-  </div>
-
-  <div class="row g-4">
-
-    {# =======================
-       INFOS PATIENT
-       ======================= #}
-    <div class="col-lg-8">
-      <div class="card shadow-sm border-0">
-        <div class="card-body p-4">
-
-          <div class="d-flex justify-content-between align-items-center mb-4">
-            <h5 class="mb-0">Informations patient</h5>
-            {% if patient.isVerified %}
-              <span class="badge bg-success">Email vérifié</span>
-            {% else %}
-              <span class="badge bg-danger">Email non vérifié</span>
-            {% endif %}
-          </div>
-
-          <div class="row g-3">
-            {% set items = {
-              'CIN': patient.cin,
-              'Téléphone': patient.telephoneUser ?: '-',
-              'Email': patient.emailUser,
-              'Adresse': patient.adresseUser ?: '-',
-              'Date de naissance': patient.dateNaissance ? patient.dateNaissance|date('Y-m-d') : '-',
-              'Rôle système': patient.roleSysteme
-            } %}
-
-            {% for label, value in items %}
-              <div class="col-md-6">
-                <div class="border rounded-3 p-3 h-100 bg-white">
-                  <div class="small text-muted">{{ label }}</div>
-                  <div class="fw-semibold text-dark">
-                    {% if label == 'Email' %}
-                      <a href="mailto:{{ value }}">{{ value }}</a>
-                    {% else %}
-                      {{ value }}
-                    {% endif %}
-                  </div>
+<div class="container-fluid">
+    <h1 class="h4 mb-3">{{ p.getPrenom() }} {{ p.getNom() }}</h1>
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card mb-3">
+                <div class="card-header">Profil</div>
+                <div class="card-body">
+                    <p><strong>Email:</strong> {{ p.getEmailUser() ?? '—' }}</p>
+                    <p><strong>Téléphone:</strong> {{ p.getTelephoneUser() ?? '—' }}</p>
+                    <p><strong>Adresse:</strong> {{ p.getAdresseUser() ?? '—' }}</p>
+                    <p><strong>CIN:</strong> {{ p.getCin() ?? '—' }}</p>
+                    <p><strong>Vérifié:</strong> {{ p.isVerified() ? 'Oui' : 'Non' }}</p>
+                    <p><strong>Score qualité:</strong> <span class="badge badge-info">{{ quality.score }}/100</span></p>
+                    <div>
+                        {% for d in quality.details %}
+                            <span class="badge badge-light mr-1">{{ d }}</span>
+                        {% endfor %}
+                    </div>
                 </div>
-              </div>
-            {% endfor %}
-          </div>
-
-        </div>
-      </div>
-    </div>
-
-    {# =======================
-       ACTIONS + API
-       ======================= #}
-    <div class="col-lg-4 d-flex flex-column gap-4">
-
-      {# ---- ACTIONS ---- #}
-      <div class="card shadow-sm border-0">
-        <div class="card-body p-4">
-          <h5 class="mb-3">Actions</h5>
-
-          {% if not patient.isVerified %}
-            <form method="post"
-                  action="{{ path('staff_patient_resend_verification', {id: patient.id}) }}"
-                  onsubmit="return confirm('Renvoyer l’email de vérification ?');">
-              <button class="btn btn-primary w-100">
-                Renvoyer l’email de vérification
-              </button>
-            </form>
-          {% else %}
-            <div class="alert alert-success py-2 mb-0">
-              ✅ Patient déjà vérifié
             </div>
-          {% endif %}
         </div>
-      </div>
-
-      {# ---- EMAIL REPUTATION ---- #}
-      <div class="card shadow-sm border-0">
-        <div class="card-body p-4">
-
-          <div class="d-flex justify-content-between align-items-center mb-3">
-            <h5 class="mb-0">Email Reputation</h5>
-            <span class="badge bg-primary">API</span>
-          </div>
-
-          <button id="btnEmailCheck"
-                  class="btn btn-outline-primary w-100 mb-2"
-                  data-url="{{ path('staff_patient_email_check', {id: patient.id}) }}"
-                  data-token="{{ csrf_token('email_check_' ~ patient.id) }}">
-            🔍 Analyser l’email
-          </button>
-
-          <div id="emailCheckLoader" class="text-center small text-muted d-none">
-            ⏳ Analyse en cours...
-          </div>
-
-          <div id="emailCheckResult" class="mt-3"></div>
-
+        <div class="col-md-4">
+            <div class="card mb-3">
+                <div class="card-header">Journal de suivi</div>
+                <div class="card-body text-muted">
+                    Notes internes désactivées.
+                </div>
+            </div>
         </div>
-      </div>
-
     </div>
-  </div>
 </div>
-
-{# =======================
-   JS EMAIL CHECK
-   ======================= #}
-<script>
-(function () {
-  const btn = document.getElementById('btnEmailCheck');
-  const loader = document.getElementById('emailCheckLoader');
-  const result = document.getElementById('emailCheckResult');
-  if (!btn) return;
-
-  const badgeClassRisk = (risk) => {
-    if (risk === 'HIGH') return 'bg-danger';
-    if (risk === 'MEDIUM') return 'bg-warning text-dark';
-    return 'bg-success';
-  };
-
-  const badgeClassImpact = (imp) => {
-    if (imp === 'HAUTE') return 'bg-danger';
-    if (imp === 'MOYENNE') return 'bg-warning text-dark';
-    return 'bg-info text-dark';
-  };
-
-  const barClassByScore = (p) => {
-    if (p < 40) return 'bg-danger';
-    if (p < 70) return 'bg-warning';
-    return 'bg-success';
-  };
-
-  btn.addEventListener('click', async () => {
-    loader.classList.remove('d-none');
-    btn.disabled = true;
-    result.innerHTML = '';
-
-    try {
-      const form = new FormData();
-      form.append('_token', btn.dataset.token);
-
-      const r = await fetch(btn.dataset.url, { method: 'POST', body: form });
-      const data = await r.json();
-
-      if (!data.ok) {
-        result.innerHTML = `<div class="alert alert-danger mb-0">${data.error || 'Erreur inconnue'}</div>`;
-        return;
-      }
-
-const score = Number.isFinite(Number(data.quality_score)) ? Number(data.quality_score) : 0;
-const percent = Math.max(0, Math.min(100, Math.round(score)));
-
-      const riskCls = badgeClassRisk(data.risk);
-      const impCls = badgeClassImpact(data.impact_priority);
-      const dispCls = data.flags?.disposable ? 'bg-danger' : 'bg-success';
-      const dispTxt = data.flags?.disposable ? 'Jetable' : 'Non jetable';
-
-      const barCls = barClassByScore(score);
-      const delivBadge =
-        data.deliverability === 'DELIVERABLE' ? 'bg-success' :
-        data.deliverability === 'UNDELIVERABLE' ? 'bg-danger' :
-        'bg-secondary';
-
-      result.innerHTML = `
-        <div class="border rounded-3 p-3 bg-white">
-          <div class="d-flex flex-wrap gap-2 mb-3">
-            <span class="badge rounded-pill ${riskCls}">Risque: ${data.risk}</span>
-            <span class="badge rounded-pill ${impCls}">Impact: ${data.impact_priority}</span>
-            <span class="badge rounded-pill ${delivBadge}">${data.deliverability}</span>
-            <span class="badge rounded-pill ${dispCls}">${dispTxt}</span>
-          </div>
-
-          <div class="mb-2">
-            <div class="d-flex justify-content-between small text-muted mb-1">
-              <span>Score</span>
-              <span class="fw-semibold text-dark">${score}%</span>
-            </div>
-            <div class="progress" style="height: 10px; background:#eef2ff;">
-              <div class="progress-bar ${barCls}" style="width:${score}%"></div>
-            </div>
-          </div>
-
-          <div class="mt-3">
-            <div class="small text-muted">Recommandation</div>
-            <div class="fw-semibold">${data.advice}</div>
-          </div>
-        </div>
-      `;
-    } catch (e) {
-      result.innerHTML = `<div class="alert alert-danger mb-0">Erreur JS: ${e.message}</div>`;
-    } finally {
-      loader.classList.add('d-none');
-      btn.disabled = false;
-    }
-  });
-})();
-</script>
-
-
 {% endblock %}

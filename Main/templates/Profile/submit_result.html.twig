@@ -1,0 +1,28 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Demande envoyée{% endblock %}
+
+{% block body %}
+<div class="container py-5 text-center">
+  <div class="py-4">
+    <div class="spinner-border text-primary" role="status"></div>
+    <p class="mt-3">Traitement de la demande…</p>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  var msg = {{ message|json_encode|raw }};
+  if (window.Swal) {
+    window.Swal.fire('Demande envoyée', msg || 'Votre demande a été transmise.', 'success')
+      .then(function(){ window.location.href = '{{ path('app_home') }}'; });
+  } else if (window.toastSuccess) {
+    window.toastSuccess('Succès', msg || 'Votre demande a été transmise.');
+    setTimeout(function(){ window.location.href = '{{ path('app_home') }}'; }, 1500);
+  } else {
+    alert(msg || 'Votre demande a été transmise.');
+    window.location.href = '{{ path('app_home') }}';
+  }
+});
+</script>
+{% endblock %}

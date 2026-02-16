@@ -4,6 +4,8 @@ namespace App\Controller;
 
 use App\Entity\RendezVous;
 use App\Form\RendezVousType;
+use App\Repository\UserRepository;
+use App\Service\MailerService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
@@ -11,9 +13,43 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
 
-
 class RendezVousController extends AbstractController
 {
+    #[Route('/rendezvous/{id}/confirm', name: 'confirm_appointment', methods: ['POST'])]
+    public function confirmAppointment(Request $request, EntityManagerInterface $em, int $id, MailerService $mailerService): Response
+    {
+        if (!$this->isCsrfTokenValid('confirm_appointment' . $id, $request->request->get('_token'))) {
+            // Invalid CSRF, just redirect back to staff fiche list (no message)
+            return $this->redirectToRoute('app_fiche_by_staff', ['idStaff' => $request->query->get('idStaff')]);
+        }
+        $repo = $em->getRepository(RendezVous::class);
+        $appointment = $repo->find($id);
+        if (!$appointment) {
+            // Not found, just redirect back to staff fiche list (no message)
+            return $this->redirectToRoute('app_fiche_by_staff', ['idStaff' => $request->query->get('idStaff')]);
+        }
+        $appointment->setStatut('Confirmé');
+        $em->persist($appointment);
+        $em->flush();
+        // Send confirmation email to patient
+        $patient = $appointment->getPatient();
+        if ($patient && $patient->getEmailUser()) {
+            $mailerService->sendRendezVousConfirmed(
+                $patient->getEmailUser(),
+                $patient->getNom() . ' ' . $patient->getPrenom(),
+                $appointment->getDatetime()
+            );
+        }
+        // Redirect back to staff fiche list for the appointment's staff
+        $staff = $appointment->getStaff();
+        $staffId = $staff ? $staff->getId() : null;
+        if ($staffId) {
+            return $this->redirectToRoute('app_fiche_by_staff', ['idStaff' => $staffId]);
+        } else {
+            // fallback: redirect to fiche list
+            return $this->redirectToRoute('app_fiche_medicale');
+        }
+    }
     #[Route('/homeC', name: 'rendezvous_home')]
     public function index(EntityManagerInterface $em): Response
     {
@@ -243,5 +279,13 @@ class RendezVousController extends AbstractController
             'editForm' => $editForm->createView(),
             'openEdit' => $editRdv->getId(),
         ]);
+    }
+    #[Route('/iaasssistante', name: 'app_ia_assistante')]
+    public function iaAssistante(UserRepository $userRepo): Response
+    {
+        return $this->render('rendez_vous/ia.html.twig', [
+            'controller_name' => 'RendezVousController',
+        ]);
+        
     }
     }

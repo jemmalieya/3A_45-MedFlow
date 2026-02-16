@@ -201,6 +201,32 @@
                                 <div class="form-group">
                                     <label for="dureeMinutes"><strong>Duration</strong></label>
                                     <input type="text" class="form-control" id="dureeMinutes" name="dureeMinutes" placeholder="HH:MM:SS" readonly>
+                                    <script>
+                                    // Visual timer for duration field
+                                    (function() {
+                                        let startTime = Date.now();
+                                        // If startTime is present in hidden input, use it
+                                        const startInput = document.getElementById('startTime');
+                                        if (startInput && startInput.value) {
+                                            const parsed = Date.parse(startInput.value.replace(/-/g, '/'));
+                                            if (!isNaN(parsed)) {
+                                                startTime = parsed;
+                                            }
+                                        }
+                                        function pad(n) { return n < 10 ? '0' + n : n; }
+                                        function updateTimer() {
+                                            const now = Date.now();
+                                            let diff = Math.floor((now - startTime) / 1000);
+                                            if (diff < 0) diff = 0;
+                                            const h = Math.floor(diff / 3600);
+                                            const m = Math.floor((diff % 3600) / 60);
+                                            const s = diff % 60;
+                                            document.getElementById('dureeMinutes').value = pad(h) + ':' + pad(m) + ':' + pad(s);
+                                        }
+                                        setInterval(updateTimer, 1000);
+                                        updateTimer();
+                                    })();
+                                    </script>
                                 </div>
                             </div>
                         </div>
@@ -247,7 +273,11 @@
 
                         <div class="form-group">
                             <button type="submit" name="save" class="btn btn-primary">Save consultation (fiche + prescriptions)</button>
-                            <button type="button" class="btn btn-secondary" onclick="window.location.href='{{ path('app_fiche_by_staff', {'idStaff': idStaff}) }}'">Cancel</button>
+                            {% if idStaff %}
+                                <button type="button" class="btn btn-secondary" onclick="window.location.href='{{ path('app_fiche_by_staff', {'idStaff': idStaff}) }}'">Cancel</button>
+                            {% else %}
+                                <button type="button" class="btn btn-secondary" onclick="window.location.href='{{ path('app_fiche_medicale') }}'">Cancel</button>
+                            {% endif %}
                         </div>
                     </form>
 
