@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="fr" data-bs-theme="light">
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="x-ua-compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="MedFlow - Gestion Pharmacie" />
+    <meta name="author" content="MedFlow" />
+
+    <title>{% block title %}Dashboard Admin{% endblock %} - MedFlow</title>
+
+    <!-- Favicon -->
+    <link rel="shortcut icon" type="image/x-icon" href="{{ asset('assets_ad/images/favicon.ico') }}" />
+
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" type="text/css" href="{{ asset('assets_ad/css/bootstrap.min.css') }}" />
+
+    <!-- Vendors CSS -->
+    <link rel="stylesheet" type="text/css" href="{{ asset('assets_ad/vendors/css/vendors.min.css') }}" />
+    <link rel="stylesheet" type="text/css" href="{{ asset('assets_ad/vendors/css/daterangepicker.min.css') }}" />
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" type="text/css" href="{{ asset('assets_ad/css/theme.min.css') }}" />
+
+    {% block stylesheets %}{% endblock %}
+</head>
+
+<body data-theme="light">
+
+    {# ========== SIDEBAR ========== #}
+    <nav class="nxl-navigation">
+        <div class="navbar-wrapper">
+            <div class="m-header">
+                <a href="{{ path('app_ad') }}" class="b-brand">
+                    <img src="{{ asset('assets_ad/images/logo-full.png') }}" alt="MedFlow" class="logo logo-lg" />
+                    <img src="{{ asset('assets_ad/images/logo-abbr.png') }}" alt="MedFlow" class="logo logo-sm" />
+                </a>
+            </div>
+
+            <div class="navbar-content">
+                <ul class="nxl-navbar">
+                    <li class="nxl-item nxl-caption">
+                        <label>Navigation</label>
+                    </li>
+
+                    <li class="nxl-item">
+                        <a href="{{ path('app_ad') }}" class="nxl-link">
+                            <span class="nxl-micon"><i class="feather-home"></i></span>
+                            <span class="nxl-mtext">Dashboard</span>
+                        </a>
+                    </li>
+                   <li class="nxl-item nxl-hasmenu">
+  <a href="javascript:void(0);" class="nxl-link">
+    <span class="nxl-micon"><i class="feather-calendar"></i></span>
+    <span class="nxl-mtext">Événements</span>
+    <span class="nxl-arrow"><i class="feather-chevron-right"></i></span>
+  </a>
+
+  <ul class="nxl-submenu">
+    <li class="nxl-item"><a class="nxl-link" href="{{ path('ad_evenements_liste') }}">Liste des événements</a></li>
+    <li class="nxl-item"><a class="nxl-link" href="{{ path('ad_participants') }}">Participants (Demandes)</a></li>
+    <li class="nxl-item"><a class="nxl-link" href="{{ path('ad_ressources') }}">Ressources</a></li>
+    <li class="nxl-item"><a class="nxl-link" href="{{ path('ad_stats_evenements') }}">Stats événements</a></li>
+    <li class="nxl-item"><a class="nxl-link" href="{{ path('ad_stats_ressources') }}">Stats ressources</a></li>
+  </ul>
+</li>
+
+                    
+
+
+                    <li class="nxl-item">
+                        <a href="#" class="nxl-link">
+                            <span class="nxl-micon"><i class="feather-users"></i></span>
+                            <span class="nxl-mtext">Utilisateurs</span>
+                        </a>
+                    </li>
+
+                    <li class="nxl-item nxl-caption">
+                        <label>Autres</label>
+                    </li>
+
+                    <li class="nxl-item">
+                        <a href="{{ path('app_home') }}" class="nxl-link">
+                            <span class="nxl-micon"><i class="feather-arrow-left"></i></span>
+                            <span class="nxl-mtext">Retour Site</span>
+                        </a>
+                    </li>
+
+                    <li class="nxl-item">
+                        <a href="{{ path('app_logout') }}" class="nxl-link">
+                            <span class="nxl-micon"><i class="feather-log-out"></i></span>
+                            <span class="nxl-mtext">Déconnexion</span>
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    {# ========== HEADER ========== #}
+    <header class="nxl-header">
+        <div class="header-wrapper">
+
+            {# Header Left #}
+            <div class="header-left d-flex align-items-center gap-4">
+                <a href="javascript:void(0);" class="nxl-head-mobile-toggler" id="mobile-collapse">
+                    <div class="hamburger hamburger--arrowturn">
+                        <div class="hamburger-box">
+                            <div class="hamburger-inner"></div>
+                        </div>
+                    </div>
+                </a>
+
+                <div class="nxl-navigation-toggle">
+                    <a href="javascript:void(0);" id="menu-mini-button">
+                        <i class="feather-align-left"></i>
+                    </a>
+                    <a href="javascript:void(0);" id="menu-expend-button" style="display: none">
+                        <i class="feather-arrow-right"></i>
+                    </a>
+                </div>
+            </div>
+
+            {# Header Right #}
+            <div class="header-right ms-auto">
+                <div class="d-flex align-items-center">
+
+                    <div class="nxl-h-item d-none d-sm-flex">
+                        <div class="full-screen-switcher">
+                            <a href="javascript:void(0);" class="nxl-head-link me-0" onclick="$('body').fullScreenHelper('toggle');">
+                                <i class="feather-maximize maximize"></i>
+                                <i class="feather-minimize minimize"></i>
+                            </a>
+                        </div>
+                    </div>
+
+                    {# ✅ Dark Mode Toggle (Bootstrap data-bs-theme) #}
+                    <div class="nxl-h-item dark-light-theme">
+                        <a href="javascript:void(0);" class="nxl-head-link me-0" id="toggle-theme" title="Thème">
+                            <i class="feather-moon" id="icon-moon"></i>
+                            <i class="feather-sun d-none" id="icon-sun"></i>
+                        </a>
+                    </div>
+
+                    <div class="dropdown nxl-h-item">
+                        <a href="javascript:void(0);" data-bs-toggle="dropdown" role="button" data-bs-auto-close="outside">
+                            <img src="{{ asset('assets_ad/images/avatar/1.png') }}" alt="user" class="img-fluid user-avtar me-0" />
+                        </a>
+                        <div class="dropdown-menu dropdown-menu-end nxl-h-dropdown nxl-user-dropdown">
+                            <div class="dropdown-header">
+                                <div class="d-flex align-items-center">
+                                    <img src="{{ asset('assets_ad/images/avatar/1.png') }}" alt="user" class="img-fluid user-avtar" />
+                                    <div>
+                                        <h6 class="text-dark mb-0">
+                                            {% if app.user %}
+                                                {{ app.user.emailUser }}
+                                            {% else %}
+                                                Administrateur
+                                            {% endif %}
+                                        </h6>
+                                        <span class="fs-12 fw-medium text-muted">Admin</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="dropdown-divider"></div>
+                            <a href="{{ path('app_home') }}" class="dropdown-item">
+                                <i class="feather-home"></i>
+                                <span>Retour au site</span>
+                            </a>
+                            <a href="{{ path('app_logout') }}" class="dropdown-item">
+                                <i class="feather-log-out"></i>
+                                <span>Déconnexion</span>
+                            </a>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+        </div>
+    </header>
+
+    {# ========== MAIN CONTENT ========== #}
+    <main class="nxl-container">
+        <div class="nxl-content">
+
+            <div class="page-header">
+                <div class="page-header-left d-flex align-items-center">
+                    <div class="page-header-title">
+                        <h5 class="m-b-10">{% block page_title %}Dashboard{% endblock %}</h5>
+                    </div>
+                    <ul class="breadcrumb">
+                        <li class="breadcrumb-item"><a href="{{ path('app_ad') }}">Admin</a></li>
+                        {% block breadcrumb %}{% endblock %}
+                    </ul>
+                </div>
+            </div>
+
+            {# Flash Messages #}
+            {% for label, messages in app.flashes %}
+                {% for message in messages %}
+                    <div class="alert alert-{{ label == 'error' ? 'danger' : label }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                {% endfor %}
+            {% endfor %}
+
+            <div class="main-content">
+                {% block body %}{% endblock %}
+            </div>
+
+        </div>
+
+        {# ========== FOOTER ========== #}
+        <footer class="footer">
+            <p class="fs-11 text-muted fw-medium text-uppercase mb-0 copyright">
+                <span>Copyright ©</span>
+                <script>document.write(new Date().getFullYear());</script>
+                <span> MedFlow - Les événements </span>
+            </p>
+            <div class="d-flex align-items-center gap-4">
+                <a href="javascript:void(0);" class="fs-11 fw-semibold text-uppercase">Aide</a>
+                <a href="javascript:void(0);" class="fs-11 fw-semibold text-uppercase">Confidentialité</a>
+            </div>
+        </footer>
+
+    </main>
+
+    {# ========== SCRIPTS ========== #}
+    <!--! BEGIN: Vendors JS !-->
+    <script src="{{ asset('assets_ad/vendors/js/vendors.min.js') }}"></script>
+    <script src="{{ asset('assets_ad/vendors/js/daterangepicker.min.js') }}"></script>
+    <script src="{{ asset('assets_ad/vendors/js/apexcharts.min.js') }}"></script>
+    <script src="{{ asset('assets_ad/vendors/js/circle-progress.min.js') }}"></script>
+    <!--! END: Vendors JS !-->
+
+    <!--! BEGIN: Apps Init  !-->
+    <script src="{{ asset('assets_ad/js/common-init.min.js') }}"></script>
+    <!--! END: Apps Init !-->
+
+    {% block javascripts %}{% endblock %}
+
+    {# ✅ Dark mode FIX FINAL: applique data-bs-theme sur <html> #}
+    <script>
+    (function () {
+        const html = document.documentElement; // <html>
+        const body = document.body;
+        const btn  = document.getElementById('toggle-theme');
+        const moon = document.getElementById('icon-moon');
+        const sun  = document.getElementById('icon-sun');
+
+        function applyTheme(theme) {
+            // ✅ Bootstrap 5.3+
+            html.setAttribute('data-bs-theme', theme);
+
+            // ✅ Sécurité (si le template écoute ces attributs/classes)
+            body.setAttribute('data-theme', theme);
+            body.classList.toggle('dark', theme === 'dark');
+            body.classList.toggle('theme-dark', theme === 'dark');
+
+            // icônes
+            if (theme === 'dark') {
+                moon.classList.add('d-none');
+                sun.classList.remove('d-none');
+            } else {
+                sun.classList.add('d-none');
+                moon.classList.remove('d-none');
+            }
+        }
+
+        // Init
+        const saved = localStorage.getItem('mf_theme') || 'light';
+        applyTheme(saved);
+
+        // Toggle
+        btn?.addEventListener('click', function () {
+            const current = html.getAttribute('data-bs-theme') || 'light';
+            const next = current === 'dark' ? 'light' : 'dark';
+            localStorage.setItem('mf_theme', next);
+            applyTheme(next);
+        });
+    })();
+    </script>
+
+</body>
+</html>

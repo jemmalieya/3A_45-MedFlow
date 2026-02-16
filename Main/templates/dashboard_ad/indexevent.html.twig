@@ -1,0 +1,271 @@
+{% extends 'admin/base_adminevent.html.twig' %}
+
+{% block page_title %}
+  {% if section == 'evenements' %}Liste des événements
+  {% elseif section == 'participants' %}Participants (Demandes)
+  {% elseif section == 'ressources' %}Ressources
+  {% elseif section == 'stats_evenements' %}Statistiques Événements
+  {% elseif section == 'stats_ressources' %}Statistiques Ressources
+  {% else %}Dashboard{% endif %}
+{% endblock %}
+
+{% block body %}
+
+  {# ================= HOME ================= #}
+  {% if section == 'home' %}
+    <div class="card">
+      <div class="card-body">
+        <h5 class="mb-1">Bienvenue dans l'espace Admin</h5>
+        <p class="text-muted mb-0">Supervision des événements, participants, ressources et statistiques.</p>
+      </div>
+    </div>
+  {% endif %}
+  <link rel="stylesheet" href="{{ asset('assets_ad/css/medflow-admin.css') }}">
+<link rel="stylesheet" href="{{ asset('assets_ad/css/admin-medflow-theme.css') }}">
+<script src="{{ asset('assets_ad/js/admin-charts-theme.js') }}"></script>
+
+
+
+  {# ================= EVENEMENTS ================= #}
+  {% if section == 'evenements' %}
+    <div class="card">
+      <div class="card-body">
+        <div class="d-flex flex-wrap gap-2 align-items-center justify-content-between mb-3">
+          <div class="text-muted">Lecture seule (pas d’ajout/modif/supp)</div>
+          <form method="get" class="d-flex gap-2">
+            <select name="sort" class="form-select form-select-sm" onchange="this.form.submit()">
+              <option value="date_desc" {{ sort == 'date_desc' ? 'selected' : '' }}>Date ↓</option>
+              <option value="date_asc"  {{ sort == 'date_asc' ? 'selected' : '' }}>Date ↑</option>
+              <option value="titre_asc" {{ sort == 'titre_asc' ? 'selected' : '' }}>Titre A→Z</option>
+              <option value="titre_desc"{{ sort == 'titre_desc' ? 'selected' : '' }}>Titre Z→A</option>
+              <option value="ville_asc" {{ sort == 'ville_asc' ? 'selected' : '' }}>Ville A→Z</option>
+              <option value="type_asc"  {{ sort == 'type_asc' ? 'selected' : '' }}>Type A→Z</option>
+            </select>
+          </form>
+        </div>
+
+        <div class="table-responsive">
+          <table class="table table-hover align-middle">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Titre</th>
+                <th>Type</th>
+                <th>Ville</th>
+                <th>Dates</th>
+                <th>Statut</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for ev in evenements %}
+                <tr>
+                  <td>{{ ev.id }}</td>
+                  <td class="fw-semibold">{{ ev.titreEvent }}</td>
+                  <td>{{ ev.typeEvent ?? '—' }}</td>
+                  <td>{{ ev.villeEvent ?? '—' }}</td>
+                  <td>
+                    {{ ev.dateDebutEvent ? ev.dateDebutEvent|date('d/m/Y') : '—' }}
+                    →
+                    {{ ev.dateFinEvent ? ev.dateFinEvent|date('d/m/Y') : '—' }}
+                  </td>
+                  <td>
+                    <span class="badge bg-light text-dark border">{{ ev.statutEvent ?? 'N/A' }}</span>
+                  </td>
+                </tr>
+              {% else %}
+                <tr><td colspan="6" class="text-muted">Aucun événement.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+      </div>
+    </div>
+  {% endif %}
+
+  {# ================= PARTICIPANTS (DEMANDES) ================= #}
+  {% if section == 'participants' %}
+    <div class="row g-3 mb-3">
+      <div class="col-md-4">
+        <div class="card"><div class="card-body">
+          <div class="text-muted">Demandes en attente</div>
+          <div class="h3 mb-0">{{ totalPending }}</div>
+        </div></div>
+      </div>
+      <div class="col-md-4">
+        <div class="card"><div class="card-body">
+          <div class="text-muted">Acceptées</div>
+          <div class="h3 mb-0">{{ totalAccepted }}</div>
+        </div></div>
+      </div>
+      <div class="col-md-4">
+        <div class="card"><div class="card-body">
+          <div class="text-muted">Refusées</div>
+          <div class="h3 mb-0">{{ totalRefused }}</div>
+        </div></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-body">
+        <div class="table-responsive">
+          <table class="table table-hover align-middle">
+            <thead>
+              <tr>
+                <th>Événement</th>
+                <th>Dates</th>
+                <th class="text-center">Pending</th>
+                <th class="text-center">Accepted</th>
+                <th class="text-center">Refused</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for ev in events %}
+                <tr>
+                  <td class="fw-semibold">{{ ev.titreEvent }}</td>
+                  <td>
+                    {{ ev.dateDebutEvent ? ev.dateDebutEvent|date('d/m/Y') : '—' }} →
+                    {{ ev.dateFinEvent ? ev.dateFinEvent|date('d/m/Y') : '—' }}
+                  </td>
+                  <td class="text-center">{{ ev.countDemandesByStatus('pending') }}</td>
+                  <td class="text-center">{{ ev.countDemandesByStatus('accepted') }}</td>
+                  <td class="text-center">{{ ev.countDemandesByStatus('refused') }}</td>
+                </tr>
+              {% else %}
+                <tr><td colspan="5" class="text-muted">Aucun événement.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  {% endif %}
+
+  {# ================= RESSOURCES ================= #}
+  {% if section == 'ressources' %}
+    <div class="card">
+      <div class="card-body">
+        <form method="get" class="row g-2 align-items-center mb-3">
+          <div class="col-md-5">
+            <input type="text" name="search" class="form-control" placeholder="Rechercher (nom, catégorie...)" value="{{ search ?? '' }}">
+          </div>
+          <div class="col-md-4">
+            <select name="sort" class="form-select" onchange="this.form.submit()">
+              <option value="date_desc" {{ sort == 'date_desc' ? 'selected' : '' }}>Date ↓</option>
+              <option value="date_asc"  {{ sort == 'date_asc' ? 'selected' : '' }}>Date ↑</option>
+              <option value="nom_asc"   {{ sort == 'nom_asc' ? 'selected' : '' }}>Nom A→Z</option>
+              <option value="nom_desc"  {{ sort == 'nom_desc' ? 'selected' : '' }}>Nom Z→A</option>
+              <option value="cat_asc"   {{ sort == 'cat_asc' ? 'selected' : '' }}>Catégorie A→Z</option>
+              <option value="type_asc"  {{ sort == 'type_asc' ? 'selected' : '' }}>Type A→Z</option>
+            </select>
+          </div>
+          <div class="col-md-3 d-grid">
+            <button class="btn btn-primary">Filtrer</button>
+          </div>
+        </form>
+
+        <div class="table-responsive">
+          <table class="table table-hover align-middle">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Nom</th>
+                <th>Type</th>
+                <th>Catégorie</th>
+                <th>Date création</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for r in ressources %}
+                <tr>
+                  <td>{{ r.id }}</td>
+                  <td class="fw-semibold">{{ r.nomRessource }}</td>
+                  <td>{{ r.typeRessource ?? '—' }}</td>
+                  <td>{{ r.categorieRessource ?? '—' }}</td>
+                  <td>{{ r.dateCreationRessource ? r.dateCreationRessource|date('d/m/Y') : '—' }}</td>
+                </tr>
+              {% else %}
+                <tr><td colspan="5" class="text-muted">Aucune ressource.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+      </div>
+    </div>
+  {% endif %}
+
+  {# ================= STATS EVENEMENTS ================= #}
+  {% if section == 'stats_evenements' %}
+    <div class="row g-3">
+      <div class="col-md-3"><div class="card"><div class="card-body">
+        <div class="text-muted">Total demandes</div><div class="h3 mb-0">{{ demandes.total ?? 0 }}</div>
+      </div></div></div>
+      <div class="col-md-3"><div class="card"><div class="card-body">
+        <div class="text-muted">Accepted</div><div class="h3 mb-0">{{ demandes.accepted ?? 0 }}</div>
+      </div></div></div>
+      <div class="col-md-3"><div class="card"><div class="card-body">
+        <div class="text-muted">Pending</div><div class="h3 mb-0">{{ demandes.pending ?? 0 }}</div>
+      </div></div></div>
+      <div class="col-md-3"><div class="card"><div class="card-body">
+        <div class="text-muted">Refused</div><div class="h3 mb-0">{{ demandes.refused ?? 0 }}</div>
+      </div></div></div>
+    </div>
+
+    <div class="row g-3 mt-1">
+      <div class="col-md-4">
+        <div class="card"><div class="card-body">
+          <h6 class="mb-2">Par type</h6>
+          {% for k,v in byType %}<div class="d-flex justify-content-between"><span>{{ k }}</span><b>{{ v }}</b></div>{% else %}<div class="text-muted">—</div>{% endfor %}
+        </div></div>
+      </div>
+      <div class="col-md-4">
+        <div class="card"><div class="card-body">
+          <h6 class="mb-2">Par ville</h6>
+          {% for k,v in byVille %}<div class="d-flex justify-content-between"><span>{{ k }}</span><b>{{ v }}</b></div>{% else %}<div class="text-muted">—</div>{% endfor %}
+        </div></div>
+      </div>
+      <div class="col-md-4">
+        <div class="card"><div class="card-body">
+          <h6 class="mb-2">Par statut</h6>
+          {% for k,v in byStatut %}<div class="d-flex justify-content-between"><span>{{ k }}</span><b>{{ v }}</b></div>{% else %}<div class="text-muted">—</div>{% endfor %}
+        </div></div>
+      </div>
+    </div>
+  {% endif %}
+
+  {# ================= STATS RESSOURCES ================= #}
+  {% if section == 'stats_ressources' %}
+    <div class="row g-3">
+      <div class="col-md-4">
+        <div class="card"><div class="card-body">
+          <h6 class="mb-2">KPI</h6>
+          {% for k,v in kpi %}<div class="d-flex justify-content-between"><span>{{ k }}</span><b>{{ v }}</b></div>{% else %}<div class="text-muted">—</div>{% endfor %}
+        </div></div>
+      </div>
+
+      <div class="col-md-4">
+        <div class="card"><div class="card-body">
+          <h6 class="mb-2">Par type</h6>
+          {% for row in byTypeR %}
+            <div class="d-flex justify-content-between"><span>{{ row.type ?? row['type'] ?? 'N/A' }}</span><b>{{ row.total ?? row['total'] ?? 0 }}</b></div>
+          {% else %}
+            <div class="text-muted">—</div>
+          {% endfor %}
+        </div></div>
+      </div>
+
+      <div class="col-md-4">
+        <div class="card"><div class="card-body">
+          <h6 class="mb-2">Top événements (ressources)</h6>
+          {% for row in topEventsR %}
+            <div class="d-flex justify-content-between"><span>{{ row.titre ?? row['titre'] ?? 'Event' }}</span><b>{{ row.total ?? row['total'] ?? 0 }}</b></div>
+          {% else %}
+            <div class="text-muted">—</div>
+          {% endfor %}
+        </div></div>
+      </div>
+    </div>
+  {% endif %}
+
+{% endblock %}

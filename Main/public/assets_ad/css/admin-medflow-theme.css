@@ -1,0 +1,177 @@
+/* =========================================================
+   MedFlow Admin - Palette Gris/Blanc + Accent (boutons etc.)
+   ========================================================= */
+
+:root{
+  --mf-bg: #f6f7fb;
+  --mf-card: #ffffff;
+  --mf-border: rgba(15, 23, 42, .10);
+  --mf-text: #0f172a;
+  --mf-muted: rgba(15, 23, 42, .65);
+
+  /* Accent (utilisé seulement pour actions / focus) */
+  --mf-accent: #2563eb;        /* bleu propre */
+  --mf-accent-soft: rgba(37, 99, 235, .12);
+}
+
+/* Fond global */
+body{
+  background: var(--mf-bg) !important;
+  color: var(--mf-text);
+}
+
+/* Cards / blocs (les gros rectangles blancs) */
+.card, .nxl-card, .main-content .bg-white, .main-content .shadow-sm{
+  background: var(--mf-card) !important;
+  border: 1px solid var(--mf-border) !important;
+  border-radius: 16px !important;
+}
+
+/* Header du content */
+.page-header,
+.nxl-header,
+.nxl-container .nxl-content{
+  background: transparent !important;
+}
+
+/* Sidebar : garder sobre */
+.nxl-navigation{
+  background: #ffffff !important;
+  border-right: 1px solid var(--mf-border) !important;
+}
+
+/* Item actif : petit accent discret */
+.nxl-navbar .nxl-link.active,
+.nxl-navbar .nxl-item.active > .nxl-link{
+  background: var(--mf-accent-soft) !important;
+  border-radius: 12px !important;
+  color: var(--mf-text) !important;
+}
+.nxl-navbar .nxl-link.active .nxl-micon i,
+.nxl-navbar .nxl-item.active > .nxl-link .nxl-micon i{
+  color: var(--mf-accent) !important;
+}
+
+/* Texte muted plus cohérent */
+.text-muted, .fs-12.text-muted{
+  color: var(--mf-muted) !important;
+}
+
+/* =========================
+   Boutons (couleur seulement ici)
+   ========================= */
+.btn{
+  border-radius: 12px !important;
+  font-weight: 600;
+}
+
+.btn-primary{
+  background: var(--mf-accent) !important;
+  border-color: var(--mf-accent) !important;
+}
+.btn-primary:hover{
+  filter: brightness(.95);
+}
+
+.btn-outline-primary{
+  border-color: var(--mf-accent) !important;
+  color: var(--mf-accent) !important;
+}
+.btn-outline-primary:hover{
+  background: var(--mf-accent) !important;
+  color: #fff !important;
+}
+
+/* =========================
+   Tables (comme tes images)
+   ========================= */
+.table{
+  --bs-table-bg: transparent;
+}
+
+.table thead th{
+  color: rgba(15,23,42,.65) !important;
+  font-size: .78rem;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  border-bottom: 1px solid var(--mf-border) !important;
+}
+
+.table tbody tr{
+  border-bottom: 1px solid rgba(15,23,42,.06) !important;
+}
+
+.table tbody td{
+  vertical-align: middle;
+  color: var(--mf-text);
+}
+
+/* Survol lignes */
+.table tbody tr:hover{
+  background: rgba(15,23,42,.03) !important;
+}
+
+/* =========================
+   Badges statut (publié etc.)
+   ========================= */
+.badge{
+  border-radius: 10px !important;
+  font-weight: 700;
+}
+
+.badge.bg-success, .badge-success{
+  background: rgba(16, 185, 129, .14) !important;
+  color: #065f46 !important;
+  border: 1px solid rgba(16, 185, 129, .30) !important;
+}
+
+.badge.bg-danger, .badge-danger{
+  background: rgba(239, 68, 68, .12) !important;
+  color: #7f1d1d !important;
+  border: 1px solid rgba(239, 68, 68, .25) !important;
+}
+
+.badge.bg-light{
+  background: rgba(15,23,42,.06) !important;
+  border: 1px solid rgba(15,23,42,.12) !important;
+}
+
+/* =========================
+   KPI cards (Demandes en attente, acceptées, refusées)
+   ========================= */
+.mf-kpi{
+  border: 1px solid var(--mf-border) !important;
+  background: #fff !important;
+  border-radius: 18px !important;
+  padding: 18px !important;
+}
+
+.mf-kpi .mf-kpi-title{
+  color: var(--mf-muted);
+  font-weight: 600;
+}
+
+.mf-kpi .mf-kpi-value{
+  font-size: 1.6rem;
+  font-weight: 800;
+}
+
+/* petit point accent optionnel */
+.mf-dot{
+  width: 10px; height: 10px;
+  border-radius: 999px;
+  background: var(--mf-accent);
+  display: inline-block;
+}
+
+/* =========================
+   Dropdown / select
+   ========================= */
+.form-select, .form-control{
+  border-radius: 12px !important;
+  border-color: rgba(15,23,42,.14) !important;
+}
+.form-select:focus, .form-control:focus{
+  border-color: var(--mf-accent) !important;
+  box-shadow: 0 0 0 .2rem rgba(37,99,235,.15) !important;
+}
