@@ -35,18 +35,13 @@
               title: 'Réclamation ajoutée avec succès!',
               text: 'Merci pour votre réclamation, nous la traiterons le plus tôt possible.',
               showConfirmButton: false,
-              timer: 3000, // Disparaît après 3 secondes
+              timer: 3000,
               timerProgressBar: true,
               position: 'top',
               toast: true,
               background: '#fff',
               color: '#155724',
-              iconColor: '#155724',
-              customClass: {
-                popup: 'swal2-popup',
-                title: 'swal2-title',
-                icon: 'swal2-icon',
-              }
+              iconColor: '#155724'
             });
           </script>
         {% endfor %}
@@ -63,6 +58,7 @@
 
             {{ form_start(form, {
               attr: {
+                id: 'reclamationForm',
                 class: 'row g-4',
                 novalidate: 'novalidate'
               }
@@ -73,6 +69,7 @@
                 {{ form_label(form.contenu, 'Contenu', {'label_attr': {'class': 'form-label text-dark'}}) }}
                 {{ form_widget(form.contenu, {
                   attr: {
+                    id: 'reclamation_contenu',
                     class: 'form-control ' ~ (form_errors(form.contenu) ? 'is-invalid' : ''),
                     placeholder: 'Ex: Problème de rendez-vous...',
                     style: 'border-radius: 15px; padding: 15px; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); transition: all 0.3s ease;'
@@ -85,11 +82,75 @@
                 {% endif %}
               </div>
 
+              {# =========================================================
+                 ✅ DICTÉE VOCALE (Contenu + Description + Type + Publier)
+                 ========================================================= #}
+              <div class="col-12">
+                <div class="card border-0 shadow-sm rounded-4" style="background:#f8fbfc;">
+                  <div class="card-body">
+
+                    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                      <div>
+                        <div class="fw-bold">
+                          <i class="bi bi-mic me-2"></i>Dictée vocale (optionnelle)
+                        </div>
+                        <small class="text-muted">
+                          Vous pouvez écrire normalement, ou dicter. Dites <b>“type …”</b> ou <b>“publier”</b> pour envoyer.
+                        </small>
+                        <div class="mt-2 small">
+                          <span class="badge bg-light text-dark border" id="speechStatus">Prêt</span>
+                          <span class="text-muted ms-2" id="speechHint">Autorisez le micro si demandé.</span>
+                        </div>
+                      </div>
+
+                      <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-danger rounded-pill" id="btnStopDictation" disabled>
+                          <i class="bi bi-stop-circle me-1"></i> Stop
+                        </button>
+                        <button type="button" class="btn btn-primary rounded-pill" id="btnStartDictation" style="background:#1CA3B4;border-color:#1CA3B4;">
+                          <i class="bi bi-play-circle me-1"></i> Démarrer
+                        </button>
+                      </div>
+                    </div>
+
+                    <div class="mt-3 d-flex gap-2 flex-wrap align-items-center">
+                      <div class="d-flex align-items-center gap-2">
+                        <small class="text-muted">Cibler :</small>
+                        <select id="speechTarget" class="form-select form-select-sm" style="width:auto;border-radius:999px;">
+                          <option value="contenu" selected>Contenu</option>
+                          <option value="description">Description</option>
+                        </select>
+                      </div>
+
+                      <button type="button" class="btn btn-outline-secondary btn-sm rounded-pill" id="btnClearTarget">
+                        <i class="bi bi-eraser me-1"></i> Effacer le champ
+                      </button>
+
+                      <div class="ms-auto d-flex align-items-center gap-2">
+                        <small class="text-muted">Langue</small>
+                        <select id="speechLang" class="form-select form-select-sm" style="width:auto;border-radius:999px;">
+                          <option value="fr-FR" selected>Français</option>
+                          <option value="ar-TN">Arabe (Tunisie)</option>
+                          <option value="en-US">English</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <small class="text-muted d-block mt-2">
+                      <i class="bi bi-info-circle me-1"></i>
+                      Commandes : <b>“type rendez-vous”</b>, <b>“type service”</b>, <b>“publier / envoyer / valider”</b>.
+                    </small>
+
+                  </div>
+                </div>
+              </div>
+
               {# ===== DESCRIPTION ===== #}
               <div class="col-12">
                 {{ form_label(form.description, 'Description', {'label_attr': {'class': 'form-label text-dark'}}) }}
                 {{ form_widget(form.description, {
                   attr: {
+                    id: 'reclamation_description',
                     class: 'form-control ' ~ (form_errors(form.description) ? 'is-invalid' : ''),
                     rows: 5,
                     placeholder: 'Décrivez votre réclamation en détail...',
@@ -108,6 +169,7 @@
                 {{ form_label(form.type, 'Type', {'label_attr': {'class': 'form-label text-dark'}}) }}
                 {{ form_widget(form.type, {
                   attr: {
+                    id: 'reclamation_type',
                     class: 'form-select ' ~ (form_errors(form.type) ? 'is-invalid' : ''),
                     style: 'border-radius: 15px; padding: 15px; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); transition: all 0.3s ease;'
                   }
@@ -133,19 +195,17 @@
                     {{ form_errors(form.pieceJointePath) }}
                   </div>
                 {% endif %}
-
                 <div class="form-text">
-                  Formats conseillés : PDF, JPG, PNG. (Taille limitée selon config)
+                  Formats conseillés : PDF, JPG, PNG.
                 </div>
               </div>
-<!-- Bouton pour reformuler le contenu sans soumettre -->
-<button type="button" id="reformulateReclamationButton" class="btn btn-outline-primary" style="border-radius: 20px; padding: 12px 25px; color: #1CA3B4; border: 2px solid #1CA3B4;">
-  <i class="bi bi-lightbulb"></i> Reformuler la réclamation
-</button>
+
+
 
               {# ===== ACTIONS ===== #}
               <div class="col-12 d-flex gap-3 mt-4 justify-content-center">
-                <button type="submit" class="btn" style="background-color: #1CA3B4; color: white; padding: 15px 30px; border-radius: 20px; transition: all 0.3s ease;">
+                <button id="btnSubmitReclamation" type="submit" class="btn"
+                        style="background-color: #1CA3B4; color: white; padding: 15px 30px; border-radius: 20px; transition: all 0.3s ease;">
                   <i class="bi bi-send"></i> Envoyer la réclamation
                 </button>
                 <button type="reset" class="btn btn-outline-secondary px-5 py-3" style="border-radius: 20px; transition: all 0.3s ease;">
@@ -163,8 +223,12 @@
 
   </div>
 </section>
+
+{# ===============================
+   ✅ Reformulation (ton code)
+   =============================== #}
 <script>
-document.getElementById('reformulateReclamationButton').addEventListener('click', async function () {
+document.getElementById('reformulateReclamationButton')?.addEventListener('click', async function () {
     const contenuField = document.getElementById('reclamation_contenu');
     const descriptionField = document.getElementById('reclamation_description');
     const button = this;
@@ -209,8 +273,299 @@ document.getElementById('reformulateReclamationButton').addEventListener('click'
 });
 </script>
 
+{# ===============================
+   ✅ Dictée vocale (AVANCÉE)
+   - cible contenu/description
+   - commande "type ..."
+   - commande "publier/envoyer" => submit
+   =============================== #}
+<script>
+(function () {
+  const formEl = document.getElementById("reclamationForm");
+  const contenuEl = document.getElementById("reclamation_contenu");
+  const descEl = document.getElementById("reclamation_description");
+  const typeEl = document.getElementById("reclamation_type");
+  const btnSubmit = document.getElementById("btnSubmitReclamation");
+
+  const btnStart = document.getElementById("btnStartDictation");
+  const btnStop  = document.getElementById("btnStopDictation");
+  const btnClear = document.getElementById("btnClearTarget");
+  const statusEl = document.getElementById("speechStatus");
+  const hintEl   = document.getElementById("speechHint");
+  const langSel  = document.getElementById("speechLang");
+  const targetSel= document.getElementById("speechTarget");
+
+  if (!formEl || !contenuEl || !descEl || !typeEl || !btnStart || !btnStop) return;
+
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+  function setStatus(type, text, hint) {
+    if (!statusEl) return;
+    statusEl.textContent = text;
+    statusEl.className =
+      type === "ok" ? "badge bg-success" :
+      type === "warn" ? "badge bg-warning text-dark" :
+      type === "err" ? "badge bg-danger" :
+      "badge bg-light text-dark border";
+    if (hintEl) hintEl.textContent = hint || "";
+  }
+
+  if (!SpeechRecognition) {
+    setStatus("err", "Non supporté", "Utilise Chrome/Edge pour la dictée vocale.");
+    btnStart.disabled = true;
+    return;
+  }
+
+  function normalize(s) {
+    return (s || "")
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .trim();
+  }
+
+  function currentTargetField() {
+    return (targetSel?.value === "description") ? descEl : contenuEl;
+  }
+
+  // ===== Commands =====
+  function normalizeText(s) {
+  return (s || "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")     // accents
+    .replace(/[’']/g, " ")              // apostrophes
+    .replace(/[\/\-]/g, " ")            // / et -
+    .replace(/[^a-z0-9\s]/g, " ")       // ponctuation
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function bestOptionMatch(spoken, options) {
+  const spokenNorm = normalizeText(spoken);
+
+  // ✅ Synonymes / raccourcis -> libellé proche
+  const aliasMap = [
+    { keys: ["rdv", "rendez vous", "rendezvous", "appointment"], label: "rendez vous" },
+    { keys: ["retard", "attente", "excessive", "longue attente"], label: "retard attente excessive" },
+    { keys: ["personnel medical", "medecin", "infirmier"], label: "personnel medical" },
+    { keys: ["personnel administratif", "administration", "secretaire"], label: "personnel administratif" },
+    { keys: ["facturation", "paiement", "payer", "carte"], label: "facturation paiement" },
+    { keys: ["assurance", "prise en charge", "mutuelle"], label: "assurance prise en charge" },
+    { keys: ["urgence", "urgences", "service urgence"], label: "service urgence" },
+    { keys: ["hospitalisation", "hospitaliser", "chambre"], label: "hospitalisation" },
+    { keys: ["qualite", "soins", "mauvais soins"], label: "qualite des soins" },
+    { keys: ["erreur medicale", "faute", "mauvais diagnostic"], label: "erreur medicale" },
+    { keys: ["dossier", "dossier medical", "fiche"], label: "dossier medical" },
+    { keys: ["pharmacie", "medicament", "medicaments"], label: "pharmacie medicaments" },
+    { keys: ["laboratoire", "analyse", "analyses"], label: "laboratoire analyses" },
+    { keys: ["radiologie", "imagerie", "scanner", "irm", "radio"], label: "radiologie imagerie" },
+    { keys: ["hygiene", "proprete", "sale"], label: "hygiene" },
+    { keys: ["securite", "danger", "vol"], label: "securite" },
+    { keys: ["infrastructure", "equipement", "materiel", "panne"], label: "infrastructure equipement" },
+    { keys: ["accueil", "orientation", "reception"], label: "accueil orientation" },
+    { keys: ["autre"], label: "autre" },
+  ];
+
+  let target = spokenNorm;
+  for (const a of aliasMap) {
+    if (a.keys.some(k => spokenNorm.includes(normalizeText(k)))) {
+      target = normalizeText(a.label);
+      break;
+    }
+  }
+
+  const targetWords = new Set(target.split(" ").filter(Boolean));
+
+  let best = null;
+  let bestScore = -1;
+
+  for (const opt of options) {
+    const label = opt.textContent || "";
+    const labelNorm = normalizeText(label);
+
+    // score = nombre de mots communs + bonus si contient
+    const words = labelNorm.split(" ").filter(Boolean);
+    let common = 0;
+    for (const w of words) if (targetWords.has(w)) common++;
+
+    let score = common;
+
+    if (labelNorm.includes(target)) score += 10;       // très bon
+    if (target.includes(labelNorm)) score += 6;
+
+    // petit bonus si le premier mot correspond
+    const firstTarget = target.split(" ")[0];
+    if (firstTarget && labelNorm.startsWith(firstTarget)) score += 2;
+
+    if (score > bestScore) {
+      bestScore = score;
+      best = opt;
+    }
+  }
+
+  // ✅ seuil minimal (sinon on ne change pas)
+  return bestScore >= 3 ? best : null;
+}
+
+function trySetTypeFromSpeech(rawText) {
+  const t = normalizeText(rawText);
+
+  // déclenche seulement si la phrase contient "type"
+  if (!t.includes("type")) return false;
+
+  // prend ce qu'il y a après "type"
+  const after = t.split("type").slice(1).join(" ").trim();
+  if (!after) {
+    setStatus("warn", "Dites: type ...", "Ex: “type rendez-vous” / “type pharmacie”");
+    return true;
+  }
+
+  const options = Array.from(typeEl.options || []).filter(o => o.value && o.value !== "");
+  const best = bestOptionMatch(after, options);
+
+  if (best) {
+    typeEl.value = best.value;
+    typeEl.dispatchEvent(new Event("change", { bubbles: true }));
+    setStatus("ok", "Type choisi", `Type: ${best.textContent}`);
+  } else {
+    setStatus("warn", "Type non reconnu", "Dites un mot-clé: rdv, urgence, pharmacie, facturation...");
+  }
+
+  return true;
+}
 
 
+  function trySubmitFromSpeech(rawText) {
+    const t = normalize(rawText);
+    const triggers = ["publier", "envoyer", "valider", "confirmer"];
+    const ok = triggers.some(w => t.includes(w));
+    if (!ok) return false;
+
+    const contenuOk = (contenuEl.value || "").trim().length > 0;
+    const descOk = (descEl.value || "").trim().length > 0;
+
+    if (!contenuOk && !descOk) {
+      setStatus("warn", "Impossible d’envoyer", "Remplissez Contenu ou Description d’abord.");
+      return true;
+    }
+
+    setStatus("ok", "Envoi...", "Publication de la réclamation");
+    stopDictation();
+    if (btnSubmit) btnSubmit.click();
+    else formEl.submit();
+    return true;
+  }
+
+  // ===== Recognition =====
+  let recognition = null;
+  let listening = false;
+  let baseTextAtStart = "";
+  let finalSpokenText = "";
+
+  function initRecognition() {
+    recognition = new SpeechRecognition();
+    recognition.lang = langSel?.value || "fr-FR";
+    recognition.continuous = true;
+    recognition.interimResults = true;
+
+    recognition.onstart = () => {
+      listening = true;
+      btnStart.disabled = true;
+      btnStop.disabled = false;
+
+      const field = currentTargetField();
+      baseTextAtStart = (field.value || "").trim();
+      finalSpokenText = "";
+
+      setStatus("ok", "Écoute…", "Parlez. Dites “publier” pour envoyer.");
+    };
+
+    recognition.onerror = (e) => {
+      console.error("Speech error:", e);
+      let msg = "Erreur micro.";
+      if (e.error === "not-allowed") msg = "Micro refusé.";
+      if (e.error === "no-speech") msg = "Aucune voix détectée.";
+      setStatus("err", msg, "Vérifiez les permissions micro.");
+      stopDictation();
+    };
+
+    recognition.onend = () => {
+      listening = false;
+      btnStart.disabled = false;
+      btnStop.disabled = true;
+      setStatus("idle", "Prêt", "Vous pouvez taper ou relancer la dictée.");
+    };
+
+    recognition.onresult = (event) => {
+      let interim = "";
+      let gotFinalChunk = "";
+
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const transcript = event.results[i][0].transcript;
+        if (event.results[i].isFinal) {
+          gotFinalChunk += transcript + " ";
+          finalSpokenText += transcript + " ";
+        } else {
+          interim += transcript;
+        }
+      }
+
+      // Commands on final chunk
+      if (gotFinalChunk.trim()) {
+        const handledType = trySetTypeFromSpeech(gotFinalChunk);
+        const handledSubmit = trySubmitFromSpeech(gotFinalChunk);
+
+        // Si commande => on ne veut pas forcément polluer le champ avec "publier/type"
+        // On laisse simple : le texte est déjà ajouté, mais c’est OK.
+        // Si tu veux le nettoyer, je te le fais aussi.
+        if (handledSubmit) return;
+      }
+
+      const field = currentTargetField();
+      const base = baseTextAtStart ? baseTextAtStart + "\n" : "";
+      field.value = (base + finalSpokenText + interim).trim();
+      field.dispatchEvent(new Event("input", { bubbles: true }));
+    };
+  }
+
+  function startDictation() {
+    if (listening) return;
+    if (!recognition) initRecognition();
+    recognition.lang = langSel?.value || "fr-FR";
+
+    const field = currentTargetField();
+    baseTextAtStart = (field.value || "").trim();
+    finalSpokenText = "";
+
+    try { recognition.start(); } catch (e) { console.warn(e); }
+  }
+
+  function stopDictation() {
+    if (!recognition) return;
+    try { recognition.stop(); } catch (e) {}
+  }
+
+  btnStart.addEventListener("click", startDictation);
+  btnStop.addEventListener("click", stopDictation);
+
+  btnClear?.addEventListener("click", () => {
+    const field = currentTargetField();
+    field.value = "";
+    field.focus();
+    setStatus("warn", "Effacé", "Vous pouvez retaper ou dicter.");
+  });
+
+  langSel?.addEventListener("change", () => { if (listening) stopDictation(); });
+  targetSel?.addEventListener("change", () => {
+    if (listening) {
+      stopDictation();
+      setStatus("warn", "Cible changée", "Relancez Démarrer pour dicter dans le nouveau champ.");
+    }
+  });
+
+  setStatus("idle", "Prêt", "Dites “type …” ou “publier”.");
+})();
+</script>
 
 {% endblock %}
- 

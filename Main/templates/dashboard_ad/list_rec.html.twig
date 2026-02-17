@@ -1,0 +1,329 @@
+{# templates/dashboard_ad/list_rec.html.twig #}
+{% extends 'base_admin.html.twig' %}
+
+{% block title %}Réclamations & Réponses{% endblock %}
+{% block page_title %}Réclamations & Réponses{% endblock %}
+
+{% block body %}
+<link rel="stylesheet" href="{{ asset('assets_ad/css/medflow-admin.css') }}">
+
+<div class="container-fluid py-3">
+
+  <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+    <div>
+      <h4 class="mb-1">Tableau des réclamations</h4>
+      <div class="text-muted">Total : <strong>{{ total }}</strong></div>
+    </div>
+
+  </div>
+
+  <div class="card shadow-sm border-0">
+    <div class="card-body">
+
+      <div class="table-responsive">
+        <table class="table align-middle table-hover">
+          <thead class="table-light">
+            <tr>
+              <th style="width:90px;">ID</th>
+              <th>Réclamation</th>
+              <th style="width:240px;">Patient</th>
+              <th style="width:140px;">Statut</th>
+              <th style="width:140px;">Priorité</th>
+              <th style="width:170px;">Créée le</th>
+              <th style="width:190px;">Actions</th>
+            </tr>
+          </thead>
+
+          <tbody>
+          {% for row in rows %}
+            {% set rec = row.rec %}
+            {% set rep = row.rep %}
+
+            <tr>
+              <td class="fw-bold">#{{ rec.idReclamation }}</td>
+
+              <td>
+                <div class="fw-semibold">
+                  <i class="bi bi-hash me-1 text-muted"></i>{{ rec.referenceReclamation }}
+                </div>
+                <div class="small text-muted mt-1">
+                  <span class="me-2"><i class="bi bi-tag me-1"></i>{{ rec.type }}</span>
+                  {% if rec.pieceJointePath %}
+                    <span class="badge bg-light text-dark border">
+                      <i class="bi bi-paperclip me-1"></i> PJ
+                    </span>
+                  {% endif %}
+                  {% if rec.urgente %}
+                    <span class="badge bg-danger ms-2">
+                      <i class="bi bi-exclamation-triangle me-1"></i> Urgente
+                    </span>
+                  {% endif %}
+                </div>
+
+                <div class="mt-2">
+                  <div class="fw-semibold">Contenu</div>
+                  <div class="text-muted small">{{ rec.contenu }}</div>
+                </div>
+
+                <div class="mt-2">
+                  <div class="fw-semibold">Description</div>
+                  <div class="text-muted small">
+                    {{ rec.description|slice(0, 120) }}{% if rec.description|length > 120 %}...{% endif %}
+                  </div>
+                </div>
+              </td>
+
+              <td>
+                {% if rec.user %}
+                  <div class="fw-semibold">
+                    <i class="bi bi-person-circle me-1 text-muted"></i>
+                    {{ rec.user.nom }} {{ rec.user.prenom }}
+                  </div>
+                  <div class="text-muted small">
+                    <i class="bi bi-envelope me-1"></i>{{ rec.user.emailUser }}
+                  </div>
+                {% else %}
+                  —
+                {% endif %}
+              </td>
+
+              <td>
+                {% set st = rec.statutReclamation|upper %}
+                {% if st == 'TRAITEE' %}
+                  <span class="badge bg-success"><i class="bi bi-check2-circle me-1"></i> TRAITÉE</span>
+                {% elseif st == 'EN_ATTENTE' %}
+                  <span class="badge bg-warning text-dark"><i class="bi bi-hourglass-split me-1"></i> EN ATTENTE</span>
+                {% else %}
+                  <span class="badge bg-secondary">{{ rec.statutReclamation }}</span>
+                {% endif %}
+              </td>
+
+              <td>
+                {% set pr = rec.priorite|upper %}
+                {% if pr == 'HAUTE' %}
+                  <span class="badge bg-danger"><i class="bi bi-arrow-up-circle me-1"></i> HAUTE</span>
+                {% elseif pr == 'NORMALE' %}
+                  <span class="badge bg-info text-dark"><i class="bi bi-dash-circle me-1"></i> NORMALE</span>
+                {% else %}
+                  <span class="badge bg-secondary">{{ rec.priorite }}</span>
+                {% endif %}
+              </td>
+
+              <td>
+                <div class="small">
+                  <div>
+                    <i class="bi bi-calendar-event me-1 text-muted"></i>
+                    {{ rec.dateCreationR ? rec.dateCreationR|date('d/m/Y') : '—' }}
+                  </div>
+                  <div class="text-muted">
+                    <i class="bi bi-clock me-1"></i>
+                    {{ rec.dateCreationR ? rec.dateCreationR|date('H:i') : '' }}
+                  </div>
+                  {% if rec.dateLimite %}
+                    <div class="mt-1">
+                      <span class="badge bg-light text-dark border">
+                        <i class="bi bi-alarm me-1"></i>
+                        Limite: {{ rec.dateLimite|date('d/m/Y H:i') }}
+                      </span>
+                    </div>
+                  {% endif %}
+                </div>
+              </td>
+
+              <td>
+                <button
+                  type="button"
+                  class="btn btn-sm btn-outline-primary btn-view-replies mb-2"
+                  data-id="{{ rec.idReclamation }}"
+                  data-ref="{{ rec.referenceReclamation }}"
+                >
+                  <i class="bi bi-chat-left-text me-1"></i> Voir réponses
+                </button>
+
+                {% if rep %}
+                  <div class="small text-muted">
+                    <span class="badge bg-success me-1"><i class="bi bi-check2 me-1"></i>Dernière réponse</span>
+                    {{ rep.message|slice(0, 40) }}{% if rep.message|length > 40 %}...{% endif %}
+                  </div>
+                {% else %}
+                  <div class="small text-muted">
+                    <span class="badge bg-secondary"><i class="bi bi-clock-history me-1"></i>Aucune réponse</span>
+                  </div>
+                {% endif %}
+              </td>
+            </tr>
+
+          {% else %}
+            <tr>
+              <td colspan="7" class="text-center text-muted py-4">
+                Aucune réclamation trouvée.
+              </td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+{# ✅ MODAL POPUP #}
+<div class="modal fade" id="repliesModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <div>
+          <h5 class="modal-title mb-0">Réponses</h5>
+          <div class="text-muted small" id="modalSubTitle">—</div>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
+      </div>
+
+      <div class="modal-body">
+        <div id="repliesLoading" class="text-center py-4 d-none">
+          <div class="spinner-border" role="status"></div>
+          <div class="text-muted mt-2">Chargement...</div>
+        </div>
+
+        <div id="repliesEmpty" class="alert alert-secondary d-none">
+          Aucune réponse pour cette réclamation.
+        </div>
+
+        <div id="repliesList" class="d-grid gap-2"></div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+(function () {
+  const modalEl = document.getElementById('repliesModal');
+
+  // ⚠️ si bootstrap JS n'est pas chargé => rien ne s'affiche
+  if (typeof bootstrap === 'undefined') {
+    console.error('Bootstrap JS n’est pas chargé. Ajoute bootstrap.bundle.min.js dans base_admin.html.twig');
+    return;
+  }
+
+  const modal = new bootstrap.Modal(modalEl);
+
+  const subTitle = document.getElementById('modalSubTitle');
+  const loading = document.getElementById('repliesLoading');
+  const empty = document.getElementById('repliesEmpty');
+  const list = document.getElementById('repliesList');
+
+  function setLoading(v){ loading.classList.toggle('d-none', !v); }
+  function setEmpty(v){ empty.classList.toggle('d-none', !v); }
+  function clearList(){ list.innerHTML = ''; }
+
+  function escapeHtml(str){
+    return (str || '').toString()
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;');
+  }
+
+  document.querySelectorAll('.btn-view-replies').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const id = btn.dataset.id;
+      const ref = btn.dataset.ref;
+
+      subTitle.textContent = `Réclamation ${ref} (#${id})`;
+
+      clearList();
+      setEmpty(false);
+      setLoading(true);
+      modal.show();
+
+      try {
+        const url = "{{ path('ad_reclamation_reponses', {id: 0}) }}".replace('0', id);
+        const res = await fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' }});
+
+        // si 404/500 => affiche erreur console
+        if (!res.ok) {
+          console.error('HTTP error', res.status, await res.text());
+          setLoading(false);
+          setEmpty(true);
+          return;
+        }
+
+        const data = await res.json();
+
+        setLoading(false);
+
+        if (!data.ok || !data.reponses || data.reponses.length === 0) {
+          setEmpty(true);
+          return;
+        }
+
+        data.reponses.forEach((r, idx) => {
+          const card = document.createElement('div');
+          card.className = 'border rounded p-3 bg-light';
+
+          const typeBadge = r.type
+            ? `<span class="badge bg-dark me-2">${escapeHtml(r.type)}</span>`
+            : '';
+
+          const readBadge = (r.isRead === true)
+            ? `<span class="badge bg-success"><i class="bi bi-check2 me-1"></i>Lu</span>`
+            : (r.isRead === false)
+              ? `<span class="badge bg-warning text-dark"><i class="bi bi-dot me-1"></i>Non lu</span>`
+              : '';
+
+          const dateLine = r.createdAt
+            ? `<div class="text-muted small"><i class="bi bi-clock me-1"></i>${escapeHtml(r.createdAt)}</div>`
+            : '';
+
+          card.innerHTML = `
+            <div class="d-flex justify-content-between align-items-start gap-2">
+              <div class="fw-semibold">
+                <i class="bi bi-reply-fill me-1 text-primary"></i> Réponse ${idx + 1}
+              </div>
+              <div class="text-end">${dateLine}</div>
+            </div>
+
+            <div class="mt-2 d-flex flex-wrap gap-2 align-items-center">
+              ${typeBadge}
+              ${readBadge}
+            </div>
+
+            <div class="mt-2">${escapeHtml(r.message)}</div>
+          `;
+
+          list.appendChild(card);
+        });
+
+      } catch (e) {
+        console.error(e);
+        setLoading(false);
+        setEmpty(true);
+      }
+    });
+  });
+})();
+</script>
+<style>
+/* ❌ Empêche l'effet flou quand un modal Bootstrap est ouvert */
+body.modal-open .content,
+body.modal-open .page-content,
+body.modal-open .container-fluid,
+body.modal-open main {
+  filter: none !important;
+  backdrop-filter: none !important;
+}
+
+/* ❌ Certains thèmes floutent tout le body */
+body.modal-open {
+  filter: none !important;
+  backdrop-filter: none !important;
+}
+</style>
+
+
+{% endblock %}

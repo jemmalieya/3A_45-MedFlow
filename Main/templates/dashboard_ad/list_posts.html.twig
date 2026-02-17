@@ -1,0 +1,116 @@
+{% extends 'base_admin.html.twig' %}
+
+{% block title %}Gestion des Posts{% endblock %}
+{% block page_title %}Posts & Modération{% endblock %}
+
+{% block body %}
+<link rel="stylesheet" href="{{ asset('assets_ad/css/medflow-admin.css') }}">
+
+<div class="container-fluid py-3">
+
+  <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+    <div>
+      <h4 class="mb-1">Tableau des posts</h4>
+      <div class="text-muted">Total : <strong>{{ total }}</strong></div>
+    </div>
+
+    <div class="d-flex gap-2 flex-wrap">
+      <span class="badge rounded-pill bg-light text-dark border px-3 py-2">
+        <i class="bi bi-hourglass-split me-1"></i> En attente : <strong>{{ pending }}</strong>
+      </span>
+      <span class="badge rounded-pill bg-light text-dark border px-3 py-2">
+        <i class="bi bi-check2-circle me-1"></i> Approuvés : <strong>{{ approved }}</strong>
+      </span>
+      <span class="badge rounded-pill bg-light text-dark border px-3 py-2">
+        <i class="bi bi-x-circle me-1"></i> Rejetés : <strong>{{ rejected }}</strong>
+      </span>
+    </div>
+  </div>
+
+  <div class="card shadow-sm border-0">
+    <div class="card-body">
+
+      <div class="table-responsive">
+        <table class="table align-middle table-hover">
+          <thead class="table-light">
+            <tr>
+              <th>#</th>
+              <th>Titre</th>
+              <th>Auteur</th>
+              <th>Catégorie</th>
+              <th>Visibilité</th>
+              <th>Statut</th>
+              <th>Stats</th>
+              <th>Créé le</th>
+            </tr>
+          </thead>
+
+          <tbody>
+          {% for post in posts %}
+            <tr>
+              <td class="fw-bold">#{{ post.id }}</td>
+
+              <td>
+                <div class="fw-semibold">{{ post.titre }}</div>
+                <div class="small text-muted">
+                  {{ post.contenu|slice(0, 60) }}{% if post.contenu|length > 60 %}...{% endif %}
+                </div>
+              </td>
+
+              <td>
+                {% if post.user %}
+                  <i class="bi bi-person-circle me-1"></i>
+                  {{ post.user.nom }} {{ post.user.prenom }}
+                {% else %}
+                  <span class="badge bg-secondary">Anonyme</span>
+                {% endif %}
+              </td>
+
+              <td>
+                <span class="badge bg-light text-dark border">{{ post.categorie }}</span>
+              </td>
+
+              <td>
+                {% if post.visibilite == 'PUBLIC' %}
+                  <span class="badge bg-success">Public</span>
+                {% elseif post.visibilite == 'AMIS' %}
+                  <span class="badge bg-info text-dark">Amis</span>
+                {% else %}
+                  <span class="badge bg-secondary">Privé</span>
+                {% endif %}
+              </td>
+
+              <td>
+                {% if post.moderationStatus == 'APPROVED' %}
+                  <span class="badge bg-success"><i class="bi bi-check2 me-1"></i>Approuvé</span>
+                {% elseif post.moderationStatus == 'PENDING' %}
+                  <span class="badge bg-warning text-dark"><i class="bi bi-hourglass-split me-1"></i>En attente</span>
+                {% else %}
+                  <span class="badge bg-danger"><i class="bi bi-x-circle me-1"></i>Rejeté</span>
+                {% endif %}
+              </td>
+
+              <td class="small text-muted">
+                ❤️ {{ post.nbrReactions }} <br>
+                💬 {{ post.nbrCommentaires }}
+              </td>
+
+              <td class="small">
+                {{ post.dateCreation|date('d/m/Y H:i') }}
+              </td>
+            </tr>
+          {% else %}
+            <tr>
+              <td colspan="8" class="text-center text-muted py-4">
+                Aucun post trouvé.
+              </td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+    </div>
+  </div>
+</div>
+{% endblock %}

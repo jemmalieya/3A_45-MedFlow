@@ -1,9 +1,17 @@
 {
-    "responseId": "d8f6c501-6cc2-4df7-b497-bea8dd35a5b1-778070f9",
+    "responseId": "51618e37-fab5-4e9b-a1c3-e231b9a6050e-778070f9",
     "queryResult": {
-        "queryText": "hi",
+        "queryText": "i want to book online appointement with docteur docteur wael for 18 february 2026 2pm",
         "languageCode": "en",
-        "parameters": [],
+        "parameters": {
+            "mode": "Distanciel",
+            "date-time": {
+                "date_time": "2026-02-18T14:00:00+01:00"
+            },
+            "person": {
+                "name": "wael"
+            }
+        },
         "allRequiredParamsPresent": true,
         "fulfillmentMessages": [
             {
@@ -15,9 +23,9 @@
             }
         ],
         "intent": {
-            "name": "projects\/medflow-ai-assistant\/agent\/intents\/7222da6d-e226-42bc-b36d-9438be7936a4",
-            "displayName": "SayHello"
+            "name": "projects\/medflow-ai-assistant\/agent\/intents\/f04bfcc9-e57b-4594-a9e5-e3a111f23869",
+            "displayName": "RendezVous"
         },
-        "intentDetectionConfidence": 1
+        "intentDetectionConfidence": 0.61215836
     }
 }

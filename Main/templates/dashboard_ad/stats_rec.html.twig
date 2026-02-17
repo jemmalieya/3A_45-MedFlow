@@ -1,0 +1,143 @@
+{% extends 'base_admin.html.twig' %}
+{% block title %}Statistiques Réclamations{% endblock %}
+{% block page_title %}Statistiques Réclamations{% endblock %}
+
+{% block body %}
+<div class="container-fluid py-4">
+
+  <!-- KPI CARDS -->
+  <div class="row g-4 mb-4">
+    <div class="col-md-3">
+      <div class="card stat-card">
+        <div class="stat-icon bg-primary"><i class="bi bi-clipboard-data"></i></div>
+        <h6>Total réclamations</h6>
+        <h2>{{ total }}</h2>
+      </div>
+    </div>
+
+    <div class="col-md-3">
+      <div class="card stat-card">
+        <div class="stat-icon bg-warning"><i class="bi bi-hourglass-split"></i></div>
+        <h6>En attente</h6>
+        <h2>{{ enAttente }}</h2>
+      </div>
+    </div>
+
+    <div class="col-md-3">
+      <div class="card stat-card">
+        <div class="stat-icon bg-success"><i class="bi bi-check-circle"></i></div>
+        <h6>Traitées</h6>
+        <h2>{{ traitees }}</h2>
+      </div>
+    </div>
+
+    <div class="col-md-3">
+      <div class="card stat-card">
+        <div class="stat-icon bg-danger"><i class="bi bi-exclamation-triangle"></i></div>
+        <h6>Urgentes</h6>
+        <h2>{{ urgentes }}</h2>
+      </div>
+    </div>
+  </div>
+
+  <!-- CHARTS -->
+  <div class="row g-4">
+    <div class="col-lg-8">
+      <div class="card p-3">
+        <h6 class="fw-bold mb-3">Réclamations (12 derniers mois)</h6>
+        <canvas id="recMonthChart"></canvas>
+      </div>
+    </div>
+
+    <div class="col-lg-4">
+      <div class="card p-3">
+        <h6 class="fw-bold mb-3">Réclamations par statut</h6>
+        <canvas id="recStatusChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-4 mt-1">
+    <div class="col-lg-6">
+      <div class="card p-3">
+        <h6 class="fw-bold mb-3">Réclamations par type</h6>
+        <canvas id="recTypeChart"></canvas>
+      </div>
+    </div>
+
+    <div class="col-lg-6">
+      <div class="card p-4 bg-light border-0">
+        <h6 class="fw-bold mb-2">Supervision intelligente</h6>
+        <ul class="list-unstyled small">
+          <li>📌 Taux d'urgence : <b>{{ (urgentes / total * 100)|number_format(1) }}%</b></li>
+          <li>📌 Statut critique si +30% urgentes</li>
+          <li>📌 Surveiller types les plus fréquents</li>
+          <li>📌 Priorité RH si backlog ↑</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+new Chart(document.getElementById('recMonthChart'), {
+  type: 'line',
+  data: {
+    labels: ['Jan','Fév','Mar','Avr','Mai','Juin','Juil','Août','Sep','Oct','Nov','Déc'],
+    datasets: [{
+      label: 'Réclamations',
+      data: {{ byMonth|json_encode|raw }},
+      borderColor: '#0d6efd',
+      backgroundColor: 'rgba(13,110,253,.15)',
+      fill: true,
+      tension: .4
+    }]
+  }
+});
+
+new Chart(document.getElementById('recStatusChart'), {
+  type: 'doughnut',
+  data: {
+    labels: ['En attente','Traitées','Urgentes'],
+    datasets: [{
+      data: [{{ enAttente }}, {{ traitees }}, {{ urgentes }}],
+      backgroundColor: ['#ffc107','#198754','#dc3545']
+    }]
+  }
+});
+
+new Chart(document.getElementById('recTypeChart'), {
+  type: 'bar',
+  data: {
+    labels: {{ byType|keys|json_encode|raw }},
+    datasets: [{
+      label: 'Par type',
+      data: {{ byType|json_encode|raw }},
+
+      backgroundColor: '#0d6efd'
+    }]
+  }
+});
+</script>
+
+<style>
+.stat-card {
+  border-radius: 16px;
+  padding: 20px;
+  border: 0;
+  box-shadow: 0 10px 30px rgba(0,0,0,.05);
+}
+.stat-icon {
+  width: 46px;
+  height: 46px;
+  border-radius: 12px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  color:white;
+  margin-bottom:10px;
+}
+</style>
+{% endblock %}

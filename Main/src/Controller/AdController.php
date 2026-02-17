@@ -5,7 +5,10 @@ namespace App\Controller;
 use App\Repository\UserRepository;
 use App\Repository\EvenementRepository;
 use App\Repository\RessourceRepository;
+use App\Repository\ReclamationRepository;
+use App\Entity\Reclamation;
 
+use App\Repository\PostRepository;
 
 use App\Repository\ProduitRepository;
 use App\Repository\CommandeRepository;
@@ -30,6 +33,7 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
 // Brevo email via API (same logic as registration)
 
 use App\Entity\User;
+
 
 
 #[Route('/ad')]
@@ -1200,5 +1204,195 @@ public function statsRessources(RessourceRepository $repo): Response
             'ficheMonthCounts' => $ficheMonthCounts,
         ]);
     }
-
+    #[Route('/reclamations', name: 'ad_reclamations_liste', methods: ['GET'])]
+    public function reclamationsListe(
+        \App\Repository\ReclamationRepository $recRepo
+    ): Response
+    {
+        // ✅ TRI CORRECT: champ Doctrine = date_creation_r
+        $reclamations = $recRepo->findBy([], ['date_creation_r' => 'DESC']);
+    
+        $rows = [];
+        foreach ($reclamations as $rec) {
+    
+            // ✅ récupérer la dernière réponse si elle existe
+            $rep = null;
+            $reps = $rec->getReponses();
+    
+            if ($reps && $reps->count() > 0) {
+                $arr = $reps->toArray();
+    
+                // Si ton entité ReponseReclamation a une date, tu peux trier ici.
+                // Sinon, on prend juste la dernière ajoutée dans la collection.
+                $rep = end($arr) ?: null;
+            }
+    
+            $rows[] = [
+                'rec' => $rec,
+                'rep' => $rep
+            ];
+        }
+    
+        return $this->render('dashboard_ad/list_rec.html.twig', [
+            'rows' => $rows,
+            'total' => count($rows),
+        ]);
+    }
+    
+    
+    #[Route('/reclamations/{id}/reponses', name: 'ad_reclamation_reponses', requirements: ['id' => '\d+'], methods: ['GET'])]
+    public function reclamationReponses(Reclamation $reclamation): JsonResponse
+    {
+        $data = [];
+    
+        foreach ($reclamation->getReponses() as $rep) {
+            $data[] = [
+                'id' => $rep->getIdReponse(),
+                'message' => $rep->getMessage(),
+                'type' => $rep->getTypeReponse(),
+                'createdAt' => $rep->getDateCreationRep() ? $rep->getDateCreationRep()->format('d/m/Y H:i') : null,
+                'isRead' => method_exists($rep, 'isRead') ? $rep->isRead() : null,
+            ];
+        }
+    
+        // (optionnel) trier du plus récent au plus ancien
+        usort($data, fn($a, $b) => strcmp((string)$b['createdAt'], (string)$a['createdAt']));
+    
+        return $this->json([
+            'ok' => true,
+            'reclamationId' => $reclamation->getIdReclamation(),
+            'reference' => $reclamation->getReferenceReclamation(),
+            'count' => count($data),
+            'reponses' => $data,
+        ]);
+    }
+    #[Route('/admin/statistiques/reclamations', name: 'ad_stats_reclamations')]
+    public function statsReclamations(ReclamationRepository $repo): Response
+    {
+        $recs = $repo->findAll();
+    
+        $total = count($recs);
+        $traitees = 0;
+        $urgentes = 0;
+        $byType = [];
+        $byMonth = array_fill(1, 12, 0);
+    
+        foreach ($recs as $r) {
+            if ($r->getStatutReclamation() === 'TRAITEE') {
+                $traitees++;
+            }
+    
+            if ($r->isUrgente()) {
+                $urgentes++;
+            }
+    
+            $type = $r->getType();
+            $byType[$type] = ($byType[$type] ?? 0) + 1;
+    
+            if ($r->getDateCreationR()) {
+                $m = (int) $r->getDateCreationR()->format('n'); // 1..12
+                $byMonth[$m]++;
+            }
+        }
+    
+        // ✅ Calcul propre: En attente = Total - Traitées
+        $enAttente = $total - $traitees;
+    
+        return $this->render('dashboard_ad/stats_rec.html.twig', [
+            'total' => $total,
+            'enAttente' => $enAttente,
+            'traitees' => $traitees,
+            'urgentes' => $urgentes,
+            'byType' => $byType,
+            'byMonth' => array_values($byMonth), // pour Chart.js
+        ]);
+    }
+    
+    
+    
+    
+    #[Route('/admin/posts', name: 'ad_posts_liste')]
+    public function listePosts(PostRepository $postRepo): Response
+    {
+        $posts = $postRepo->findBy([], ['date_creation' => 'DESC']);
+    
+        $total = count($posts);
+        $approved = 0;
+        $pending = 0;
+        $rejected = 0;
+    
+        foreach ($posts as $p) {
+            if ($p->getModerationStatus() === 'APPROVED') $approved++;
+            if ($p->getModerationStatus() === 'PENDING') $pending++;
+            if ($p->getModerationStatus() === 'REJECTED') $rejected++;
+        }
+    
+        return $this->render('dashboard_ad/list_posts.html.twig', [
+            'posts' => $posts,
+            'total' => $total,
+            'approved' => $approved,
+            'pending' => $pending,
+            'rejected' => $rejected,
+        ]);
+    }
+    
+    
+    #[Route('/admin/statistiques/posts', name: 'ad_stats_posts')]
+    public function statsPosts(PostRepository $repo): Response
+    {
+        $posts = $repo->findAll();
+    
+        $total = count($posts);
+        $approved = 0;
+        $pending = 0;
+        $rejected = 0;
+    
+        $byCategorie = [];
+        $byVisibilite = [];
+        $byHumeur = [];
+        $byMonth = array_fill(1, 12, 0);
+    
+        foreach ($posts as $p) {
+            // Statuts de modération
+            if ($p->getModerationStatus() === 'APPROVED') $approved++;
+            if ($p->getModerationStatus() === 'PENDING')  $pending++;
+            if ($p->getModerationStatus() === 'REJECTED') $rejected++;
+    
+            // Par catégorie
+            $cat = $p->getCategorie();
+            $byCategorie[$cat] = ($byCategorie[$cat] ?? 0) + 1;
+    
+            // Par visibilité
+            $vis = $p->getVisibilite();
+            $byVisibilite[$vis] = ($byVisibilite[$vis] ?? 0) + 1;
+    
+            // Par humeur
+            $hum = $p->getHumeur() ?: 'Non défini';
+            $byHumeur[$hum] = ($byHumeur[$hum] ?? 0) + 1;
+    
+            // Par mois de création
+            if ($p->getDateCreation()) {
+                $m = (int) $p->getDateCreation()->format('n'); // 1..12
+                $byMonth[$m]++;
+            }
+        }
+    
+        return $this->render('dashboard_ad/stats_posts.html.twig', [
+            'total' => $total,
+            'approved' => $approved,
+            'pending' => $pending,
+            'rejected' => $rejected,
+    
+            'labelsCategorie' => array_keys($byCategorie),
+            'valuesCategorie' => array_values($byCategorie),
+    
+            'labelsVisibilite' => array_keys($byVisibilite),
+            'valuesVisibilite' => array_values($byVisibilite),
+    
+            'labelsHumeur' => array_keys($byHumeur),
+            'valuesHumeur' => array_values($byHumeur),
+    
+            'byMonth' => array_values($byMonth),
+        ]);
+    }
 }

@@ -1,0 +1,113 @@
+{% extends 'base_admin.html.twig' %}
+
+{% block title %}Statistiques des Posts{% endblock %}
+{% block page_title %}Statistiques – Posts & Modération{% endblock %}
+
+{% block body %}
+<link rel="stylesheet" href="{{ asset('assets_ad/css/medflow-admin.css') }}">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<div class="container-fluid py-3">
+
+  {# ===== KPIs ===== #}
+  <div class="row g-3 mb-3">
+    <div class="col-md-3">
+      <div class="card shadow-sm border-0 p-3">
+        <div class="text-muted">Total Posts</div>
+        <h3 class="mb-0">{{ total }}</h3>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card shadow-sm border-0 p-3">
+        <div class="text-muted">Approuvés</div>
+        <h3 class="mb-0 text-success">{{ approved }}</h3>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card shadow-sm border-0 p-3">
+        <div class="text-muted">En attente</div>
+        <h3 class="mb-0 text-warning">{{ pending }}</h3>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card shadow-sm border-0 p-3">
+        <div class="text-muted">Rejetés</div>
+        <h3 class="mb-0 text-danger">{{ rejected }}</h3>
+      </div>
+    </div>
+  </div>
+
+  {# ===== Charts ===== #}
+  <div class="row g-3">
+
+    <div class="col-lg-6">
+      <div class="card shadow-sm border-0 p-3">
+        <h6 class="mb-2">Posts par Catégorie</h6>
+        <canvas id="catChart"></canvas>
+      </div>
+    </div>
+
+    <div class="col-lg-6">
+      <div class="card shadow-sm border-0 p-3">
+        <h6 class="mb-2">Posts par Visibilité</h6>
+        <canvas id="visChart"></canvas>
+      </div>
+    </div>
+
+    <div class="col-lg-6">
+      <div class="card shadow-sm border-0 p-3">
+        <h6 class="mb-2">Posts par Humeur</h6>
+        <canvas id="humChart"></canvas>
+      </div>
+    </div>
+
+    <div class="col-lg-6">
+      <div class="card shadow-sm border-0 p-3">
+        <h6 class="mb-2">Évolution mensuelle des posts</h6>
+        <canvas id="monthChart"></canvas>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+const catChart = new Chart(document.getElementById('catChart'), {
+  type: 'doughnut',
+  data: {
+    labels: {{ labelsCategorie|json_encode|raw }},
+    datasets: [{ data: {{ valuesCategorie|json_encode|raw }} }]
+  }
+});
+
+const visChart = new Chart(document.getElementById('visChart'), {
+  type: 'pie',
+  data: {
+    labels: {{ labelsVisibilite|json_encode|raw }},
+    datasets: [{ data: {{ valuesVisibilite|json_encode|raw }} }]
+  }
+});
+
+const humChart = new Chart(document.getElementById('humChart'), {
+  type: 'bar',
+  data: {
+    labels: {{ labelsHumeur|json_encode|raw }},
+    datasets: [{ data: {{ valuesHumeur|json_encode|raw }} }]
+  }
+});
+
+const monthChart = new Chart(document.getElementById('monthChart'), {
+  type: 'line',
+  data: {
+    labels: ['Jan','Fév','Mar','Avr','Mai','Juin','Juil','Août','Sep','Oct','Nov','Déc'],
+    datasets: [{
+      label: 'Posts / mois',
+      data: {{ byMonth|json_encode|raw }},
+      tension: 0.4,
+      fill: true
+    }]
+  }
+});
+</script>
+
+{% endblock %}

@@ -76,26 +76,34 @@
                             <span class="nxl-mtext">Déconnexion</span>
                         </a>
                     </li>
-                    <li class="nxl-item">
-                        <a href="{{ path('ad_produits_liste') }}" class="nxl-link">
-                            <span class="nxl-micon"><i class="feather-box"></i></span>
-                            <span class="nxl-mtext">Produits</span>
-                        </a>
-                    </li>
+<li class="nxl-item nxl-has-submenu">
+    <a href="javascript:void(0)" class="nxl-link nxl-toggle">
+        <span class="nxl-micon"><i class="feather-box"></i></span>
+        <span class="nxl-mtext">Produits</span>
+        <i class="feather-chevron-down ms-auto"></i>
+    </a>
 
-                    <li class="nxl-item">
-                        <a href="{{ path('ad_commandes_liste') }}" class="nxl-link">
-                            <span class="nxl-micon"><i class="feather-shopping-cart"></i></span>
-                            <span class="nxl-mtext">Commandes</span>
-                        </a>
-                    </li>
+    <ul class="nxl-submenu">
+        <li>
+            <a href="{{ path('ad_produits_liste') }}" class="nxl-link">
+                <i class="feather-box me-2"></i> Produits
+            </a>
+        </li>
 
-                    <li class="nxl-item">
-                        <a href="{{ path('ad_statistiques') }}" class="nxl-link">
-                            <span class="nxl-micon"><i class="feather-bar-chart-2"></i></span>
-                            <span class="nxl-mtext">Statistiques</span>
-                        </a>
-                    </li>
+        <li>
+            <a href="{{ path('ad_commandes_liste') }}" class="nxl-link">
+                <i class="feather-shopping-cart me-2"></i> Commandes
+            </a>
+        </li>
+
+        <li>
+            <a href="{{ path('ad_statistiques') }}" class="nxl-link">
+                <i class="feather-bar-chart-2 me-2"></i> Statistiques
+            </a>
+        </li>
+    </ul>
+</li>
+
 <ul class="nxl-submenu">
     <li class="nxl-item"><a class="nxl-link" href="{{ path('ad_evenements_liste') }}">Liste des événements</a></li>
     <li class="nxl-item"><a class="nxl-link" href="{{ path('ad_participants') }}">Participants (Demandes)</a></li>
@@ -117,6 +125,37 @@
                             <li class="nxl-item"><a class="nxl-link" href="{{ path('app_ad_statcons') }}">Statistiques de Consultations</a></li>
                         </ul>
                     </li>
+
+
+                    <li class="nxl-item nxl-hasmenu">
+                        <a href="javascript:void(0);" class="nxl-link">
+                            <span class="nxl-micon"><i class="feather-cast"></i></span>
+                            <span class="nxl-mtext">Reclamations</span><span class="nxl-arrow"><i class="feather-chevron-right"></i></span>
+                        </a>
+                        <ul class="nxl-submenu">
+                            <li class="nxl-item"><a class="nxl-link" href="{{ path('ad_reclamations_liste') }}">liste des reclamations</a></li>
+                        </ul>
+                        <ul class="nxl-submenu">
+                            <li class="nxl-item"><a class="nxl-link" href="{{ path('ad_stats_reclamations') }}">Statistiques de reclamations </a></li>
+                        </ul>
+                    </li>
+ <li class="nxl-item nxl-hasmenu">
+                        <a href="javascript:void(0);" class="nxl-link">
+                            <span class="nxl-micon"><i class="feather-cast"></i></span>
+                            <span class="nxl-mtext">Posts</span><span class="nxl-arrow"><i class="feather-chevron-right"></i></span>
+                        </a>
+                        <ul class="nxl-submenu">
+                            <li class="nxl-item"><a class="nxl-link" href="{{ path('ad_posts_liste') }}">liste des posts</a></li>
+                        </ul>
+                        <ul class="nxl-submenu">
+                            <li class="nxl-item"><a class="nxl-link" href="{{ path('ad_stats_posts') }}">Statistiques de post </a></li>
+                        </ul>
+                    </li>
+
+
+
+
+                    
 
                     <li class="nxl-item">
                         <a href="#" class="nxl-link">
