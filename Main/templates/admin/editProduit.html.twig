@@ -37,9 +37,9 @@
       </div>
 
       {# =========================
-         FORM START
+         FORM START (IMPORTANT: enctype upload)
          ========================= #}
-      {{ form_start(form, {'attr': {'novalidate': 'novalidate'}}) }}
+      {{ form_start(form, {'attr': {'novalidate': 'novalidate', 'enctype': 'multipart/form-data'}}) }}
 
       {% set submitted = form.vars.submitted %}
 
@@ -63,7 +63,9 @@
                   <i class="bi bi-tag me-2"></i>Nom du produit <span class="text-danger">*</span>
                 </label>
                 {{ form_widget(f, {'attr': {'class': 'form-control form-control-lg ' ~ (submitted ? (f.vars.valid ? 'is-valid' : 'is-invalid') : '')}}) }}
-                <div class="invalid-feedback d-block">{{ form_errors(f) }}</div>
+                {% if submitted and not f.vars.valid %}
+                  <div class="invalid-feedback d-block">{{ form_errors(f) }}</div>
+                {% endif %}
                 {% if submitted and f.vars.valid %}
                   <div class="valid-feedback d-block">✅ OK</div>
                 {% endif %}
@@ -76,7 +78,9 @@
                   <i class="bi bi-card-text me-2"></i>Description <span class="text-danger">*</span>
                 </label>
                 {{ form_widget(f, {'attr': {'class': 'form-control ' ~ (submitted ? (f.vars.valid ? 'is-valid' : 'is-invalid') : ''), 'rows': 5}}) }}
-                <div class="invalid-feedback d-block">{{ form_errors(f) }}</div>
+                {% if submitted and not f.vars.valid %}
+                  <div class="invalid-feedback d-block">{{ form_errors(f) }}</div>
+                {% endif %}
                 {% if submitted and f.vars.valid %}
                   <div class="valid-feedback d-block">✅ OK</div>
                 {% endif %}
@@ -95,7 +99,9 @@
                       <i class="bi bi-cash-coin me-1"></i>DT
                     </span>
                   </div>
-                  <div class="invalid-feedback d-block">{{ form_errors(f) }}</div>
+                  {% if submitted and not f.vars.valid %}
+                    <div class="invalid-feedback d-block">{{ form_errors(f) }}</div>
+                  {% endif %}
                   {% if submitted and f.vars.valid %}
                     <div class="valid-feedback d-block">✅ OK</div>
                   {% endif %}
@@ -108,7 +114,9 @@
                     <i class="bi bi-box-seam me-2"></i>Quantité <span class="text-danger">*</span>
                   </label>
                   {{ form_widget(f, {'attr': {'class': 'form-control form-control-lg ' ~ (submitted ? (f.vars.valid ? 'is-valid' : 'is-invalid') : '')}}) }}
-                  <div class="invalid-feedback d-block">{{ form_errors(f) }}</div>
+                  {% if submitted and not f.vars.valid %}
+                    <div class="invalid-feedback d-block">{{ form_errors(f) }}</div>
+                  {% endif %}
                   {% if submitted and f.vars.valid %}
                     <div class="valid-feedback d-block">✅ OK</div>
                   {% endif %}
@@ -122,28 +130,72 @@
                   <i class="bi bi-grid me-2"></i>Catégorie <span class="text-danger">*</span>
                 </label>
                 {{ form_widget(f, {'attr': {'class': 'form-select form-select-lg ' ~ (submitted ? (f.vars.valid ? 'is-valid' : 'is-invalid') : '')}}) }}
-                <div class="invalid-feedback d-block">{{ form_errors(f) }}</div>
+                {% if submitted and not f.vars.valid %}
+                  <div class="invalid-feedback d-block">{{ form_errors(f) }}</div>
+                {% endif %}
                 {% if submitted and f.vars.valid %}
                   <div class="valid-feedback d-block">✅ OK</div>
                 {% endif %}
               </div>
 
-              {# ---------- IMAGE ---------- #}
-              {% set f = form.image_produit %}
-              <div class="mb-0">
-                <label class="form-label fw-bold text-dark">
-                  <i class="bi bi-image me-2"></i>URL de l'image <span class="text-danger">*</span>
-                </label>
-                <div class="input-group input-group-lg">
-                  <span class="input-group-text bg-light">
-                    <i class="bi bi-link-45deg"></i>
-                  </span>
-                  {{ form_widget(f, {'attr': {'class': 'form-control ' ~ (submitted ? (f.vars.valid ? 'is-valid' : 'is-invalid') : '')}}) }}
+             {# ---------- IMAGE (UPLOAD LOCAL) ---------- #}
+{% set f = form.imageFile %}
+<div class="mb-0">
+  <label class="form-label fw-bold text-dark">
+    <i class="bi bi-image me-2"></i>Image du produit
+    {% if form.vars.attr.mode is defined and form.vars.attr.mode == 'create' %}
+      <span class="text-danger">*</span>
+    {% endif %}
+  </label>
+
+  {# Aperçu image actuelle #}
+  {% if produit.imageProduit %}
+    <div class="mb-3">
+      <div class="small text-muted mb-2">
+        <i class="bi bi-eye me-1"></i>Image actuelle :
+      </div>
+      <img
+        src="{{ asset('uploads/produits/' ~ produit.imageProduit) }}"
+        alt="Image actuelle"
+        style="width:140px;height:140px;object-fit:cover;border-radius:16px;border:2px solid #e5e7eb;"
+      >
+    </div>
+  {% else %}
+    <div class="alert alert-warning py-2">
+      <i class="bi bi-exclamation-triangle me-2"></i>Aucune image enregistrée pour ce produit.
+    </div>
+  {% endif %}
+
+  {# Champ upload #}
+  {{ form_widget(f, {
+    'attr': {
+      'class': 'form-control ' ~ (submitted ? (f.vars.valid ? 'is-valid' : 'is-invalid') : '')
+    }
+  }) }}
+
+  <div class="form-text text-muted mt-2">
+    Formats acceptés : JPG, PNG, WEBP — max 3MB.
+  </div>
+
+  {% if submitted and not f.vars.valid %}
+    <div class="invalid-feedback d-block">{{ form_errors(f) }}</div>
+  {% endif %}
+  {% if submitted and f.vars.valid %}
+    <div class="valid-feedback d-block">✅ OK</div>
+  {% endif %}
+</div>
+                  {# Preview nouveau fichier #}
+                  <div class="preview-wrap mt-3" id="previewWrap" style="display:none;">
+                    <div class="d-flex align-items-center gap-3">
+                      <img id="imagePreview" src="" alt="Prévisualisation" class="img-preview">
+                      <div class="small">
+                        <div class="fw-bold text-dark">Nouvelle image (preview)</div>
+                        <div class="text-muted" id="previewInfo"></div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-                <div class="invalid-feedback d-block">{{ form_errors(f) }}</div>
-                {% if submitted and f.vars.valid %}
-                  <div class="valid-feedback d-block">✅ OK</div>
-                {% endif %}
+
               </div>
 
             </div>
@@ -166,7 +218,9 @@
                 {{ form_widget(f) }}
               </div>
 
-              <div class="invalid-feedback d-block mt-2">{{ form_errors(f) }}</div>
+              {% if submitted and not f.vars.valid %}
+                <div class="invalid-feedback d-block mt-2">{{ form_errors(f) }}</div>
+              {% endif %}
               {% if submitted and f.vars.valid %}
                 <div class="valid-feedback d-block mt-2">✅ OK</div>
               {% endif %}
@@ -220,10 +274,8 @@
       background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     }
 
-    /* ✅ Validation Bootstrap style (force display) */
     .invalid-feedback, .valid-feedback{ font-size:.85rem; }
 
-    /* Radios bloc border green/red */
     .block-valid{
       border: 1px solid #198754;
       border-radius: 14px;
@@ -237,9 +289,41 @@
       background: rgba(220,53,69,.04);
     }
 
+    .upload-zone{
+      border:1px dashed #e5e7eb;
+      border-radius:16px;
+      background: #fbfbff;
+    }
+
+    .current-image-box{
+      border:1px solid #e5e7eb;
+      border-radius:16px;
+      padding:12px;
+      background:#fff;
+    }
+
+    .img-current{
+      width: 120px;
+      height: 120px;
+      object-fit: cover;
+      border-radius: 16px;
+      border:1px solid #e5e7eb;
+      box-shadow: 0 10px 22px rgba(0,0,0,.10);
+      background:#fff;
+    }
+
+    .img-preview{
+      width: 84px;
+      height: 84px;
+      object-fit: cover;
+      border-radius: 14px;
+      border:1px solid #e5e7eb;
+      box-shadow: 0 10px 20px rgba(0,0,0,.08);
+      background:#fff;
+    }
+
     /* Status radios => cards */
     .status-radio-group input[type="radio"]{ display:none; }
-
     .status-radio-group label{
       border:1px solid #e5e7eb;
       padding:14px 14px;
@@ -273,7 +357,6 @@
       background:#667eea;
     }
 
-    /* Flash animation */
     .flash-message{ border-left: 4px solid; animation: slideInDown .35s ease; }
     .flash-message.slide-out{ animation: slideOutUp .35s ease forwards; }
     @keyframes slideInDown{ from{opacity:0;transform:translateY(-25px);} to{opacity:1;transform:translateY(0);} }
@@ -286,12 +369,42 @@
   <script src="{{ asset('assets_dash/js/produits.js') }}"></script>
   <script>
     document.addEventListener('DOMContentLoaded', function() {
+      // flash hide
       document.querySelectorAll('.flash-message').forEach(msg => {
         setTimeout(() => {
           msg.classList.add('slide-out');
           setTimeout(() => msg.remove(), 350);
         }, 3000);
       });
+
+      // preview nouveau fichier
+      const input = document.querySelector('input[type="file"][name$="[imageFile]"]');
+      const wrap = document.getElementById('previewWrap');
+      const img = document.getElementById('imagePreview');
+      const info = document.getElementById('previewInfo');
+
+      if (input) {
+        input.addEventListener('change', function() {
+          const file = this.files && this.files[0];
+          if (!file) {
+            wrap.style.display = 'none';
+            img.src = '';
+            info.textContent = '';
+            return;
+          }
+          if (!file.type.startsWith('image/')) {
+            wrap.style.display = 'none';
+            return;
+          }
+          const url = URL.createObjectURL(file);
+          img.src = url;
+
+          const sizeMb = (file.size / (1024 * 1024)).toFixed(2);
+          info.textContent = `${file.name} • ${sizeMb} Mo`;
+
+          wrap.style.display = 'block';
+        });
+      }
     });
   </script>
 {% endblock %}

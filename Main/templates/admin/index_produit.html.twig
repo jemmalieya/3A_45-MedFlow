@@ -658,11 +658,14 @@
               {% for produit in produits %}
                 <tr class="product-row">
                   <td class="px-4">
-                    <img src="{{ produit.imageProduit }}"
-                         alt="{{ produit.nomProduit }}"
-                         class="rounded shadow-sm product-img"
-                         style="width: 70px; height: 70px; object-fit: cover;">
-                  </td>
+  <img
+    src="{{ asset('uploads/produits/' ~ produit.imageProduit) }}"
+    alt="{{ produit.nomProduit }}"
+    class="rounded shadow-sm product-img"
+    style="width: 70px; height: 70px; object-fit: cover;"
+    onerror="this.onerror=null;this.src='https://via.placeholder.com/70?text=No+Img';"
+  >
+</td>
 
                   <td class="px-4">
                     <div class="fw-bold text-dark">{{ produit.nomProduit }}</div>

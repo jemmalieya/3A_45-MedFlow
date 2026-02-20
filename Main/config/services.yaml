@@ -2,6 +2,7 @@
 
 parameters:
     pieces_jointes_directory: '%kernel.project_dir%/public/uploads/pieces_jointes'
+    produits_images_dir: '%kernel.project_dir%/public/uploads/produits'
     openfda.api_key: '%env(OPENFDA_API_KEY)%'
     openfda.timeout: '%env(int:OPENFDA_TIMEOUT)%'
 

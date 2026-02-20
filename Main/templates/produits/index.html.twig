@@ -186,12 +186,12 @@
                 <div class="price-badge">{{ produit.prixProduit }} DT</div>
               {% endif %}
 
-              <img
-                src="{{ produit.imageProduit }}"
-                class="produit-img {% if produit.statusProduit != 'Disponible' %}img-grayscale{% endif %}"
-                alt="{{ produit.nomProduit }}"
-                loading="lazy"
-              >
+<img
+  src="{{ produit.imageProduit ? asset('uploads/produits/' ~ produit.imageProduit) : asset('assets/images/no-image.png') }}"
+  class="produit-img"
+  alt="{{ produit.nomProduit }}"
+  loading="lazy"
+>
             </div>
 
             <div class="card-body">

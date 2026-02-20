@@ -13,6 +13,8 @@ use Symfony\Component\Routing\Annotation\Route;
 use App\Repository\CommandeRepository;
 use App\Service\AiPharmacyRecommender;
 use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\HttpFoundation\File\UploadedFile;
+use Symfony\Component\String\Slugger\SluggerInterface;
 
 final class ProduitsController extends AbstractController
 {
@@ -53,47 +55,102 @@ final class ProduitsController extends AbstractController
      * AJOUTER UN PRODUIT (admin)
      */
     #[Route('/admin/produits/new', name: 'admin_produit_new', methods: ['GET', 'POST'])]
-    public function new(Request $request, EntityManagerInterface $em): Response
+    public function new(Request $request, EntityManagerInterface $em, SluggerInterface $slugger): Response
     {
         $produit = new Produit();
-        $form = $this->createForm(ProduitType::class, $produit);
+    
+        $form = $this->createForm(ProduitType::class, $produit, [
+            'mode' => 'create'
+        ]);
         $form->handleRequest($request);
-
+    
         if ($form->isSubmitted() && $form->isValid()) {
+    
+            /** @var UploadedFile|null $imageFile */
+            $imageFile = $form->get('imageFile')->getData();
+    
+            if ($imageFile) {
+                $original = pathinfo($imageFile->getClientOriginalName(), PATHINFO_FILENAME);
+                $safeName = $slugger->slug($original);
+                $newFilename = $safeName.'-'.uniqid().'.'.$imageFile->guessExtension();
+    
+                $imageFile->move(
+                    $this->getParameter('produits_images_dir'),
+                    $newFilename
+                );
+    
+                $produit->setImageProduit($newFilename);
+            } else {
+                $this->addFlash('error', "Veuillez choisir une image.");
+                return $this->render('admin/newProduit.html.twig', [
+                    'form' => $form->createView(),
+                ]);
+            }
+    
             $em->persist($produit);
             $em->flush();
-
+    
             $this->addFlash('success', 'Produit ajouté avec succès !');
-
             return $this->redirectToRoute('admin_produits_index');
         }
-
+    
         return $this->render('admin/newProduit.html.twig', [
             'form' => $form->createView(),
         ]);
     }
-
     /**
      * MODIFIER UN PRODUIT (admin)
      */
     #[Route('/admin/produits/{id}/edit', name: 'admin_produit_edit', methods: ['GET', 'POST'])]
-    public function edit(Produit $produit, Request $request, EntityManagerInterface $em): Response
+    public function edit(Produit $produit, Request $request, EntityManagerInterface $em, SluggerInterface $slugger): Response
     {
-        $form = $this->createForm(ProduitType::class, $produit);
+        $oldImage = $produit->getImageProduit();
+    
+        $form = $this->createForm(ProduitType::class, $produit, [
+            'mode' => 'edit'
+        ]);
         $form->handleRequest($request);
-
+    
         if ($form->isSubmitted() && $form->isValid()) {
+    
+            /** @var UploadedFile|null $imageFile */
+            $imageFile = $form->get('imageFile')->getData();
+    
+            if ($imageFile) {
+                $original = pathinfo($imageFile->getClientOriginalName(), PATHINFO_FILENAME);
+                $safeName = $slugger->slug($original);
+                $newFilename = $safeName.'-'.uniqid().'.'.$imageFile->guessExtension();
+    
+                $imageFile->move(
+                    $this->getParameter('produits_images_dir'),
+                    $newFilename
+                );
+    
+                $produit->setImageProduit($newFilename);
+    
+                // ✅ supprimer ancienne image (optionnel mais propre)
+                if ($oldImage) {
+                    $oldPath = $this->getParameter('produits_images_dir').'/'.$oldImage;
+                    if (file_exists($oldPath)) {
+                        @unlink($oldPath);
+                    }
+                }
+            } else {
+                // garde l'ancienne
+                $produit->setImageProduit($oldImage);
+            }
+    
             $em->flush();
             $this->addFlash('success', 'Produit modifié avec succès !');
             return $this->redirectToRoute('admin_produits_index');
         }
-
+    
         return $this->render('admin/editProduit.html.twig', [
             'produit' => $produit,
             'form' => $form->createView(),
+            'oldImage' => $oldImage
         ]);
     }
-
     /**
      * SUPPRIMER UN PRODUIT (admin)
      */
@@ -101,11 +158,22 @@ final class ProduitsController extends AbstractController
     public function delete(Produit $produit, Request $request, EntityManagerInterface $em): Response
     {
         if ($this->isCsrfTokenValid('delete' . $produit->getId_produit(), $request->request->get('_token'))) {
+    
+            $img = $produit->getImageProduit();
+    
             $em->remove($produit);
             $em->flush();
+    
+            if ($img) {
+                $path = $this->getParameter('produits_images_dir').'/'.$img;
+                if (file_exists($path)) {
+                    @unlink($path);
+                }
+            }
+    
             $this->addFlash('success', 'Produit supprimé avec succès !');
         }
-
+    
         return $this->redirectToRoute('admin_produits_index');
     }
 
@@ -127,8 +195,7 @@ final class ProduitsController extends AbstractController
             'id' => $p->getId_produit(),
             'nom' => $p->getNomProduit(),
             'prix' => (float) $p->getPrixProduit(),
-            'image' => $p->getImageProduit(),
-            'categorie' => $p->getCategorieProduit(),
+'image' => $p->getImageProduit() ? '/uploads/produits/' . $p->getImageProduit() : null,            'categorie' => $p->getCategorieProduit(),
         ], $produits);
 
         return new JsonResponse([
@@ -195,8 +262,7 @@ public function apiRecoAi(AiPharmacyRecommender $reco, CommandeRepository $cr, P
             'id' => $p->getId_produit(),
             'nom' => $p->getNomProduit(),
             'prix' => (float) $p->getPrixProduit(),
-            'image' => $p->getImageProduit(),
-            'categorie' => $p->getCategorieProduit(),
+'image' => $p->getImageProduit() ? '/uploads/produits/' . $p->getImageProduit() : null,            'categorie' => $p->getCategorieProduit(),
             'badges' => $badges,
         ];
     }, $items);

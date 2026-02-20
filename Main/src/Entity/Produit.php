@@ -67,20 +67,25 @@ class Produit
         message: "La quantité doit être un nombre entier."
     )]
     private ?int $quantite_produit = null;
+// ✅ Image (nom de fichier dans /public/uploads/produits)
+#[ORM\Column(length: 255, nullable: true)]
+#[Assert\NotBlank(message: "L'image du produit est obligatoire.", groups: ['create'])]
+#[Assert\Length(
+    max: 255,
+    maxMessage: "Le nom de fichier ne peut pas dépasser {{ limit }} caractères."
+)]
+private ?string $image_produit = null;
 
-    // ✅ Image (URL)
-    #[ORM\Column(length: 255)]
-    #[Assert\NotBlank(message: "L'URL de l'image est obligatoire.")]
-    #[Assert\Url(
-        message: "L'URL de l'image n'est pas valide. Elle doit commencer par http:// ou https://",
-        protocols: ['http', 'https']
-    )]
-    #[Assert\Length(
-        max: 255,
-        maxMessage: "L'URL ne peut pas dépasser {{ limit }} caractères."
-    )]
-    private ?string $image_produit = null;
+public function getImageProduit(): ?string
+{
+    return $this->image_produit;
+}
 
+public function setImageProduit(?string $image_produit): static
+{
+    $this->image_produit = $image_produit !== null ? trim($image_produit) : null;
+    return $this;
+}
     // ✅ Catégorie
     #[ORM\Column(length: 150)]
     #[Assert\NotBlank(message: "La catégorie est obligatoire.")]
@@ -174,16 +179,7 @@ class Produit
         return $this;
     }
 
-    public function getImageProduit(): ?string
-    {
-        return $this->image_produit;
-    }
-
-    public function setImageProduit(?string $image_produit): static
-    {
-        $this->image_produit = $image_produit !== null ? trim($image_produit) : null;
-        return $this;
-    }
+   
 
     public function getCategorieProduit(): ?string
     {

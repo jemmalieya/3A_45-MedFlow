@@ -78,7 +78,8 @@
                     <td>
                       <div class="d-flex align-items-center">
                         <img
-                          src="{{ ligne.produit.imageProduit }}"
+                          src="{{ asset('uploads/produits/' ~ ligne.produit.imageProduit) }}"
+                          
                           alt="{{ ligne.produit.nomProduit }}"
                           class="thumb me-3"
                         >

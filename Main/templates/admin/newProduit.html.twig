@@ -64,8 +64,8 @@
         {% endfor %}
       </div>
 
-      {# ====== FORM ====== #}
-      {{ form_start(form, {'attr': {'novalidate': 'novalidate'}}) }}
+      {# ====== FORM (IMPORTANT : enctype) ====== #}
+      {{ form_start(form, {'attr': {'novalidate': 'novalidate', 'enctype': 'multipart/form-data'}}) }}
 
       <div class="row g-4">
 
@@ -155,23 +155,36 @@
                 {{ ui.okText(form.categorie_produit) }}
               </div>
 
-              {# IMAGE #}
+              {# IMAGE (UPLOAD) #}
               <div class="mb-0">
                 <label class="form-label fw-bold text-dark">
-                  <i class="bi bi-image me-2"></i>URL de l'image <span class="text-danger">*</span>
+                  <i class="bi bi-image me-2"></i>Image du produit <span class="text-danger">*</span>
                 </label>
 
-                <div class="input-group input-group-lg">
-                  <span class="input-group-text bg-light">
-                    <i class="bi bi-link-45deg"></i>
-                  </span>
-                  {{ form_widget(form.image_produit, {'attr': {'class': ui.addClass(form.image_produit, 'form-control')}}) }}
-                </div>
+                <div class="upload-zone p-3">
+                  {{ form_widget(form.imageFile, {'attr': {'class': ui.addClass(form.imageFile, 'form-control form-control-lg'), 'accept': 'image/*'}}) }}
 
-                {% if form.image_produit.vars.submitted and not form.image_produit.vars.valid %}
-                  <div class="invalid-feedback d-block">{{ form_errors(form.image_produit) }}</div>
-                {% endif %}
-                {{ ui.okText(form.image_produit) }}
+                  <div class="small text-muted mt-2">
+                    <i class="bi bi-info-circle me-1"></i>
+                    Formats acceptés : JPG / PNG / WEBP (max 3Mo)
+                  </div>
+
+                  {% if form.imageFile.vars.submitted and not form.imageFile.vars.valid %}
+                    <div class="invalid-feedback d-block">{{ form_errors(form.imageFile) }}</div>
+                  {% endif %}
+                  {{ ui.okText(form.imageFile) }}
+
+                  {# Preview #}
+                  <div class="preview-wrap mt-3" id="previewWrap" style="display:none;">
+                    <div class="d-flex align-items-center gap-3">
+                      <img id="imagePreview" src="" alt="Prévisualisation" class="img-preview">
+                      <div class="small">
+                        <div class="fw-bold text-dark">Prévisualisation</div>
+                        <div class="text-muted" id="previewInfo"></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
 
             </div>
@@ -247,10 +260,24 @@
       background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     }
 
-    /* Bootstrap already styles is-valid/is-invalid
-       We just make feedback visible */
     .invalid-feedback{ font-weight:600; }
     .valid-feedback{ font-weight:600; }
+
+    .upload-zone{
+      border:1px dashed #e5e7eb;
+      border-radius:16px;
+      background: #fbfbff;
+    }
+
+    .img-preview{
+      width: 84px;
+      height: 84px;
+      object-fit: cover;
+      border-radius: 14px;
+      border:1px solid #e5e7eb;
+      box-shadow: 0 10px 20px rgba(0,0,0,.08);
+      background: #fff;
+    }
 
     /* Status radios cards */
     .status-radio-group input[type="radio"]{ display:none; }
@@ -294,17 +321,50 @@
   </style>
 {% endblock %}
 
-{# ====== JS (just flash hide) ====== #}
+{# ====== JS (flash hide + preview) ====== #}
 {% block javascripts %}
   {{ parent() }}
   <script>
     document.addEventListener('DOMContentLoaded', function() {
+      // flash hide
       document.querySelectorAll('.flash-message').forEach(msg => {
         setTimeout(() => {
           msg.classList.add('slide-out');
           setTimeout(() => msg.remove(), 350);
         }, 3000);
       });
+
+      // preview image
+      const input = document.querySelector('input[type="file"][name$="[imageFile]"]');
+      const wrap = document.getElementById('previewWrap');
+      const img = document.getElementById('imagePreview');
+      const info = document.getElementById('previewInfo');
+
+      if (input) {
+        input.addEventListener('change', function() {
+          const file = this.files && this.files[0];
+          if (!file) {
+            wrap.style.display = 'none';
+            img.src = '';
+            info.textContent = '';
+            return;
+          }
+
+          // sécurité simple
+          if (!file.type.startsWith('image/')) {
+            wrap.style.display = 'none';
+            return;
+          }
+
+          const url = URL.createObjectURL(file);
+          img.src = url;
+
+          const sizeMb = (file.size / (1024 * 1024)).toFixed(2);
+          info.textContent = `${file.name} • ${sizeMb} Mo`;
+
+          wrap.style.display = 'block';
+        });
+      }
     });
   </script>
 {% endblock %}
