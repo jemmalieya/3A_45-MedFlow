@@ -1,30 +1,40 @@
+{# ===========================
+   templates/produits/index.html.twig
+   =========================== #}
+
 {% extends 'base.html.twig' %}
 
 {% block title %}Pharmacie{% endblock %}
 
 {% block body %}
-{# Messages Flash #}
+{# =========================
+   FLASH MESSAGES
+   ========================= #}
 <div id="flash-messages-container">
-    {% for label, messages in app.flashes %}
-        {% for message in messages %}
-            <div class="alert-custom alert-{{ label }} show" role="alert">
-                <i class="bi bi-{% if label == 'success' %}check{% else %}x{% endif %}-circle-fill"></i>
-                <span>{{ message }}</span>
-                <button type="button" class="btn-close-custom" onclick="this.parentElement.remove()">×</button>
-            </div>
-        {% endfor %}
+  {% for label, messages in app.flashes %}
+    {% for message in messages %}
+      <div class="alert-custom alert-{{ label }} show" role="alert">
+        <i class="bi bi-{% if label == 'success' %}check{% else %}x{% endif %}-circle-fill"></i>
+        <span>{{ message }}</span>
+        <button type="button" class="btn-close-custom" aria-label="Fermer" onclick="this.parentElement.remove()">×</button>
+      </div>
     {% endfor %}
+  {% endfor %}
 </div>
 
-{# Header #}
+{# =========================
+   HEADER
+   ========================= #}
 <div class="page-header">
-    <div class="container text-center">
-        <h1><i class="bi bi-shop me-3"></i>Notre Pharmacie</h1>
-        <p>Découvrez notre sélection de produits de santé et bien-être</p>
-    </div>
+  <div class="container text-center">
+    <h1><i class="bi bi-shop me-3"></i>Notre Pharmacie</h1>
+    <p>Découvrez notre sélection de produits de santé et bien-être</p>
+  </div>
 </div>
 
-{# Accès rapide commandes #}
+{# =========================
+   ACCÈS RAPIDE COMMANDES
+   ========================= #}
 <div class="container mb-4">
   <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
     <div class="text-muted">
@@ -38,186 +48,250 @@
   </div>
 </div>
 
-<div class="container mb-5">
-    
-    {# Barre de recherche et filtres - SANS FORMULAIRE pour recherche en temps réel #}
-    <div class="search-filter-section mb-4">
-        <div class="row g-3">
-            {# Recherche #}
-            <div class="col-md-6">
-                <div class="search-box">
-                    <i class="bi bi-search"></i>
-                    <input type="text" 
-                           id="searchInput" 
-                           class="form-control" 
-                           placeholder="Rechercher un produit (nom, catégorie...)">
-                    <button id="clearSearch" class="btn-clear" style="display: none;">
-                        <i class="bi bi-x-circle-fill"></i>
-                    </button>
-                </div>
-            </div>
+{# =========================
+   AI RECO RAILS
+   ========================= #}
+<div class="container mb-4">
 
-            {# Tri par prix #}
-            <div class="col-md-3">
-                <select id="sortPrice" class="form-select">
-                    <option value="">Trier par prix</option>
-                    <option value="asc">Prix croissant</option>
-                    <option value="desc">Prix décroissant</option>
-                </select>
-            </div>
-
-            {# Filtre par catégorie #}
-            <div class="col-md-3">
-                <select id="filterCategory" class="form-select">
-                    <option value="">Toutes catégories</option>
-                    {% set categories = [] %}
-                    {% for produit in produits %}
-                        {% if produit.categorieProduit not in categories %}
-                            {% set categories = categories|merge([produit.categorieProduit]) %}
-                        {% endif %}
-                    {% endfor %}
-                    {% for categorie in categories|sort %}
-                        <option value="{{ categorie }}">{{ categorie }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-        </div>
-
-        {# Compteur de résultats #}
-        <div class="mt-3">
-            <span id="resultCount" class="text-muted">
-                <i class="bi bi-bag"></i>
-                <span id="count">{{ produits|length }}</span> produit(s) trouvé(s)
-            </span>
-        </div>
+  {# Best Sellers / Tendances #}
+  <section class="reco-zone">
+    <div class="reco-head">
+      <div>
+        <h2 class="reco-title">🔥 Best Sellers</h2>
+        <p class="reco-sub">Produits les plus achetés (hors médicaments)</p>
+      </div>
+      <div class="reco-chip">Auto • Défilement continu</div>
     </div>
-    
-    {# Grille Produits #}
-    {% if produits is not empty %}
-        <div class="row g-4" id="produitsContainer">
-            {% for produit in produits %}
-                <div class="col-lg-3 col-md-4 col-sm-6 produit-item" 
-                     data-nom="{{ produit.nomProduit|lower }}"
-                     data-categorie="{{ produit.categorieProduit|lower }}"
-                     data-prix="{{ produit.prixProduit }}"
-                     data-description="{{ produit.descriptionProduit|lower }}">
-                    <div class="produit-card {% if produit.statusProduit != 'Disponible' %}unavailable{% endif %}">
-                        
-                        {# Image #}
-                        <div class="produit-image-container">
-                            {% if produit.statusProduit != 'Disponible' %}
-                                <div class="badge-indisponible">{{ produit.statusProduit }}</div>
-                            {% else %}
-                                <div class="price-badge">{{ produit.prixProduit }} DT</div>
-                            {% endif %}
-                            
-                            <img src="{{ produit.imageProduit }}" 
-                                 class="produit-img {% if produit.statusProduit != 'Disponible' %}img-grayscale{% endif %}" 
-                                 alt="{{ produit.nomProduit }}">
-                        </div>
 
-                        {# Body #}
-                        <div class="card-body">
-                            <h5 class="card-title">{{ produit.nomProduit }}</h5>
-                            
-                            <span class="card-category">
-                                <i class="bi bi-tag me-1"></i>{{ produit.categorieProduit }}
-                            </span>
+    <div class="reco-rail">
+      <div class="reco-track" id="bestTrack" aria-live="polite"></div>
+      <div class="reco-empty" id="bestEmpty" style="display:none;">
+        Aucun best-seller pour le moment.
+      </div>
+    </div>
+  </section>
 
-                            <div class="card-stock">
-                                <i class="bi bi-box-seam"></i>
-                                <span>{{ produit.quantiteProduit }} en stock</span>
-                            </div>
+  {# Recommandés pour vous #}
+  <section class="reco-zone mt-4">
+    <div class="reco-head">
+      <div>
+        <h2 class="reco-title">🤖 Recommandés pour vous</h2>
+        <p class="reco-sub" id="aiBasedOnText">
+          Basé sur votre historique d’achat (hors médicaments)
+        </p>
+      </div>
 
-                            <span class="status-badge {% if produit.statusProduit == 'Disponible' %}available{% else %}unavailable{% endif %}">
-                                <i class="bi bi-{% if produit.statusProduit == 'Disponible' %}check{% else %}x{% endif %}-circle"></i>
-                                {{ produit.statusProduit }}
-                            </span>
+      {# ✅ le JS va modifier ce texte selon data.mode #}
+      <div class="reco-chip ai" id="aiChip">Explainable • Personnalisé</div>
+    </div>
 
-                            {# Actions #}
-                            <div class="card-actions">
-                                {% if produit.statusProduit == 'Disponible' %}
-                                    <button class="btn-add-cart" 
-                                            data-id="{{ produit.id_produit }}" 
-                                            data-nom="{{ produit.nomProduit }}"
-                                            data-stock="{{ produit.quantiteProduit }}">
-                                        <i class="bi bi-cart-plus"></i>
-                                        <span>Ajouter</span>
-                                    </button>
-                                {% else %}
-                                    <button class="btn-unavailable" disabled>
-                                        <i class="bi bi-cart-x"></i>
-                                        <span>Indisponible</span>
-                                    </button>
-                                {% endif %}
-                                
-                                <button class="btn-details" data-bs-toggle="modal" data-bs-target="#modal-{{ produit.id_produit }}">
-                                    <i class="bi bi-info-circle"></i>
-                                </button>
-                            </div>
-                        </div>
+    <div class="reco-rail">
+      <div class="reco-track" id="aiTrack" aria-live="polite"></div>
+      <div class="reco-empty" id="aiEmpty" style="display:none;">
+        Recommandations indisponibles — voici les tendances du moment.
+      </div>
+    </div>
+  </section>
+</div>
+
+{# =========================
+   SECTION PRODUITS + FILTRES
+   ========================= #}
+<div class="container mb-5">
+  {% set cats = categories ?? [] %}
+
+<div class="search-filter-section mb-4">
+  <div class="row g-3">
+
+    {# Recherche #}
+    <div class="col-md-5">
+      <div class="search-box">
+        <i class="bi bi-search"></i>
+        <input
+          type="text"
+          id="searchInput"
+          class="form-control"
+          placeholder="Rechercher un produit (nom, catégorie...)"
+          value="{{ currentSearch|default('') }}"
+          autocomplete="off"
+        >
+        <button id="clearSearch" class="btn-clear" type="button" style="display:none;" aria-label="Réinitialiser">
+          <i class="bi bi-x-circle-fill"></i>
+        </button>
+      </div>
+    </div>
+
+    {# Tri par prix #}
+    <div class="col-md-2">
+      <select id="sortPrice" class="form-select">
+        <option value="">Trier prix</option>
+        <option value="asc" {{ currentSort|default('') == 'asc' ? 'selected' : '' }}>Prix ↑</option>
+        <option value="desc" {{ currentSort|default('') == 'desc' ? 'selected' : '' }}>Prix ↓</option>
+      </select>
+    </div>
+
+    {# ✅ Tri par stock (ajouté) #}
+    <div class="col-md-2">
+      <select id="sortStock" class="form-select">
+        <option value="">Trier stock</option>
+        <option value="stock_desc">Stock ↓</option>
+        <option value="stock_asc">Stock ↑</option>
+      </select>
+    </div>
+
+    {# Filtre par catégorie #}
+    <div class="col-md-3">
+      <select id="filterCategory" class="form-select">
+        <option value="">Toutes catégories</option>
+        {% set categories = [] %}
+        {% for produit in produits %}
+          {% if produit.categorieProduit not in categories %}
+            {% set categories = categories|merge([produit.categorieProduit]) %}
+          {% endif %}
+        {% endfor %}
+        {% for categorie in categories|sort %}
+          <option value="{{ categorie }}">{{ categorie }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+  </div>
+
+  <div class="mt-3">
+    <span id="resultCount" class="text-muted">
+      <i class="bi bi-bag"></i>
+      <span id="count">{{ produits|length }}</span> produit(s) trouvé(s)
+    </span>
+  </div>
+</div>
+
+  {# GRILLE PRODUITS #}
+  {% if produits is not empty %}
+    <div class="row g-4" id="produitsContainer">
+      {% for produit in produits %}
+        <div
+          class="col-lg-3 col-md-4 col-sm-6 produit-item"
+          data-nom="{{ produit.nomProduit|lower }}"
+          data-categorie="{{ produit.categorieProduit|lower }}"
+          data-prix="{{ produit.prixProduit }}"
+               data-stock="{{ produit.quantiteProduit }}"
+
+          data-description="{{ produit.descriptionProduit|default('')|lower }}"
+        >
+          <div class="produit-card {% if produit.statusProduit != 'Disponible' %}unavailable{% endif %}">
+            <div class="produit-image-container">
+              {% if produit.statusProduit != 'Disponible' %}
+                <div class="badge-indisponible">{{ produit.statusProduit }}</div>
+              {% else %}
+                <div class="price-badge">{{ produit.prixProduit }} DT</div>
+              {% endif %}
+
+              <img
+                src="{{ produit.imageProduit }}"
+                class="produit-img {% if produit.statusProduit != 'Disponible' %}img-grayscale{% endif %}"
+                alt="{{ produit.nomProduit }}"
+                loading="lazy"
+              >
+            </div>
+
+            <div class="card-body">
+              <h5 class="card-title">{{ produit.nomProduit }}</h5>
+
+              <span class="card-category">
+                <i class="bi bi-tag me-1"></i>{{ produit.categorieProduit }}
+              </span>
+
+              <div class="card-stock">
+                <i class="bi bi-box-seam"></i>
+                <span>{{ produit.quantiteProduit }} en stock</span>
+              </div>
+
+              <span class="status-badge {% if produit.statusProduit == 'Disponible' %}available{% else %}unavailable{% endif %}">
+                <i class="bi bi-{% if produit.statusProduit == 'Disponible' %}check{% else %}x{% endif %}-circle"></i>
+                {{ produit.statusProduit }}
+              </span>
+
+              <div class="card-actions">
+                {% if produit.statusProduit == 'Disponible' %}
+                  <button class="btn-add-cart" type="button" data-id="{{ produit.id_produit }}" data-stock="{{ produit.quantiteProduit }}">
+                    <i class="bi bi-cart-plus"></i>
+                    <span>Ajouter</span>
+                  </button>
+                {% else %}
+                  <button class="btn-unavailable" type="button" disabled>
+                    <i class="bi bi-cart-x"></i>
+                    <span>Indisponible</span>
+                  </button>
+                {% endif %}
+
+                <button class="btn-details" type="button" data-bs-toggle="modal" data-bs-target="#modal-{{ produit.id_produit }}" aria-label="Détails {{ produit.nomProduit }}">
+                  <i class="bi bi-info-circle"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {# MODAL #}
+        <div class="modal fade" id="modal-{{ produit.id_produit }}" tabindex="-1" aria-hidden="true">
+          <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content">
+              <div class="modal-header">
+                <h5 class="modal-title">{{ produit.nomProduit }}</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fermer"></button>
+              </div>
+
+              <div class="modal-body">
+                <div class="row">
+                  <div class="col-md-5 text-center mb-4 mb-md-0">
+                    <img src="{{ produit.imageProduit }}" class="img-fluid" style="max-height:300px;" alt="{{ produit.nomProduit }}" loading="lazy">
+                  </div>
+
+                  <div class="col-md-7">
+                    <div class="detail-row">
+                      <span class="detail-label">Description</span>
+                      <span class="detail-value">{{ produit.descriptionProduit }}</span>
                     </div>
-                </div>
-
-                {# Modal détails #}
-                <div class="modal fade" id="modal-{{ produit.id_produit }}" tabindex="-1" aria-hidden="true">
-                    <div class="modal-dialog modal-dialog-centered modal-lg">
-                        <div class="modal-content">
-                            <div class="modal-header">
-                                <h5 class="modal-title">{{ produit.nomProduit }}</h5>
-                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                            </div>
-                            <div class="modal-body">
-                                <div class="row">
-                                    <div class="col-md-5 text-center mb-4 mb-md-0">
-                                        <img src="{{ produit.imageProduit }}" class="img-fluid" style="max-height:300px;">
-                                    </div>
-                                    <div class="col-md-7">
-                                        <div class="detail-row">
-                                            <span class="detail-label">Description</span>
-                                            <span class="detail-value">{{ produit.descriptionProduit }}</span>
-                                        </div>
-                                        <div class="detail-row">
-                                            <span class="detail-label">Prix</span>
-                                            <span class="detail-value fw-bold text-success">{{ produit.prixProduit }} DT</span>
-                                        </div>
-                                        <div class="detail-row">
-                                            <span class="detail-label">Quantité en stock</span>
-                                            <span class="detail-value">{{ produit.quantiteProduit }}</span>
-                                        </div>
-                                        <div class="detail-row">
-                                            <span class="detail-label">Catégorie</span>
-                                            <span class="detail-value">{{ produit.categorieProduit }}</span>
-                                        </div>
-                                        <div class="detail-row">
-                                            <span class="detail-label">Statut</span>
-                                            <span class="badge {% if produit.statusProduit == 'Disponible' %}bg-success{% else %}bg-danger{% endif %}">
-                                                {{ produit.statusProduit }}
-                                            </span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+                    <div class="detail-row">
+                      <span class="detail-label">Prix</span>
+                      <span class="detail-value fw-bold text-success">{{ produit.prixProduit }} DT</span>
                     </div>
+                    <div class="detail-row">
+                      <span class="detail-label">Quantité en stock</span>
+                      <span class="detail-value">{{ produit.quantiteProduit }}</span>
+                    </div>
+                    <div class="detail-row">
+                      <span class="detail-label">Catégorie</span>
+                      <span class="detail-value">{{ produit.categorieProduit }}</span>
+                    </div>
+                    <div class="detail-row">
+                      <span class="detail-label">Statut</span>
+                      <span class="badge {% if produit.statusProduit == 'Disponible' %}bg-success{% else %}bg-danger{% endif %}">
+                        {{ produit.statusProduit }}
+                      </span>
+                    </div>
+                  </div>
                 </div>
-            {% endfor %}
-        </div>
+              </div>
 
-        {# Message aucun résultat #}
-        <div id="noResults" class="empty-state" style="display: none;">
-            <i class="bi bi-search"></i>
-            <h3>Aucun produit trouvé</h3>
-            <p>Essayez avec d'autres mots-clés ou filtres</p>
+            </div>
+          </div>
         </div>
-    {% else %}
-        <div class="empty-state">
-            <i class="bi bi-inbox"></i>
-            <h3>Aucun produit disponible</h3>
-            <p>Revenez plus tard pour découvrir nos nouveaux produits</p>
-        </div>
-    {% endif %}
+      {% endfor %}
+    </div>
 
+    <div id="noResults" class="empty-state" style="display:none;">
+      <i class="bi bi-search"></i>
+      <h3>Aucun produit trouvé</h3>
+      <p>Essayez avec d'autres mots-clés ou filtres</p>
+    </div>
+  {% else %}
+    <div class="empty-state">
+      <i class="bi bi-inbox"></i>
+      <h3>Aucun produit disponible</h3>
+      <p>Revenez plus tard pour découvrir nos nouveaux produits</p>
+    </div>
+  {% endif %}
 </div>
 {% endblock %}
 
@@ -228,5 +302,6 @@
 
 {% block javascripts %}
   {{ parent() }}
-  <script src="{{ asset('assets/js/produits.js') }}"></script>
+  {# ✅ pour éviter cache #}
+  <script src="{{ asset('assets/js/produits.js') }}?v=3"></script>
 {% endblock %}
