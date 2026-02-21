@@ -3,6 +3,7 @@ parameters:
     produits_images_dir: '%kernel.project_dir%/public/uploads/produits'
     openfda.api_key: '%env(OPENFDA_API_KEY)%'
     openfda.timeout: '%env(int:OPENFDA_TIMEOUT)%'
+    ocrspace.api_key: '%env(OCRSPACE_API_KEY)%'
 
 services:
     _defaults:
@@ -41,3 +42,8 @@ services:
             - '../src/DependencyInjection/'
             - '../src/Entity/'
             - '../src/Kernel.php'
+
+    
+    App\Service\OcrService:
+        arguments:
+            $ocrspaceKey: '%ocrspace.api_key%'
