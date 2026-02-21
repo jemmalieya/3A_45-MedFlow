@@ -5,10 +5,7 @@
 {% block body %}
 
 <style>
-/* ==============================================
-   PRODUITS - MODERN BLUE DESIGN
-   ============================================== */
-
+/* --- TON CSS INCHANGÉ (je garde le tien) --- */
 :root {
     --blue-50: #eff6ff;
     --blue-100: #dbeafe;
@@ -22,34 +19,24 @@
     --blue-900: #1e3a8a;
 }
 
-/* Background général */
 .section {
     background: linear-gradient(135deg, #f9fafb 0%, var(--blue-50) 100%);
     min-height: 100vh;
 }
+.container-fluid { max-width: 1400px; }
 
-.container-fluid {
-    max-width: 1400px;
-}
-
-/* Header Card */
 .bg-gradient-primary {
     background: linear-gradient(135deg, var(--blue-600) 0%, var(--blue-800) 100%) !important;
     border-radius: 16px;
     overflow: hidden;
 }
-
-.bg-gradient-primary * {
-    color: white !important;
-}
-
+.bg-gradient-primary * { color: white !important; }
 .bg-gradient-primary h2 {
     font-size: 2rem;
     font-weight: 700;
     text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
-/* Boutons header */
 .btn-warning {
     background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%) !important;
     border: none;
@@ -58,13 +45,11 @@
     box-shadow: 0 4px 12px rgba(251, 191, 36, 0.3);
     transition: all 0.3s ease;
 }
-
 .btn-warning:hover {
     background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%) !important;
     transform: translateY(-2px);
     box-shadow: 0 6px 16px rgba(251, 191, 36, 0.4);
 }
-
 .btn-light {
     background: white !important;
     border: none;
@@ -73,69 +58,25 @@
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
     transition: all 0.3s ease;
 }
-
 .btn-light:hover {
     background: var(--blue-50) !important;
     transform: translateY(-2px);
     box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
 }
 
-/* Messages Flash */
-#flash-messages-container {
-    position: fixed;
-    top: 20px;
-    right: 20px;
-    z-index: 2000;
-    max-width: 400px;
-}
-
-.flash-message {
-    animation: slideInRight 0.4s ease;
+.card {
     border: none;
-    border-radius: 12px;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
-    margin-bottom: 1rem;
+    border-radius: 16px;
+    box-shadow: 0 4px 20px rgba(59, 130, 246, 0.1);
+    overflow: hidden;
+    background: white;
 }
-
-.alert-success {
-    background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
-    color: #065f46 !important;
-    border-left: 5px solid #10b981;
+.card-header {
+    background: linear-gradient(135deg, var(--blue-50) 0%, var(--blue-100) 100%);
+    border-bottom: 2px solid var(--blue-200);
 }
+.card-header h5 { color: var(--blue-800) !important; font-weight: 700; }
 
-.alert-danger {
-    background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
-    color: #991b1b !important;
-    border-left: 5px solid #ef4444;
-}
-
-@keyframes slideInRight {
-    from {
-        opacity: 0;
-        transform: translateX(100px);
-    }
-    to {
-        opacity: 1;
-        transform: translateX(0);
-    }
-}
-
-@keyframes slideOutRight {
-    from {
-        opacity: 1;
-        transform: translateX(0);
-    }
-    to {
-        opacity: 0;
-        transform: translateX(100px);
-    }
-}
-
-.flash-message.slide-out {
-    animation: slideOutRight 0.4s ease forwards;
-}
-
-/* Cards statistiques */
 .stat-card {
     border: none;
     border-radius: 16px;
@@ -144,85 +85,20 @@
     background: white;
     box-shadow: 0 4px 12px rgba(59, 130, 246, 0.08);
 }
-
 .stat-card:hover {
     transform: translateY(-8px) scale(1.02);
     box-shadow: 0 12px 32px rgba(59, 130, 246, 0.2);
 }
-
-.stat-card .bi {
-    animation: pulse 2s ease-in-out infinite;
-}
-
-@keyframes pulse {
-    0%, 100% { transform: scale(1); }
-    50% { transform: scale(1.05); }
-}
-
 .stat-card h3 {
     background: linear-gradient(135deg, var(--blue-600) 0%, var(--blue-800) 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
-    background-clip: text;
 }
 
-/* Card principale tableau */
-.card {
-    border: none;
-    border-radius: 16px;
-    box-shadow: 0 4px 20px rgba(59, 130, 246, 0.1);
-    overflow: hidden;
-    background: white;
-}
-
-.card-header {
-    background: linear-gradient(135deg, var(--blue-50) 0%, var(--blue-100) 100%);
-    border-bottom: 2px solid var(--blue-200);
-}
-
-.card-header h5 {
-    color: var(--blue-800) !important;
-    font-weight: 700;
-}
-
-/* Input de recherche */
-.input-group-text {
-    background: white !important;
-    border: 2px solid var(--blue-200);
-    border-right: none;
-    border-radius: 10px 0 0 10px;
-}
-
-.input-group-text i {
-    color: var(--blue-600);
-}
-
-#searchInput {
-    background: white !important;
-    border: 2px solid var(--blue-200);
-    border-left: none;
-    border-radius: 0 10px 10px 0;
-    transition: all 0.3s ease;
-}
-
-#searchInput:focus {
-    border-color: var(--blue-500);
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-}
-
-#searchInput::placeholder {
-    color: #9ca3af;
-}
-
-/* Table */
-.table {
-    margin: 0;
-}
-
+.table { margin: 0; }
 .table thead.table-light {
     background: linear-gradient(135deg, var(--blue-50) 0%, var(--blue-100) 100%);
 }
-
 .table thead th {
     color: var(--blue-800) !important;
     font-weight: 700;
@@ -232,297 +108,204 @@
     border: none;
     padding: 1.25rem 1rem;
 }
-
 .product-row {
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     border-bottom: 1px solid #f3f4f6;
 }
-
 .product-row:hover {
     background: linear-gradient(135deg, var(--blue-50) 0%, #ffffff 100%);
     transform: translateX(5px);
     box-shadow: 0 4px 12px rgba(59, 130, 246, 0.1);
 }
+.product-row td { padding: 1.25rem 1rem; vertical-align: middle; }
 
-.product-row td {
-    padding: 1.25rem 1rem;
-    vertical-align: middle;
-}
-
-/* Images produits */
 .product-img {
     border: 3px solid var(--blue-100);
     border-radius: 12px;
     transition: all 0.3s ease;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
-
 .product-row:hover .product-img {
     transform: scale(1.15) rotate(3deg);
     border-color: var(--blue-500);
     box-shadow: 0 8px 20px rgba(59, 130, 246, 0.3);
 }
 
-/* Badges */
-.badge {
-    font-weight: 700;
-    letter-spacing: 0.3px;
-    border-radius: 20px;
-    font-size: 0.85rem;
-}
+.badge { font-weight: 700; border-radius: 20px; font-size: 0.85rem; }
+.badge.bg-primary { background: linear-gradient(135deg, var(--blue-500) 0%, var(--blue-700) 100%) !important; }
+.badge.bg-danger { background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%) !important; }
+.badge.bg-success { background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important; }
+.badge.bg-warning { background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%) !important; color: #78350f !important; }
+.badge.bg-light { background: #f3f4f6 !important; color: #374151 !important; border: 2px solid #e5e7eb !important; }
 
-.badge.bg-primary {
-    background: linear-gradient(135deg, var(--blue-500) 0%, var(--blue-700) 100%) !important;
-}
-
-.badge.bg-danger {
-    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%) !important;
-}
-
-.badge.bg-success {
-    background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
-}
-
-.badge.bg-warning {
-    background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%) !important;
-    color: #78350f !important;
-}
-
-.badge.bg-light {
-    background: #f3f4f6 !important;
-    color: #374151 !important;
-    border: 2px solid #e5e7eb !important;
-}
-
-/* Prix */
 .text-success {
     background: linear-gradient(135deg, #10b981 0%, #059669 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
-    background-clip: text;
     font-weight: 700 !important;
 }
 
-/* Boutons d'action */
 .btn-action {
-    width: 40px;
-    height: 40px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 10px;
-    border: none;
+    width: 40px; height: 40px;
+    display: inline-flex; align-items: center; justify-content: center;
+    border-radius: 10px; border: none;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     font-size: 15px;
-    position: relative;
-    overflow: hidden;
+    position: relative; overflow: hidden;
 }
-
-.btn-action::before {
-    content: '';
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    width: 0;
-    height: 0;
-    border-radius: 50%;
-    background: rgba(255, 255, 255, 0.5);
-    transform: translate(-50%, -50%);
-    transition: width 0.6s, height 0.6s;
-}
-
-.btn-action:hover::before {
-    width: 100px;
-    height: 100px;
-}
-
-.btn-action i {
-    margin: 0 !important;
-    position: relative;
-    z-index: 1;
-}
-
+.btn-action i { position: relative; z-index: 1; }
 .btn-primary.btn-action {
     background: linear-gradient(135deg, var(--blue-500) 0%, var(--blue-700) 100%);
     box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
 }
-
 .btn-primary.btn-action:hover {
     background: linear-gradient(135deg, var(--blue-600) 0%, var(--blue-800) 100%);
     transform: translateY(-3px) rotate(5deg);
     box-shadow: 0 8px 20px rgba(59, 130, 246, 0.4);
 }
-
 .btn-danger.btn-action {
     background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
     box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
 }
-
 .btn-danger.btn-action:hover {
     background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
     transform: translateY(-3px) rotate(-5deg);
     box-shadow: 0 8px 20px rgba(239, 68, 68, 0.4);
 }
 
-/* Modal de confirmation */
 .confirm-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
     background: rgba(30, 58, 138, 0.8);
     backdrop-filter: blur(8px);
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    display: flex; align-items: center; justify-content: center;
     z-index: 3000;
     animation: fadeIn 0.3s ease;
 }
-
 .confirm-box {
     background: white;
     padding: 3rem;
     border-radius: 24px;
-    width: 90%;
-    max-width: 550px;
+    width: 90%; max-width: 550px;
     text-align: center;
     box-shadow: 0 24px 60px rgba(0, 0, 0, 0.3);
-    animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
     border: 3px solid var(--blue-200);
 }
 
-.confirm-icon i {
-    font-size: 5rem;
-    animation: shake 0.5s ease;
+.flash-popout-zone{
+  position: fixed;
+  top: 26px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9999;
+  width: min(820px, calc(100% - 24px));
+  pointer-events: none;
 }
-
-@keyframes shake {
-    0%, 100% { transform: rotate(0deg); }
-    25% { transform: rotate(-10deg); }
-    75% { transform: rotate(10deg); }
+.flash-popout{
+  pointer-events: auto;
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 18px 18px;
+  border-radius: 18px;
+  box-shadow: 0 18px 55px rgba(0,0,0,.18);
+  border: 1px solid rgba(0,0,0,.06);
+  margin-bottom: 12px;
+  backdrop-filter: blur(8px);
+  animation: popIn .28s ease both;
 }
-
-.confirm-box h4 {
-    color: #111827;
-    font-weight: 700;
-    font-size: 1.75rem;
+@keyframes popIn{
+  from{ opacity:0; transform: translateY(-10px) scale(.98); }
+  to{ opacity:1; transform: translateY(0) scale(1); }
 }
-
-.confirm-box p {
-    color: #6b7280;
-    font-size: 1.1rem;
+.flash-popout.hide{ animation: popOut .25s ease forwards; }
+@keyframes popOut{
+  to{ opacity:0; transform: translateY(-10px) scale(.98); }
 }
-
-.confirm-buttons {
-    display: flex;
-    gap: 1rem;
-    justify-content: center;
+.flash-icon{
+  width: 44px; height: 44px; border-radius: 14px;
+  display: grid; place-items: center;
+  flex: 0 0 44px;
+  font-size: 1.25rem;
 }
-
-.confirm-buttons .btn {
-    min-width: 150px;
-    font-weight: 700;
-    transition: all 0.3s ease;
-    border-radius: 12px;
-    padding: 0.875rem 1.5rem;
+.flash-content{ flex: 1; }
+.flash-title{ font-weight: 800; font-size: 1.05rem; line-height: 1.2; margin-bottom: 4px; }
+.flash-text{ color: rgba(17,24,39,.85); font-weight: 600; }
+.flash-close{
+  background: transparent; border: 0; font-size: 1.6rem;
+  line-height: 1; padding: 0 8px;
+  color: rgba(17,24,39,.6);
+  cursor: pointer;
 }
+.flash-close:hover{ color: rgba(17,24,39,.9); }
 
-.btn-outline-secondary {
-    border: 2px solid #d1d5db !important;
-    color: #6b7280 !important;
-    background: white;
-}
+.flash-success{ background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%); }
+.flash-success .flash-icon{ background: rgba(255,255,255,.75); color: #065f46; }
+.flash-danger{ background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%); }
+.flash-danger .flash-icon{ background: rgba(255,255,255,.75); color: #991b1b; }
+.flash-warning{ background: linear-gradient(135deg, #fff7ed 0%, #fffbeb 100%); }
+.flash-warning .flash-icon{ background: rgba(255,255,255,.75); color: #7c2d12; }
 
-.btn-outline-secondary:hover {
-    background: #f3f4f6;
-    border-color: #9ca3af !important;
-    color: #374151 !important;
-    transform: translateY(-2px);
-}
+.inventory-alert-card { position: relative; overflow: hidden; border-radius: 20px; background: linear-gradient(135deg, #fff7ed 0%, #fffbeb 100%); border: 2px solid #fde68a; box-shadow: 0 8px 32px rgba(245, 158, 11, 0.15); transition: all 0.3s ease; }
+.inventory-alert-card:hover { transform: translateY(-4px); box-shadow: 0 12px 40px rgba(245, 158, 11, 0.25); }
+.inventory-alert-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 5px; background: linear-gradient(90deg, #f59e0b 0%, #fbbf24 50%, #f59e0b 100%); animation: shimmer 3s infinite; }
+@keyframes shimmer { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
 
-.confirm-buttons .btn-danger {
-    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+.alert-icon-wrapper { width: 72px; height: 72px; background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 8px 24px rgba(251, 191, 36, 0.4); animation: pulse-alert 2s ease-in-out infinite; }
+@keyframes pulse-alert { 0%, 100% { transform: scale(1); box-shadow: 0 8px 24px rgba(251, 191, 36, 0.4); } 50% { transform: scale(1.05); box-shadow: 0 12px 32px rgba(251, 191, 36, 0.6); } }
+.alert-icon-wrapper i { font-size: 2rem; color: white; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2)); }
+
+.alert-title { font-size: 1.375rem; font-weight: 900; color: #78350f; margin-bottom: 8px; letter-spacing: -0.5px; }
+.alert-stats { display: flex; gap: 24px; flex-wrap: wrap; }
+.alert-stat-item { display: flex; align-items: center; gap: 8px; }
+.alert-stat-number { font-size: 1.75rem; font-weight: 900; background: linear-gradient(135deg, #dc2626 0%, #ef4444 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+.alert-stat-label { font-size: 0.875rem; color: #92400e; font-weight: 600; }
+
+.btn-view-details {
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+    color: white;
     border: none;
-    box-shadow: 0 6px 20px rgba(239, 68, 68, 0.4);
+    border-radius: 14px;
+    padding: 14px 28px;
+    font-weight: 700;
+    font-size: 0.95rem;
+    box-shadow: 0 6px 20px rgba(245, 158, 11, 0.3);
+    transition: all 0.3s ease;
+    display: flex; align-items: center; gap: 10px;
 }
+.btn-view-details:hover { background: linear-gradient(135deg, #d97706 0%, #b45309 100%); transform: translateY(-2px); box-shadow: 0 10px 30px rgba(245, 158, 11, 0.4); }
+.btn-view-details.disabled { background: linear-gradient(135deg, #d1d5db 0%, #9ca3af 100%); cursor: not-allowed; box-shadow: none; }
+.btn-view-details.disabled:hover { transform: none; box-shadow: none; }
 
-.confirm-buttons .btn-danger:hover {
-    background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
-    transform: translateY(-2px);
-    box-shadow: 0 8px 24px rgba(239, 68, 68, 0.5);
-}
+.d-none { display: none !important; }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
-@keyframes popIn {
-    from {
-        transform: scale(0.5) translateY(50px);
-        opacity: 0;
-    }
-    to {
-        transform: scale(1) translateY(0);
-        opacity: 1;
-    }
-}
-
-@keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
-}
-
-.d-none {
-    display: none !important;
-}
-
-/* Empty state */
-.bi-inbox {
-    color: #cbd5e1;
-    animation: float 3s ease-in-out infinite;
-}
-
-@keyframes float {
-    0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-15px); }
-}
-
-/* Responsive */
-@media (max-width: 768px) {
-    .bg-gradient-primary h2 {
-        font-size: 1.5rem;
-    }
-    
-    .stat-card:hover {
-        transform: translateY(-5px);
-    }
-    
-    .product-row:hover {
-        transform: translateX(0);
-    }
-    
-    .btn-lg {
-        padding: 0.75rem 1.25rem;
-        font-size: 0.95rem;
-    }
-    
-    .confirm-box {
-        padding: 2rem;
-    }
-}
+/* ✅ pagination centre */
+.pagination { margin: 18px 0 0; }
+.pagination .page-link { border-radius: 12px !important; padding: 10px 14px; }
+.pagination .active .page-link { background: var(--blue-700); border-color: var(--blue-700); }
 </style>
+
+{# --- variables alertes (inchangées) --- #}
+{% set ruptureCount = ruptureList|length %}
+{% set lowCount = lowStockList|length %}
+{% set seuil = seuilFaible %}
+{% set hasAlerts = (ruptureCount > 0) or (lowCount > 0) %}
 
 <section class="section py-5">
   <div class="container-fluid">
 
-    <!-- Header avec navigation -->
+    {# HEADER #}
     <div class="row mb-4">
       <div class="col-12">
         <div class="card border-0 shadow-sm bg-gradient-primary text-white">
           <div class="card-body p-4">
             <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
               <div>
-                <h2 class="mb-1 fw-bold">
-                  <i class="bi bi-box-seam me-2"></i>Gestion des Produits
-                </h2>
-                <p class="mb-0 opacity-75">{{ produits|length }} produit(s) dans votre inventaire</p>
+                <h2 class="mb-1 fw-bold"><i class="bi bi-box-seam me-2"></i>Gestion des Produits</h2>
+                <p class="mb-0 opacity-75">
+                  {# ✅ avec paginator : total items #}
+                  {{ pagination.getTotalItemCount }} produit(s) dans votre inventaire
+                </p>
               </div>
               <div class="d-flex gap-2">
                 <a href="{{ path('admin_produit_new') }}" class="btn btn-warning btn-lg shadow-sm">
@@ -538,30 +321,102 @@
       </div>
     </div>
 
-    <!-- Messages Flash -->
-    <div id="flash-messages-container">
+    {# FLASH POPOUT #}
+    <div id="flashPopoutZone" class="flash-popout-zone" aria-live="polite" aria-atomic="true">
       {% for message in app.flashes('success') %}
-        <div class="alert alert-success alert-dismissible fade show flash-message shadow-sm" role="alert">
-          <i class="bi bi-check-circle-fill me-2"></i>{{ message }}
-          <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        <div class="flash-popout flash-success">
+          <div class="flash-icon"><i class="bi bi-check-circle-fill"></i></div>
+          <div class="flash-content">
+            <div class="flash-title">Succès</div>
+            <div class="flash-text">{{ message }}</div>
+          </div>
+          <button type="button" class="flash-close" aria-label="Fermer">×</button>
         </div>
       {% endfor %}
 
       {% for message in app.flashes('error') %}
-        <div class="alert alert-danger alert-dismissible fade show flash-message shadow-sm" role="alert">
-          <i class="bi bi-x-circle-fill me-2"></i>{{ message }}
-          <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        <div class="flash-popout flash-danger">
+          <div class="flash-icon"><i class="bi bi-x-circle-fill"></i></div>
+          <div class="flash-content">
+            <div class="flash-title">Erreur</div>
+            <div class="flash-text">{{ message }}</div>
+          </div>
+          <button type="button" class="flash-close" aria-label="Fermer">×</button>
+        </div>
+      {% endfor %}
+
+      {% for message in app.flashes('warning') %}
+        <div class="flash-popout flash-warning">
+          <div class="flash-icon"><i class="bi bi-exclamation-triangle-fill"></i></div>
+          <div class="flash-content">
+            <div class="flash-title">Alerte inventaire</div>
+            <div class="flash-text">{{ message }}</div>
+          </div>
+          <button type="button" class="flash-close" aria-label="Fermer">×</button>
         </div>
       {% endfor %}
     </div>
 
-    <!-- Statistiques rapides -->
+    {# ALERTE INVENTAIRE #}
+    <div class="row mb-4">
+      <div class="col-12">
+        <div class="inventory-alert-card">
+          <div class="card-body p-4">
+            <div class="d-flex align-items-center justify-content-between gap-4 flex-wrap">
+              <div class="d-flex align-items-center gap-4 flex-wrap">
+                <div class="alert-icon-wrapper">
+                  <i class="bi bi-bell-fill"></i>
+                </div>
+
+                <div class="alert-content-wrapper">
+                  <h5 class="alert-title mb-0">Alerte Inventaire</h5>
+                  {% if hasAlerts %}
+                    <div class="alert-stats mt-2">
+                      <div class="alert-stat-item">
+                        <span class="alert-stat-number">{{ ruptureCount }}</span>
+                        <span class="alert-stat-label">en rupture</span>
+                      </div>
+                      <div class="alert-stat-item">
+                        <span class="alert-stat-number">{{ lowCount }}</span>
+                        <span class="alert-stat-label">stock faible (≤ {{ seuil }})</span>
+                      </div>
+                    </div>
+                  {% else %}
+                    <p class="mb-0 text-muted mt-1">
+                      <i class="bi bi-check-circle-fill text-success me-1"></i>
+                      Tous les produits sont bien approvisionnés
+                    </p>
+                  {% endif %}
+                </div>
+              </div>
+
+              <div>
+                <button id="btnInvDetails"
+                        type="button"
+                        class="btn-view-details {% if not hasAlerts %}disabled{% endif %}"
+                        {% if not hasAlerts %}disabled{% endif %}>
+                  <i class="bi bi-eye-fill"></i>
+                  <span>Voir détails</span>
+                  {% if hasAlerts %}
+                    <span class="badge bg-dark rounded-pill">{{ ruptureCount + lowCount }}</span>
+                  {% endif %}
+                </button>
+              </div>
+
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {# ✅ STATS : on ne peut plus recalculer sur "produits" (pagination = page actuelle)
+       => stats basées sur listes déjà fournies + total paginator #}
     <div class="row g-3 mb-4">
       <div class="col-md-3">
         <div class="card border-0 shadow-sm h-100 stat-card">
           <div class="card-body text-center">
             <i class="bi bi-box text-primary" style="font-size: 2.5rem;"></i>
-            <h3 class="mt-3 mb-0 fw-bold">{{ produits|length }}</h3>
+            <h3 class="mt-3 mb-0 fw-bold">{{ pagination.getTotalItemCount }}</h3>
             <small class="text-muted">Total Produits</small>
           </div>
         </div>
@@ -570,34 +425,8 @@
       <div class="col-md-3">
         <div class="card border-0 shadow-sm h-100 stat-card">
           <div class="card-body text-center">
-            <i class="bi bi-check-circle text-success" style="font-size: 2.5rem;"></i>
-            <h3 class="mt-3 mb-0 fw-bold">
-              {% set disponibles = 0 %}
-              {% for p in produits %}
-                {% if p.statusProduit == 'Disponible' %}
-                  {% set disponibles = disponibles + 1 %}
-                {% endif %}
-              {% endfor %}
-              {{ disponibles }}
-            </h3>
-            <small class="text-muted">Disponibles</small>
-          </div>
-        </div>
-      </div>
-
-      <div class="col-md-3">
-        <div class="card border-0 shadow-sm h-100 stat-card">
-          <div class="card-body text-center">
             <i class="bi bi-exclamation-triangle text-warning" style="font-size: 2.5rem;"></i>
-            <h3 class="mt-3 mb-0 fw-bold">
-              {% set ruptures = 0 %}
-              {% for p in produits %}
-                {% if p.statusProduit == 'Rupture' %}
-                  {% set ruptures = ruptures + 1 %}
-                {% endif %}
-              {% endfor %}
-              {{ ruptures }}
-            </h3>
+            <h3 class="mt-3 mb-0 fw-bold">{{ ruptureCount }}</h3>
             <small class="text-muted">En Rupture</small>
           </div>
         </div>
@@ -606,34 +435,59 @@
       <div class="col-md-3">
         <div class="card border-0 shadow-sm h-100 stat-card">
           <div class="card-body text-center">
-            <i class="bi bi-x-circle text-danger" style="font-size: 2.5rem;"></i>
-            <h3 class="mt-3 mb-0 fw-bold">
-              {% set indisponibles = 0 %}
-              {% for p in produits %}
-                {% if p.statusProduit == 'Indisponible' %}
-                  {% set indisponibles = indisponibles + 1 %}
-                {% endif %}
-              {% endfor %}
-              {{ indisponibles }}
-            </h3>
-            <small class="text-muted">Indisponibles</small>
+            <i class="bi bi-exclamation-circle text-danger" style="font-size: 2.5rem;"></i>
+            <h3 class="mt-3 mb-0 fw-bold">{{ lowCount }}</h3>
+            <small class="text-muted">Stock Faible</small>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-md-3">
+        <div class="card border-0 shadow-sm h-100 stat-card">
+          <div class="card-body text-center">
+            <i class="bi bi-list-check text-success" style="font-size: 2.5rem;"></i>
+            <h3 class="mt-3 mb-0 fw-bold">{{ pagination.getItemNumberPerPage }}</h3>
+            <small class="text-muted">Par Page</small>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- Tableau des produits -->
+    {# ✅ FILTRE SERVER-SIDE POUR PAGINATION (recherche/catégorie) #}
+    <div class="card border-0 shadow-sm mb-3">
+      <div class="card-body">
+        <form method="get" class="row g-2 align-items-end">
+          <div class="col-md-5">
+            <label class="form-label fw-bold">Recherche</label>
+            <input class="form-control" name="search" value="{{ app.request.get('search') }}" placeholder="Nom ou catégorie...">
+          </div>
+          <div class="col-md-3">
+            <label class="form-label fw-bold">Catégorie</label>
+            <input class="form-control" name="category" value="{{ app.request.get('category') }}" placeholder="Ex: Vitamines">
+          </div>
+          <div class="col-md-4 d-flex gap-2">
+            <button class="btn btn-dark w-100" type="submit">
+              <i class="bi bi-funnel-fill me-1"></i> Filtrer
+            </button>
+            <a class="btn btn-outline-secondary w-100" href="{{ path('admin_produits_index') }}">
+              Reset
+            </a>
+          </div>
+        </form>
+      </div>
+    </div>
+   
+
+    {# TABLE PRODUITS (pagination) #}
     <div class="card border-0 shadow-sm">
       <div class="card-header bg-white border-0 py-3">
         <div class="d-flex justify-content-between align-items-center">
-          <h5 class="mb-0 fw-bold">
-            <i class="bi bi-list-ul me-2"></i>Liste des Produits
-          </h5>
+          <h5 class="mb-0 fw-bold"><i class="bi bi-list-ul me-2"></i>Liste des Produits</h5>
+
+          {# ✅ recherche JS optionnelle (filtre page courante) #}
           <div class="input-group" style="max-width: 350px;">
-            <span class="input-group-text">
-              <i class="bi bi-search"></i>
-            </span>
-            <input type="text" class="form-control" placeholder="Rechercher un produit..." id="searchInput">
+            <span class="input-group-text"><i class="bi bi-search"></i></span>
+            <input type="text" class="form-control" placeholder="Filtrer la page..." id="searchInput">
           </div>
         </div>
       </div>
@@ -655,21 +509,19 @@
             </thead>
 
             <tbody>
-              {% for produit in produits %}
+              {% for produit in pagination %}
                 <tr class="product-row">
                   <td class="px-4">
-  <img
-    src="{{ asset('uploads/produits/' ~ produit.imageProduit) }}"
-    alt="{{ produit.nomProduit }}"
-    class="rounded shadow-sm product-img"
-    style="width: 70px; height: 70px; object-fit: cover;"
-    onerror="this.onerror=null;this.src='https://via.placeholder.com/70?text=No+Img';"
-  >
-</td>
-
-                  <td class="px-4">
-                    <div class="fw-bold text-dark">{{ produit.nomProduit }}</div>
+                    <img
+                      src="{{ produit.imageProduit ? asset('uploads/produits/' ~ produit.imageProduit) : 'https://via.placeholder.com/70?text=No+Img' }}"
+                      alt="{{ produit.nomProduit }}"
+                      class="rounded shadow-sm product-img"
+                      style="width: 70px; height: 70px; object-fit: cover;"
+                      onerror="this.onerror=null;this.src='https://via.placeholder.com/70?text=No+Img';"
+                    >
                   </td>
+
+                  <td class="px-4"><div class="fw-bold text-dark">{{ produit.nomProduit }}</div></td>
 
                   <td class="px-4">
                     <span class="fw-bold text-success fs-6">{{ produit.prixProduit|number_format(2, '.', '') }} DT</span>
@@ -686,23 +538,20 @@
                   </td>
 
                   <td class="px-4 text-center">
-                    {% if produit.statusProduit == 'Disponible' %}
-                      <span class="badge bg-success px-3 py-2">
-                        <i class="bi bi-check-circle me-1"></i>{{ produit.statusProduit }}
-                      </span>
-                    {% elseif produit.statusProduit == 'Rupture' %}
-                      <span class="badge bg-warning px-3 py-2">
-                        <i class="bi bi-exclamation-triangle me-1"></i>{{ produit.statusProduit }}
-                      </span>
+                    {% set st = produit.statusProduit|lower %}
+                    {% if st == 'disponible' %}
+                      <span class="badge bg-success px-3 py-2"><i class="bi bi-check-circle me-1"></i>{{ produit.statusProduit }}</span>
+                    {% elseif st == 'rupture' %}
+                      <span class="badge bg-warning px-3 py-2"><i class="bi bi-exclamation-triangle me-1"></i>{{ produit.statusProduit }}</span>
                     {% else %}
-                      <span class="badge bg-danger px-3 py-2">
-                        <i class="bi bi-x-circle me-1"></i>{{ produit.statusProduit }}
-                      </span>
+                      <span class="badge bg-danger px-3 py-2"><i class="bi bi-x-circle me-1"></i>{{ produit.statusProduit }}</span>
                     {% endif %}
                   </td>
 
                   <td class="px-4">
-                    <small class="text-muted">{{ produit.descriptionProduit|slice(0, 60) }}...</small>
+                    <small class="text-muted">
+                      {{ produit.descriptionProduit ? (produit.descriptionProduit|slice(0, 60) ~ '...') : '—' }}
+                    </small>
                   </td>
 
                   <td class="px-4 text-center">
@@ -718,7 +567,6 @@
                             action="{{ path('admin_produit_delete', {'id': produit.id_produit}) }}"
                             class="d-inline delete-form">
                         <input type="hidden" name="_token" value="{{ csrf_token('delete' ~ produit.id_produit) }}">
-
                         <button type="button"
                                 class="btn btn-sm btn-danger btn-action btn-open-delete"
                                 data-nom="{{ produit.nomProduit|e('html_attr') }}"
@@ -742,17 +590,22 @@
 
           </table>
         </div>
+
+        {# ✅ Pagination (très important) #}
+        <div class="d-flex justify-content-center py-3">
+          {{ knp_pagination_render(pagination) }}
+        </div>
       </div>
     </div>
 
   </div>
 </section>
 
-{# Modal de confirmation #}
+{# OVERLAY DELETE #}
 <div id="adminConfirmOverlay" class="confirm-overlay d-none">
   <div class="confirm-box">
     <div class="confirm-icon">
-      <i class="bi bi-exclamation-triangle-fill text-danger"></i>
+      <i class="bi bi-exclamation-triangle-fill text-danger" style="font-size: 5rem;"></i>
     </div>
     <h4 class="mt-3 fw-bold">Confirmer la suppression</h4>
     <p id="adminConfirmMessage" class="text-muted"></p>
@@ -768,74 +621,195 @@
   </div>
 </div>
 
+{# MODAL INVENTORY #}
+<div class="modal fade" id="inventoryAlertModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+      <div class="modal-header" style="background: linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%);">
+        <h5 class="modal-title fw-bold text-dark d-flex align-items-center gap-2">
+          <i class="bi bi-bell-fill"></i>
+          Détails Alerte Inventaire
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+
+      <div class="modal-body p-4">
+        {% if not hasAlerts %}
+          <div class="text-center py-5">
+            <i class="bi bi-check-circle-fill text-success" style="font-size: 4rem;"></i>
+            <h4 class="mt-4 fw-bold">Inventaire OK ✅</h4>
+            <p class="text-muted mb-0">Aucun produit en rupture ou en stock faible.</p>
+          </div>
+        {% else %}
+          <div class="row g-4">
+            <div class="col-lg-6">
+              <div class="p-4 rounded-4 border-2" style="background:#fff5f5; border:2px solid #fecaca !important;">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                  <div class="d-flex align-items-center gap-2">
+                    <div style="width:48px;height:48px;background:#fee2e2;border-radius:12px;display:flex;align-items:center;justify-content:center;">
+                      <i class="bi bi-exclamation-octagon-fill text-danger fs-4"></i>
+                    </div>
+                    <div>
+                      <div class="fw-bold fs-5">Produits en Rupture</div>
+                      <small class="text-muted">Réapprovisionnement urgent</small>
+                    </div>
+                  </div>
+                  <span class="badge bg-danger rounded-pill px-3 py-2 fs-6">{{ ruptureCount }}</span>
+                </div>
+
+                {% if ruptureCount == 0 %}
+                  <div class="text-center py-3 text-muted">✅ Aucun produit en rupture</div>
+                {% else %}
+                  <div class="list-group list-group-flush">
+                    {% for p in ruptureList %}
+                      <div class="list-group-item border-0 px-0 py-2 bg-transparent">
+                        <div class="d-flex justify-content-between align-items-center">
+                          <div>
+                            <strong>{{ p.nomProduit }}</strong>
+                            <br><small class="text-muted">Stock: {{ p.quantiteProduit }}</small>
+                          </div>
+                          <span class="badge bg-danger">Urgent</span>
+                        </div>
+                      </div>
+                    {% endfor %}
+                  </div>
+                {% endif %}
+              </div>
+            </div>
+
+            <div class="col-lg-6">
+              <div class="p-4 rounded-4 border-2" style="background:#fef3c7; border:2px solid #fde68a !important;">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                  <div class="d-flex align-items-center gap-2">
+                    <div style="width:48px;height:48px;background:#fef08a;border-radius:12px;display:flex;align-items:center;justify-content:center;">
+                      <i class="bi bi-exclamation-triangle-fill text-warning fs-4"></i>
+                    </div>
+                    <div>
+                      <div class="fw-bold fs-5">Stock Faible (≤ {{ seuil }})</div>
+                      <small class="text-muted">À surveiller</small>
+                    </div>
+                  </div>
+                  <span class="badge bg-warning text-dark rounded-pill px-3 py-2 fs-6">{{ lowCount }}</span>
+                </div>
+
+                {% if lowCount == 0 %}
+                  <div class="text-center py-3 text-muted">✅ Aucun stock faible</div>
+                {% else %}
+                  <div class="list-group list-group-flush">
+                    {% for p in lowStockList %}
+                      <div class="list-group-item border-0 px-0 py-2 bg-transparent">
+                        <div class="d-flex justify-content-between align-items-center">
+                          <div>
+                            <strong>{{ p.nomProduit }}</strong>
+                            <br><small class="text-muted">Stock: {{ p.quantiteProduit }}</small>
+                          </div>
+                          <span class="badge bg-warning text-dark">Alerte</span>
+                        </div>
+                      </div>
+                    {% endfor %}
+                  </div>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+
+          <hr class="my-4">
+          <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <small class="text-muted">
+              <i class="bi bi-clock me-1"></i>
+              Mise à jour : {{ "now"|date("d/m/Y H:i") }}
+            </small>
+            <button type="button" class="btn btn-outline-dark btn-sm"
+                    data-bs-dismiss="modal"
+                    onclick="document.getElementById('produitsTable').scrollIntoView({behavior:'smooth'})">
+              <i class="bi bi-arrow-down me-1"></i>Aller à la liste
+            </button>
+          </div>
+        {% endif %}
+      </div>
+
+      <div class="modal-footer bg-light">
+        <button type="button" class="btn btn-secondary rounded-pill px-4" data-bs-dismiss="modal">Fermer</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
 document.addEventListener('DOMContentLoaded', function() {
 
-  // Auto-disparition messages flash
-  const flashMessages = document.querySelectorAll('.flash-message');
-  flashMessages.forEach(msg => {
-    setTimeout(() => {
-      msg.classList.add('slide-out');
-      setTimeout(() => msg.remove(), 400);
-    }, 3000);
+  // flash auto close
+  document.querySelectorAll('.flash-popout').forEach((el) => {
+    const closeBtn = el.querySelector('.flash-close');
+    const hide = () => {
+      el.classList.add('hide');
+      setTimeout(() => el.remove(), 260);
+    };
+    if (closeBtn) closeBtn.addEventListener('click', hide);
+    setTimeout(hide, 3000);
   });
 
-  // Recherche
-  const searchInput = document.getElementById('searchInput');
-  const table = document.getElementById('produitsTable');
-  const rows = table ? table.getElementsByTagName('tbody')[0].getElementsByTagName('tr') : [];
-
-  if (searchInput) {
-    searchInput.addEventListener('keyup', function() {
-      const filter = this.value.toLowerCase();
-      for (let i = 0; i < rows.length; i++) {
-        const row = rows[i];
-        const text = row.textContent.toLowerCase();
-        row.style.display = text.includes(filter) ? '' : 'none';
+  // modal inventaire
+  const btnInv = document.getElementById('btnInvDetails');
+  const invModalEl = document.getElementById('inventoryAlertModal');
+  if (btnInv && invModalEl) {
+    btnInv.addEventListener('click', function(e) {
+      e.preventDefault();
+      if (this.disabled) return;
+      if (!window.bootstrap || !bootstrap.Modal) {
+        console.error("Bootstrap Modal non chargé.");
+        return;
       }
+      bootstrap.Modal.getOrCreateInstance(invModalEl).show();
     });
   }
 
-  // Tooltips
-  const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-  tooltipTriggerList.map(function (tooltipTriggerEl) {
-    return new bootstrap.Tooltip(tooltipTriggerEl);
-  });
+  // recherche JS (page courante)
+  const searchInput = document.getElementById('searchInput');
+  const table = document.getElementById('produitsTable');
+  const rows = table ? table.querySelectorAll('tbody tr') : [];
+  if (searchInput) {
+    searchInput.addEventListener('keyup', function() {
+      const filter = this.value.toLowerCase();
+      rows.forEach(row => {
+        const text = row.textContent.toLowerCase();
+        row.style.display = text.includes(filter) ? '' : 'none';
+      });
+    });
+  }
 
-  // Modal confirmation
+  // tooltips
+  if (window.bootstrap && bootstrap.Tooltip) {
+    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    tooltipTriggerList.map(function (el) { return new bootstrap.Tooltip(el); });
+  }
+
+  // confirm delete
   const overlay = document.getElementById('adminConfirmOverlay');
   const msg = document.getElementById('adminConfirmMessage');
   const btnNo = document.getElementById('adminConfirmNo');
   const btnYes = document.getElementById('adminConfirmYes');
-
   let formToSubmit = null;
 
   document.querySelectorAll('.btn-open-delete').forEach(btn => {
     btn.addEventListener('click', () => {
       const nom = btn.dataset.nom || 'ce produit';
       formToSubmit = btn.closest('form');
-
       msg.textContent = `Êtes-vous sûr de vouloir supprimer "${nom}" ? Cette action est irréversible.`;
       overlay.classList.remove('d-none');
     });
   });
 
-  btnNo.addEventListener('click', () => {
-    overlay.classList.add('d-none');
-    formToSubmit = null;
-  });
-
-  btnYes.addEventListener('click', () => {
-    overlay.classList.add('d-none');
-    if (formToSubmit) formToSubmit.submit();
-  });
+  if (btnNo) btnNo.addEventListener('click', () => { overlay.classList.add('d-none'); formToSubmit = null; });
+  if (btnYes) btnYes.addEventListener('click', () => { overlay.classList.add('d-none'); if (formToSubmit) formToSubmit.submit(); });
 
   document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && !overlay.classList.contains('d-none')) {
+    if (e.key === 'Escape' && overlay && !overlay.classList.contains('d-none')) {
       overlay.classList.add('d-none');
       formToSubmit = null;
     }
   });
+
 });
 </script>
 

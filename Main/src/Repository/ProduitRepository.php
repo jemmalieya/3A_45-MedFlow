@@ -19,11 +19,13 @@ class ProduitRepository extends ServiceEntityRepository
 
         if ($search && trim($search) !== '') {
             $s = '%' . mb_strtolower(trim($search)) . '%';
+            // ✅ CORRECTION: utiliser les noms de propriété avec underscore
             $qb->andWhere('LOWER(p.nom_produit) LIKE :s OR LOWER(p.description_produit) LIKE :s OR LOWER(p.categorie_produit) LIKE :s')
                ->setParameter('s', $s);
         }
 
         if ($category && trim($category) !== '') {
+            // ✅ CORRECTION: utiliser categorie_produit
             $qb->andWhere('p.categorie_produit = :cat')
                ->setParameter('cat', trim($category));
         }
@@ -61,7 +63,9 @@ class ProduitRepository extends ServiceEntityRepository
         int $limit = 12
     ): array {
         $qb = $this->createQueryBuilder('p')
+            // ✅ CORRECTION: utiliser status_produit
             ->andWhere('p.status_produit = :st')->setParameter('st', 'Disponible')
+            // ✅ CORRECTION: utiliser categorie_produit
             ->andWhere('p.categorie_produit != :med')->setParameter('med', 'Médicaments');
 
         if (!empty($excludeIds)) {
@@ -69,10 +73,12 @@ class ProduitRepository extends ServiceEntityRepository
         }
 
         if (!empty($preferredCategories)) {
+            // ✅ CORRECTION: utiliser categorie_produit
             $qb->andWhere('p.categorie_produit IN (:cats)')->setParameter('cats', $preferredCategories);
         }
 
         if ($targetPrice !== null) {
+            // ✅ CORRECTION: utiliser prix_produit
             $qb->addSelect('ABS(p.prix_produit - :tp) AS HIDDEN priceDiff')
                ->setParameter('tp', $targetPrice)
                ->orderBy('priceDiff', 'ASC');
@@ -86,10 +92,13 @@ class ProduitRepository extends ServiceEntityRepository
     public function findByCategoriesExcludingIds(array $categories, array $excludeIds = [], int $limit = 12): array
     {
         $qb = $this->createQueryBuilder('p')
+            // ✅ CORRECTION: utiliser status_produit
             ->andWhere('p.status_produit = :st')->setParameter('st', 'Disponible')
+            // ✅ CORRECTION: utiliser categorie_produit
             ->andWhere('p.categorie_produit != :med')->setParameter('med', 'Médicaments');
 
         if (!empty($categories)) {
+            // ✅ CORRECTION: utiliser categorie_produit
             $qb->andWhere('p.categorie_produit IN (:cats)')->setParameter('cats', $categories);
         }
 
@@ -109,7 +118,9 @@ class ProduitRepository extends ServiceEntityRepository
     public function findByCategoryNonMedicaments(string $category, int $limit = 12): array
     {
         return $this->createQueryBuilder('p')
+            // ✅ CORRECTION: utiliser status_produit
             ->andWhere('p.status_produit = :st')->setParameter('st', 'Disponible')
+            // ✅ CORRECTION: utiliser categorie_produit
             ->andWhere('p.categorie_produit = :cat')->setParameter('cat', $category)
             ->andWhere('p.categorie_produit != :med')->setParameter('med', 'Médicaments')
             ->orderBy('p.id_produit', 'DESC')
@@ -117,4 +128,28 @@ class ProduitRepository extends ServiceEntityRepository
             ->getQuery()
             ->getResult();
     }
+
+    public function qbAdminList(?string $search = null, ?string $category = null)
+    {
+        $qb = $this->createQueryBuilder('p')
+            ->orderBy('p.id_produit', 'DESC');
+
+        if ($search && trim($search) !== '') {
+            $q = '%' . mb_strtolower(trim($search)) . '%';
+            // ✅ CORRECTION: utiliser les noms avec underscore
+            $qb->andWhere('LOWER(p.nom_produit) LIKE :q OR LOWER(p.categorie_produit) LIKE :q')
+               ->setParameter('q', $q);
+        }
+
+        if ($category && trim($category) !== '') {
+            // ✅ CORRECTION: utiliser categorie_produit
+            $qb->andWhere('p.categorie_produit = :cat')
+               ->setParameter('cat', trim($category));
+        }
+
+        return $qb;
+    }
+
+
+    
 }

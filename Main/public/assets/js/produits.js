@@ -1,3 +1,5 @@
+console.log("✅ produits.js chargé v4");
+
 document.addEventListener('DOMContentLoaded', () => {
 
   // ============================================
@@ -10,7 +12,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }, 3000);
 
-  // (close btn)
   document.addEventListener('click', (e) => {
     if (e.target && e.target.classList.contains('btn-close-custom')) {
       const parent = e.target.closest('.alert-custom');
@@ -19,7 +20,7 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // ============================================
-  // 2) AJOUTER AU PANIER SANS RELOAD (grille produits)
+  // 2) AJOUTER AU PANIER SANS RELOAD
   // ============================================
   document.querySelectorAll('.btn-add-cart').forEach(btn => {
     btn.addEventListener('click', async () => {
@@ -66,12 +67,12 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // ============================================
-  // 3) RECHERCHE + FILTRES + TRI PRIX + ✅ TRI STOCK
+  // 3) RECHERCHE + FILTRES + TRI
   // ============================================
   const searchInput = document.getElementById('searchInput');
   const clearSearchBtn = document.getElementById('clearSearch');
   const sortPriceSelect = document.getElementById('sortPrice');
-  const sortStockSelect = document.getElementById('sortStock'); // ✅ ajouté
+  const sortStockSelect = document.getElementById('sortStock');
   const filterCategorySelect = document.getElementById('filterCategory');
   const produitsContainer = document.getElementById('produitsContainer');
   const produitItems = document.querySelectorAll('.produit-item');
@@ -84,7 +85,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const searchTerm = (searchInput.value || '').toLowerCase().trim();
     const selectedCategory = (filterCategorySelect.value || '').toLowerCase();
     const sortOrder = sortPriceSelect ? sortPriceSelect.value : '';
-    const stockOrder = sortStockSelect ? sortStockSelect.value : ''; // ✅ ajouté
+    const stockOrder = sortStockSelect ? sortStockSelect.value : '';
 
     let visibleItems = [];
     let hiddenCount = 0;
@@ -117,10 +118,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
 
-    // ✅ TRI : priorité STOCK si sélectionné, sinon PRIX
     if (visibleItems.length > 0) {
-
-      // 1) Stock
       if (stockOrder === 'stock_asc' || stockOrder === 'stock_desc') {
         visibleItems.sort((a, b) => {
           const sA = parseInt(a.dataset.stock || '0', 10);
@@ -128,10 +126,7 @@ document.addEventListener('DOMContentLoaded', () => {
           return stockOrder === 'stock_asc' ? sA - sB : sB - sA;
         });
         visibleItems.forEach(item => produitsContainer.appendChild(item));
-      }
-
-      // 2) Prix
-      else if (sortOrder === 'asc' || sortOrder === 'desc') {
+      } else if (sortOrder === 'asc' || sortOrder === 'desc') {
         visibleItems.sort((a, b) => {
           const priceA = parseFloat(a.dataset.prix || '0');
           const priceB = parseFloat(b.dataset.prix || '0');
@@ -159,7 +154,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   if (searchInput) searchInput.addEventListener('input', filterAndSortProducts);
   if (sortPriceSelect) sortPriceSelect.addEventListener('change', filterAndSortProducts);
-  if (sortStockSelect) sortStockSelect.addEventListener('change', filterAndSortProducts); // ✅ ajouté
+  if (sortStockSelect) sortStockSelect.addEventListener('change', filterAndSortProducts);
   if (filterCategorySelect) filterCategorySelect.addEventListener('change', filterAndSortProducts);
 
   if (clearSearchBtn) {
@@ -167,13 +162,12 @@ document.addEventListener('DOMContentLoaded', () => {
       if (searchInput) searchInput.value = '';
       if (filterCategorySelect) filterCategorySelect.value = '';
       if (sortPriceSelect) sortPriceSelect.value = '';
-      if (sortStockSelect) sortStockSelect.value = ''; // ✅ ajouté
+      if (sortStockSelect) sortStockSelect.value = '';
       if (searchInput) searchInput.focus();
       filterAndSortProducts();
     });
   }
 
-  // Ctrl + K focus recherche
   document.addEventListener('keydown', function (e) {
     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
       e.preventDefault();
@@ -182,12 +176,126 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // ============================================
-  // 4) RAILS RECO (Best sellers + AI explainable)
+  // 4) RAILS RECO
   // ============================================
   loadRail("bestTrack", "bestEmpty", "/produits/api/best-sellers");
   loadRail("aiTrack", "aiEmpty", "/produits/api/reco-ai");
-});
 
+  // ============================================
+  // 5) ✅ QR CONTACT VCARD - VERSION CORRIGÉE
+  // ============================================
+  const btnContact = document.getElementById('btnContactQr');
+  const modalEl = document.getElementById('contactQrModal');
+
+  if (btnContact && modalEl) {
+    console.log("✅ Bouton Contact et Modal trouvés");
+
+    if (!window.bootstrap || !bootstrap.Modal) {
+      console.error("❌ Bootstrap Modal non chargé");
+      alert("Bootstrap n'est pas chargé. Vérifiez que bootstrap.bundle.min.js est inclus.");
+      return;
+    }
+
+    const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+    const loading = document.getElementById('contactQrLoading');
+    const content = document.getElementById('contactQrContent');
+    const errorBox = document.getElementById('contactQrError');
+    const errorMsg = document.getElementById('contactQrErrorMsg');
+    const img = document.getElementById('contactQrImg');
+
+    const showLoading = () => {
+      console.log("🔄 Affichage du loading");
+      if (loading) loading.classList.remove('d-none');
+      if (content) content.classList.add('d-none');
+      if (errorBox) errorBox.classList.add('d-none');
+    };
+
+    const showError = (msg) => {
+      console.error("❌ Erreur:", msg);
+      if (loading) loading.classList.add('d-none');
+      if (content) content.classList.add('d-none');
+      if (errorBox) errorBox.classList.remove('d-none');
+      if (errorMsg) errorMsg.textContent = msg || 'Erreur inconnue.';
+    };
+
+    const showContent = () => {
+      console.log("✅ Affichage du QR");
+      if (loading) loading.classList.add('d-none');
+      if (errorBox) errorBox.classList.add('d-none');
+      if (content) content.classList.remove('d-none');
+    };
+
+    btnContact.addEventListener('click', async (e) => {
+      e.preventDefault();
+      console.log("🔘 Clic sur btnContact");
+
+      showLoading();
+      modal.show();
+
+      try {
+        console.log("📡 Fetch /contact-pharmacie/qr.json");
+        const res = await fetch('/contact-pharmacie/qr.json', {
+          headers: { 'Accept': 'application/json' }
+        });
+
+        console.log("📨 Status HTTP:", res.status);
+
+        if (!res.ok) {
+          throw new Error(`Erreur HTTP ${res.status}`);
+        }
+
+        const raw = await res.text();
+        console.log("📄 Réponse brute:", raw.slice(0, 200));
+
+        let data;
+        try {
+          data = JSON.parse(raw);
+        } catch {
+          throw new Error(`Réponse non-JSON : ${raw.slice(0, 120)}`);
+        }
+
+        console.log("📦 Données JSON:", data);
+
+        if (!data.ok) {
+          throw new Error(data.error || 'Erreur serveur');
+        }
+
+        const fullUrl = window.location.origin + data.qrPath + '?v=' + Date.now();
+        console.log("🖼️ URL QR:", fullUrl);
+
+        if (img) {
+          img.onload = () => {
+            console.log("✅ Image chargée");
+            showContent();
+          };
+          img.onerror = () => {
+            console.error("❌ Erreur chargement image");
+            showError("L'image QR n'a pas pu être chargée.");
+          };
+          img.src = fullUrl;
+        }
+
+        // Timeout de sécurité
+        setTimeout(() => {
+          if (loading && !loading.classList.contains('d-none')) {
+            console.log("⏱️ Timeout - affichage forcé");
+            showContent();
+          }
+        }, 2000);
+
+      } catch (e) {
+        console.error("💥 Exception:", e);
+        showError(e.message);
+      }
+    });
+
+  } else {
+    console.error("❌ Bouton Contact OU Modal introuvable");
+    console.log("btnContact:", btnContact);
+    console.log("modalEl:", modalEl);
+  }
+
+});
 
 // ============================================
 // UTILITAIRES
@@ -223,11 +331,6 @@ function showFlashMessage(message, type) {
   }, 3000);
 }
 
-
-// ============================================
-// AI RECO RAILS (MedFlow)
-// + support explainText / badges
-// ============================================
 async function loadRail(trackId, emptyId, apiUrl) {
   try {
     const track = document.getElementById(trackId);
@@ -237,7 +340,6 @@ async function loadRail(trackId, emptyId, apiUrl) {
     const res = await fetch(apiUrl, { headers: { "X-Requested-With": "XMLHttpRequest" } });
     const data = await res.json();
 
-    // ✅ Afficher explainText si présent (reco-ai)
     if (apiUrl.includes("/produits/api/reco-ai")) {
       const txt = document.getElementById('aiBasedOnText');
       if (txt && data && data.explainText) txt.textContent = data.explainText;
@@ -288,7 +390,6 @@ function renderRail(trackEl, items) {
     `;
   }).join("");
 
-  // Duplication pour effet infini
   if (items.length >= 4) trackEl.innerHTML = cards + cards;
   else trackEl.innerHTML = cards + cards + cards + cards;
 }

@@ -1,5 +1,3 @@
-# config/services.yaml
-
 parameters:
     pieces_jointes_directory: '%kernel.project_dir%/public/uploads/pieces_jointes'
     produits_images_dir: '%kernel.project_dir%/public/uploads/produits'
@@ -10,6 +8,10 @@ services:
     _defaults:
         autowire: true
         autoconfigure: true
+        bind:
+            # ✅ Binding global pour éviter les erreurs d'injection
+            $projectDir: '%kernel.project_dir%'
+            $appSecret: '%env(APP_SECRET)%'
 
     # Stripe
     App\Service\StripePaymentService:
@@ -24,10 +26,13 @@ services:
             $token: '%env(TWILIO_TOKEN)%'
             $from: '%env(TWILIO_FROM)%'
 
-    # OpenFDA (Service d'interactions médicamenteuses)
+    # OpenFDA
     App\Service\OpenFdaService:
         arguments:
             $apiKey: '%openfda.api_key%'
+
+    # ✅ QR Code Service (plus besoin de arguments car bind global)
+    App\Service\QrCodeService: ~
 
     # Auto-register services in src/
     App\:
