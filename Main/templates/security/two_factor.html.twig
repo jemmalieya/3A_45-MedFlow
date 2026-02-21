@@ -1,0 +1,33 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Validation 2FA{% endblock %}
+
+{% block body %}
+<div class="container" style="max-width: 480px; margin-top: 60px;">
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <h1 class="h4 mb-3">Vérification 2FA</h1>
+
+            {% for label, messages in app.flashes %}
+                {% for message in messages %}
+                    <div class="alert alert-{{ label }}">{{ message }}</div>
+                {% endfor %}
+            {% endfor %}
+
+            <p class="text-muted mb-3">Entrez le code à 6 chiffres de votre application d’authentification.</p>
+
+            <form method="post" action="{{ path('app_2fa_verify') }}">
+                <div class="mb-3">
+                    <label class="form-label">Code</label>
+                    <input name="code" class="form-control" inputmode="numeric" autocomplete="one-time-code" required />
+                </div>
+                <button class="btn btn-primary w-100" type="submit">Valider</button>
+            </form>
+
+            <div class="mt-3 text-center">
+                <a class="link-secondary" href="{{ path('app_logout') }}">Se déconnecter</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

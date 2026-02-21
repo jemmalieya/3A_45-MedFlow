@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-public-origin="{{ app_public_origin|default('')|e('html_attr') }}">
 <head>
   <meta charset="utf-8">
   <meta content="width=device-width, initial-scale=1.0" name="viewport">
@@ -465,6 +465,206 @@
         }
 
         modalBody.innerHTML = html;
+
+        // ===== 2FA UI (inside profile edit modal) =====
+        const init2faUi = (root) => {
+          const badge = root.querySelector('[data-2fa-badge]');
+          const actions = root.querySelector('[data-2fa-actions]');
+          const enableBtn = root.querySelector('[data-2fa-enable]');
+          const disableBtn = root.querySelector('[data-2fa-disable]');
+          const setupBox = root.querySelector('[data-2fa-setup]');
+          const secretInput = root.querySelector('[data-2fa-secret]');
+          const qrBox = root.querySelector('[data-2fa-qr]');
+          const codeInput = root.querySelector('[data-2fa-code]');
+          const confirmBtn = root.querySelector('[data-2fa-confirm]');
+          const cancelBtn = root.querySelector('[data-2fa-cancel]');
+          const errBox = root.querySelector('[data-2fa-error]');
+
+          const disableBox = root.querySelector('[data-2fa-disable-box]');
+          const disableCode = root.querySelector('[data-2fa-disable-code]');
+          const disableConfirm = root.querySelector('[data-2fa-disable-confirm]');
+          const disableCancel = root.querySelector('[data-2fa-disable-cancel]');
+          const disableErr = root.querySelector('[data-2fa-disable-error]');
+
+          if (!badge || !actions || !enableBtn || !setupBox || !secretInput || !qrBox || !codeInput || !confirmBtn || !cancelBtn || !disableBtn || !disableBox || !disableCode || !disableConfirm || !disableCancel) {
+            return; // Not the profile edit modal
+          }
+
+          const showErr = (box, msg) => {
+            if (!box) return;
+            box.textContent = msg || 'Erreur.';
+            box.classList.remove('d-none');
+          };
+          const hideErr = (box) => {
+            if (!box) return;
+            box.textContent = '';
+            box.classList.add('d-none');
+          };
+
+          const setBadge = (enabled) => {
+            if (enabled) {
+              badge.textContent = 'Activé';
+              badge.className = 'badge text-bg-success';
+              disableBtn.hidden = false;
+              enableBtn.hidden = true;
+            } else {
+              badge.textContent = 'Désactivé';
+              badge.className = 'badge text-bg-secondary';
+              disableBtn.hidden = true;
+              enableBtn.hidden = false;
+            }
+          };
+
+          const apiJson = async (url, opts = {}) => {
+            const res = await fetch(url, {
+              method: opts.method || 'GET',
+              headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                ...(opts.headers || {})
+              },
+              body: opts.body ? JSON.stringify(opts.body) : undefined,
+              credentials: 'same-origin'
+            });
+
+            const contentType = (res.headers.get('content-type') || '').toLowerCase();
+            if (!contentType.includes('application/json')) {
+              // Often means redirect to login (HTML) or a server error page.
+              throw new Error('Session expirée ou réponse non JSON. Reconnectez-vous puis réessayez.');
+            }
+
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) {
+              const msg = data && data.error ? data.error : `Erreur (${res.status})`;
+              throw new Error(msg);
+            }
+            return data;
+          };
+
+          const refreshStatus = async () => {
+            badge.textContent = 'Chargement…';
+            badge.className = 'badge text-bg-secondary';
+            setupBox.hidden = true;
+            disableBox.hidden = true;
+            hideErr(errBox);
+            hideErr(disableErr);
+
+            try {
+              const s = await apiJson('/api/2fa/status');
+              setBadge(!!s.enabled);
+            } catch (e) {
+              badge.textContent = 'Indisponible';
+              badge.className = 'badge text-bg-warning';
+            }
+          };
+
+          enableBtn.addEventListener('click', async () => {
+            hideErr(errBox);
+            // Open immediately so the user sees progress/errors.
+            setupBox.hidden = false;
+            qrBox.innerHTML = '<div class="text-center py-4"><div class="spinner-border" role="status"></div></div>';
+            try {
+              enableBtn.disabled = true;
+              const out = await apiJson('/api/2fa/setup', { method: 'POST' });
+              secretInput.value = out.secret || '';
+
+              // Generate QR for authenticator apps (no network needed): otpauth://...
+              const uri = out.otpauth_uri || '';
+              const qrRes = await fetch('/api/2fa/qr?text=' + encodeURIComponent(uri), {
+                headers: { 'Accept': 'image/svg+xml,text/plain,*/*', 'X-Requested-With': 'XMLHttpRequest' },
+                credentials: 'same-origin'
+              });
+              if (!qrRes.ok) {
+                throw new Error('QR non disponible');
+              }
+              const svg = await qrRes.text();
+              const trimmed = (svg || '').trim();
+              if (trimmed.startsWith('data:image/')) {
+                const img = document.createElement('img');
+                img.alt = 'QR Code 2FA';
+                img.className = 'img-fluid';
+                img.src = trimmed;
+                qrBox.innerHTML = '';
+                qrBox.appendChild(img);
+              } else {
+                qrBox.innerHTML = trimmed;
+              }
+
+              codeInput.value = '';
+              codeInput.focus();
+            } catch (e) {
+              showErr(errBox, e.message || 'Erreur lors de la génération du secret.');
+              toastError('2FA', e.message || 'Erreur lors de la génération du secret.');
+            } finally {
+              enableBtn.disabled = false;
+            }
+          });
+
+          cancelBtn.addEventListener('click', () => {
+            hideErr(errBox);
+            setupBox.hidden = true;
+          });
+
+          confirmBtn.addEventListener('click', async () => {
+            hideErr(errBox);
+            const code = (codeInput.value || '').trim();
+            if (!code) {
+              showErr(errBox, 'Entrez le code à 6 chiffres.');
+              return;
+            }
+
+            try {
+              confirmBtn.disabled = true;
+              await apiJson('/api/2fa/confirm', { method: 'POST', body: { code } });
+              setBadge(true);
+              setupBox.hidden = true;
+              toastSuccess('2FA activé', 'La double authentification est maintenant activée.');
+              await refreshStatus();
+            } catch (e) {
+              showErr(errBox, e.message || 'Code invalide.');
+            } finally {
+              confirmBtn.disabled = false;
+            }
+          });
+
+          disableBtn.addEventListener('click', () => {
+            hideErr(disableErr);
+            disableCode.value = '';
+            disableBox.hidden = false;
+            disableCode.focus();
+          });
+
+          disableCancel.addEventListener('click', () => {
+            hideErr(disableErr);
+            disableBox.hidden = true;
+          });
+
+          disableConfirm.addEventListener('click', async () => {
+            hideErr(disableErr);
+            const code = (disableCode.value || '').trim();
+            if (!code) {
+              showErr(disableErr, 'Entrez le code à 6 chiffres.');
+              return;
+            }
+            try {
+              disableConfirm.disabled = true;
+              await apiJson('/api/2fa/disable', { method: 'POST', body: { code } });
+              disableBox.hidden = true;
+              toastSuccess('2FA désactivé', 'La double authentification est désactivée.');
+              await refreshStatus();
+            } catch (e) {
+              showErr(disableErr, e.message || 'Code invalide.');
+            } finally {
+              disableConfirm.disabled = false;
+            }
+          });
+
+          refreshStatus();
+        };
+
+        init2faUi(modalBody);
+
         // ✅ Preview instantané photo (dans le modal edit)
 const fileInput = modalBody.querySelector('input[type="file"]');
 const previewImg = modalBody.querySelector('.js-profile-preview');

@@ -24,6 +24,8 @@ class RegisterUserType extends AbstractType
 {
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
+                $isGoogle = (bool) ($options['is_google'] ?? false);
+
         $builder
           ->add('cin', TextType::class, [
         'constraints' => [
@@ -70,7 +72,10 @@ class RegisterUserType extends AbstractType
 
             ->add('emailUser', EmailType::class, [
                 'required' => true,
-                'attr' => ['placeholder' => 'Email'],
+                'attr' => [
+                    'placeholder' => 'Email',
+                    'readonly' => $isGoogle,
+                ],
                 'constraints' => [
                     new NotBlank(['message' => 'L’email est obligatoire.']),
                 ],
@@ -83,7 +88,10 @@ class RegisterUserType extends AbstractType
             ],
             ])
 
-            ->add('plainPassword', PasswordType::class, [
+        ;
+
+        if (!$isGoogle) {
+            $builder->add('plainPassword', PasswordType::class, [
                 'required' => true,
                 'mapped' => false,
                 'attr' => ['placeholder' => 'Mot de passe'],
@@ -95,18 +103,20 @@ class RegisterUserType extends AbstractType
                         'message' => 'Le mot de passe doit contenir: lettres (minuscules + majuscules), chiffres et caractères spéciaux (@$!%*?&).'
                     ])
                 ]
-            ])
-
-            ->add('profilePictureFile', FileType::class, [
-                'required' => false,
-                'mapped' => false,
             ]);
+        }
+
+        $builder->add('profilePictureFile', FileType::class, [
+            'required' => false,
+            'mapped' => false,
+        ]);
     }
 
     public function configureOptions(OptionsResolver $resolver): void
     {
         $resolver->setDefaults([
             'data_class' => User::class,
+            'is_google' => false,
         ]);
     }
 }

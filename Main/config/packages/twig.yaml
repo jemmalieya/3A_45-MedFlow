@@ -1,5 +1,7 @@
 twig:
     file_name_pattern: '*.twig'
+    globals:
+        app_public_origin: '%app.public_origin%'
 
 when@test:
     twig:

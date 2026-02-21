@@ -22,7 +22,10 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     private ?string $plainPassword = null;
 
     #[ORM\Column(length: 255, nullable: true)]
-private ?string $googleId = null;
+    private ?string $googleId = null;
+
+    #[ORM\Column(length: 255, nullable: true)]
+    private ?string $facebookId = null;
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
@@ -75,6 +78,21 @@ private ?string $googleId = null;
 
     #[ORM\Column(type: Types::DATETIME_MUTABLE, nullable: true)]
     private ?\DateTimeInterface $derniereConnexion = null;
+
+    #[ORM\Column(length: 45, nullable: true)]
+    private ?string $lastLoginIp = null;
+
+    #[ORM\Column(length: 10, nullable: true)]
+    private ?string $lastLoginCountry = null;
+
+    #[ORM\Column(type: Types::DATETIME_MUTABLE, nullable: true)]
+    private ?\DateTimeInterface $lastLoginAt = null;
+
+    #[ORM\Column(length: 64, nullable: true)]
+    private ?string $totpSecret = null;
+
+    #[ORM\Column(options: ['default' => false])]
+    private bool $totpEnabled = false;
 
     #[ORM\Column]
     private bool $isVerified = false;
@@ -318,6 +336,61 @@ private Collection $posts;
     public function setDerniereConnexion(?\DateTimeInterface $derniereConnexion): self
     {
         $this->derniereConnexion = $derniereConnexion;
+        return $this;
+    }
+
+    public function getLastLoginIp(): ?string
+    {
+        return $this->lastLoginIp;
+    }
+
+    public function setLastLoginIp(?string $lastLoginIp): self
+    {
+        $this->lastLoginIp = $lastLoginIp;
+        return $this;
+    }
+
+    public function getLastLoginCountry(): ?string
+    {
+        return $this->lastLoginCountry;
+    }
+
+    public function setLastLoginCountry(?string $lastLoginCountry): self
+    {
+        $this->lastLoginCountry = $lastLoginCountry;
+        return $this;
+    }
+
+    public function getLastLoginAt(): ?\DateTimeInterface
+    {
+        return $this->lastLoginAt;
+    }
+
+    public function setLastLoginAt(?\DateTimeInterface $lastLoginAt): self
+    {
+        $this->lastLoginAt = $lastLoginAt;
+        return $this;
+    }
+
+    public function getTotpSecret(): ?string
+    {
+        return $this->totpSecret;
+    }
+
+    public function setTotpSecret(?string $totpSecret): self
+    {
+        $this->totpSecret = $totpSecret;
+        return $this;
+    }
+
+    public function isTotpEnabled(): bool
+    {
+        return $this->totpEnabled;
+    }
+
+    public function setTotpEnabled(bool $totpEnabled): self
+    {
+        $this->totpEnabled = $totpEnabled;
         return $this;
     }
 
@@ -617,12 +690,27 @@ private Collection $posts;
         return $this;
     }
 
-    // In your User entity, add the method
-public function setGoogleId(?string $googleId): self
-{
-    $this->googleId = $googleId;
-    return $this;
-}
+        public function getGoogleId(): ?string
+        {
+            return $this->googleId;
+        }
+
+        public function setGoogleId(?string $googleId): self
+        {
+            $this->googleId = $googleId;
+            return $this;
+        }
+
+        public function getFacebookId(): ?string
+        {
+            return $this->facebookId;
+        }
+
+        public function setFacebookId(?string $facebookId): self
+        {
+            $this->facebookId = $facebookId;
+            return $this;
+        }
 
 
 

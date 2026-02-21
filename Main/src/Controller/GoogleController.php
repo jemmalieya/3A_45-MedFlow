@@ -3,6 +3,8 @@
 namespace App\Controller;
 
 use App\Repository\UserRepository;
+use App\Security\OAuthAuthenticator;
+use Doctrine\ORM\EntityManagerInterface;
 use Google\Client;
 use Google\Service\Oauth2;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -10,6 +12,7 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\Security\Http\Authentication\UserAuthenticatorInterface;
 
 class GoogleController extends AbstractController
 {
@@ -50,7 +53,7 @@ class GoogleController extends AbstractController
     }
 
     #[Route('/login/google/callback', name: 'google_callback', methods: ['GET'])]
-    public function callback(Request $request, UserRepository $userRepo): Response
+    public function callback(Request $request, UserRepository $userRepo, UserAuthenticatorInterface $userAuthenticator, OAuthAuthenticator $oauthAuthenticator, EntityManagerInterface $em): Response
     {
         if ($request->query->get('error')) {
             return new Response('Google OAuth error: ' . $request->query->get('error'), 400);
@@ -86,29 +89,52 @@ class GoogleController extends AbstractController
 
         $email    = $userInfo->getEmail();
         $name     = $userInfo->getName();
+        $givenName = $userInfo->getGivenName();
+        $familyName = $userInfo->getFamilyName();
+        $picture = $userInfo->getPicture();
         $googleId = $userInfo->getId();
 
         if (!$email) {
             return new Response('Google did not return an email', 400);
         }
 
-        // ✅ Si user existe déjà: on peut décider de le rediriger direct login
-        // MAIS ton objectif = compléter infos + validation email
-        // => on passe toujours par register si info manquante OU user inexistant.
         $existingUser = $userRepo->findOneBy(['emailUser' => $email]);
 
-        // ✅ Stocker en session pour pré-remplir /register
+        if ($existingUser) {
+            // Associate Google ID if missing and persist
+            $existingUser->setGoogleId((string) $googleId);
+
+            // Google OAuth already proves ownership of the email => skip email verification
+            if (method_exists($existingUser, 'setIsVerified')) {
+                $existingUser->setIsVerified(true);
+            }
+            if (method_exists($existingUser, 'setVerificationToken')) {
+                $existingUser->setVerificationToken(null);
+            }
+            if (method_exists($existingUser, 'setTokenExpiresAt')) {
+                $existingUser->setTokenExpiresAt(null);
+            }
+            $em->flush();
+
+            // Programmatically authenticate existing verified users
+            $response = $userAuthenticator->authenticateUser($existingUser, $oauthAuthenticator, $request);
+            // If authenticator doesn't return a Response, fallback to home
+            return $response ?? $this->redirectToRoute('app_home');
+        }
+
+        // Store data in session to prefill registration and continue flow
         $session = $request->getSession();
         $session->start();
         $session->set('google_oauth', [
             'email'    => $email,
             'name'     => (string) $name,
+            'givenName' => (string) ($givenName ?? ''),
+            'familyName' => (string) ($familyName ?? ''),
+            'picture'  => (string) ($picture ?? ''),
             'googleId' => (string) $googleId,
-            'existingUserId' => $existingUser ? $existingUser->getId() : null,
         ]);
         $session->save();
 
-        // ✅ Rediriger vers ton formulaire register pour compléter les champs
         return $this->redirectToRoute('app_register');
     }
 }

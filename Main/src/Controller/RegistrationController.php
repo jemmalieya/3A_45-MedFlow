@@ -13,6 +13,8 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use Symfony\Component\Routing\Annotation\Route;
+use Symfony\Component\Security\Http\Authentication\UserAuthenticatorInterface;
+use App\Security\OAuthAuthenticator;
 
 
 class RegistrationController extends AbstractController
@@ -31,13 +33,16 @@ class RegistrationController extends AbstractController
         EntityManagerInterface $em,
         UserPasswordHasherInterface $hasher,
         LoggerInterface $logger,
-        UserRepository $userRepo
+        UserRepository $userRepo,
+        UserAuthenticatorInterface $userAuthenticator,
+        OAuthAuthenticator $oauthAuthenticator
     ): Response {
         $session = $request->getSession();
         $session->start();
 
         $google = $session->get('google_oauth');
-        if ($google && !empty($google['email'])) {
+        $isGoogleFlow = (is_array($google) && !empty($google['email']));
+        if ($isGoogleFlow) {
             $user = $userRepo->findOneBy(['emailUser' => $google['email']]) ?? new User();
 
             // Pré-remplir email/nom/prénom (sans casser ce que l’utilisateur a déjà)
@@ -45,14 +50,29 @@ class RegistrationController extends AbstractController
                 $user->setEmailUser($google['email']);
             }
 
+            // Prefer structured names from Google when available
+            $givenName = trim((string) ($google['givenName'] ?? ''));
+            $familyName = trim((string) ($google['familyName'] ?? ''));
+            if ($givenName && !$user->getPrenom()) {
+                $user->setPrenom($givenName);
+            }
+            if ($familyName && !$user->getNom()) {
+                $user->setNom($familyName);
+            }
+
+            // Fallback: split display name
             $name = trim((string) ($google['name'] ?? ''));
             if ($name && (!$user->getPrenom() || !$user->getNom())) {
                 $parts = preg_split('/\s+/', $name);
                 $prenom = $parts[0] ?? '';
                 $nom = $parts[count($parts) - 1] ?? '';
 
-                if (!$user->getPrenom() && $prenom) $user->setPrenom($prenom);
-                if (!$user->getNom() && $nom) $user->setNom($nom);
+                if (!$user->getPrenom() && $prenom) {
+                    $user->setPrenom($prenom);
+                }
+                if (!$user->getNom() && $nom) {
+                    $user->setNom($nom);
+                }
             }
 
             // Si tu as googleId dans ton entity (optionnel)
@@ -65,7 +85,9 @@ class RegistrationController extends AbstractController
 
         $isNew = ($user->getId() === null);
 
-        $form = $this->createForm(RegisterUserType::class, $user);
+        $form = $this->createForm(RegisterUserType::class, $user, [
+            'is_google' => $isGoogleFlow,
+        ]);
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
@@ -86,51 +108,72 @@ class RegistrationController extends AbstractController
             $this->addFlash('error', 'Le CIN, le téléphone et la date de naissance sont requis.');
             return $this->redirectToRoute('app_register');
         }
-            // Récupérer et hacher le mot de passe
-            $plainPassword = $form->get('plainPassword')->getData();
+            // Password:
+            // - Normal registration: required
+            // - Google registration: not required; generate one if missing (DB column is not-null)
+            $plainPassword = null;
+            if ($form->has('plainPassword')) {
+                $plainPassword = $form->get('plainPassword')->getData();
+            }
             if ($plainPassword) {
                 $user->setPassword($hasher->hashPassword($user, $plainPassword));
+            } elseif (!$user->getPassword()) {
+                $generated = bin2hex(random_bytes(24));
+                $user->setPassword($hasher->hashPassword($user, $generated));
             }
 
-            // Définir rôle et token si nécessaire
+            // Définir rôle et vérification
             if ($isNew) {
                 $user->setRoleSysteme('PATIENT');
+            }
+
+            if ($isGoogleFlow) {
+                // Google OAuth prouve l'email => pas de vérification email
+                $user->setIsVerified(true);
+                $user->setVerificationToken(null);
+                $user->setTokenExpiresAt(null);
+            } else {
                 $user->setIsVerified(false);
-            }   // Setting token expiration (24 hours)
-            $user->setTokenExpiresAt((new \DateTime())->modify('+24 hours'));
-
-
-           if ($isNew || $user->IsVerified() === false) {
-            $token = bin2hex(random_bytes(32)); // Generate random token
-            $user->setVerificationToken($token);  // Set the token
-            $user->setTokenExpiresAt((new \DateTime())->modify('+24 hours')); // Set token expiration
-        }
+                if ($isNew || $user->IsVerified() === false) {
+                    $token = bin2hex(random_bytes(32));
+                    $user->setVerificationToken($token);
+                    $user->setTokenExpiresAt((new \DateTime())->modify('+24 hours'));
+                }
+            }
 
             // Utiliser UserService pour créer l'utilisateur
             $this->userService->saveUser($user);
 
-            // Envoi d'email de vérification via Brevo
-            try {
-                $brevoResponse = $this->sendVerificationEmail($user);
-                $logger->info('Brevo email sent', [
-                    'user' => $user->getEmailUser(),
-                    'response' => $brevoResponse,
-                ]);
-                $this->addFlash('success', 'Compte créé ! Vérifiez votre email pour activer votre compte.');
-            } catch (\Throwable $e) {
-                $logger->error('Brevo email failed', [
-                    'user' => $user->getEmailUser(),
-                    'error' => $e->getMessage(),
-                ]);
-                $this->addFlash('warning', "Compte créé, mais l'email de vérification n'a pas pu être envoyé.");
+            if (!$isGoogleFlow) {
+                // Envoi d'email de vérification via Brevo
+                try {
+                    $brevoResponse = $this->sendVerificationEmail($user);
+                    $logger->info('Brevo email sent', [
+                        'user' => $user->getEmailUser(),
+                        'response' => $brevoResponse,
+                    ]);
+                    $this->addFlash('success', 'Compte créé ! Vérifiez votre email pour activer votre compte.');
+                } catch (\Throwable $e) {
+                    $logger->error('Brevo email failed', [
+                        'user' => $user->getEmailUser(),
+                        'error' => $e->getMessage(),
+                    ]);
+                    $this->addFlash('warning', "Compte créé, mais l'email de vérification n'a pas pu être envoyé.");
+                }
+
+                $session->remove('google_oauth');
+                return $this->redirectToRoute('app_login');
             }
 
+            // Google flow: clear session and login immediately
             $session->remove('google_oauth');
-            return $this->redirectToRoute('app_login');
+            $resp = $userAuthenticator->authenticateUser($user, $oauthAuthenticator, $request);
+            return $resp ?? $this->redirectToRoute('app_home');
         }
 
         return $this->render('registration/index.html.twig', [
             'form' => $form->createView(),
+            'is_google' => $isGoogleFlow,
         ]);
     }
 
