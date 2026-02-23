@@ -220,7 +220,23 @@ if (!$userCity && method_exists($user, 'getAdresseUser')) {
 
     return $result;
 }
+public function findCandidatesForAiRecommendation(Evenement $current, int $limit = 25): array
+{
+    $qb = $this->createQueryBuilder('e');
 
+    return $qb
+        ->andWhere('e.id != :id')
+        ->setParameter('id', $current->getId())
+        ->andWhere('e.date_debut_event >= :today')
+        ->setParameter('today', new \DateTime('-1 day'))
+        // optionnel: uniquement publié
+        // ->andWhere('LOWER(e.statut_event) IN (:st)')
+        // ->setParameter('st', ['publié','publie','published'])
+        ->orderBy('e.date_debut_event', 'ASC')
+        ->setMaxResults($limit)
+        ->getQuery()
+        ->getResult();
+}
 
 
 }

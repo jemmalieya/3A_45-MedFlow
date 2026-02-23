@@ -5,8 +5,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const confirmYes = document.getElementById('confirmYes');
   const confirmNo = document.getElementById('confirmNo');
 
-  // ✅ IMPORTANT : dans ton Twig c’est id="btn-valider"
-  const checkoutBtn = document.getElementById('btn-valider');
+  // ✅ ID UNIQUE
+  const checkoutBtn = document.getElementById('btnCheckout');
 
   let currentAction = null;
   let lastSeverity = null;
@@ -23,7 +23,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const toastEl = document.createElement('div');
     toastEl.className = `toast align-items-center text-white bg-${color} border-0 shadow-lg`;
-    toastEl.role = 'alert';
+    toastEl.setAttribute('role', 'alert');
     toastEl.innerHTML = `
       <div class="d-flex">
         <div class="toast-body">
@@ -39,6 +39,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     toastEl.addEventListener('hidden.bs.toast', () => toastEl.remove());
   };
+
+  // ✅ Afficher flashes Twig en toast
+  try {
+    (window.__FLASH_SUCCESS__ || []).forEach(m => window.showToast(m, 'success'));
+    (window.__FLASH_ERROR__ || []).forEach(m => window.showToast(m, 'danger'));
+  } catch (e) {}
 
   // ================== BADGE NAVBAR ==================
   function updateCartBadge(count) {
@@ -82,7 +88,7 @@ document.addEventListener('DOMContentLoaded', () => {
       textEl.textContent =
         countProducts > 0
           ? `${countProducts} article(s) dans votre panier`
-          : `Votre panier est vide`;
+          : 'Votre panier est vide';
     }
   }
 
@@ -141,6 +147,7 @@ document.addEventListener('DOMContentLoaded', () => {
     checkoutBtn.classList.toggle('btn-validate-blocked', blocked);
 
     if (blocked) {
+      // si <a>, on empêche la navigation
       checkoutBtn.setAttribute('aria-disabled', 'true');
       checkoutBtn.setAttribute('title', msg || '🚨 Interaction dangereuse');
       checkoutBtn.addEventListener('click', preventCheckoutOnce, { once: true });
@@ -152,30 +159,30 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function preventCheckoutOnce(e) {
     e.preventDefault();
-    showToast('🚨 Validation bloquée : interaction dangereuse détectée.', 'danger');
+    window.showToast('🚨 Validation bloquée : interaction dangereuse détectée.', 'danger');
   }
 
-  // ================== REFRESH OpenFDA ==================
+  // ================== REFRESH OpenFDA (IMPORTANT) ==================
   async function refreshOpenFdaUI(showToastOnDanger = false) {
     try {
       const res = await fetch('/panier/check-interactions', {
         headers: { Accept: 'application/json' },
       });
       const data = await res.json().catch(() => null);
-
       if (!data || !data.checked) return;
 
       const sev = data.severity || 'safe';
+      const canValidate = data.canValidate !== false; // par défaut true
 
-      // éviter spam toast si danger déjà affiché
       const severityChanged = lastSeverity !== sev;
       lastSeverity = sev;
 
-      if (sev === 'danger') {
+      // ✅ Danger MAIS ordonnance validée -> canValidate=true -> PAS de blocage
+      if (sev === 'danger' && !canValidate) {
         setCheckoutBlocked(true, data.message);
 
         if (showToastOnDanger && severityChanged) {
-          showToast(data.message || '🚨 Interaction dangereuse détectée !', 'danger');
+          window.showToast(data.message || '🚨 Interaction dangereuse détectée !', 'danger');
         }
       } else {
         setCheckoutBlocked(false);
@@ -201,7 +208,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const btnVider = document.getElementById('btnViderPanier');
   if (btnVider) {
     btnVider.addEventListener('click', () => {
-      currentAction = { url: `/panier/vider`, type: 'clear', id: null };
+      currentAction = { url: '/panier/vider', type: 'clear', id: null };
       if (confirmMessage) confirmMessage.textContent = 'Êtes-vous sûr de vouloir vider votre panier ?';
       confirmOverlay?.classList.remove('d-none');
     });
@@ -221,13 +228,13 @@ document.addEventListener('DOMContentLoaded', () => {
           : getQtyFromUI(id) + 1;
 
         updateQtyUI(id, newQty);
-        showToast(`Quantité de "${nom}" augmentée ✅`, 'success');
+  window.showToast(`Quantité de "${nom}" augmentée ✅`, 'success');
 
         if (typeof data.count !== 'undefined') updateCartBadge(parseInt(data.count, 10));
 
         await refreshOpenFdaUI(true);
       } catch (e) {
-        showToast(e.message || 'Erreur', 'danger');
+        window.showToast(e.message || 'Erreur', 'danger');
       }
     });
   });
@@ -249,17 +256,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (newQty <= 0) {
           removeRow(id);
-          showToast(`"${nom}" supprimé du panier ✅`, 'success');
+          window.showToast(`"${nom}" supprimé du panier ✅`, 'success');
         } else {
           updateQtyUI(id, newQty);
-          showToast(`Quantité de "${nom}" diminuée ✅`, 'success');
+          window.showToast(`Quantité de "${nom}" diminuée ✅`, 'success');
         }
 
         if (typeof data.count !== 'undefined') updateCartBadge(parseInt(data.count, 10));
 
         await refreshOpenFdaUI(false);
       } catch (e) {
-        showToast(e.message || 'Erreur', 'danger');
+        window.showToast(e.message || 'Erreur', 'danger');
       }
     });
   });
@@ -274,7 +281,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       if (currentAction.type === 'delete' && currentAction.id) {
         removeRow(currentAction.id);
-        showToast('Produit supprimé avec succès ✅', 'success');
+        window.showToast('Produit supprimé ✅', 'success');
       }
 
       if (currentAction.type === 'clear') {
@@ -286,7 +293,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       await refreshOpenFdaUI(false);
     } catch (e) {
-      showToast(e.message || 'Erreur réseau', 'danger');
+      window.showToast(e.message || 'Erreur réseau', 'danger');
     }
 
     currentAction = null;

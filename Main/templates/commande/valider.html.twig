@@ -10,12 +10,17 @@
         <div class="pay-hero__icon"><i class="bi bi-bag-check"></i></div>
         <div>
           <h2 class="mb-1">Finaliser votre commande</h2>
+          
           <p class="mb-0 opacity-75">Vérifiez votre panier puis confirmez le paiement sécurisé.</p>
         </div>
         <div class="ms-auto text-end d-none d-md-block">
           <div class="small opacity-75">Total à payer</div>
           <div class="pay-total">{{ total|number_format(2, '.', '') }} <span class="dt">DT</span></div>
+
         </div>
+        <button id="themeToggle" class="btn btn-outline-dark btn-sm ms-2">
+  <i class="bi bi-moon-stars"></i> Mode sombre
+</button>
       </div>
 
       <div class="card border-0 shadow-sm mb-4 pay-card">
@@ -43,8 +48,7 @@
                   <tr>
                     <td>
                       <div class="d-flex align-items-center">
-                        <img src="{{ produit.imageProduit }}" alt="{{ produit.nomProduit }}" class="thumb me-3">
-                        <div>
+ <img src="{{ asset('uploads/produits/' ~ produit.imageProduit)  }}" alt="{{ produit.nomProduit }}" class="thumb me-3">                        <div>
                           <div class="fw-semibold">{{ produit.nomProduit }}</div>
                           <div class="text-muted small">Produit authentique • Livraison rapide</div>
                         </div>
@@ -281,6 +285,70 @@
   .btn-pay:disabled{opacity:.55; box-shadow:none;}
   .btn-pay:not(:disabled):hover{transform: translateY(-1px); box-shadow: 0 14px 28px rgba(16,185,129,.28);}
   .modal-soft{border-radius:18px; overflow:hidden;}
+  /* =========================
+   🌙 DARK MODE — VALIDATION COMMANDE
+   ========================= */
+body.dark{
+  background:#0b1220 !important;
+  color:#e5e7eb !important;
+}
+
+body.dark .pay-hero,
+body.dark .pay-card,
+body.dark .modal-soft,
+body.dark .terms-pro{
+  background:#0f172a !important;
+  border-color: rgba(0,151,178,.35) !important;
+  color:#e5e7eb !important;
+}
+
+body.dark .pay-card__header{
+  background:#0097B2 !important;
+  color:#fff !important;
+}
+
+body.dark .table thead{
+  background:#020617 !important;
+  color:#e5e7eb !important;
+}
+
+body.dark .table tbody tr{
+  background:#0f172a !important;
+  color:#e5e7eb !important;
+}
+
+body.dark .table tfoot{
+  background:#020617 !important;
+  color:#e5e7eb !important;
+}
+
+body.dark .text-muted{
+  color:#94a3b8 !important;
+}
+
+body.dark .qty-pill{
+  background: rgba(0,151,178,.20) !important;
+  border-color: rgba(0,151,178,.40) !important;
+  color:#e5e7eb !important;
+}
+
+body.dark .secure-badge,
+body.dark .pay-hero__icon,
+body.dark .terms-icon{
+  background: rgba(0,151,178,.20) !important;
+  border-color: rgba(0,151,178,.40) !important;
+}
+
+body.dark .btn-outline-secondary,
+body.dark .btn-outline-dark{
+  background: transparent !important;
+  color:#7dd3fc !important;
+  border-color: rgba(0,151,178,.45) !important;
+}
+
+body.dark .btn-pay{
+  background: linear-gradient(135deg, #0ea5a4, #0097B2) !important;
+}
 </style>
 
 <script>
@@ -313,6 +381,24 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     payModal.show();
   });
+});
+document.addEventListener('DOMContentLoaded', () => {
+  const btn = document.getElementById("themeToggle");
+
+  // Charger thème sauvegardé
+  if (localStorage.getItem("theme") === "dark") {
+    document.body.classList.add("dark");
+  }
+
+  if (btn) {
+    btn.addEventListener("click", () => {
+      document.body.classList.toggle("dark");
+      localStorage.setItem(
+        "theme",
+        document.body.classList.contains("dark") ? "dark" : "light"
+      );
+    });
+  }
 });
 </script>
 {% endblock %}

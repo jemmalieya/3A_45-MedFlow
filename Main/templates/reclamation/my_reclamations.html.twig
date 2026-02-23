@@ -15,12 +15,14 @@
         <h3 class="fw-bold">Mes réclamations</h3>
         <p>Décrivez votre problème, nous vous répondrons rapidement.</p>
       </div>
-      <tr><tr><tr><tr><tr><tr><tr><tr><tr><tr><tr><tr>
-      <a href="{{ path('reclamation_index') }}" 
-         class="btn btn-gradient btn-lg text-white fw-bold"
-         style="background-image: linear-gradient(90deg, #1CA3B4, #48cae4); border: none; box-shadow: 0 4px 12px rgba(0,0,0,0.2);">
-        <i class="bi bi-plus me-2"></i> Nouvelle réclamation
-      </a>
+
+
+
+    <a href="{{ path('reclamation_index') }}"
+   class="btn btn-gradient btn-lg text-white fw-bold"
+   style="margin-top: 18px; background-image: linear-gradient(90deg, #1CA3B4, #48cae4); border: none; box-shadow: 0 4px 12px rgba(0,0,0,0.2); display:inline-block;">
+  <i class="bi bi-plus me-2"></i> Nouvelle réclamation
+</a>
     </div>
   </div>
 
@@ -50,7 +52,7 @@
     {% else %}
       <!-- TABLEAU MODERNE -->
       <div class="table-responsive shadow-sm rounded">
-        <table class="table table-hover align-middle text-center" 
+        <table class="table table-hover align-middle text-center"
                style="border-radius: 10px; overflow: hidden; background: #ffffff;">
           <thead style="background: #e0f7fa; font-weight: 600;">
             <tr>
@@ -67,18 +69,19 @@
             {% for r in reclamations %}
               <tr class="align-middle" style="transition: background 0.3s;">
                 <td>
-  <strong>{{ r.referenceReclamation }}</strong>
+                  <strong>{{ r.referenceReclamation }}</strong>
 
-  {% set nbUnread = unreadByRec[r.idReclamation]|default(0) %}
-  {% if nbUnread > 0 %}
-    <span id="unread-badge-{{ r.idReclamation }}" class="badge bg-danger ms-2">
-      🔔 {{ nbUnread }} nouveau(x)
-    </span>
-  {% endif %}
-</td>
+                  {% set nbUnread = unreadByRec[r.idReclamation]|default(0) %}
+                  {% if nbUnread > 0 %}
+                    <span id="unread-badge-{{ r.idReclamation }}" class="badge bg-danger ms-2">
+                      🔔 {{ nbUnread }} nouveau(x)
+                    </span>
+                  {% endif %}
+                </td>
 
                 <td>{{ r.contenu }}</td>
                 <td><span class="badge bg-light text-dark">{{ r.type }}</span></td>
+
                 <td>
                   {% set s = r.statutReclamation %}
                   {% if s == 'EN_ATTENTE' %}
@@ -96,39 +99,51 @@
                   {% else %}
                     <span class="badge bg-secondary">{{ s }}</span>
                   {% endif %}
-              
-   
-
-
                 </td>
+
                 <td>{{ r.dateCreationR ? r.dateCreationR|date('d/m/Y H:i') : '-' }}</td>
 
+                {# ✅ Ajustement: wrapper propre pour aligner les boutons #}
                 <td class="text-end">
+                  <div class="actions-wrap">
+                    {# ===== BOUTON PIÈCE JOINTE (Cloudinary) ===== #}
+                    {% if r.pieceJointePath %}
+                      <button type="button"
+                              class="btn btn-sm text-white btn-proof"
+                              style="background: linear-gradient(90deg, #1CA3B4, #48cae4); box-shadow: 0 3px 8px rgba(0,0,0,0.2);"
+                              data-bs-toggle="modal"
+                              data-bs-target="#proofModal"
+                              data-preview-url="{{ path('reclamation_piece_preview', { id: r.idReclamation }) }}"
+                              data-title="Preuve - {{ r.referenceReclamation }}">
+                        <i class="bi bi-image me-1"></i> Preuve
+                      </button>
+                    {% endif %}
 
-                  <!-- BOUTON MODAL REPONSES -->
-                  <button type="button"
-                          class="btn btn-sm text-white me-2"
-                          style="background: linear-gradient(90deg, #48cae4, #00b4d8); box-shadow: 0 3px 8px rgba(0,0,0,0.2);"
-                          data-bs-toggle="modal"
-                          data-bs-target="#responsesModal-{{ r.idReclamation }}">
-                    <i class="bi bi-chat-left-text me-1"></i> Réponses
-                  </button>
+                    <!-- BOUTON MODAL REPONSES -->
+                    <button type="button"
+                            class="btn btn-sm text-white"
+                            style="background: linear-gradient(90deg, #48cae4, #00b4d8); box-shadow: 0 3px 8px rgba(0,0,0,0.2);"
+                            data-bs-toggle="modal"
+                            data-bs-target="#responsesModal-{{ r.idReclamation }}">
+                      <i class="bi bi-chat-left-text me-1"></i> Réponses
+                    </button>
 
-                  <!-- BOUTON MODIFIER -->
-                  <a href="{{ path('reclamation_edit', {'id': r.idReclamation}) }}"
-                     class="btn btn-sm text-white me-2" 
-                     style="background: linear-gradient(90deg, #0077b6, #0096c7); box-shadow: 0 3px 8px rgba(0,0,0,0.2);">
-                    <i class="bi bi-pencil me-1"></i> Modifier
-                  </a>
+                    <!-- BOUTON MODIFIER -->
+                    <a href="{{ path('reclamation_edit', {'id': r.idReclamation}) }}"
+                       class="btn btn-sm text-white"
+                       style="background: linear-gradient(90deg, #0077b6, #0096c7); box-shadow: 0 3px 8px rgba(0,0,0,0.2);">
+                      <i class="bi bi-pencil me-1"></i> Modifier
+                    </a>
 
-                  <!-- BOUTON SUPPRIMER -->
-                  <button type="button"
-                          class="btn btn-sm text-white"
-                          style="background: linear-gradient(90deg, #ef233c, #d90429); box-shadow: 0 3px 8px rgba(0,0,0,0.2);"
-                          data-bs-toggle="modal"
-                          data-bs-target="#deleteModal-{{ r.idReclamation }}">
-                    <i class="bi bi-trash me-1"></i> Supprimer
-                  </button>
+                    <!-- BOUTON SUPPRIMER -->
+                    <button type="button"
+                            class="btn btn-sm text-white"
+                            style="background: linear-gradient(90deg, #ef233c, #d90429); box-shadow: 0 3px 8px rgba(0,0,0,0.2);"
+                            data-bs-toggle="modal"
+                            data-bs-target="#deleteModal-{{ r.idReclamation }}">
+                      <i class="bi bi-trash me-1"></i> Supprimer
+                    </button>
+                  </div>
 
                   <!-- MODAL SUPPRESSION -->
                   <div class="modal fade" id="deleteModal-{{ r.idReclamation }}" tabindex="-1" aria-hidden="true">
@@ -164,56 +179,55 @@
                   </div>
 
                   <!-- MODAL REPONSES -->
-  <!-- MODAL REPONSES MODERNE AVEC #1CA3B4 -->
-<div class="modal fade"
-     id="responsesModal-{{ r.idReclamation }}"
-     data-mark-url="{{ path('reclamation_mark_read', {'id': r.idReclamation}) }}"
-     tabindex="-1" aria-hidden="true">
+                  <!-- MODAL REPONSES MODERNE AVEC #1CA3B4 -->
+                  <div class="modal fade"
+                       id="responsesModal-{{ r.idReclamation }}"
+                       data-mark-url="{{ path('reclamation_mark_read', {'id': r.idReclamation}) }}"
+                       tabindex="-1" aria-hidden="true">
 
-  <div class="modal-dialog modal-dialog-centered modal-lg">
-    <div class="modal-content shadow-lg rounded-4 border-0">
-      
-      <!-- HEADER AVEC DEGRADÉ -->
-      <div class="modal-header text-white rounded-top-4" 
-           style="background: linear-gradient(90deg, #1CA3B4, #48cae4);">
-        <h5 class="modal-title">
-          <i class="bi bi-chat-left-text me-2"></i> Réponses - {{ r.referenceReclamation }}
-        </h5>
-        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
+                    <div class="modal-dialog modal-dialog-centered modal-lg">
+                      <div class="modal-content shadow-lg rounded-4 border-0">
 
-      <!-- BODY -->
-      <div class="modal-body" style="max-height: 60vh; overflow-y: auto; background: #f8f9fa;">
-        {% if r.reponses is empty %}
-          <div class="alert alert-info text-center m-0">
-            <i class="bi bi-info-circle me-1"></i> Aucune réponse pour le moment.
-          </div>
-        {% else %}
-          <div class="list-group">
-            {% for rep in r.reponses %}
-              <div class="list-group-item list-group-item-action mb-2 shadow-sm rounded-3 p-3" style="background: #ffffff;">
-                <div class="d-flex justify-content-between align-items-center mb-1">
-                  <!-- BADGE TYPE AVEC DEGRADÉ -->
-                  <span class="badge text-white" 
-                        style="background: linear-gradient(90deg, #1CA3B4, #48cae4);">
-                    {{ rep.typeReponse }}
-                  </span>
-                  <small class="text-muted">{{ rep.dateCreationRep|date('d/m/Y H:i') }}</small>
-                </div>
-                <div class="mt-1" style="font-size: 0.95rem; line-height: 1.4;">
-                  {{ rep.message }}
-                </div>
-              </div>
-            {% endfor %}
-          </div>
-        {% endif %}
-      </div>
+                        <!-- HEADER AVEC DEGRADÉ -->
+                        <div class="modal-header text-white rounded-top-4"
+                             style="background: linear-gradient(90deg, #1CA3B4, #48cae4);">
+                          <h5 class="modal-title">
+                            <i class="bi bi-chat-left-text me-2"></i> Réponses - {{ r.referenceReclamation }}
+                          </h5>
+                          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
 
-    </div>
-  </div>
-</div>
+                        <!-- BODY -->
+                        <div class="modal-body" style="max-height: 60vh; overflow-y: auto; background: #f8f9fa;">
+                          {% if r.reponses is empty %}
+                            <div class="alert alert-info text-center m-0">
+                              <i class="bi bi-info-circle me-1"></i> Aucune réponse pour le moment.
+                            </div>
+                          {% else %}
+                            <div class="list-group">
+                              {% for rep in r.reponses %}
+                                <div class="list-group-item list-group-item-action mb-2 shadow-sm rounded-3 p-3" style="background: #ffffff;">
+                                  <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <!-- BADGE TYPE AVEC DEGRADÉ -->
+                                    <span class="badge text-white"
+                                          style="background: linear-gradient(90deg, #1CA3B4, #48cae4);">
+                                      {{ rep.typeReponse }}
+                                    </span>
+                                    <small class="text-muted">{{ rep.dateCreationRep|date('d/m/Y H:i') }}</small>
+                                  </div>
+                                  <div class="mt-1" style="font-size: 0.95rem; line-height: 1.4;">
+                                    {{ rep.message }}
+                                  </div>
+                                </div>
+                              {% endfor %}
+                            </div>
+                          {% endif %}
+                        </div>
 
-
+                      </div>
+                    </div>
+                  </div>
+                  {# /MODAL REPONSES #}
 
                 </td>
               </tr>
@@ -242,7 +256,47 @@
     transform: translateY(-2px);
     transition: all 0.3s;
   }
+
+  /* ✅ Ajustement boutons Actions (sans changer ton design) */
+  .actions-wrap{
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: .5rem;
+    flex-wrap: wrap;              /* ✅ passe à la ligne si écran petit */
+    max-width: 420px;             /* ✅ évite l'étalement infini */
+  }
+  .actions-wrap .btn,
+  .actions-wrap a.btn{
+    min-width: 112px;             /* ✅ même largeur visuelle */
+    height: 36px;                 /* ✅ même hauteur */
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    white-space: nowrap;
+    border-radius: 10px;
+  }
+  .actions-wrap .btn i{
+    font-size: .95rem;
+  }
+
+  /* ✅ Table responsive: évite boutons collés */
+  @media (max-width: 992px){
+    .actions-wrap{ max-width: 100%; }
+    .actions-wrap .btn,
+    .actions-wrap a.btn{ min-width: 120px; }
+  }
+  @media (max-width: 576px){
+    .actions-wrap{ gap: .4rem; }
+    .actions-wrap .btn,
+    .actions-wrap a.btn{
+      min-width: 100%;
+      justify-content: center;
+    }
+    td.text-end{ text-align: center !important; }
+  }
 </style>
+
 {% if notificationsCount > 0 %}
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
@@ -255,8 +309,8 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 });
 </script>
-
 {% endif %}
+
 <script>
 document.addEventListener('DOMContentLoaded', function () {
   document.querySelectorAll('.modal[id^="responsesModal-"]').forEach(modal => {
@@ -286,9 +340,136 @@ document.addEventListener('DOMContentLoaded', function () {
 
   });
 });
+
+document.addEventListener('DOMContentLoaded', function () {
+  const proofModal = document.getElementById('proofModal');
+  if (!proofModal) return;
+
+  const titleEl = document.getElementById('proofModalTitle');
+  const loadingEl = document.getElementById('proofLoading');
+  const errorEl = document.getElementById('proofError');
+  const imgEl = document.getElementById('proofImg');
+  const openNewTabEl = document.getElementById('proofOpenNewTab');
+  const viewport = document.getElementById('proofViewport');
+
+  let scale = 1;
+
+  function setZoom(newScale) {
+    scale = Math.min(4, Math.max(1, newScale));
+    imgEl.style.transform = `scale(${scale})`;
+    imgEl.style.cursor = (scale > 1) ? 'zoom-out' : 'zoom-in';
+  }
+
+  // Click: toggle zoom
+  imgEl.addEventListener('click', () => {
+    setZoom(scale === 1 ? 2 : 1);
+  });
+
+  // Double click: reset
+  imgEl.addEventListener('dblclick', (e) => {
+    e.preventDefault();
+    setZoom(1);
+    viewport.scrollTop = 0;
+    viewport.scrollLeft = 0;
+  });
+
+  // Wheel zoom (mouse)
+  viewport.addEventListener('wheel', (e) => {
+    if (!e.ctrlKey) return; // ctrl+wheel pour éviter zoom accidentel
+    e.preventDefault();
+    const delta = Math.sign(e.deltaY);
+    setZoom(scale + (delta > 0 ? -0.2 : 0.2));
+  }, { passive: false });
+
+  // Quand on ouvre la modal depuis un bouton
+  proofModal.addEventListener('show.bs.modal', async function (event) {
+    const btn = event.relatedTarget;
+    if (!btn) return;
+
+    const previewUrl = btn.getAttribute('data-preview-url');
+    const title = btn.getAttribute('data-title') || 'Preuve';
+
+    titleEl.textContent = title;
+    errorEl.classList.add('d-none');
+    errorEl.textContent = '';
+    loadingEl.style.display = 'block';
+    imgEl.src = '';
+    openNewTabEl.href = '#';
+    setZoom(1);
+
+    try {
+      const res = await fetch(previewUrl, { headers: { 'X-Requested-With': 'XMLHttpRequest' }});
+      const data = await res.json();
+
+      if (!data.ok) {
+        throw new Error(data.message || 'Impossible de charger la preuve.');
+      }
+
+      imgEl.src = data.url;
+      openNewTabEl.href = data.url;
+    } catch (err) {
+      errorEl.textContent = err.message || 'Erreur lors du chargement.';
+      errorEl.classList.remove('d-none');
+    } finally {
+      loadingEl.style.display = 'none';
+    }
+  });
+
+  // Nettoyage à la fermeture
+  proofModal.addEventListener('hidden.bs.modal', function () {
+    imgEl.src = '';
+    setZoom(1);
+  });
+});
 </script>
 
+{# ===== MODAL PREUVE (preview + zoom) ===== #}
+<div class="modal fade" id="proofModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-xl">
+    <div class="modal-content shadow-lg rounded-4 border-0">
 
+      <div class="modal-header text-white rounded-top-4"
+           style="background: linear-gradient(90deg, #1CA3B4, #48cae4);">
+        <h5 class="modal-title" id="proofModalTitle">
+          <i class="bi bi-image me-2"></i> Preuve
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
 
+      <div class="modal-body" style="background:#f8f9fa;">
+        <div id="proofLoading" class="text-center py-5">
+          <div class="spinner-border" role="status"></div>
+          <div class="mt-2 text-muted">Chargement de l’image...</div>
+        </div>
+
+        <div id="proofError" class="alert alert-danger d-none"></div>
+
+        <div class="d-flex justify-content-center">
+          <div id="proofViewport"
+               style="max-height:70vh; overflow:auto; border-radius:16px; background:#fff; padding:10px; box-shadow:0 10px 30px rgba(0,0,0,.08);">
+            <img id="proofImg"
+                 src=""
+                 alt="Preuve"
+                 style="max-width:100%; height:auto; border-radius:12px; cursor: zoom-in; transform-origin: center center; transition: transform .15s ease;">
+          </div>
+        </div>
+
+        <div class="text-center mt-3 text-muted small">
+          Cliquez pour zoomer • Double-cliquez pour réinitialiser • Molette pour zoom (si souris)
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <a id="proofOpenNewTab" href="#" target="_blank" class="btn btn-outline-primary">
+          <i class="bi bi-box-arrow-up-right me-1"></i> Ouvrir dans un nouvel onglet
+        </a>
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+          Fermer
+        </button>
+      </div>
+
+    </div>
+  </div>
+</div>
 
 {% endblock %}

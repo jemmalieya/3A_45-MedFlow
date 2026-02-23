@@ -70,6 +70,14 @@
         <strong>Fin :</strong> {{ fiche.endTime is defined and fiche.endTime ? fiche.endTime|date('d/m/Y H:i') : (fiche.end_time is defined and fiche.end_time ? fiche.end_time|date('d/m/Y H:i') : '—') }}<br>
         <strong>Durée :</strong> {{ fiche.dureeMinutes is defined and fiche.dureeMinutes is not null ? fiche.dureeMinutes : (fiche.duree_minutes is defined and fiche.duree_minutes is not null ? fiche.duree_minutes : '—') }} minutes
     </div>
+    <div class="signature" style="margin-top:30px; min-height:80px;">
+        {% if fiche.signature is defined and fiche.signature %}
+            <img src="data:image/png;base64,{{ fiche.signature }}" alt="Signature" style="max-width:320px; max-height:80px; display:block; border:1px solid #bbb; background:#fff; margin-bottom:6px;" />
+        {% else %}
+            <div class="line" style="height:2px; background:#bbb; width:320px;"></div><br>
+        {% endif %}
+        <span>Médecin / Signature</span>
+    </div>
 
     <div class="footer">
         Document généré le {{ "now"|date('d/m/Y H:i') }}

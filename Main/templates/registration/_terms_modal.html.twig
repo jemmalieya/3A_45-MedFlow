@@ -1,0 +1,79 @@
+{# Shared modal: Terms & Services (registration) #}
+
+<div class="modal fade" id="mfTermsModal" tabindex="-1" aria-labelledby="mfTermsModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg">
+    <div class="modal-content" style="border-radius: 18px; overflow: hidden;">
+      <div class="modal-header" style="background: linear-gradient(135deg, rgba(var(--mf-primary-rgb), .18), rgba(var(--mf-blue-rgb), .08));">
+        <div class="d-flex align-items-center gap-2">
+          <div class="rounded-circle d-inline-flex align-items-center justify-content-center" style="width:42px;height:42px;background: rgba(var(--mf-primary-rgb), .14); color: var(--mf-primary);">
+            <i class="bi bi-file-earmark-text"></i>
+          </div>
+          <div>
+            <div class="fw-bold" id="mfTermsModalLabel">Conditions d’utilisation & Services</div>
+            <div class="text-muted" style="font-size:.9rem;">MedFlow — mise à jour: {{ "now"|date('d/m/Y') }}</div>
+          </div>
+        </div>
+
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
+      </div>
+
+      <div class="modal-body">
+        <div class="alert alert-info" style="border-radius: 14px;">
+          <div class="fw-semibold mb-1"><i class="bi bi-shield-check me-1"></i> Version lisible</div>
+          <div class="small">
+            L’objectif de MedFlow: faciliter la gestion (rendez-vous, dossiers, échanges) avec un maximum de sécurité.
+            En créant un compte, vous acceptez les règles ci-dessous.
+          </div>
+        </div>
+
+        <h6 class="fw-bold mt-3">1) Comptes & sécurité</h6>
+        <ul class="small">
+          <li>Vous êtes responsable de la confidentialité de vos identifiants (mot de passe, 2FA si activée).</li>
+          <li>En cas de suspicion d’accès non autorisé, changez immédiatement votre mot de passe.</li>
+          <li>Nous pouvons appliquer des mesures anti-abus (ex: limitation de tentatives, verrouillage temporaire).</li>
+        </ul>
+
+        <h6 class="fw-bold mt-3">2) Données & confidentialité</h6>
+        <ul class="small">
+          <li>Les informations saisies (profil, documents, etc.) sont utilisées pour fournir le service MedFlow.</li>
+          <li>Vous devez fournir des données exactes et éviter toute usurpation.</li>
+          <li>Les documents Staff sont utilisés uniquement pour vérifier l’accès et la conformité.</li>
+        </ul>
+
+        <h6 class="fw-bold mt-3">3) Usage acceptable</h6>
+        <ul class="small">
+          <li>Interdiction d’utiliser MedFlow pour du spam, du phishing, ou toute activité illégale.</li>
+          <li>Interdiction de tenter de contourner la sécurité, de scanner le service, ou d’exfiltrer des données.</li>
+          <li>Respect des autres utilisateurs et de la confidentialité des informations médicales.</li>
+        </ul>
+
+        <h6 class="fw-bold mt-3">4) Limites & avertissement médical</h6>
+        <ul class="small">
+          <li>MedFlow est un outil de gestion. Il ne remplace pas un avis médical professionnel.</li>
+          <li>Les décisions cliniques restent sous la responsabilité du personnel médical.</li>
+        </ul>
+
+        <h6 class="fw-bold mt-3">5) Disponibilité</h6>
+        <ul class="small">
+          <li>Nous faisons au mieux pour assurer la disponibilité, mais des interruptions peuvent survenir (maintenance, incidents).</li>
+          <li>Nous pouvons faire évoluer les fonctionnalités pour améliorer performance, sécurité et expérience.</li>
+        </ul>
+
+        <h6 class="fw-bold mt-3">6) Résiliation</h6>
+        <ul class="small">
+          <li>Vous pouvez demander la suppression de votre compte selon les procédures de l’application.</li>
+          <li>En cas d’abus grave, nous pouvons suspendre ou fermer un compte pour protéger la plateforme.</li>
+        </ul>
+
+        <div class="small text-muted mt-3">
+          En cas de question: contactez l’équipe MedFlow via l’espace support.
+        </div>
+      </div>
+
+      <div class="modal-footer" style="background: rgba(var(--bs-body-bg-rgb), .65);">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Fermer</button>
+        <button type="button" class="btn btn-primary" data-bs-dismiss="modal">J’ai compris</button>
+      </div>
+    </div>
+  </div>
+</div>

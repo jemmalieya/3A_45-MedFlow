@@ -3,13 +3,16 @@
 namespace App\Controller;
 
 use App\Entity\User;
+use App\Service\RecaptchaService;
 use App\Form\RegisterUserType;
 use App\Form\ProfileType;
+use App\Form\ProfilePasswordType;
 use App\Form\ResetPasswordType;
 use App\Service\UserService;
 use App\Repository\UserRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\Form\FormError;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
@@ -133,7 +136,7 @@ final class UserController extends AbstractController
     {
         $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
 
-        return $this->render('profile/show.html.twig');
+        return $this->render('Profile/_modal_show.html.twig');
     }
 
     #[Route('/profile/modal/edit', name: 'profile_modal_edit_submit', methods: ['POST'])]
@@ -168,7 +171,7 @@ public function modalEditSubmit(Request $request, EntityManagerInterface $em): R
         $em->flush();
 
         // optionnel: renvoyer avatar html
-        $avatarHtml = $this->renderView('profile/_avatar_slot.html.twig');
+        $avatarHtml = $this->renderView('Profile/_avatar_slot.html.twig');
 
         return $this->json([
             'success' => true,
@@ -177,7 +180,7 @@ public function modalEditSubmit(Request $request, EntityManagerInterface $em): R
         ]);
     }
 
-    $formHtml = $this->renderView('profile/_modal_edit.html.twig', [
+    $formHtml = $this->renderView('Profile/_modal_edit.html.twig', [
         'form' => $form->createView(),
     ]);
 
@@ -227,7 +230,7 @@ public function modalEdit(Request $request): Response
     $user = $this->getUser();
     $form = $this->createForm(ProfileType::class, $user);
 
-    return $this->render('profile/_modal_edit.html.twig', [
+    return $this->render('Profile/_modal_edit.html.twig', [
         'form' => $form->createView(),
     ]);
 }
@@ -238,16 +241,16 @@ public function modalShow(): Response
 {
     $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
 
-    return $this->render('profile/_modal_show.html.twig');
+    return $this->render('Profile/_modal_show.html.twig');
 }
 #[Route('/profile/modal/password', name: 'profile_modal_password', methods: ['GET'])]
 public function modalPassword(): Response
 {
     $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
 
-    $form = $this->createForm(ResetPasswordType::class);
+    $form = $this->createForm(ProfilePasswordType::class);
 
-    return $this->render('profile/_modal_password.html.twig', [
+    return $this->render('Profile/_modal_password.html.twig', [
         'form' => $form->createView(),
     ]);
 }
@@ -261,27 +264,40 @@ public function modalPasswordSubmit(
 {
     $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
 
+    /** @var User|null $user */
     $user = $this->getUser(); // utilisateur connecté
+    if (!$user instanceof User) {
+        return $this->json([
+            'success' => false,
+            'message' => 'Utilisateur non authentifié.',
+        ], 401);
+    }
 
-    $form = $this->createForm(ResetPasswordType::class);
+    $form = $this->createForm(ProfilePasswordType::class);
     $form->handleRequest($request);
 
     if ($form->isSubmitted() && $form->isValid()) {
 
-        // ✅ EXACTEMENT comme ton reset password par token
-        $plainPassword = $form->get('plainPassword')->getData();
-        $user->setPassword($hasher->hashPassword($user, $plainPassword));
+        $currentPassword = (string) $form->get('currentPassword')->getData();
+        if (!$hasher->isPasswordValid($user, $currentPassword)) {
+            $form->get('currentPassword')->addError(new FormError('Mot de passe actuel incorrect.'));
+        } else {
 
-        $em->flush();
+            // ✅ EXACTEMENT comme ton reset password par token
+            $plainPassword = (string) $form->get('plainPassword')->getData();
+            $user->setPassword($hasher->hashPassword($user, $plainPassword));
 
-        return $this->json([
-            'success' => true,
-            'message' => 'Mot de passe mis à jour ✅',
-        ]);
+            $em->flush();
+
+            return $this->json([
+                'success' => true,
+                'message' => 'Mot de passe mis à jour ✅',
+            ]);
+        }
     }
 
     // Renvoie le form avec erreurs pour le réafficher dans le modal
-    $formHtml = $this->renderView('profile/_modal_password.html.twig', [
+    $formHtml = $this->renderView('Profile/_modal_password.html.twig', [
         'form' => $form->createView(),
     ]);
 
@@ -297,13 +313,14 @@ public function modalPasswordSubmit(
     {
         $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
 
-        return $this->render('profile/_modal_staff_request.html.twig');
+        return $this->render('Profile/_modal_staff_request.html.twig');
     }
 
     #[Route('/profile/modal/staff-request/submit', name: 'profile_modal_staff_request_submit', methods: ['POST'])]
     public function modalStaffRequestSubmit(
         Request $request,
-        EntityManagerInterface $em
+        EntityManagerInterface $em,
+        RecaptchaService $recaptcha
     ): Response {
         $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
 
@@ -311,6 +328,10 @@ public function modalPasswordSubmit(
         $token = (string) $request->request->get('_token');
         if (!$this->isCsrfTokenValid('staff_request', $token)) {
             return $this->json(['success' => false, 'error' => 'Session expirée, veuillez recharger la page.'], 419);
+        }
+
+        if ($recaptcha->isEnabled() && !$recaptcha->verifyRequest($request)) {
+            return $this->json(['success' => false, 'error' => 'Veuillez valider le reCAPTCHA.'], 422);
         }
 
         /** @var User $user */
@@ -447,7 +468,7 @@ if ($docSpecialite !== '') {
             return $this->json(['success' => true, 'message' => $message]);
         }
 
-        return $this->render('profile/submit_result.html.twig', [
+        return $this->render('Profile/submit_result.html.twig', [
             'success' => true,
             'message' => $message,
         ]);

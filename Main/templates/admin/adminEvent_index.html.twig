@@ -4,7 +4,7 @@
 
 {% block stylesheets %}
   {{ parent() }}
-  <link rel="stylesheet" href="{{ asset('assets_dash/css/evenement-index.css') }}">
+  <link rel="stylesheet" href="{{ asset('assets_dash/css/evenement-index.css') }}?v={{ date().timestamp }}">
 {% endblock %}
 
 {% block body %}
@@ -86,7 +86,7 @@
 
   <div class="row mb-4">
     <div class="col-md-4 mb-3">
-      <div class="card border-0 shadow-sm evind-kpi">
+      <div class="card border-0 shadow-sm evind-kpi evind-kpi--total">
         <div class="card-body d-flex align-items-center justify-content-between">
           <div>
             <div class="evind-kpi-label">Total événements</div>
@@ -98,7 +98,7 @@
     </div>
 
     <div class="col-md-4 mb-3">
-      <div class="card border-0 shadow-sm evind-kpi">
+      <div class="card border-0 shadow-sm evind-kpi evind-kpi--published">
         <div class="card-body d-flex align-items-center justify-content-between">
           <div>
             <div class="evind-kpi-label">Publiés</div>
@@ -110,7 +110,7 @@
     </div>
 
     <div class="col-md-4 mb-3">
-      <div class="card border-0 shadow-sm evind-kpi">
+      <div class="card border-0 shadow-sm evind-kpi evind-kpi--canceled">
         <div class="card-body d-flex align-items-center justify-content-between">
           <div>
             <div class="evind-kpi-label">Annulés</div>
@@ -139,7 +139,7 @@
       {% if evenements is empty %}
         <div class="alert alert-info mb-0">Aucun événement trouvé.</div>
       {% else %}
-        <div class="table-responsive">
+        <div class="table-responsive evind-table-wrap">
           <table class="table align-middle evind-table" id="evTable">
             <thead>
               <tr>

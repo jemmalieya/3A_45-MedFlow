@@ -110,8 +110,14 @@ class Ressource
         message: "Coût invalide (ex: 120.500)."
     )]
     private ?string $cout_estime_ressource = null;
+    
+    #[ORM\Column(length: 255, nullable: true)]
+   private ?string $cloudinary_public_id = null;
 
+  public function getCloudinaryPublicId(): ?string { return $this->cloudinary_public_id; }
+   public function setCloudinaryPublicId(?string $id): static { $this->cloudinary_public_id = $id; return $this; }
     // ===== OTHER =====
+    
     #[ORM\Column]
     private bool $est_publique_ressource = true;
 
@@ -125,6 +131,18 @@ class Ressource
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE)]
     private ?\DateTimeImmutable $date_mise_a_jour_ressource = null;
 
+    #[ORM\Column(length: 255, nullable: true)]
+private ?string $signature_url = null;
+
+#[ORM\Column(length: 255, nullable: true)]
+private ?string $signature_public_id = null;
+
+public function getSignatureUrl(): ?string { return $this->signature_url; }
+public function setSignatureUrl(?string $url): static { $this->signature_url = $url; return $this; }
+
+public function getSignaturePublicId(): ?string { return $this->signature_public_id; }
+public function setSignaturePublicId(?string $id): static { $this->signature_public_id = $id; return $this; }
+
     public function __construct()
     {
         $this->est_publique_ressource = true;
@@ -136,36 +154,35 @@ class Ressource
         $type = $this->type_ressource;
 
         // ✅ FILE
-        if ($type === 'file') {
-            if (!$this->chemin_fichier_ressource) {
-                $context->buildViolation("Le chemin du fichier est obligatoire pour le type Fichier.")
-                    ->atPath('chemin_fichier_ressource')->addViolation();
-            } else {
-                // Optionnel : format de chemin simple
-                if (!preg_match('/^\/?uploads\/.+/i', $this->chemin_fichier_ressource)) {
-                    $context->buildViolation("Chemin fichier conseillé: /uploads/....")
-                        ->atPath('chemin_fichier_ressource')->addViolation();
-                }
-            }
+     // ✅ FILE
+if ($type === 'file') {
 
-            if ($this->url_externe_ressource) {
-                $context->buildViolation("L'URL externe doit être vide pour le type Fichier.")
-                    ->atPath('url_externe_ressource')->addViolation();
-            }
+    // 1) Interdire URL externe + champs stock
+    if ($this->url_externe_ressource) {
+        $context->buildViolation("L'URL externe doit être vide pour le type Fichier.")
+            ->atPath('url_externe_ressource')->addViolation();
+    }
 
-            // mime_type & taille_kb recommandés si fichier (pas obligatoires)
-            if ($this->mime_type_ressource && !$this->taille_kb_ressource) {
-                // pas une erreur, mais si tu veux rendre obligatoire :
-                // $context->buildViolation("La taille est recommandée avec un mime type.")
-                //     ->atPath('taille_kb_ressource')->addViolation();
-            }
+    if ($this->quantite_disponible_ressource !== null || $this->unite_ressource || $this->fournisseur_ressource || $this->cout_estime_ressource) {
+        $context->buildViolation("Les champs Stock doivent être vides pour le type Fichier.")
+            ->atPath('quantite_disponible_ressource')->addViolation();
+    }
 
-            // champs stock doivent être vides (sinon confusion)
-            if ($this->quantite_disponible_ressource !== null || $this->unite_ressource || $this->fournisseur_ressource || $this->cout_estime_ressource) {
-                $context->buildViolation("Les champs Stock doivent être vides pour le type Fichier.")
-                    ->atPath('quantite_disponible_ressource')->addViolation();
-            }
+    // 2) IMPORTANT : ne pas bloquer la soumission si chemin est vide,
+    // car il sera rempli après upload Cloudinary dans le controller.
+    // On ne valide le format que si un chemin existe déjà (édition / données existantes).
+    if ($this->chemin_fichier_ressource) {
+
+        // Accepte Cloudinary (https://...) ou /uploads/...
+        $isHttp = preg_match('#^https?://#i', $this->chemin_fichier_ressource);
+        $isUploads = preg_match('#^/?uploads/#i', $this->chemin_fichier_ressource);
+
+        if (!$isHttp && !$isUploads) {
+            $context->buildViolation("Chemin invalide. Doit être une URL (Cloudinary) ou /uploads/...")
+                ->atPath('chemin_fichier_ressource')->addViolation();
         }
+    }
+}
 
         // ✅ LINK
         if ($type === 'external_link') {

@@ -113,14 +113,22 @@
               {% for produit in produits %}
                 <tr>
                   <td>
-                    <img
-                      src="{{ produit.imageProduit }}"
-                      alt="{{ produit.nomProduit }}"
-                      class="rounded"
-                      width="52"
-                      height="52"
-                      style="object-fit: cover; border: 1px solid rgba(0,0,0,.08);"
-                    >
+<img
+  src="{% if produit.imageProduit %}
+         {% if produit.imageProduit starts with 'http' %}
+           {{ produit.imageProduit }}
+         {% else %}
+           {{ asset('uploads/produits/' ~ produit.imageProduit) }}
+         {% endif %}
+       {% else %}
+         {{ asset('assets/images/no-image.png') }}
+       {% endif %}"
+  alt="{{ produit.nomProduit }}"
+  class="rounded"
+  width="52"
+  height="52"
+  style="object-fit: cover; border: 1px solid rgba(0,0,0,.08);"
+>
                   </td>
 
                   <td>
@@ -186,7 +194,7 @@
 
                       data-id="{{ produit.id_produit }}"
                       data-nom="{{ produit.nomProduit|e('html_attr') }}"
-                      data-image="{{ produit.imageProduit|e('html_attr') }}"
+                      data-image="{{ asset('uploads/produits/' ~ produit.imageProduit)|e('html_attr') }}"
                       data-categorie="{{ produit.categorieProduit|e('html_attr') }}"
                       data-prix="{{ produit.prixProduit }}"
                       data-quantite="{{ produit.quantiteProduit }}"

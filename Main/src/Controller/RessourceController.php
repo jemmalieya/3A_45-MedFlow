@@ -11,7 +11,10 @@ use App\Form\RessourceType;
 use App\Repository\RessourceRepository;
 use Symfony\Component\HttpFoundation\Request;
 
+use App\Form\RessourceBatchType;
+use App\Form\Model\RessourceBatch;
 
+use App\Service\CalusinaryEventservice;
 use Dompdf\Dompdf;
 use Dompdf\Options;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -62,27 +65,54 @@ public function index(Request $request, RessourceRepository $repo): Response
 }
 
 
-    
-    #[Route('/new', name: 'admin_ressource_new', methods: ['GET', 'POST'])]
-    public function new(Request $request, EntityManagerInterface $em): Response
-    {
-        $ressource = new Ressource();
-        $form = $this->createForm(RessourceType::class, $ressource);
-        $form->handleRequest($request);
+#[Route('/new', name: 'admin_ressource_new', methods: ['GET', 'POST'])]
+public function new(
+    Request $request,
+    EntityManagerInterface $em,
+    CalusinaryEventservice $cloud
+): Response {
+    $batch = new RessourceBatch();
+    $batch->ressources[] = new Ressource();
 
-        if ($form->isSubmitted() && $form->isValid()) {
+    $form = $this->createForm(RessourceBatchType::class, $batch);
+    $form->handleRequest($request);
+
+    if ($form->isSubmitted() && $form->isValid()) {
+
+        foreach ($form->get('ressources') as $i => $ressourceForm) {
+            /** @var Ressource $ressource */
+            $ressource = $batch->ressources[$i];
+
+            $uploadedFile = $ressourceForm->has('uploadFile')
+                ? $ressourceForm->get('uploadFile')->getData()
+                : null;
+
+            if ($ressource->getTypeRessource() === 'file') {
+                if ($uploadedFile) {
+                    $result = $cloud->upload($uploadedFile->getPathname(), 'medflow/ressources');
+
+                    // URL Cloudinary dans ton champ existant
+                    $ressource->setCheminFichierRessource($result['secure_url']);
+                    $ressource->setCloudinaryPublicId($result['public_id']);
+
+                    $ressource->setMimeTypeRessource($uploadedFile->getMimeType());
+                    $ressource->setTailleKbRessource((int) ceil($uploadedFile->getSize() / 1024));
+                }
+            }
+
             $em->persist($ressource);
-            $em->flush();
-
-            $this->addFlash('success', 'Ressource ajoutée avec succès');
-
-            return $this->redirectToRoute('admin_ressource_index');
         }
 
-        return $this->render('admin/new_Ressource.html.twig', [
-            'form' => $form->createView(),
-        ]);
+        $em->flush();
+        $this->addFlash('success', 'Ressources ajoutées avec succès');
+        return $this->redirectToRoute('admin_ressource_index');
     }
+
+    return $this->render('admin/new_Ressource.html.twig', [
+        'form' => $form->createView(),
+    ]);
+}
+
 
    #[Route('/{id}', name: 'admin_ressource_show', requirements: ['id' => '\d+'], methods: ['GET'])]
 public function show(Ressource $ressource): Response
@@ -95,12 +125,33 @@ public function show(Ressource $ressource): Response
 
    
     #[Route('/{id}/edit', name: 'admin_ressource_edit', requirements: ['id' => '\d+'], methods: ['GET', 'POST'])]
-    public function edit(Request $request, Ressource $ressource, EntityManagerInterface $em): Response
+ public function edit(
+    Request $request,
+    Ressource $ressource,
+    EntityManagerInterface $em,
+    \App\Service\CalusinaryEventservice $cloud
+): Response
     {
         $form = $this->createForm(RessourceType::class, $ressource);
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
+            $uploadedFile = $form->has('uploadFile') ? $form->get('uploadFile')->getData() : null;
+
+if ($ressource->getTypeRessource() === 'file' && $uploadedFile) {
+
+    // supprimer ancien si existe
+    if ($ressource->getCloudinaryPublicId()) {
+        $cloud->destroy($ressource->getCloudinaryPublicId());
+    }
+
+    $result = $cloud->upload($uploadedFile->getPathname(), 'medflow/ressources');
+    $ressource->setCheminFichierRessource($result['secure_url']);
+    $ressource->setCloudinaryPublicId($result['public_id']);
+
+    $ressource->setMimeTypeRessource($uploadedFile->getMimeType());
+    $ressource->setTailleKbRessource((int) ceil($uploadedFile->getSize() / 1024));
+}
             $em->flush();
 
             $this->addFlash('success', 'Ressource modifiée');
@@ -115,10 +166,19 @@ public function show(Ressource $ressource): Response
     }
 
     #[Route('/{id}/delete', name: 'admin_ressource_delete', requirements: ['id' => '\d+'], methods: ['POST'])]
-    public function delete(Request $request, Ressource $ressource, EntityManagerInterface $em): Response
+   public function delete(
+    Request $request,
+    Ressource $ressource,
+    EntityManagerInterface $em,
+    \App\Service\CalusinaryEventservice $cloud
+): Response
     {
         if ($this->isCsrfTokenValid('delete'.$ressource->getId(), $request->request->get('_token'))) {
+            if ($ressource->getCloudinaryPublicId()) {
+    $cloud->destroy($ressource->getCloudinaryPublicId());
+}
             $em->remove($ressource);
+            
             $em->flush();
 
             $this->addFlash('success', 'Ressource supprimée');
@@ -188,6 +248,8 @@ public function exportStatsPdf(RessourceRepository $repo): Response
         ]
     );
 }
+
+
 
 
 

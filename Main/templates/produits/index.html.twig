@@ -3,7 +3,860 @@
 {% block title %}Pharmacie{% endblock %}
 
 {% block body %}
-{# Messages Flash #}
+
+<style>
+/* ======================================================
+   ✅ CHARTE (SOLID COLORS - NO GRADIENT)
+   Dark Turquoise: #0097B2
+   Vivid Turquoise: #00BFA6
+   White: #FFFFFF
+   Black: #000000
+   Red: #BC0B09
+   ====================================================== */
+:root{
+  --primary: #00BFA6;       /* vivid turquoise */
+  --primary-dark: #0097B2;  /* dark turquoise */
+  --danger: #BC0B09;
+  --success: #10b981;
+  --warning: #f59e0b;
+
+  --gray-50:#f9fafb;
+  --gray-100:#f3f4f6;
+  --gray-200:#e5e7eb;
+  --gray-700:#374151;
+  --gray-800:#1f2937;
+
+  --shadow-sm:0 2px 10px rgba(0,0,0,.06);
+  --shadow-md:0 10px 26px rgba(0,0,0,.10);
+  --shadow-lg:0 18px 42px rgba(0,0,0,.14);
+
+  --ring: 0 0 0 .22rem rgba(0,151,178,.18);
+}
+
+/* Base page */
+body{
+  background: #f6fbfb !important;
+}
+
+/* Container max width for nice layout */
+.mw-1120{ max-width:1120px; }
+
+/* ======================================================
+   HEADER (SOLID)
+   ====================================================== */
+.page-header{
+  background: var(--primary-dark);
+  color:#fff;
+  padding: 42px 0;
+  margin: 26px auto 18px auto;
+  border-radius: 20px;
+  box-shadow: 0 18px 40px rgba(0,151,178,.22);
+  overflow:hidden;
+  position:relative;
+}
+.page-header::after{
+  content:"";
+  position:absolute;
+  inset:-2px;
+  background:
+    radial-gradient(900px 240px at 18% 10%, rgba(255,255,255,.16), transparent 55%),
+    radial-gradient(900px 240px at 80% 0%, rgba(255,255,255,.10), transparent 55%);
+  pointer-events:none;
+}
+.page-header h1{
+  font-size: 2.6rem;
+  font-weight: 900;
+  margin:0 0 8px 0;
+  position:relative;
+  z-index:1;
+}
+.page-header p{
+  margin:0;
+  opacity:.92;
+  font-size: 1.05rem;
+  position:relative;
+  z-index:1;
+}
+
+/* ======================================================
+   QUICK ACTIONS BAR (Mes commandes + Contact)
+   ====================================================== */
+.quick-actions{
+  background:#fff;
+  border-radius: 18px;
+  box-shadow: var(--shadow-sm);
+  border: 1px solid rgba(0,151,178,.10);
+  padding: 14px 16px;
+}
+
+.btn-orders{
+  display:inline-flex; align-items:center; gap:10px;
+  padding: 12px 16px;
+  border-radius: 14px;
+  border: none;
+  background: var(--primary-dark);
+  color:#fff;
+  font-weight: 900;
+  text-decoration:none;
+  box-shadow: 0 12px 26px rgba(0,151,178,.18);
+  transition:.2s ease;
+}
+.btn-orders:hover{
+  transform: translateY(-1px);
+  color:#fff;
+  box-shadow: 0 16px 34px rgba(0,151,178,.26);
+}
+
+.btn-contact{
+  display:inline-flex; align-items:center; gap:10px;
+  padding: 12px 16px;
+  border-radius: 14px;
+  border: 2px solid rgba(0,151,178,.25);
+  background: #fff;
+  color: var(--primary-dark);
+  font-weight: 900;
+  transition:.2s ease;
+}
+.btn-contact:hover{
+  transform: translateY(-1px);
+  background: rgba(0,191,166,.10);
+  box-shadow: 0 12px 28px rgba(0,151,178,.12);
+}
+
+/* ======================================================
+   FLASH MESSAGES
+   ====================================================== */
+#flash-messages-container{
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 2000;
+  max-width: 420px;
+}
+.alert-custom{
+  display:flex; align-items:center; gap:12px;
+  padding: 14px 18px;
+  border-radius: 14px;
+  margin-bottom: 12px;
+  box-shadow: var(--shadow-md);
+  opacity: 0;
+  transform: translateX(100px);
+  transition: all .25s ease;
+}
+.alert-custom.show{ opacity: 1; transform: translateX(0); }
+.alert-success{ background: #d1fae5; color:#065f46; border-left:5px solid var(--success); }
+.alert-error{ background: #fee2e2; color:#991b1b; border-left:5px solid var(--danger); }
+.btn-close-custom{
+  margin-left:auto;
+  background:none; border:none;
+  font-size: 1.35rem;
+  cursor:pointer;
+  color: inherit;
+  opacity:.6;
+}
+.btn-close-custom:hover{ opacity:1; }
+
+/* ======================================================
+   RECO RAILS (Best Sellers / Recommandés) — PRO + SOLID
+   ====================================================== */
+.reco-zone{
+  background:#fff;
+  border-radius: 18px;
+  box-shadow: var(--shadow-sm);
+  border: 1px solid rgba(0,151,178,.10);
+  padding: 16px;
+}
+.reco-head{
+  display:flex; align-items:flex-start; justify-content:space-between;
+  gap: 12px; flex-wrap:wrap;
+  margin-bottom: 12px;
+}
+.reco-title{
+  margin:0;
+  font-weight: 1000;
+  font-size: 1.25rem;
+  color: var(--gray-800);
+}
+.reco-sub{
+  margin: 4px 0 0 0;
+  color: #6b7280;
+}
+.reco-chip{
+  display:inline-flex;
+  align-items:center;
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-weight: 900;
+  font-size: .8rem;
+  background: rgba(0,191,166,.14);
+  color: var(--primary-dark);
+}
+.reco-chip.ai{
+  background: rgba(0,151,178,.14);
+  color: var(--primary-dark);
+}
+
+.reco-track{
+  display:flex;
+  gap: 12px;
+  overflow:auto;
+  padding-bottom: 6px;
+  scroll-behavior:smooth;
+}
+.reco-track::-webkit-scrollbar{ height:8px; }
+.reco-track::-webkit-scrollbar-thumb{
+  background: rgba(0,151,178,.18);
+  border-radius: 20px;
+}
+
+.reco-card{
+  min-width: 210px;
+  background:#fff;
+  border-radius: 14px;
+  border: 1px solid #e5e7eb;
+  padding: 12px;
+  transition: .2s ease;
+}
+.reco-card:hover{
+  transform: translateY(-3px);
+  box-shadow: 0 12px 26px rgba(0,0,0,.10);
+  border-color: rgba(0,151,178,.22);
+}
+.reco-img{
+  width:100%;
+  height: 140px;
+  object-fit: contain;
+  border-radius: 12px;
+  background: #f8fafc;
+  padding: 8px;
+}
+.reco-body{ margin-top: 10px; }
+.reco-cat{
+  display:inline-block;
+  font-size: .75rem;
+  font-weight: 800;
+  color: var(--primary-dark);
+  background: rgba(0,191,166,.12);
+  padding: 4px 10px;
+  border-radius: 999px;
+  margin-bottom: 8px;
+}
+.reco-name{
+  font-weight: 900;
+  font-size: .95rem;
+  color: #111827;
+  margin:0 0 8px 0;
+  display:-webkit-box;
+  -webkit-line-clamp:2;
+  -webkit-box-orient:vertical;
+  overflow:hidden;
+}
+.reco-price{
+  font-weight: 1000;
+  color: var(--primary-dark);
+  font-size: 1.1rem;
+  margin: 0 0 10px 0;
+}
+.reco-add{
+  width:100%;
+  border:none;
+  border-radius: 12px;
+  padding: 10px 12px;
+  background: var(--primary-dark);
+  color:#fff;
+  font-weight: 1000;
+  display:flex; align-items:center; justify-content:center; gap:8px;
+  transition:.2s ease;
+}
+.reco-add:hover{ transform: translateY(-1px); box-shadow: 0 12px 26px rgba(0,151,178,.20); }
+
+/* ======================================================
+   SEARCH / FILTERS
+   ====================================================== */
+.search-filter-section{
+  background:#fff;
+  padding: 18px;
+  border-radius: 18px;
+  box-shadow: var(--shadow-sm);
+  border: 1px solid rgba(0,151,178,.10);
+}
+.search-box{ position:relative; }
+.search-box i.bi-search{
+  position:absolute;
+  left:15px; top:50%;
+  transform: translateY(-50%);
+  color:#6c757d;
+  font-size: 18px;
+}
+.search-box input{
+  padding-left:45px;
+  padding-right:86px;
+  height: 46px;
+  border:2px solid #e9ecef;
+  border-radius: 12px;
+  transition:.2s ease;
+}
+.search-box input:focus{
+  border-color: var(--primary-dark);
+  box-shadow: var(--ring);
+}
+.form-select{
+  height:46px;
+  border:2px solid #e9ecef;
+  border-radius: 12px;
+}
+.form-select:focus{
+  border-color: var(--primary-dark);
+  box-shadow: var(--ring);
+}
+#resultCount #count{ color: var(--primary-dark); font-weight: 1000; }
+
+.btn-clear{
+  position:absolute;
+  right:10px; top:50%;
+  transform: translateY(-50%);
+  background:none; border:none;
+  color:#6c757d;
+  cursor:pointer;
+  padding:5px;
+}
+.btn-clear:hover{ color: var(--danger); }
+
+.btn-voice{
+  position:absolute;
+  right:44px;
+  top:50%;
+  transform: translateY(-50%);
+  width:34px; height:34px;
+  border-radius: 12px;
+  border:2px solid rgba(0,151,178,.22);
+  background:#fff;
+  color: var(--primary-dark);
+  display:flex; align-items:center; justify-content:center;
+  cursor:pointer;
+  transition:.2s ease;
+}
+.btn-voice:hover{ background: rgba(0,191,166,.10); }
+.btn-voice.listening{
+  background: var(--primary-dark);
+  color:#fff;
+  border-color: transparent;
+  box-shadow: 0 12px 26px rgba(0,151,178,.18);
+}
+
+/* ======================================================
+   PRODUCT CARDS
+   ====================================================== */
+.produit-card{
+  background:#fff;
+  border-radius: 20px;
+  overflow:hidden;
+  border: 1px solid #eef2f7;
+  height:100%;
+  display:flex;
+  flex-direction:column;
+  transition:.25s ease;
+}
+.produit-card:hover{
+  transform: translateY(-6px);
+  box-shadow: var(--shadow-lg);
+  border-color: rgba(0,151,178,.25);
+}
+.produit-image-container{
+  position:relative;
+  width:100%;
+  height: 240px;
+  background: #f7fafc;  /* ✅ SOLID (no gradient) */
+  overflow:hidden;
+}
+.produit-img{
+  width:100%; height:100%;
+  object-fit: contain;
+  padding: 18px;
+  transition: transform .25s ease;
+}
+.produit-card:hover .produit-img:not(.img-grayscale){ transform: scale(1.06); }
+.img-grayscale{ filter: grayscale(100%) opacity(.5); }
+
+.price-badge{
+  position:absolute;
+  top:14px; right:14px;
+  background: var(--primary-dark); /* ✅ SOLID */
+  color:#fff;
+  padding: 8px 14px;
+  border-radius: 999px;
+  font-weight: 1000;
+  font-size: 1rem;
+  box-shadow: 0 12px 26px rgba(0,151,178,.18);
+  z-index:10;
+}
+.badge-indisponible{
+  position:absolute;
+  top:14px; left:14px;
+  background: var(--danger); /* ✅ SOLID */
+  color:#fff;
+  padding: 8px 14px;
+  border-radius: 999px;
+  font-weight: 900;
+  font-size: .8rem;
+  text-transform: uppercase;
+  letter-spacing: .4px;
+  box-shadow: 0 12px 26px rgba(188,11,9,.18);
+  z-index:10;
+}
+
+.card-body{
+  padding: 20px;
+  display:flex;
+  flex-direction:column;
+  flex-grow:1;
+}
+.card-title{
+  font-size: 1.12rem;
+  font-weight: 1000;
+  color: var(--gray-800);
+  margin: 0 0 10px 0;
+  line-height: 1.35;
+  display:-webkit-box;
+  -webkit-line-clamp:2;
+  -webkit-box-orient:vertical;
+  overflow:hidden;
+}
+.card-category{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  padding: 6px 12px;
+  background: rgba(0,191,166,.12);
+  color: var(--primary-dark);
+  border-radius: 999px;
+  font-size: .82rem;
+  font-weight: 900;
+  margin-bottom: 10px;
+}
+.card-stock{
+  display:flex; align-items:center; gap:8px;
+  font-size: .9rem;
+  color: #6b7280;
+  margin-bottom: 12px;
+}
+
+/* status */
+.status-badge{
+  padding: 8px 14px;
+  border-radius: 999px;
+  font-weight: 900;
+  font-size: .82rem;
+  margin-bottom: 14px;
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+}
+.status-badge.available{
+  background: rgba(0,191,166,.14);
+  color: #065f46;
+}
+.status-badge.unavailable{
+  background:#fee2e2;
+  color:#991b1b;
+}
+
+.card-actions{
+  display:flex;
+  gap:10px;
+  margin-top:auto;
+}
+
+/* ✅ AJOUTER (SOLID + texte blanc forcé) */
+.btn-add-cart{
+  flex:1;
+  padding: 12px;
+  background: var(--primary-dark);  /* ✅ SOLID */
+  color:#fff !important;
+  border:none;
+  border-radius: 14px;
+  font-weight: 1000;
+  cursor:pointer;
+  transition:.2s ease;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  opacity: 1 !important;
+}
+.btn-add-cart i,
+.btn-add-cart span{ color:#fff !important; opacity: 1 !important; }
+
+.btn-add-cart:hover{
+  transform: translateY(-1px);
+  box-shadow: 0 14px 30px rgba(0,151,178,.22);
+}
+
+.btn-details{
+  padding: 12px 16px;
+  background:#fff;
+  color: var(--primary-dark);
+  border:2px solid rgba(0,151,178,.25);
+  border-radius: 14px;
+  font-weight: 1000;
+  cursor:pointer;
+  transition:.2s ease;
+}
+.btn-details:hover{
+  background: rgba(0,191,166,.10);
+}
+
+.btn-unavailable{
+  flex:1;
+  padding: 12px;
+  background: var(--gray-200);
+  color:#6b7280;
+  border:none;
+  border-radius: 14px;
+  font-weight: 900;
+  cursor:not-allowed;
+  display:flex; align-items:center; justify-content:center; gap:8px;
+}
+
+/* TTS */
+.btn-tts{
+  width: 46px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  border-radius: 14px;
+  border:2px solid rgba(0,151,178,.22);
+  background:#fff;
+  color: var(--primary-dark);
+  font-weight: 1000;
+  cursor:pointer;
+  transition:.2s ease;
+}
+.btn-tts:hover{
+  background: rgba(0,191,166,.10);
+  transform: translateY(-1px);
+}
+.btn-tts.is-speaking{
+  background: var(--primary-dark);
+  color:#fff;
+  border-color: transparent;
+}
+.btn-tts-modal{
+  width:auto;
+  padding: 10px 14px;
+  gap:8px;
+  display:inline-flex; align-items:center;
+}
+
+/* Empty state */
+.empty-state{ text-align:center; padding: 70px 20px; }
+.empty-state i{ font-size: 4.5rem; color: #d1d5db; margin-bottom: 18px; }
+.empty-state h3{ color: var(--gray-800); margin-bottom: 8px; font-weight: 1000; }
+.empty-state p{ color:#6b7280; }
+
+/* Modal */
+.modal-content{ border-radius: 20px; border:none; overflow:hidden; }
+.modal-header{
+  background: var(--primary-dark); /* ✅ SOLID */
+  color:#fff;
+  border:none;
+  padding: 20px;
+}
+.modal-title{ font-weight: 1000; font-size: 1.2rem; }
+.modal-body{ padding: 26px; }
+.modal-body img{ border-radius: 14px; box-shadow: var(--shadow-md); }
+
+.detail-row{
+  display:flex;
+  justify-content:space-between;
+  gap:12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--gray-200);
+}
+.detail-row:last-child{ border-bottom:none; }
+.detail-label{ font-weight: 1000; color: var(--gray-800); }
+.detail-value{ color:#6b7280; }
+
+/* QR modal */
+#contactQrModal .modal-header{
+  background: var(--primary-dark) !important;
+}
+#contactQrModal .spinner-border{ color: var(--primary-dark) !important; }
+
+/* AI fab */
+.ai-fab{
+  position: fixed;
+  right: 22px;
+  bottom: 22px;
+  width: 56px; height: 56px;
+  border-radius: 18px;
+  display:flex; align-items:center; justify-content:center;
+  cursor:pointer;
+  z-index: 9999;
+  color:#fff;
+  background: var(--primary-dark); /* ✅ SOLID */
+  box-shadow: 0 18px 40px rgba(0,151,178,.22);
+  transition:.2s ease;
+}
+.ai-fab:hover{ transform: translateY(-1px); }
+
+.ai-panel{
+  position: fixed;
+  right: 22px;
+  bottom: 90px;
+  width: 360px;
+  max-width: calc(100vw - 44px);
+  background:#fff;
+  border-radius: 18px;
+  box-shadow: 0 20px 60px rgba(15,23,42,.25);
+  overflow:hidden;
+  z-index: 9999;
+  border: 1px solid rgba(0,151,178,.18);
+}
+.ai-panel.d-none{ display:none; }
+.ai-head{
+  padding: 12px 14px;
+  background: var(--primary-dark); /* ✅ SOLID */
+  color:#fff;
+  display:flex; align-items:center; justify-content:space-between;
+}
+.ai-title{ font-weight: 1000; display:flex; align-items:center; gap:10px; }
+.ai-dot{ width:10px; height:10px; border-radius:50%; background:#22c55e; box-shadow:0 0 0 4px rgba(34,197,94,.18); }
+.ai-x{
+  background: rgba(255,255,255,.18);
+  border: 1px solid rgba(255,255,255,.28);
+  color:#fff;
+  width:34px; height:34px;
+  border-radius: 12px;
+  font-size: 20px;
+  line-height:1;
+  cursor:pointer;
+}
+.ai-body{
+  padding: 14px;
+  height: 320px;
+  overflow:auto;
+  background: #f6fbfb; /* ✅ SOLID */
+}
+.ai-msg{
+  padding: 10px 12px;
+  border-radius: 14px;
+  margin: 10px 0;
+  max-width: 92%;
+  font-size: .95rem;
+  line-height: 1.35;
+  box-shadow: 0 10px 20px rgba(15,23,42,.08);
+}
+.ai-user{
+  margin-left:auto;
+  background: var(--primary-dark);
+  color:#fff;
+  border-bottom-right-radius: 6px;
+}
+.ai-bot{
+  background:#fff;
+  color:#0f172a;
+  border-bottom-left-radius: 6px;
+  border: 1px solid rgba(0,151,178,.12);
+}
+.ai-foot{
+  padding: 12px;
+  display:flex; gap:10px;
+  border-top: 1px solid rgba(0,151,178,.12);
+  background:#fff;
+}
+.ai-input{
+  flex:1;
+  border: 2px solid rgba(0,151,178,.18);
+  border-radius: 14px;
+  padding: 10px 12px;
+  outline:none;
+}
+.ai-input:focus{ border-color: rgba(0,151,178,.55); box-shadow: 0 0 0 4px rgba(0,151,178,.12); }
+.ai-send{
+  width:44px; height:44px;
+  border-radius: 14px;
+  border:none;
+  color:#fff;
+  background: var(--primary-dark); /* ✅ SOLID */
+  box-shadow: 0 12px 26px rgba(0,151,178,.18);
+  cursor:pointer;
+  transition:.2s ease;
+}
+.ai-send:hover{ transform: translateY(-1px); }
+
+@media (max-width:768px){
+  .page-header h1{ font-size: 2rem; }
+  .produit-image-container{ height: 200px; }
+  .card-actions{ flex-direction:column; }
+}
+/* ================================
+   ✅ SOLID THEME (NO GRADIENT)
+   (ne touche pas au caroussel)
+   ================================ */
+
+:root{
+  --primary: #00BFA6 !important;
+  --primary-dark: #0097B2 !important;
+}
+
+/* Header solid */
+.page-header{
+  background: var(--primary-dark) !important;
+}
+
+/* Boutons solid */
+.btn-orders,
+.btn-add-cart,
+.ai-fab,
+.ai-head,
+.ai-send{
+  background: var(--primary-dark) !important;
+  background-image: none !important;
+}
+
+/* Price badge solid */
+.price-badge{
+  background: var(--primary-dark) !important;
+  background-image: none !important;
+}
+
+/* Modal header solid */
+.modal-header{
+  background: var(--primary-dark) !important;
+  background-image: none !important;
+}
+
+/* ✅ Texte Ajouter bien BLANC (pas faded) */
+.btn-add-cart,
+.btn-add-cart *{
+  color: #fff !important;
+  opacity: 1 !important;
+}
+
+/* ✅ Focus turquoise */
+.search-box input:focus,
+.form-select:focus{
+  border-color: var(--primary-dark) !important;
+  box-shadow: 0 0 0 .2rem rgba(0,151,178,.18) !important;
+}
+
+/* ======================================================
+   ✅ UPGRADE DESIGN — CARDS RECOMMANDÉS (CARROUSEL)
+   (ne change pas la logique du carrousel)
+   ====================================================== */
+
+/* Carte reco plus premium */
+.reco-card{
+  position: relative;
+  min-width: 230px;              /* un peu + large */
+  border-radius: 18px;
+  padding: 14px;
+  border: 1px solid rgba(0,151,178,.14);
+  box-shadow: 0 10px 24px rgba(0,0,0,.06);
+  overflow: hidden;
+}
+
+.reco-card:hover{
+  transform: translateY(-4px);
+  box-shadow: 0 18px 34px rgba(0,0,0,.10);
+  border-color: rgba(0,151,178,.28);
+}
+
+/* Ligne badges en haut (Recommandé / Même catégorie)
+   👉 marche même si ce sont juste des textes dans un "premier div" du card */
+.reco-card > :first-child{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  flex-wrap:wrap;
+  font-weight: 900;
+  font-size: .82rem;
+  color: var(--primary-dark);
+  margin-bottom: 10px;
+}
+
+/* Style “pill” sur les 2 textes (Recommandé / Même catégorie)
+   Si ton JS les met dans des <span>, c’est encore mieux (voir plus bas) */
+.reco-card > :first-child span,
+.reco-card > :first-child .badge,
+.reco-card > :first-child .tag,
+.reco-card > :first-child .chip{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(0,191,166,.12);
+  color: var(--primary-dark);
+  border: 1px solid rgba(0,151,178,.18);
+}
+
+/* Image : cadre propre + centrage */
+.reco-img{
+  height: 150px;
+  border-radius: 14px;
+  background: #f7fafc;
+  border: 1px solid rgba(0,151,178,.10);
+  padding: 10px;
+  object-fit: contain;
+}
+
+/* Corps : alignement plus propre */
+.reco-body{
+  margin-top: 12px;
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+}
+
+/* Catégorie : plus clean */
+.reco-cat{
+  font-weight: 900;
+  font-size: .78rem;
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: rgba(0,191,166,.10);
+  color: var(--primary-dark);
+  border: 1px solid rgba(0,151,178,.14);
+  width: fit-content;
+}
+
+/* Nom : meilleur rendu + hauteur stable */
+.reco-name{
+  font-size: 1rem;
+  line-height: 1.35;
+  min-height: 44px;             /* stabilise les cartes */
+  margin: 0;
+}
+
+/* Prix : plus visible */
+.reco-price{
+  font-size: 1.15rem;
+  font-weight: 1000;
+  color: var(--primary-dark);
+  margin: 0;
+}
+
+/* Bouton ajouter : full width + plus premium */
+.reco-add{
+  margin-top: 6px;
+  border-radius: 14px;
+  padding: 11px 12px;
+  font-weight: 1000;
+  letter-spacing: .2px;
+  box-shadow: 0 10px 22px rgba(0,151,178,.14);
+}
+.reco-add:hover{
+  box-shadow: 0 14px 30px rgba(0,151,178,.22);
+}
+
+
+</style>
+
+{# =========================
+   FLASH MESSAGES
+   ========================= #}
 <div id="flash-messages-container">
   {% for label, messages in app.flashes %}
     {% for message in messages %}
@@ -16,43 +869,85 @@
   {% endfor %}
 </div>
 
-{# Header #}
-<div class="page-header">
-  <div class="container text-center">
-    <h1><i class="bi bi-shop me-3"></i>Notre Pharmacie</h1>
-    <p>Découvrez notre sélection de produits de santé et bien-être</p>
+{# =========================
+   HEADER
+   ========================= #}
+<div class="container mw-1120">
+  <div class="page-header">
+    <div class="container text-center">
+      <h1><i class="bi bi-shop me-3"></i>Notre Pharmacie</h1>
+      <p>Découvrez notre sélection de produits de santé et bien-être</p>
+    </div>
   </div>
+  <button id="themeToggle" class="btn-contact" type="button">
+  <i class="bi bi-moon-stars"></i> Mode sombre
+</button>
 </div>
 
-{# Accès rapide commandes #}
-<div class="container mb-4">
-  <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+{# =========================
+   QUICK ACTIONS
+   ========================= #}
+<div class="container mw-1120 mb-4">
+  <div class="quick-actions d-flex justify-content-between align-items-center flex-wrap gap-2">
     <div class="text-muted">
       <i class="bi bi-info-circle me-1"></i>
       Retrouvez toutes vos commandes ici.
     </div>
-    <a href="{{ path('mes_commandes') }}" class="btn btn-orders">
-      <i class="bi bi-bag-check-fill me-2"></i>
-      Mes commandes
-    </a>
+
+    <div class="d-flex gap-2">
+      <a href="{{ path('mes_commandes') }}" class="btn-orders">
+        <i class="bi bi-bag-check-fill"></i> Mes commandes
+      </a>
+
+      <button type="button" class="btn-contact" id="btnContactQr">
+        <i class="bi bi-person-vcard"></i> Contact
+      </button>
+    </div>
   </div>
 </div>
 
-<div class="container mb-5">
-  {# Barre de recherche et filtres #}
+{# =========================
+   RECO RAILS
+   ========================= #}
+<div class="container mw-1120 mb-4">
+  <section class="reco-zone">
+    <div class="reco-head">
+      <div>
+        <h2 class="reco-title">🔥 Best Sellers</h2>
+        <p class="reco-sub">Produits les plus achetés</p>
+      </div>
+      <div class="reco-chip">Auto</div>
+    </div>
+    <div class="reco-track" id="bestTrack"></div>
+    <div class="reco-empty" id="bestEmpty" style="display:none;">Aucun best-seller</div>
+  </section>
+
+  <section class="reco-zone mt-4">
+    <div class="reco-head">
+      <div>
+        <h2 class="reco-title">🤖 Recommandés pour vous</h2>
+        <p class="reco-sub" id="aiBasedOnText">Basé sur votre historique</p>
+      </div>
+      <div class="reco-chip ai">IA</div>
+    </div>
+    <div class="reco-track" id="aiTrack"></div>
+    <div class="reco-empty" id="aiEmpty" style="display:none;">Recommandations indisponibles</div>
+  </section>
+</div>
+
+{# =========================
+   PRODUITS
+   ========================= #}
+<div class="container mw-1120 mb-5">
   <div class="search-filter-section mb-4">
     <div class="row g-3">
-      {# Recherche #}
-      <div class="col-md-6">
+
+      <div class="col-md-5">
         <div class="search-box">
           <i class="bi bi-search"></i>
+          <input type="text" id="searchInput" class="form-control"
+                 placeholder="Rechercher (nom, catégorie, description...)">
 
-          <input type="text"
-                 id="searchInput"
-                 class="form-control"
-                 placeholder="Rechercher un produit (nom, catégorie, description...)">
-
-          {# ✅ Recherche vocale #}
           <button id="voiceSearchBtn" class="btn-voice" type="button" title="Recherche vocale">
             <i class="bi bi-mic-fill"></i>
           </button>
@@ -63,23 +958,22 @@
         </div>
       </div>
 
-      <div class="col-md-3">
+      <div class="col-md-2">
         <select id="sortPrice" class="form-select">
-          <option value="">Trier par prix</option>
-          <option value="asc" {% if currentSort == 'asc' %}selected{% endif %}>Prix croissant</option>
-          <option value="desc" {% if currentSort == 'desc' %}selected{% endif %}>Prix décroissant</option>
+          <option value="">Trier prix</option>
+          <option value="asc">Prix ↑</option>
+          <option value="desc">Prix ↓</option>
         </select>
       </div>
 
-      <div class="col-md-3">
+      <div class="col-md-2">
         <select id="sortStock" class="form-select">
-          <option value="">Trier par stock</option>
-          <option value="asc" {% if currentSortStock == 'asc' %}selected{% endif %}>Stock croissant</option>
-          <option value="desc" {% if currentSortStock == 'desc' %}selected{% endif %}>Stock décroissant</option>
+          <option value="">Trier stock</option>
+          <option value="desc">Stock ↓</option>
+          <option value="asc">Stock ↑</option>
         </select>
       </div>
 
-      {# Filtre par catégorie #}
       <div class="col-md-3">
         <select id="filterCategory" class="form-select">
           <option value="">Toutes catégories</option>
@@ -96,7 +990,6 @@
       </div>
     </div>
 
-    {# Compteur de résultats #}
     <div class="mt-3">
       <span id="resultCount" class="text-muted">
         <i class="bi bi-bag"></i>
@@ -105,7 +998,6 @@
     </div>
   </div>
 
-  {# Grille Produits #}
   {% if produits is not empty %}
     <div class="row g-4" id="produitsContainer">
       {% for produit in produits %}
@@ -115,8 +1007,8 @@
              data-prix="{{ produit.prixProduit }}"
              data-stock="{{ produit.quantiteProduit }}"
              data-description="{{ produit.descriptionProduit|lower }}">
+
           <div class="produit-card {% if produit.statusProduit != 'Disponible' %}unavailable{% endif %}">
-            {# Image #}
             <div class="produit-image-container">
               {% if produit.statusProduit != 'Disponible' %}
                 <div class="badge-indisponible">{{ produit.statusProduit }}</div>
@@ -124,17 +1016,26 @@
                 <div class="price-badge">{{ produit.prixProduit }} DT</div>
               {% endif %}
 
-              <img src="{{ produit.imageProduit }}"
-                   class="produit-img {% if produit.statusProduit != 'Disponible' %}img-grayscale{% endif %}"
-                   alt="{{ produit.nomProduit }}">
+              <img
+                src="{% if produit.imageProduit %}
+                       {% if produit.imageProduit starts with 'http' %}
+                         {{ produit.imageProduit }}
+                       {% else %}
+                         {{ asset('uploads/produits/' ~ produit.imageProduit) }}
+                       {% endif %}
+                     {% else %}
+                       {{ asset('assets/images/no-image.png') }}
+                     {% endif %}"
+                class="produit-img {% if produit.statusProduit != 'Disponible' %}img-grayscale{% endif %}"
+                alt="{{ produit.nomProduit }}"
+                loading="lazy">
             </div>
 
-            {# Body #}
             <div class="card-body">
               <h5 class="card-title">{{ produit.nomProduit }}</h5>
 
               <span class="card-category">
-                <i class="bi bi-tag me-1"></i>{{ produit.categorieProduit }}
+                <i class="bi bi-tag"></i> {{ produit.categorieProduit }}
               </span>
 
               <div class="card-stock">
@@ -147,12 +1048,10 @@
                 {{ produit.statusProduit }}
               </span>
 
-              {# Actions #}
               <div class="card-actions">
                 {% if produit.statusProduit == 'Disponible' %}
                   <button class="btn-add-cart"
                           data-id="{{ produit.id_produit }}"
-                          data-nom="{{ produit.nomProduit }}"
                           data-stock="{{ produit.quantiteProduit }}">
                     <i class="bi bi-cart-plus"></i>
                     <span>Ajouter</span>
@@ -164,7 +1063,6 @@
                   </button>
                 {% endif %}
 
-                {# ✅ TTS #}
                 <button type="button"
                         class="btn-tts"
                         data-tts-title="{{ produit.nomProduit|e('html_attr') }}"
@@ -172,11 +1070,10 @@
                         data-tts-price="{{ produit.prixProduit }}"
                         data-tts-stock="{{ produit.quantiteProduit }}"
                         data-tts-status="{{ produit.statusProduit|e('html_attr') }}"
-                        aria-label="Lire les détails du produit">
+                        aria-label="Lire les détails">
                   <i class="bi bi-volume-up-fill"></i>
                 </button>
 
-                {# Détails modal #}
                 <button class="btn-details" type="button" data-bs-toggle="modal" data-bs-target="#modal-{{ produit.id_produit }}">
                   <i class="bi bi-info-circle"></i>
                 </button>
@@ -185,7 +1082,7 @@
           </div>
         </div>
 
-        {# Modal détails #}
+        {# Modal #}
         <div class="modal fade" id="modal-{{ produit.id_produit }}" tabindex="-1" aria-hidden="true">
           <div class="modal-dialog modal-dialog-centered modal-lg">
             <div class="modal-content">
@@ -211,29 +1108,38 @@
               <div class="modal-body">
                 <div class="row">
                   <div class="col-md-5 text-center mb-4 mb-md-0">
-                    <img src="{{ produit.imageProduit }}" class="img-fluid" style="max-height:300px;">
+                    <img
+                      src="{% if produit.imageProduit %}
+                             {% if produit.imageProduit starts with 'http' %}
+                               {{ produit.imageProduit }}
+                             {% else %}
+                               {{ asset('uploads/produits/' ~ produit.imageProduit) }}
+                             {% endif %}
+                           {% else %}
+                             {{ asset('assets/images/no-image.png') }}
+                           {% endif %}"
+                      class="img-fluid"
+                      style="max-height:300px;"
+                      alt="{{ produit.nomProduit }}">
                   </div>
+
                   <div class="col-md-7">
                     <div class="detail-row">
                       <span class="detail-label">Description</span>
                       <span class="detail-value">{{ produit.descriptionProduit }}</span>
                     </div>
-
                     <div class="detail-row">
                       <span class="detail-label">Prix</span>
-                      <span class="detail-value fw-bold text-primary">{{ produit.prixProduit }} DT</span>
+                      <span class="detail-value fw-bold" style="color: var(--primary-dark)">{{ produit.prixProduit }} DT</span>
                     </div>
-
                     <div class="detail-row">
-                      <span class="detail-label">Quantité en stock</span>
+                      <span class="detail-label">Quantité</span>
                       <span class="detail-value">{{ produit.quantiteProduit }}</span>
                     </div>
-
                     <div class="detail-row">
                       <span class="detail-label">Catégorie</span>
                       <span class="detail-value">{{ produit.categorieProduit }}</span>
                     </div>
-
                     <div class="detail-row">
                       <span class="detail-label">Statut</span>
                       <span class="badge {% if produit.statusProduit == 'Disponible' %}bg-success{% else %}bg-danger{% endif %}">
@@ -250,19 +1156,57 @@
       {% endfor %}
     </div>
 
-    {# Message aucun résultat #}
     <div id="noResults" class="empty-state" style="display:none;">
       <i class="bi bi-search"></i>
       <h3>Aucun produit trouvé</h3>
-      <p>Essayez avec d'autres mots-clés ou filtres</p>
+      <p>Essayez d'autres mots-clés</p>
     </div>
   {% else %}
     <div class="empty-state">
       <i class="bi bi-inbox"></i>
       <h3>Aucun produit disponible</h3>
-      <p>Revenez plus tard pour découvrir nos nouveaux produits</p>
     </div>
   {% endif %}
+</div>
+
+{# =========================
+   MODAL QR CONTACT
+   ========================= #}
+<div class="modal fade" id="contactQrModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0 shadow-lg rounded-4">
+      <div class="modal-header">
+        <h5 class="modal-title text-white fw-bold">
+          <i class="bi bi-person-vcard me-2"></i>Ajouter la pharmacie
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+
+      <div class="modal-body p-4 text-center">
+        <div id="contactQrLoading" class="py-3">
+          <div class="spinner-border" role="status"></div>
+          <p class="text-muted mt-3 mb-0">Chargement du QR…</p>
+        </div>
+
+        <div id="contactQrContent" class="d-none">
+          <img id="contactQrImg" src="" alt="QR Contact"
+               class="shadow rounded-4"
+               style="width:260px;height:260px;">
+          <div class="small text-muted mt-3">Scannez avec votre caméra</div>
+        </div>
+
+        <div id="contactQrError" class="d-none">
+          <i class="bi bi-x-circle-fill text-danger" style="font-size:2rem;"></i>
+          <p class="mt-2 mb-0 fw-bold">Impossible d'afficher le QR</p>
+          <p class="text-muted mb-0" id="contactQrErrorMsg"></p>
+        </div>
+      </div>
+
+      <div class="modal-footer bg-light">
+        <button type="button" class="btn btn-secondary rounded-pill px-4" data-bs-dismiss="modal">Fermer</button>
+      </div>
+    </div>
+  </div>
 </div>
 
 {# =========================
@@ -290,657 +1234,16 @@
   </div>
 </div>
 
-<style>
-:root{
-  --primary:#0d6efd;
-  --primary-dark:#0b5ed7;
-  --success:#10b981;
-  --danger:#ef4444;
-  --warning:#f59e0b;
-  --gray-50:#f9fafb;
-  --gray-100:#f3f4f6;
-  --gray-200:#e5e7eb;
-  --gray-800:#1f2937;
-  --shadow-sm:0 2px 8px rgba(0,0,0,.08);
-  --shadow-md:0 4px 16px rgba(0,0,0,.12);
-  --shadow-lg:0 8px 32px rgba(0,0,0,.15);
-}
-
-/* ===== HEADER ===== */
-.page-header{
-  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-  color:#fff;
-  padding:60px 0;
-  margin-bottom:60px;
-  border-radius:0 0 50px 50px;
-  box-shadow: var(--shadow-lg);
-}
-.page-header h1{
-  font-size:3rem;
-  font-weight:800;
-  margin-bottom:10px;
-  text-shadow:0 2px 4px rgba(0,0,0,.12);
-}
-.page-header p{ font-size:1.2rem; opacity:.95; }
-
-/* ===== BTN MES COMMANDES ===== */
-.btn-orders{
-  display:inline-flex; align-items:center; gap:8px;
-  padding:12px 18px; border-radius:14px; border:none;
-  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-  color:#fff; font-weight:800;
-  box-shadow:0 10px 22px rgba(13,110,253,.35);
-  transition:.25s ease;
-  text-decoration:none;
-}
-.btn-orders:hover{
-  transform: translateY(-2px);
-  box-shadow:0 14px 28px rgba(13,110,253,.5);
-  color:#fff;
-}
-
-/* ===== BADGE PRIX ===== */
-.price-badge{
-  position:absolute; top:16px; right:16px;
-  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-  color:#fff; padding:8px 16px; border-radius:50px;
-  font-weight:800; font-size:1.05rem;
-  box-shadow:0 4px 12px rgba(13,110,253,.35);
-  z-index:10;
-}
-
-/* ===== Cartes ===== */
-.produit-card{
-  background:#fff; border-radius:20px; overflow:hidden;
-  transition:.25s ease;
-  border:2px solid var(--gray-100);
-  height:100%;
-  display:flex; flex-direction:column;
-}
-.produit-card:hover{
-  transform: translateY(-8px);
-  box-shadow: var(--shadow-lg);
-  border-color: var(--primary);
-}
-.produit-image-container{
-  position:relative;
-  width:100%;
-  height:240px;
-  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-  overflow:hidden;
-}
-.produit-img{
-  width:100%; height:100%;
-  object-fit:contain;
-  padding:20px;
-  transition:transform .25s ease;
-}
-.produit-card:hover .produit-img:not(.img-grayscale){ transform: scale(1.08); }
-.img-grayscale{ filter: grayscale(100%) opacity(.5); }
-
-.badge-indisponible{
-  position:absolute; top:16px; left:16px;
-  background: linear-gradient(135deg, var(--danger) 0%, #dc2626 100%);
-  color:#fff; padding:8px 16px; border-radius:50px;
-  font-weight:700; font-size:.85rem;
-  text-transform:uppercase; letter-spacing:.5px;
-  box-shadow:0 4px 12px rgba(239,68,68,.35);
-  z-index:10;
-}
-
-.card-body{
-  padding:24px;
-  display:flex; flex-direction:column;
-  flex-grow:1;
-}
-.card-title{
-  font-size:1.2rem;
-  font-weight:800;
-  color:var(--gray-800);
-  margin-bottom:12px;
-  line-height:1.35;
-  display:-webkit-box;
-  -webkit-line-clamp:2;
-  -webkit-box-orient:vertical;
-  overflow:hidden;
-}
-.card-category{
-  display:inline-block;
-  padding:6px 12px;
-  background: var(--gray-100);
-  color: var(--gray-800);
-  border-radius:10px;
-  font-size:.85rem;
-  font-weight:600;
-  margin-bottom:12px;
-}
-.card-stock{
-  display:flex; align-items:center; gap:8px;
-  font-size:.9rem; color:#6b7280;
-  margin-bottom:16px;
-}
-
-.status-badge{
-  padding:8px 16px;
-  border-radius:50px;
-  font-weight:700;
-  font-size:.85rem;
-  margin-bottom:16px;
-  display:inline-flex;
-  align-items:center;
-  gap:6px;
-}
-.status-badge.available{ background:#dbeafe; color:#1e40af; }
-.status-badge.unavailable{ background:#fee2e2; color:#991b1b; }
-
-/* Actions */
-.card-actions{ display:flex; gap:10px; margin-top:auto; }
-
-.btn-add-cart{
-  flex:1;
-  padding:12px;
-  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-  color:#fff; border:none; border-radius:12px;
-  font-weight:800; cursor:pointer;
-  transition:.25s ease;
-  display:flex; align-items:center; justify-content:center; gap:8px;
-}
-.btn-add-cart:hover{
-  transform: translateY(-2px);
-  box-shadow: 0 8px 20px rgba(13,110,253,.35);
-}
-.btn-details{
-  padding:12px 20px;
-  background:#fff;
-  color: var(--primary);
-  border:2px solid var(--primary);
-  border-radius:12px;
-  font-weight:800;
-  cursor:pointer;
-  transition:.2s ease;
-}
-.btn-details:hover{ background: var(--primary); color:#fff; }
-
-.btn-unavailable{
-  flex:1;
-  padding:12px;
-  background: var(--gray-200);
-  color:#6b7280;
-  border:none;
-  border-radius:12px;
-  font-weight:700;
-  cursor:not-allowed;
-  display:flex; align-items:center; justify-content:center; gap:8px;
-}
-
-/* ✅ BTN Lire (TTS) */
-.btn-tts{
-  width:46px;
-  display:inline-flex; align-items:center; justify-content:center;
-  border-radius:12px;
-  border:2px solid rgba(13,110,253,.25);
-  background:#fff;
-  color: var(--primary);
-  font-weight:900;
-  cursor:pointer;
-  transition:.2s ease;
-}
-.btn-tts:hover{
-  background: var(--primary);
-  color:#fff;
-  transform: translateY(-2px);
-  box-shadow: 0 10px 22px rgba(13,110,253,.20);
-}
-.btn-tts.is-speaking{
-  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-  color:#fff;
-  border-color: transparent;
-}
-.btn-tts-modal{ width:auto; padding:10px 14px; gap:8px; }
-
-/* Modal */
-.modal-content{ border-radius:20px; border:none; overflow:hidden; }
-.modal-header{
-  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-  color:#fff;
-  border:none;
-  padding:24px;
-}
-.modal-title{ font-weight:900; font-size:1.3rem; }
-.modal-body{ padding:32px; }
-.modal-body img{ border-radius:12px; box-shadow: var(--shadow-md); }
-
-.detail-row{
-  display:flex;
-  justify-content:space-between;
-  gap:12px;
-  padding:12px 0;
-  border-bottom:1px solid var(--gray-200);
-}
-.detail-row:last-child{ border-bottom:none; }
-.detail-label{ font-weight:800; color: var(--gray-800); }
-.detail-value{ color:#6b7280; }
-
-/* Search box */
-.search-filter-section{
-  background:#fff;
-  padding:20px;
-  border-radius:14px;
-  box-shadow: var(--shadow-sm);
-}
-.search-box{ position:relative; }
-.search-box i.bi-search{
-  position:absolute;
-  left:15px;
-  top:50%;
-  transform: translateY(-50%);
-  color:#6c757d;
-  font-size:18px;
-}
-.search-box input{
-  padding-left:45px;
-  padding-right:86px; /* place pour micro + clear */
-  height:45px;
-  border:2px solid #e9ecef;
-  border-radius:10px;
-  transition:.2s ease;
-}
-.search-box input:focus{
-  border-color: var(--primary);
-  box-shadow: 0 0 0 .2rem rgba(13,110,253,.15);
-}
-.search-box .btn-clear{
-  position:absolute;
-  right:10px;
-  top:50%;
-  transform: translateY(-50%);
-  background:none;
-  border:none;
-  color:#6c757d;
-  cursor:pointer;
-  padding:5px;
-  transition: color .2s ease;
-}
-.search-box .btn-clear:hover{ color: var(--danger); }
-
-.form-select{
-  height:45px;
-  border:2px solid #e9ecef;
-  border-radius:10px;
-}
-.form-select:focus{
-  border-color: var(--primary);
-  box-shadow: 0 0 0 .2rem rgba(13,110,253,.15);
-}
-
-#resultCount #count{ color: var(--primary); font-weight:900; }
-
-/* ✅ Micro */
-.btn-voice{
-  position:absolute;
-  right:44px;
-  top:50%;
-  transform: translateY(-50%);
-  width:34px; height:34px;
-  border-radius:10px;
-  border:2px solid rgba(13,110,253,.25);
-  background:#fff;
-  color: var(--primary);
-  display:flex; align-items:center; justify-content:center;
-  cursor:pointer;
-  transition:.2s ease;
-}
-.btn-voice:hover{ background: var(--primary); color:#fff; }
-.btn-voice.listening{
-  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-  color:#fff;
-  border-color: transparent;
-  box-shadow: 0 10px 22px rgba(13,110,253,.20);
-}
-
-/* Empty */
-.empty-state{ text-align:center; padding:80px 20px; }
-.empty-state i{ font-size:5rem; color: var(--gray-200); margin-bottom:22px; }
-.empty-state h3{ color: var(--gray-800); margin-bottom:10px; font-weight:900; }
-.empty-state p{ color:#6b7280; }
-
-@media (max-width:768px){
-  .page-header h1{ font-size:2rem; }
-  .produit-image-container{ height:200px; }
-  .card-actions{ flex-direction:column; }
-}
-
-/* ===== Groq UI ===== */
-.ai-fab{
-  position: fixed; right: 22px; bottom: 22px;
-  width: 56px; height: 56px; border-radius: 18px;
-  display:flex; align-items:center; justify-content:center;
-  cursor:pointer; z-index: 9999;
-  color:#fff;
-  background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
-  box-shadow: 0 14px 30px rgba(37,99,235,.28);
-  transition: .2s ease;
-}
-.ai-fab:hover{ transform: translateY(-2px); box-shadow: 0 18px 40px rgba(37,99,235,.35); }
-
-.ai-panel{
-  position: fixed; right: 22px; bottom: 90px;
-  width: 360px; max-width: calc(100vw - 44px);
-  background: #fff; border-radius: 18px;
-  box-shadow: 0 20px 60px rgba(15,23,42,.25);
-  overflow: hidden; z-index: 9999;
-  border: 1px solid rgba(37,99,235,.15);
-}
-.ai-panel.d-none{ display:none; }
-
-.ai-head{
-  padding: 12px 14px;
-  background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
-  color:#fff;
-  display:flex; align-items:center; justify-content:space-between;
-}
-.ai-title{ font-weight: 800; display:flex; align-items:center; gap:10px; }
-.ai-dot{ width:10px; height:10px; border-radius:50%; background:#22c55e; box-shadow:0 0 0 4px rgba(34,197,94,.18); }
-.ai-x{
-  background: rgba(255,255,255,.18);
-  border: 1px solid rgba(255,255,255,.28);
-  color:#fff; width: 34px; height: 34px;
-  border-radius: 12px; font-size: 20px; line-height: 1;
-  cursor:pointer;
-}
-.ai-body{
-  padding: 14px;
-  height: 320px;
-  overflow: auto;
-  background: linear-gradient(180deg, #eff6ff 0%, #ffffff 60%);
-}
-.ai-msg{
-  padding: 10px 12px;
-  border-radius: 14px;
-  margin: 10px 0;
-  max-width: 92%;
-  font-size: .95rem;
-  line-height: 1.35;
-  box-shadow: 0 8px 18px rgba(15,23,42,.08);
-}
-.ai-user{
-  margin-left: auto;
-  background: #2563eb;
-  color: #fff;
-  border-bottom-right-radius: 6px;
-}
-.ai-bot{
-  background: #fff;
-  color: #0f172a;
-  border-bottom-left-radius: 6px;
-  border: 1px solid rgba(37,99,235,.12);
-}
-.ai-foot{
-  padding: 12px;
-  display:flex; gap: 10px;
-  border-top: 1px solid rgba(37,99,235,.12);
-  background: #fff;
-}
-.ai-input{
-  flex:1;
-  border: 2px solid rgba(37,99,235,.18);
-  border-radius: 14px;
-  padding: 10px 12px;
-  outline: none;
-}
-.ai-input:focus{ border-color: rgba(37,99,235,.55); box-shadow: 0 0 0 4px rgba(37,99,235,.12); }
-.ai-send{
-  width: 44px; height: 44px;
-  border-radius: 14px;
-  border: none;
-  color:#fff;
-  background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
-  box-shadow: 0 10px 22px rgba(37,99,235,.22);
-  cursor:pointer;
-  transition: .2s ease;
-}
-.ai-send:hover{ transform: translateY(-1px); }
-</style>
-
-<script>
-document.addEventListener('DOMContentLoaded', () => {
-  // ====== Filtres internes (sans produits.js) ======
-  const searchInput = document.getElementById('searchInput');
-  const clearBtn = document.getElementById('clearSearch');
-  const filterCategory = document.getElementById('filterCategory');
-  const sortPrice = document.getElementById('sortPrice');
-  const sortStock = document.getElementById('sortStock');
-  const countEl = document.getElementById('count');
-  const noResults = document.getElementById('noResults');
-  const container = document.getElementById('produitsContainer');
-
-  const items = Array.from(document.querySelectorAll('.produit-item'));
-
-  const normalize = (s) => (s || '').toString().toLowerCase().trim();
-
-  const applyFilters = () => {
-    const q = normalize(searchInput.value);
-    const cat = normalize(filterCategory.value);
-    const sp = sortPrice.value;
-    const ss = sortStock.value;
-
-    // filter
-    let visible = items.filter(it => {
-      const nom = normalize(it.dataset.nom);
-      const c = normalize(it.dataset.categorie);
-      const d = normalize(it.dataset.description);
-
-      const matchesQ = !q || nom.includes(q) || c.includes(q) || d.includes(q);
-      const matchesCat = !cat || c === normalize(cat);
-
-      return matchesQ && matchesCat;
-    });
-
-    // sort
-    const sorted = [...visible].sort((a,b) => {
-      const pa = parseFloat(a.dataset.prix || '0');
-      const pb = parseFloat(b.dataset.prix || '0');
-      const sa = parseInt(a.dataset.stock || '0', 10);
-      const sb = parseInt(b.dataset.stock || '0', 10);
-
-      if (sp) return sp === 'asc' ? (pa - pb) : (pb - pa);
-      if (ss) return ss === 'asc' ? (sa - sb) : (sb - sa);
-      return 0;
-    });
-
-    // display
-    items.forEach(it => it.style.display = 'none');
-    sorted.forEach(it => it.style.display = '');
-
-    // reorder DOM
-    if (container) {
-      sorted.forEach(it => container.appendChild(it));
-    }
-
-    // count + empty
-    if (countEl) countEl.textContent = String(sorted.length);
-    if (noResults) noResults.style.display = sorted.length ? 'none' : 'block';
-
-    // clear button
-    if (clearBtn) clearBtn.style.display = q ? 'block' : 'none';
-  };
-
-  if (searchInput) searchInput.addEventListener('input', applyFilters);
-  if (filterCategory) filterCategory.addEventListener('change', applyFilters);
-  if (sortPrice) sortPrice.addEventListener('change', applyFilters);
-  if (sortStock) sortStock.addEventListener('change', applyFilters);
-
-  if (clearBtn) {
-    clearBtn.addEventListener('click', () => {
-      searchInput.value = '';
-      applyFilters();
-      searchInput.focus();
-    });
-  }
-
-  applyFilters();
-
-  // ====== GROQ CHAT UI ======
-  const fab = document.getElementById('aiFab');
-  const panel = document.getElementById('aiPanel');
-  const closeBtn = document.getElementById('aiClose');
-  const body = document.getElementById('aiBody');
-  const aiInput = document.getElementById('aiInput');
-  const send = document.getElementById('aiSend');
-
-  const addMsg = (text, who) => {
-    const div = document.createElement('div');
-    div.className = 'ai-msg ' + (who === 'user' ? 'ai-user' : 'ai-bot');
-    div.textContent = text;
-    body.appendChild(div);
-    body.scrollTop = body.scrollHeight;
-  };
-
-  if (fab) {
-    fab.addEventListener('click', () => {
-      panel.classList.toggle('d-none');
-      setTimeout(() => aiInput && aiInput.focus(), 50);
-    });
-  }
-  if (closeBtn) closeBtn.addEventListener('click', () => panel.classList.add('d-none'));
-
-  const ask = async () => {
-    const message = (aiInput.value || '').trim();
-    if (!message) return;
-
-    aiInput.value = '';
-    addMsg(message, 'user');
-
-    send.disabled = true;
-    aiInput.disabled = true;
-
-    try {
-      const res = await fetch('{{ path("api_pharmacie_ai") }}', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({ message })
-      });
-
-      const data = await res.json().catch(() => null);
-
-      if (!res.ok || !data || !data.ok) {
-        addMsg((data && data.reply) ? data.reply : "Erreur IA. Réessaie.", 'bot');
-      } else {
-        addMsg(data.reply, 'bot');
-      }
-    } catch (e) {
-      addMsg("Erreur réseau. Vérifie ta connexion.", 'bot');
-    } finally {
-      send.disabled = false;
-      aiInput.disabled = false;
-      aiInput.focus();
-    }
-  };
-
-  if (send) send.addEventListener('click', ask);
-  if (aiInput) aiInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') ask(); });
-
-  // ====== TTS (Lire détails produit) ======
-  const canSpeak = ('speechSynthesis' in window) && ('SpeechSynthesisUtterance' in window);
-
-  const stopSpeak = () => {
-    if (!canSpeak) return;
-    window.speechSynthesis.cancel();
-    document.querySelectorAll('.btn-tts.is-speaking').forEach(b => b.classList.remove('is-speaking'));
-  };
-
-  const speak = (btn) => {
-    if (!canSpeak) {
-      alert("Ton navigateur ne supporte pas la lecture audio (TTS). Essaie Chrome/Edge.");
-      return;
-    }
-
-    if (btn.classList.contains('is-speaking')) {
-      stopSpeak();
-      return;
-    }
-
-    stopSpeak();
-    btn.classList.add('is-speaking');
-
-    const title  = btn.dataset.ttsTitle  || '';
-    const desc   = btn.dataset.ttsDesc   || '';
-    const price  = btn.dataset.ttsPrice  || '';
-    const stock  = btn.dataset.ttsStock  || '';
-    const status = btn.dataset.ttsStatus || '';
-
-    const text =
-      `Produit : ${title}. ` +
-      (desc ? `Description : ${desc}. ` : '') +
-      (price ? `Prix : ${price} dinars. ` : '') +
-      (stock ? `Stock : ${stock}. ` : '') +
-      (status ? `Statut : ${status}.` : '');
-
-    const u = new SpeechSynthesisUtterance(text);
-    u.lang = 'fr-FR';
-    u.rate = 1;
-    u.pitch = 1;
-
-    u.onend = () => btn.classList.remove('is-speaking');
-    u.onerror = () => btn.classList.remove('is-speaking');
-
-    window.speechSynthesis.speak(u);
-  };
-
-  document.querySelectorAll('.btn-tts').forEach(btn => btn.addEventListener('click', () => speak(btn)));
-  document.querySelectorAll('.modal').forEach(m => m.addEventListener('hidden.bs.modal', stopSpeak));
-  window.addEventListener('beforeunload', stopSpeak);
-
-  // ====== Recherche vocale (SpeechRecognition) ======
-  const voiceBtn = document.getElementById('voiceSearchBtn');
-  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-
-  if (!SpeechRecognition) {
-    if (voiceBtn) voiceBtn.style.display = 'none';
-  } else {
-    const recognition = new SpeechRecognition();
-    recognition.lang = 'fr-FR';
-    recognition.interimResults = false;
-    recognition.maxAlternatives = 1;
-
-    voiceBtn.addEventListener('click', () => {
-      try { recognition.start(); } catch(e) {}
-    });
-
-    recognition.onstart = () => {
-      voiceBtn.classList.add('listening');
-      voiceBtn.innerHTML = '<i class="bi bi-mic-mute-fill"></i>';
-    };
-
-    recognition.onend = () => {
-      voiceBtn.classList.remove('listening');
-      voiceBtn.innerHTML = '<i class="bi bi-mic-fill"></i>';
-    };
-
-    recognition.onerror = () => {
-      voiceBtn.classList.remove('listening');
-      voiceBtn.innerHTML = '<i class="bi bi-mic-fill"></i>';
-    };
-
-    recognition.onresult = (event) => {
-      const text = (event.results?.[0]?.[0]?.transcript || '').trim();
-      if (!text) return;
-      searchInput.value = text;
-      applyFilters();
-    };
-  }
-});
-</script>
 {% endblock %}
 
 {% block stylesheets %}
   {{ parent() }}
-  {# garde ton fichier si tu veux, mais attention au doublon de styles #}
-  <link rel="stylesheet" href="{{ asset('assets/css/produits.css') }}">
+  {# ⚠️ Si tes couleurs changent encore, commente ce fichier pour tester (il peut écraser) #}
+   <link rel="stylesheet" href="{{ asset('assets/css/produits.css') }}"> 
+   <link rel="stylesheet" href="{{ asset('assets/css/theme-dark.css') }}">
 {% endblock %}
 
 {% block javascripts %}
   {{ parent() }}
-  {# tu peux garder ton fichier js mais ATTENTION doublon si il filtre déjà #}
   <script src="{{ asset('assets/js/produits.js') }}"></script>
 {% endblock %}

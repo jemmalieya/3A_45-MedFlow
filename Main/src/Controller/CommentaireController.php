@@ -12,14 +12,14 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Form\FormError;
 use Symfony\Component\HttpFoundation\JsonResponse;
-
+use App\Service\AiCommentModerationService;
 
 
 #[Route('/blog/commentaire')]
 class CommentaireController extends AbstractController
 {
     #[Route('/blog/commentaire/add/{id}', name: 'commentaire_add', methods: ['GET', 'POST'])]
-public function add(Post $post, Request $request, EntityManagerInterface $em): Response
+public function add(Post $post, Request $request, EntityManagerInterface $em, AiCommentModerationService $moderation): Response
 {
     $commentaire = new Commentaire();
     $commentaire->setPost($post);
@@ -61,7 +61,21 @@ public function add(Post $post, Request $request, EntityManagerInterface $em): R
             // Pas besoin de manipuler manuellement la date, elle est automatiquement définie dans le constructeur de l'entité
             $commentaire->setContenu($contenu);
             $commentaire->setDateCreation(new \DateTimeImmutable());
+// ======================
+// ✅ MODERATION IA
+// ======================
+$decision = $moderation->moderate($contenu);
 
+$commentaire->setModerationScore($decision['score']);
+$commentaire->setModerationLabel($decision['label']);
+$commentaire->setModeratedAt(new \DateTimeImmutable());
+
+if (!$decision['allow']) {
+    $commentaire->setStatus('blocked');
+    $this->addFlash('error', "Commentaire bloqué automatiquement (IA: {$decision['label']} / score {$decision['score']}).");
+} else {
+    $commentaire->setStatus('published');
+}
             // Persister le commentaire dans la base de données
             $em->persist($commentaire);
 
@@ -89,7 +103,7 @@ public function add(Post $post, Request $request, EntityManagerInterface $em): R
 
 
 #[Route('/commentaire/edit/{id}', name: 'commentaire_edit', methods: ['GET', 'POST'])]
-public function edit(Commentaire $commentaire, Request $request, EntityManagerInterface $em): Response
+public function edit(Commentaire $commentaire, Request $request, EntityManagerInterface $em, AiCommentModerationService $moderation): Response
 {
 
 $user = $this->getUser();
@@ -124,6 +138,18 @@ if (!$user || $commentaire->getUser() !== $user) {
         }
 
         if ($form->isValid()) {
+            $decision = $moderation->moderate($contenu);
+
+$commentaire->setModerationScore($decision['score']);
+$commentaire->setModerationLabel($decision['label']);
+$commentaire->setModeratedAt(new \DateTimeImmutable());
+
+if (!$decision['allow']) {
+    $commentaire->setStatus('blocked');
+    $this->addFlash('error', "Modification refusée: commentaire bloqué par IA (IA: {$decision['label']} / score {$decision['score']}).");
+} else {
+    $commentaire->setStatus('published');
+}
             $em->flush();
             $this->addFlash('success', 'Commentaire modifié ✅');
 
@@ -174,7 +200,8 @@ public function delete(Request $request, Commentaire $commentaire, EntityManager
 
 
     #[Route('/add-inline/{id}', name: 'commentaire_add_inline', methods: ['POST'])]
-public function addInline(Post $post, Request $request, EntityManagerInterface $em): Response
+public function addInline(Post $post, Request $request, EntityManagerInterface $em, AiCommentModerationService $moderation): Response
+
 {
     // CSRF
     
@@ -214,20 +241,39 @@ public function addInline(Post $post, Request $request, EntityManagerInterface $
         return $this->redirectToRoute('app_login');
     }
     $commentaire->setUser($user);
+$decision = $moderation->moderate($contenu);
 
+$commentaire->setModerationScore($decision['score']);
+$commentaire->setModerationLabel($decision['label']);
+$commentaire->setModeratedAt(new \DateTimeImmutable());
+
+if (!$decision['allow']) {
+    $commentaire->setStatus('blocked');
+    $this->addFlash('comment_error', $postId.'|Commentaire bloqué automatiquement (IA: '.$decision['label'].' / score '.$decision['score'].').');
+    // On enregistre quand même le commentaire en "blocked" :
+} else {
+    $commentaire->setStatus('published');
+}
     $em->persist($commentaire);
 
-    // ✅ MAJ nbr_commentaires (si tu utilises ce champ)
+    if ($commentaire->getStatus() === 'published') {
     $post->setNbrCommentaires(($post->getNbrCommentaires() ?? 0) + 1);
+}
 
     $em->flush();
 
+   // ... après $em->flush();
+
+if ($commentaire->getStatus() === 'blocked') {
+  $this->addFlash('error', 'Votre commentaire a été bloqué par la modération automatique.');
+} else {
     $this->addFlash('success', 'Commentaire ajouté ✅');
+}
     return $this->redirectToRoute('post_index');
 }
 
 #[Route('/inline-edit/{id}', name: 'commentaire_inline_edit', methods: ['POST'])]
-public function inlineEdit(Request $request, Commentaire $commentaire, EntityManagerInterface $em): JsonResponse
+public function inlineEdit(Request $request, Commentaire $commentaire, EntityManagerInterface $em, AiCommentModerationService $moderation): JsonResponse
 {
     $user = $this->getUser();
 
@@ -254,7 +300,22 @@ public function inlineEdit(Request $request, Commentaire $commentaire, EntityMan
     if (count($matches[0]) < 2) {
         return new JsonResponse(['ok' => false, 'message' => 'Le commentaire doit contenir au moins 2 lettres.'], 422);
     }
+$decision = $moderation->moderate($contenu);
+dd($decision);
 
+$commentaire->setModerationScore($decision['score']);
+$commentaire->setModerationLabel($decision['label']);
+$commentaire->setModeratedAt(new \DateTimeImmutable());
+
+if (!$decision['allow']) {
+    $commentaire->setStatus('blocked');
+    return new JsonResponse([
+        'ok' => false,
+        'message' => 'Commentaire bloqué automatiquement (IA: '.$decision['label'].' / score '.$decision['score'].')',
+    ], 422);
+} else {
+    $commentaire->setStatus('published');
+}
     $commentaire->setContenu($contenu);
     $em->flush();
 

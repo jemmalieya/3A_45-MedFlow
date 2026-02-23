@@ -2,10 +2,11 @@
 
 namespace App\Form;
 
+use App\Form\Model\RessourceBatch;
 use Symfony\Component\Form\AbstractType;
-use Symfony\Component\Form\Extension\Core\Type\CollectionType;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\OptionsResolver\OptionsResolver;
+use Symfony\Component\Form\Extension\Core\Type\CollectionType;
 
 class RessourceBatchType extends AbstractType
 {
@@ -18,14 +19,13 @@ class RessourceBatchType extends AbstractType
             'allow_delete' => true,
             'by_reference' => false,
             'prototype' => true,
-            'label' => false,
         ]);
     }
 
     public function configureOptions(OptionsResolver $resolver): void
     {
         $resolver->setDefaults([
-            'data_class' => null,
+            'data_class' => RessourceBatch::class,
         ]);
     }
 }

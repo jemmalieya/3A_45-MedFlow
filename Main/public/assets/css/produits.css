@@ -603,48 +603,301 @@
         transform: translateY(0);
     }
 }
-/* ===========================
-   ✅ OVERRIDE BLEU (prix + mes commandes + boutons)
-   Colle ceci TOUT À LA FIN du CSS
-   =========================== */
+/* ======================================================
+   ✅ OVERRIDE FINAL BLEU (colle ceci TOUT À LA FIN)
+   - Force le bleu partout (header, prix, commandes, rails)
+   ====================================================== */
 
-/* 1) Palette BLEU comme "Prendre rendez-vous" / Connexion */
+/* Palette BLEU */
 :root{
-  --primary: #0ea5e9;        /* bleu clair */
-  --primary-dark: #2563eb;   /* bleu profond */
-}
+    --primary: #0ea5e9;        /* bleu clair */
+    --primary-dark: #2563eb;   /* bleu profond */
+  }
+  
+  /* Header */
+  .page-header{
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%) !important;
+  }
+  
+  /* Badge Prix (card produit) */
+  .price-badge{
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%) !important;
+    box-shadow: 0 4px 12px rgba(37,99,235,0.28) !important;
+  }
+  
+  /* Bouton Mes Commandes */
+  .btn-orders{
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%) !important;
+    border: 2px solid rgba(255,255,255,0.25) !important;
+    color:#fff !important;
+    box-shadow: 0 10px 22px rgba(37,99,235,0.22) !important;
+  }
+  .btn-orders:hover{
+    transform: translateY(-2px);
+    box-shadow: 0 14px 28px rgba(37,99,235,0.30) !important;
+    color:#fff !important;
+  }
+  
+  /* Bouton Add to cart */
+  .btn-add-cart{
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%) !important;
+  }
+  .btn-add-cart:hover{
+    box-shadow: 0 8px 20px rgba(37,99,235,0.30) !important;
+  }
+  
+  /* Boutons Bootstrap primary (si tu en as) */
+  .btn.btn-primary{
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%) !important;
+    border-color: transparent !important;
+  }
+  
+  /* ======================
+     ✅ RAILS RECO (bleu)
+     ====================== */
+  
+  /* barre colorée en haut du bloc reco */
+  .reco-zone::before{
+    background: linear-gradient(90deg, var(--primary) 0%, var(--primary-dark) 100%) !important;
+  }
+  
+  /* chip (tag) */
+  .reco-chip{
+    background: rgba(14,165,233,.10) !important;
+    border-color: rgba(37,99,235,.25) !important;
+    color: var(--primary-dark) !important;
+  }
+  
+  /* prix en rail */
+  .reco-price{
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%) !important;
+    -webkit-background-clip: text !important;
+    -webkit-text-fill-color: transparent !important;
+    background-clip: text !important;
+  }
+  
+  /* bouton rail */
+  .reco-btn{
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%) !important;
+    box-shadow: 0 4px 14px rgba(37,99,235,.22) !important;
+  }
+  .reco-btn:hover{
+    box-shadow: 0 6px 20px rgba(37,99,235,.35) !important;
+  }
+  
+  /* catégorie rail */
+  .reco-cat{
+    background: rgba(14,165,233,.12) !important;
+    color: var(--primary-dark) !important;
+  }
+  /* ======= RECO TRAIN (CSS AUTO) ======= */
+.reco-track{
+    position: relative;
+    overflow: hidden !important;
+    white-space: nowrap;
+  }
+  
+  .reco-inner{
+    display: inline-flex;
+    gap: 12px;
+    will-change: transform;
+  }
+  
+  /* on anime seulement quand JS a mis .auto-scroll */
+  .reco-track.auto-scroll .reco-inner{
+    animation: recoMarquee 22s linear infinite;
+  }
+  
+  /* pause au hover */
+  .reco-track.auto-scroll:hover .reco-inner{
+    animation-play-state: paused;
+  }
+  
+  @keyframes recoMarquee{
+    0%   { transform: translateX(0); }
+    100% { transform: translateX(calc(-1 * var(--reco-shift, 600px))); }
+  }
+  /* ======================================================
+   ✅ OVERRIDE FINAL TEAL / DARK TURQUOISE (COLLE À LA FIN)
+   - Remplace tout le bleu par teal comme Réclamation
+   ====================================================== */
 
-/* 2) Header (si tu veux qu'il suive aussi le bleu) */
-.page-header{
-  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%) !important;
-}
-
-/* 3) ✅ Badge Prix -> BLEU (plus de vert) */
-.price-badge{
-  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%) !important;
-  box-shadow: 0 4px 12px rgba(37,99,235,0.28) !important;
-}
-
-/* 4) ✅ Bouton "Mes commandes" -> BLEU (plus de vert) */
-.btn-orders{
-  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%) !important;
-  border: 2px solid rgba(255,255,255,0.25) !important;
-  color:#fff !important;
-  box-shadow: 0 10px 22px rgba(37,99,235,0.22) !important;
-}
-.btn-orders:hover{
-  transform: translateY(-2px);
-  box-shadow: 0 14px 28px rgba(37,99,235,0.30) !important;
-  color:#fff !important;
-}
-
-/* 5) ✅ Si tu as un bouton Connexion en Bootstrap primary, il devient bleu aussi */
-.btn.btn-primary{
-  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%) !important;
-  border-color: transparent !important;
-}
-
-/* 6) Effet hover cohérent sur Add to cart */
-.btn-add-cart:hover{
-  box-shadow: 0 8px 20px rgba(37,99,235,0.30) !important;
-}
+:root{
+    --primary: #00BFA6;        /* Vivid Turquoise */
+    --primary-dark: #0097B2;   /* Dark Turquoise */
+  }
+  
+  /* ===== HEADER : même “shape” que Réclamation =====
+     (carte centrée, arrondie, moderne) */
+  .page-header{
+    background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary) 100%) !important;
+    border-radius: 18px !important;
+    padding: 38px 0 !important;
+    margin: 28px auto 42px auto !important;
+    max-width: 1100px !important;
+    box-shadow: 0 18px 45px rgba(0,151,178,.22) !important;
+    position: relative !important;
+    overflow: hidden !important;
+  }
+  
+  .page-header::after{
+    content:"";
+    position:absolute;
+    inset:0;
+    background:
+      radial-gradient(900px 220px at 15% 20%, rgba(255,255,255,.22), transparent 55%),
+      radial-gradient(900px 220px at 85% 10%, rgba(255,255,255,.16), transparent 55%);
+    pointer-events:none;
+  }
+  
+  .page-header h1,
+  .page-header p{
+    position: relative;
+    z-index: 1;
+  }
+  
+  /* ===== PRIX BADGE ===== */
+  .price-badge{
+    background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary) 100%) !important;
+    box-shadow: 0 10px 22px rgba(0,151,178,.22) !important;
+  }
+  
+  /* ===== CARTES hover border ===== */
+  .produit-card:hover{
+    border-color: var(--primary) !important;
+  }
+  
+  /* ===== Boutons principaux ===== */
+  .btn-orders,
+  .btn-add-cart{
+    background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary) 100%) !important;
+    box-shadow: 0 12px 26px rgba(0,151,178,.22) !important;
+  }
+  
+  .btn-add-cart:hover,
+  .btn-orders:hover{
+    box-shadow: 0 18px 40px rgba(0,151,178,.30) !important;
+  }
+  
+  /* ===== Bouton details ===== */
+  .btn-details{
+    color: var(--primary-dark) !important;
+    border-color: var(--primary-dark) !important;
+  }
+  .btn-details:hover{
+    background: var(--primary-dark) !important;
+    color:#fff !important;
+  }
+  
+  /* ===== Search focus / selects focus ===== */
+  .search-box input:focus,
+  .form-select:focus{
+    border-color: var(--primary-dark) !important;
+    box-shadow: 0 0 0 .2rem rgba(0,151,178,.16) !important;
+  }
+  
+  #resultCount #count{
+    color: var(--primary-dark) !important;
+    font-weight: 900 !important;
+  }
+  
+  /* ===== Voice button (micro) ===== */
+  .btn-voice{
+    border-color: rgba(0,151,178,.25) !important;
+    color: var(--primary-dark) !important;
+  }
+  .btn-voice:hover{
+    background: var(--primary-dark) !important;
+    color:#fff !important;
+  }
+  .btn-voice.listening{
+    background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary) 100%) !important;
+    box-shadow: 0 12px 26px rgba(0,151,178,.22) !important;
+  }
+  
+  /* ===== TTS button ===== */
+  .btn-tts{
+    border-color: rgba(0,151,178,.25) !important;
+    color: var(--primary-dark) !important;
+  }
+  .btn-tts:hover{
+    background: var(--primary-dark) !important;
+    color:#fff !important;
+  }
+  .btn-tts.is-speaking{
+    background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary) 100%) !important;
+    border-color: transparent !important;
+  }
+  
+  /* ===== Modal header ===== */
+  .modal-header{
+    background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary) 100%) !important;
+  }
+  
+  /* ===== Reco rails ===== */
+  .reco-zone{
+    border: 1px solid rgba(0,151,178,.10) !important;
+  }
+  
+  .reco-chip{
+    background: rgba(0,191,166,.12) !important;
+    border-color: rgba(0,151,178,.25) !important;
+    color: var(--primary-dark) !important;
+  }
+  
+  .reco-track::-webkit-scrollbar-thumb{
+    background: rgba(0,151,178,.22) !important;
+  }
+  
+  .reco-price{
+    color: var(--primary-dark) !important;
+  }
+  
+  .reco-cat{
+    background: rgba(0,191,166,.12) !important;
+    color: var(--primary-dark) !important;
+  }
+  
+  /* ===== AI panel / FAB ===== */
+  .ai-fab{
+    background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary) 100%) !important;
+    box-shadow: 0 18px 40px rgba(0,151,178,.28) !important;
+  }
+  
+  .ai-panel{
+    border: 1px solid rgba(0,151,178,.18) !important;
+  }
+  
+  .ai-head{
+    background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary) 100%) !important;
+  }
+  
+  .ai-body{
+    background: linear-gradient(180deg, rgba(0,191,166,.10) 0%, #ffffff 62%) !important;
+  }
+  
+  .ai-user{
+    background: var(--primary-dark) !important;
+  }
+  
+  .ai-bot{
+    border: 1px solid rgba(0,151,178,.14) !important;
+  }
+  
+  .ai-input{
+    border: 2px solid rgba(0,151,178,.18) !important;
+  }
+  .ai-input:focus{
+    border-color: rgba(0,151,178,.55) !important;
+    box-shadow: 0 0 0 4px rgba(0,151,178,.12) !important;
+  }
+  
+  .ai-send{
+    background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary) 100%) !important;
+    box-shadow: 0 12px 26px rgba(0,151,178,.22) !important;
+  }
+  
+  /* ===== Bootstrap .text-primary si utilisé ===== */
+  .text-primary{
+    color: var(--primary-dark) !important;
+  }

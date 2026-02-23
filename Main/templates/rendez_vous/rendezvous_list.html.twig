@@ -86,13 +86,13 @@
         {% else %}
             <div class="rv-list-card">
                 <div class="table-responsive">
-                    <div class="mb-2 d-flex justify-content-between align-items-center">
-                        <div>
+                    <div class="mb-3 d-flex justify-content-end align-items-center">
+                        <div class="search-sort-group">
+                            <input type="text" id="searchRendezvous" class="stylish-search me-2" placeholder="🔍 Recherche">
+                            <button id="sortRendezvousDate" class="btn btn-sort-date" data-asc="true">
+                                <i class="fas fa-sort-up"></i> Trier par date
+                            </button>
                         </div>
-                           <input type="text" id="searchRendezvous" class="form-control rounded-pill shadow-sm border-0" placeholder="🔍 Recherche rendez-vous" style="width: 220px; background-color: #e0f2fe; font-size: 1rem; border: 2px solid #2563eb; color: #2563eb;">
-                           <button id="sortRendezvousDate" class="btn btn-primary ms-2" style="background-color: #2563eb; border-color: #2563eb; color: #fff;" data-asc="true">
-                               <i class="fas fa-sort-up"></i> Trier par date
-                           </button>
                     </div>
                     <table class="table rv-table mb-0" id="rendezvousTable">
                         <thead>
@@ -122,9 +122,9 @@
                                     <td>
                                       {% if r.getPatient and r.getPatient() %}
                                         {% if r.getPatient().id == patientId %}
-                                          <strong>Moi ({{ r.getPatient().id }})</strong>
+                                          <strong>Moi ({{ r.getPatient().nom }} {{ r.getPatient().prenom }})</strong>
                                         {% else %}
-                                          {{ r.getPatient().id }}
+                                          {{ r.getPatient().nom }} {{ r.getPatient().prenom }}
                                         {% endif %}
                                       {% else %}
                                         —
@@ -132,14 +132,17 @@
                                     </td>
                                     <td>
                                       {% if r.getStaff and r.getStaff() %}
-                                        {{ r.getStaff().id }}
+                                        {{ r.getStaff().nom }} {{ r.getStaff().prenom }}
                                       {% else %}
                                         —
                                       {% endif %}
                                     </td>
                                     <td>{{ r.createdAt ? r.createdAt|date('Y-m-d H:i') : '—' }}</td>
+                                    <!-- Edit button removed -->
                                     <td>
-                                        <a href="{{ path('rendezvous_list', {'openEdit': r.id}) }}" class="btn btn-rv-edit">📝</a>
+                                        <a href="{{ path('modify_rendezvous', {'id': r.id}) }}" class="btn btn-rv-modify" title="Modifier ce rendez-vous">
+                                            📝
+                                        </a>
                                     </td>
                                     <td>
                                         <form method="post" action="{{ path('rendezvous_delete', {'id': r.id}) }}" onsubmit="return confirm('Supprimer ce rendez-vous ?');" style="display:inline;">
@@ -148,36 +151,7 @@
                                         </form>
                                     </td>
                                 </tr>
-                                <tr id="edit-row-{{ r.id }}" class="edit-row" style="display:none;">
-                                    <td colspan="10">
-                                        {% if openEdit and openEdit == r.id and editForm %}
-                                            {{ form_start(editForm, {'action': path('rendezvous_edit', {'id': r.id}), 'method': 'post'}) }}
-                                            <input type="hidden" name="_token" value="{{ csrf_token('edit' ~ r.id) }}">
-                                            <div class="row g-2 align-items-end">
-                                                <div class="col-md-3">
-                                                    {{ form_label(editForm.datetime, 'Date & Heure', {'label_attr': {'class': 'form-label small fw-bold text-secondary'}}) }}
-                                                    {{ form_widget(editForm.datetime, {'attr': {'class': 'form-control'}}) }}
-                                                    {{ form_errors(editForm.datetime) }}
-                                                </div>
-                                                <div class="col-md-2">
-                                                    {{ form_label(editForm.mode, 'Mode', {'label_attr': {'class': 'form-label small fw-bold text-secondary'}}) }}
-                                                    {{ form_widget(editForm.mode, {'attr': {'class': 'form-select'}}) }}
-                                                    {{ form_errors(editForm.mode) }}
-                                                </div>
-                                                <div class="col-md-5">
-                                                    {{ form_label(editForm.motif, 'Motif', {'label_attr': {'class': 'form-label small fw-bold text-secondary'}}) }}
-                                                    {{ form_widget(editForm.motif, {'attr': {'class': 'form-control'}}) }}
-                                                    {{ form_errors(editForm.motif) }}
-                                                </div>
-                                                <div class="col-md-2 text-end">
-                                                    <button class="btn btn-rv-save" type="submit">✅ Enregistrer</button>
-                                                    <button type="button" class="btn btn-rv-cancel" onclick="toggleEdit({{ r.id }})">✖ Annuler</button>
-                                                </div>
-                                            </div>
-                                            {{ form_end(editForm) }}
-                                        {% endif %}
-                                    </td>
-                                </tr>
+                                <!-- Edit row removed -->
                             {% endfor %}
                         </tbody>
                     </table>
@@ -197,13 +171,13 @@
         {% if fiches_medicales is defined and fiches_medicales|length > 0 %}
             <div class="rv-list-card mb-4">
                 <div class="table-responsive">
-                    <div class="mb-2 d-flex justify-content-between align-items-center">
-                        <div>
+                    <div class="mb-3 d-flex justify-content-end align-items-center">
+                        <div class="search-sort-group">
+                            <input type="text" id="searchFiche" class="stylish-search me-2" placeholder="🔍 Recherche">
+                            <button id="sortFicheDate" class="btn btn-sort-date" data-asc="true">
+                                <i class="fas fa-sort-up"></i> Trier par date
+                            </button>
                         </div>
-                           <input type="text" id="searchFiche" class="form-control rounded-pill shadow-sm border-0" placeholder="🔍 Recherche fiche médicale" style="width: 220px; background-color: #e0f2fe; font-size: 1rem; border: 2px solid #2563eb; color: #2563eb;">
-                           <button id="sortFicheDate" class="btn btn-primary ms-2" style="background-color: #2563eb; border-color: #2563eb; color: #fff;" data-asc="true">
-                               <i class="fas fa-sort-up"></i> Trier par date
-                           </button>
                     </div>
                     <table class="table rv-table mb-0" id="ficheTable">
                         <thead>
@@ -264,11 +238,13 @@
         {% if prescriptions is defined and prescriptions|length > 0 %}
             <div class="rv-list-card mb-4" style="background: #e0f2fe; border: 1px solid #2563eb33;">
                 <div class="table-responsive">
-                    <div class="mb-2 d-flex justify-content-end align-items-center gap-2">
-                        <input type="text" id="searchPrescription" class="form-control rounded-pill shadow-sm border-0" placeholder="🔍 Recherche prescription" style="width: 220px; background-color: #e0f2fe; font-size: 1rem; border: 2px solid #2563eb; color: #2563eb;">
-                        <button id="sortPrescriptionDate" class="btn btn-primary ms-2" style="background-color: #2563eb; border-color: #2563eb; color: #fff;" data-asc="true">
-                            <i class="fas fa-sort-up"></i> Trier par date
-                        </button>
+                    <div class="mb-3 d-flex justify-content-end align-items-center">
+                        <div class="search-sort-group">
+                            <input type="text" id="searchPrescription" class="stylish-search me-2" placeholder="🔍 Recherche">
+                            <button id="sortPrescriptionDate" class="btn btn-sort-date" data-asc="true">
+                                <i class="fas fa-sort-up"></i> Trier par date
+                            </button>
+                        </div>
                     </div>
                     <table class="table rv-table mb-0" id="prescriptionTable" style="background: #e0f2fe;">
                         <thead>
@@ -318,33 +294,68 @@
     </div>
 
     <style>
-        .stylish-search {
-            border-radius: 18px;
+        .search-sort-group {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: #f0fdfa;
+            border-radius: 2rem;
+            padding: 0.35rem 0.7rem 0.35rem 1rem;
+            box-shadow: 0 2px 12px #38bdf822, 0 1.5px 4px #2563eb11;
             border: 2px solid #38bdf8;
-            font-size: 1.05em;
-            padding-left: 1.5em;
+            margin-bottom: 0;
+        }
+        .stylish-search {
+            border-radius: 2rem;
+            border: none;
+            font-size: 1.08em;
+            padding: 0.5em 1.2em 0.5em 2.2em;
             background: linear-gradient(90deg, #f0fdfa 0%, #ecfeff 100%);
-            box-shadow: 0 2px 8px #38bdf822;
+            box-shadow: none;
+            color: #2563eb;
+            width: 220px;
+            outline: none;
             transition: border-color 0.2s, box-shadow 0.2s;
+            background-image: url('data:image/svg+xml;utf8,<svg fill="%2338bdf8" height="18" viewBox="0 0 24 24" width="18" xmlns="http://www.w3.org/2000/svg"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99c.41.41 1.09.41 1.5 0s.41-1.09 0-1.5l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>');
+            background-repeat: no-repeat;
+            background-position: 0.7em center;
         }
         .stylish-search:focus {
-            border-color: #2563eb;
-            box-shadow: 0 4px 16px #2563eb33;
+            border: none;
+            box-shadow: 0 0 0 3px #2563eb33;
         }
         .btn-sort-date {
-            border-radius: 16px;
+            border-radius: 2rem;
             font-size: 1em;
             font-weight: 600;
             background: linear-gradient(90deg, #ecfeff 0%, #38bdf8 100%);
             color: #2563eb;
-            border: 2px solid #38bdf8;
+            border: none;
             box-shadow: 0 2px 8px #38bdf822;
+            padding: 0.5em 1.2em;
             transition: background 0.2s, color 0.2s, box-shadow 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 0.5em;
         }
         .btn-sort-date:hover {
             background: linear-gradient(90deg, #38bdf8 0%, #2563eb 100%);
             color: #fff;
             box-shadow: 0 4px 16px #2563eb33;
+        }
+        @media (max-width: 600px) {
+            .search-sort-group {
+                flex-direction: column;
+                align-items: stretch;
+                padding: 0.5rem 0.7rem;
+            }
+            .stylish-search {
+                width: 100%;
+                margin-bottom: 0.5rem;
+            }
+            .btn-sort-date {
+                width: 100%;
+            }
         }
     </style>
     <script>
@@ -372,12 +383,7 @@
             setupDateSort('rendezvousTable', 'sortRendezvousDate', 1); // Date & Heure col
             setupDateSort('ficheTable', 'sortFicheDate', 8); // Date de création col
             setupDateSort('prescriptionTable', 'sortPrescriptionDate', 1); // Date col
-        function toggleEdit(id) {
-            const row = document.getElementById('edit-row-' + id);
-            if (!row) return;
-            row.style.display = row.style.display === 'none' ? 'table-row' : 'none';
-            if (row.style.display !== 'none') row.scrollIntoView({behavior: 'smooth', block: 'center'});
-        }
+
 
         // Table search and sort utility
         function setupTableSearch(tableId, searchId) {
@@ -420,67 +426,7 @@
             setupTableSearch('prescriptionTable', 'searchPrescription');
             setupTableSort('prescriptionTable');
 
-            // Inline edit validation (existing code)
-            const rules = {
-                datetime: { required: true },
-                mode: { required: true },
-                motif: { minLength: 5, maxLength: 500, required: false }
-            };
-            function findEl(key, id) {
-                const byId = document.getElementById(key + '-' + id);
-                if (byId) return byId;
-                return document.querySelector('[name="' + key + '"]');
-            }
-            function validateKeyFor(id, key) {
-                const el = findEl(key, id);
-                if (!el) return true;
-                let feedback = document.getElementById((el.id || (el.getAttribute('name')||key)) + '-feedback');
-                if (!feedback) {
-                    feedback = document.createElement('small');
-                    feedback.className = 'd-block mt-2';
-                    feedback.style.fontSize = '0.85rem';
-                    el.insertAdjacentElement('afterend', feedback);
-                }
-                const value = (el.value || '').trim();
-                const r = rules[key] || {};
-                let msg = '';
-                let valid = true;
-                if (r.required && value.length === 0) {
-                    valid = false; msg = '⚠️ This field is required';
-                } else if (r.minLength && value.length > 0 && value.length < r.minLength) {
-                    valid = false; msg = '⚠️ Minimum ' + r.minLength + ' characters required (' + value.length + '/' + r.minLength + ')';
-                } else if (r.maxLength && value.length > r.maxLength) {
-                    valid = false; msg = '⚠️ Maximum ' + r.maxLength + ' characters allowed (' + value.length + '/' + r.maxLength + ')';
-                } else if (value.length > 0) {
-                    valid = true; msg = '✓ Perfect';
-                }
-                feedback.textContent = msg;
-                if (valid && value.length > 0) { feedback.style.color = '#28a745'; el.style.borderColor = '#28a745'; }
-                else if (!valid) { feedback.style.color = '#dc3545'; el.style.borderColor = '#dc3545'; }
-                else { feedback.style.color = ''; el.style.borderColor = ''; feedback.textContent = ''; }
-                return valid;
-            }
-            document.querySelectorAll('tr[id^="edit-row-"]').forEach(function(row){
-                const id = row.id.replace('edit-row-','');
-                ['datetime','mode','motif'].forEach(function(k){
-                    const el = findEl(k, id);
-                    if (!el) return;
-                    if (k === 'datetime') {
-                        const now = new Date();
-                        const pad = n => String(n).padStart(2,'0');
-                        const minVal = now.getFullYear() + '-' + pad(now.getMonth()+1) + '-' + pad(now.getDate()) + 'T' + pad(now.getHours()) + ':' + pad(now.getMinutes());
-                        try { el.setAttribute('min', minVal); } catch(e) {}
-                    }
-                    el.addEventListener('input', function(){ validateKeyFor(id,k); });
-                    el.addEventListener('blur', function(){ validateKeyFor(id,k); });
-                    el.addEventListener('focus', function(){ if (rules[k].required && (el.value||'').trim().length===0) validateKeyFor(id,k); });
-                });
-            });
-            const openId = new URLSearchParams(window.location.search).get('openEdit');
-            if (openId) {
-                const row = document.getElementById('edit-row-' + openId);
-                if (row) { row.style.display = 'table-row'; row.scrollIntoView({behavior:'smooth', block:'center'}); }
-            }
+
         });
     </script>
 {% endblock %}

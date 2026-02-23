@@ -1,3 +1,4 @@
+{# templates/panier/index.html.twig #}
 {% extends 'base.html.twig' %}
 
 {% block title %}Mon Panier{% endblock %}
@@ -5,67 +6,470 @@
 {% block body %}
 
 <style>
-/* OpenFDA UI */
-.ai-check-wrap{border-radius:18px;overflow:hidden;box-shadow:0 14px 40px rgba(16,24,40,.10);border:1px solid rgba(16,24,40,.08);margin-bottom:22px;background:#fff;}
-.ai-check-head{padding:14px 18px;display:flex;align-items:center;justify-content:space-between;gap:12px;}
-.ai-check-left{display:flex;align-items:center;gap:10px;font-weight:800;}
-.ai-pill{display:inline-flex;align-items:center;gap:8px;padding:.45rem .9rem;border-radius:999px;font-size:.85rem;font-weight:800;border:1px solid transparent;white-space:nowrap;}
-.ai-pill.online{background:#eafaf1;color:#0b6b3a;border-color:#bfe8cf;}
-.ai-pill.offline{background:#fff1f1;color:#8f1b1b;border-color:#f1b9b9;}
-.ai-body{padding:16px 18px 18px 18px;}
-.ai-alert{border-radius:16px;padding:16px;border:1px solid rgba(16,24,40,.10);}
-.ai-alert.safe{background:linear-gradient(135deg,#eafaf1 0%,#d9f7e6 100%);}
-.ai-alert.warning{background:linear-gradient(135deg,#fff7dd 0%,#ffe9ad 100%);}
-.ai-alert.danger{background:linear-gradient(135deg,#ffe8ea 0%,#ffd3d8 100%);}
-.ai-alert h5{margin:0 0 6px 0;font-weight:900;}
-.ai-alert p{margin:0;opacity:.95;}
-.ai-item{background:#fff;border-radius:14px;padding:14px;border:1px solid rgba(16,24,40,.10);box-shadow:0 6px 18px rgba(16,24,40,.06);margin-top:12px;}
-.ai-badges{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px;}
-.ai-badge{font-size:.78rem;font-weight:900;padding:.35rem .7rem;border-radius:999px;border:1px solid rgba(16,24,40,.12);background:#f8fafc;}
-.ai-badge.high{background:#ffe9ea;border-color:#f1b9b9;color:#8f1b1b;}
-.ai-badge.medium{background:#fff7dd;border-color:#ffe09b;color:#7a5a00;}
-.ai-badge.low{background:#e7f3ff;border-color:#b7d8ff;color:#0a4a8a;}
-.ai-pair{font-weight:900;font-size:1rem;}
-.ai-rec{margin-top:10px;padding:10px 12px;border-radius:12px;background:#f8fafc;border:1px dashed rgba(16,24,40,.18);font-style:italic;}
-.ai-accordion-btn{background:transparent;border:none;padding:0;font-weight:800;color:#0d6efd;cursor:pointer;}
-.ai-accordion{margin-top:10px;border-top:1px dashed rgba(16,24,40,.15);padding-top:10px;display:none;}
-.ai-accordion.show{display:block;}
-.ai-block{margin-top:14px;padding:12px 14px;border-radius:14px;border:1px solid rgba(16,24,40,.10);background:#fff;}
-.ai-block.lock{border-color:#f1b9b9;background:#fff1f1;}
-.btn-validate-blocked{opacity:.65;cursor:not-allowed !important;}
+/* ======================================================
+   ✅ PANIER — TEAL ONLY (#0097B2) — CLEAN & PRO
+   ====================================================== */
+:root{
+  --teal:#0097B2;              /* ✅ UNIQUE TEAL */
+  --danger:#ef4444;
+  --ok:#10b981;
+  --warn:#f59e0b;
+
+  --bg:#f6fbfc;
+  --card:#ffffff;
+
+  --t:#0f172a;
+  --muted:#64748b;
+  --line:#e5e7eb;
+
+  --shadow-sm:0 6px 16px rgba(15,23,42,.06);
+  --shadow-md:0 16px 40px rgba(15,23,42,.12);
+
+  /* ✅ Résumé ne touche jamais la navbar */
+  --navbar-offset: 130px;
+
+  --ring: 0 0 0 .24rem rgba(0,151,178,.28);
+}
+
+body{ background: var(--bg) !important; }
+.panier-page{ padding-top: 10px; }
+.btn:focus{ box-shadow: var(--ring) !important; }
+
+/* ================= HEADER ================= */
+.panier-header{
+  border-radius: 24px;
+  padding: 28px 18px;
+  color:#fff;
+  box-shadow: 0 18px 50px rgba(0,151,178,.22);
+  background: var(--teal);     /* ✅ teal only */
+  position:relative;
+  overflow:hidden;
+  margin-bottom: 18px;
+}
+.panier-header::after{
+  content:"";
+  position:absolute; inset:-2px;
+  background:
+    radial-gradient(980px 260px at 12% 10%, rgba(255,255,255,.18), transparent 60%),
+    radial-gradient(980px 260px at 88% 0%, rgba(255,255,255,.10), transparent 65%);
+  pointer-events:none;
+}
+.panier-icon{
+  width: 70px; height: 70px;
+  border-radius: 22px;
+  display:flex; align-items:center; justify-content:center;
+  background: rgba(255,255,255,.18);
+  border: 1px solid rgba(255,255,255,.30);
+  margin: 0 auto;
+  box-shadow: 0 14px 34px rgba(0,0,0,.12);
+  position:relative; z-index:1;
+}
+.panier-icon i{ font-size: 2.1rem; }
+.panier-header h1, .panier-header p{ position:relative; z-index:1; }
+#cart-items-text{ color: rgba(255,255,255,.88) !important; }
+
+/* ================= CARDS ================= */
+.card{
+  border: 1px solid rgba(15,23,42,.06) !important;
+  border-radius: 18px !important;
+  overflow:hidden;
+  box-shadow: var(--shadow-sm);
+  background: var(--card);
+}
+.card-header{
+  background:#fff !important;
+  border-bottom: 1px solid rgba(15,23,42,.06) !important;
+}
+.card-header h5{ color: var(--t); font-weight: 1000; }
+
+/* ================= BUTTONS (TEAL ONLY) ================= */
+.btn-primary,
+.btn-success{
+  background: var(--teal) !important;     /* ✅ teal only */
+  border:none !important;
+  font-weight: 900;
+  color:#fff !important;
+  box-shadow: 0 12px 26px rgba(0,151,178,.22);
+}
+.btn-primary:hover,
+.btn-success:hover{
+  transform: translateY(-1px);
+  filter: brightness(.95);
+}
+
+.btn-outline-primary{
+  background:#fff !important;
+  border: 2px solid rgba(0,151,178,.35) !important;
+  color: var(--teal) !important;
+  font-weight: 900;
+}
+.btn-outline-primary:hover{
+  background: rgba(0,151,178,.08) !important;
+  transform: translateY(-1px);
+}
+
+/* btn bloqué */
+.btn-validate-blocked{ opacity:.65; cursor:not-allowed !important; }
+
+/* ================= CART LIST ================= */
+#cart-items-list{ padding: 12px 12px; }
+
+.cart-item{
+  background:#fff;
+  border: 1px solid rgba(15,23,42,.06);
+  border-radius: 18px;
+  padding: 16px;
+  margin: 12px 0;
+  box-shadow: 0 12px 26px rgba(15,23,42,.05);
+  transition: .18s ease;
+}
+.cart-item:hover{
+  transform: translateY(-2px);
+  border-color: rgba(0,151,178,.28);
+  box-shadow: 0 18px 38px rgba(0,151,178,.12);
+}
+
+.product-image{
+  width: 78px; height: 78px;
+  border-radius: 18px;
+  background:#fff;
+  border: 1px solid rgba(0,151,178,.22);
+  box-shadow: 0 12px 24px rgba(15,23,42,.06);
+  display:flex; align-items:center; justify-content:center;
+  overflow:hidden;
+}
+.product-image img{ width:100%; height:100%; object-fit:cover; }
+
+.cart-item h6{ font-weight:1000; color: var(--t); margin-bottom: 4px; }
+.cart-item p{ color: var(--muted) !important; }
+.cart-item .text-primary{ color: var(--teal) !important; font-weight: 1000; }
+
+/* ================= QTY CONTROL ================= */
+.qty-control{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background: rgba(0,151,178,.06);
+  border: 1px solid rgba(0,151,178,.22);
+  border-radius: 999px;
+  padding: 6px;
+  gap:0;
+  width: fit-content;
+  margin: 0 auto;
+  box-shadow: 0 10px 20px rgba(0,151,178,.12);
+}
+.qty-btn{
+  width: 42px;
+  height: 42px;
+  border: none;
+  border-radius: 999px;
+  display:flex; align-items:center; justify-content:center;
+  cursor:pointer;
+  font-weight: 900;
+  color:#fff;
+  background: var(--teal);     /* ✅ teal only */
+  box-shadow: 0 10px 18px rgba(0,151,178,.22);
+  transition: .15s ease;
+}
+.qty-btn:hover{
+  transform: translateY(-1px) scale(1.04);
+  filter: brightness(.95);
+}
+.qty-btn:disabled{ opacity:.6; cursor:not-allowed; transform:none; }
+.qty-input{
+  width: 58px;
+  text-align:center;
+  border:none;
+  background: transparent;
+  font-weight: 1000;
+  color: var(--t);
+  outline:none;
+}
+
+/* ================= REMOVE ICON ================= */
+.btn-supprimer{
+  width: 40px;
+  height: 40px;
+  border-radius: 14px;
+  border: 1px solid rgba(239,68,68,.22);
+  background: rgba(239,68,68,.10);
+  color: var(--danger) !important;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  box-shadow: 0 12px 22px rgba(239,68,68,.10);
+  transition: .18s ease;
+}
+.btn-supprimer:hover{
+  transform: translateY(-1px);
+  background: rgba(239,68,68,.14);
+  border-color: rgba(239,68,68,.35);
+}
+
+/* ================= SUMMARY STICKY ================= */
+.sticky-summary{
+  position: sticky;
+  top: var(--navbar-offset);
+  z-index: 3;
+}
+.summary-card .card-header{
+  background: var(--teal) !important;  /* ✅ teal only */
+  color:#fff !important;
+  border-bottom: none !important;
+}
+.summary-card .card-header h5{ color:#fff; font-weight: 1000; }
+
+.summary-line{ font-size: .95rem; color: var(--muted); }
+.summary-total{
+  background: rgba(0,151,178,.08);
+  border: 1px solid rgba(0,151,178,.22);
+  border-radius: 16px;
+  padding: 14px;
+  margin-top: 14px;
+}
+.summary-total .text-primary{ color: var(--teal) !important; }
+
+/* ================= EMPTY CART ================= */
+.empty-cart{
+  background:#fff;
+  border-radius: 22px;
+  border: 2px dashed rgba(0,151,178,.25);
+  box-shadow: var(--shadow-sm);
+}
+.empty-cart-icon{
+  width: 90px; height: 90px;
+  border-radius: 26px;
+  background: rgba(0,151,178,.10);
+  border: 1px solid rgba(0,151,178,.22);
+  display:flex; align-items:center; justify-content:center;
+  margin: 0 auto;
+}
+.empty-cart-icon i{ font-size: 2.6rem; color: var(--teal); }
+
+/* ================= OPENFDA ================= */
+.ai-check-wrap{
+  border-radius: 20px;
+  overflow:hidden;
+  border: 1px solid rgba(15,23,42,.06);
+  box-shadow: var(--shadow-sm);
+  margin-bottom: 18px;
+  background:#fff;
+}
+.ai-check-head{
+  padding: 14px 18px;
+  display:flex; align-items:center; justify-content:space-between; gap:12px;
+  background: rgba(0,151,178,.08);  /* ✅ teal light */
+}
+.ai-check-left{ display:flex; align-items:center; gap:10px; font-weight:1000; color: var(--t); }
+.ai-pill{
+  display:inline-flex; align-items:center; gap:8px;
+  padding:.42rem .85rem;
+  border-radius:999px;
+  font-size:.82rem;
+  font-weight:1000;
+  border:1px solid rgba(15,23,42,.06);
+  background:#fff;
+}
+.ai-body{ padding: 16px 18px 18px 18px; }
+
+.ai-alert{
+  border-radius: 18px;
+  padding: 16px 18px;
+  border: 1px solid rgba(15,23,42,.06);
+  box-shadow: 0 12px 24px rgba(15,23,42,.06);
+}
+.ai-alert.safe{ background: rgba(16,185,129,.12); color:#065f46; border-left:6px solid var(--ok); }
+.ai-alert.warning{ background: rgba(245,158,11,.12); color:#7a4b00; border-left:6px solid var(--warn); }
+.ai-alert.danger{ background: rgba(239,68,68,.12); color:#7f1d1d; border-left:6px solid var(--danger); }
+
+.ai-item{
+  margin-top: 12px;
+  border-radius: 18px;
+  padding: 16px;
+  background:#fff;
+  border: 1px solid rgba(15,23,42,.06);
+  box-shadow: 0 12px 24px rgba(15,23,42,.06);
+}
+
+.ai-accordion-btn{
+  margin-top: 10px;
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  border:none;
+  border-radius: 12px;
+  padding: 10px 12px;
+  background: rgba(0,151,178,.10);
+  color: var(--teal);
+  font-weight:1000;
+  cursor:pointer;
+  transition:.15s ease;
+}
+.ai-accordion-btn:hover{ transform: translateY(-1px); background: rgba(0,151,178,.14); }
+.ai-accordion{
+  max-height: 0;
+  overflow:hidden;
+  transition: max-height .28s ease;
+}
+.ai-accordion.show{ max-height: 900px; }
+.ai-block{
+  margin-top: 10px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(15,23,42,.06);
+  background:#fff;
+}
+
+/* ================= CONFIRM POP-OUT (CLEAN) ================= */
+.confirm-overlay{
+  position:fixed; inset:0;
+  background: rgba(15,23,42,.60);
+  display:flex; align-items:center; justify-content:center;
+  z-index: 5000;
+  padding:16px;
+}
+.confirm-overlay.d-none{ display:none !important; }
+
+.confirm-box{
+  width:min(520px, 96vw);
+  border-radius:22px;
+  background:#fff;
+  border:1px solid rgba(15,23,42,.08);
+  box-shadow: 0 28px 90px rgba(0,0,0,.28);
+  overflow:hidden;
+  animation: popIn .18s ease forwards;
+}
+@keyframes popIn{ from{ transform:scale(.98); opacity:.6 } to{ transform:scale(1); opacity:1 } }
+
+.confirm-head{
+  background: var(--teal);          /* ✅ teal only */
+  color:#fff;
+  padding:16px 18px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+}
+.confirm-head .title{
+  font-weight:1000;
+  display:flex;
+  align-items:center;
+  gap:10px;
+}
+.confirm-close{
+  border:none;
+  background: rgba(255,255,255,.18);
+  color:#fff;
+  width:38px; height:38px;
+  border-radius:14px;
+  display:flex; align-items:center; justify-content:center;
+  cursor:pointer;
+}
+.confirm-body{ padding:18px; }
+.confirm-body p{ margin:0; color: var(--muted); font-weight:650; }
+
+.confirm-buttons{
+  padding: 0 18px 18px 18px;
+  display:flex;
+  gap:10px;
+  justify-content:flex-end;
+}
+.btn-cancel{
+  background:#fff !important;
+  border:2px solid rgba(15,23,42,.12) !important;
+  color: var(--t) !important;
+  font-weight:900;
+  border-radius:14px;
+  padding:10px 16px;
+}
+.btn-cancel:hover{ background: rgba(15,23,42,.04) !important; }
+
+.btn-confirm-danger{
+  background: var(--danger) !important;
+  border:none !important;
+  color:#fff !important;
+  font-weight:900;
+  border-radius:14px;
+  padding:10px 16px;
+  box-shadow:0 12px 24px rgba(239,68,68,.18);
+}
+.btn-confirm-danger:hover{ filter:brightness(.95); transform:translateY(-1px); }
+
+/* ================= RESPONSIVE ================= */
+@media (max-width: 768px){
+  .product-image{ width: 66px; height: 66px; }
+  .qty-control{ width: 100%; justify-content: space-between; }
+  .qty-input{ width: 70px; }
+  .sticky-summary{ position: static; top:auto; }
+}
+
+
+/* ===== DARK MODE (PANIER SEULEMENT) ===== */
+body.dark{
+  background:#0b1220 !important;
+  color:#e5e7eb !important;
+}
+body.dark .panier-page,
+body.dark .card,
+body.dark .cart-item,
+body.dark .summary-card,
+body.dark .confirm-box,
+body.dark .empty-cart,
+body.dark .ai-check-wrap,
+body.dark .ai-item{
+  background:#0f172a !important;
+  border-color: rgba(0,151,178,.35) !important;
+  color:#e5e7eb !important;
+}
+body.dark .panier-header,
+body.dark .summary-card .card-header,
+body.dark .confirm-head{
+  background:#0097B2 !important;
+  color:#fff !important;
+}
+body.dark .text-muted{ color:#94a3b8 !important; }
+body.dark input,
+body.dark select{ background:#020617 !important; color:#e5e7eb !important; border-color: rgba(0,151,178,.4) !important; }
 </style>
 
 <div class="panier-page">
 
   {# Toast container #}
   <div class="position-fixed top-0 start-50 translate-middle-x p-3"
-       style="z-index: 1050; max-width:400px;"
+       style="z-index: 2050; max-width:420px;"
        id="toast-container"></div>
 
-  {# Confirmation overlay #}
-  <div id="confirmOverlay" class="confirm-overlay d-none">
-    <div class="confirm-box">
-      <div class="confirm-icon">
-        <i class="bi bi-exclamation-circle text-warning"></i>
+  {# ✅ Confirmation POP-OUT #}
+  <div id="confirmOverlay" class="confirm-overlay d-none" aria-hidden="true">
+    <div class="confirm-box" role="dialog" aria-modal="true" aria-labelledby="confirmTitle">
+      <div class="confirm-head">
+        <div class="title" id="confirmTitle">
+          <i class="bi bi-exclamation-triangle-fill"></i> Confirmation
+        </div>
+        <button type="button" class="confirm-close" id="confirmClose" aria-label="Fermer">
+          <i class="bi bi-x-lg"></i>
+        </button>
       </div>
-      <h5 class="mt-3">Confirmation</h5>
-      <p id="confirmMessage" class="text-muted"></p>
-      <div class="confirm-buttons mt-4">
-        <button class="btn btn-outline-secondary px-4" id="confirmNo" type="button">Annuler</button>
-        <button class="btn btn-danger px-4" id="confirmYes" type="button">Confirmer</button>
+
+      <div class="confirm-body">
+        <p id="confirmMessage"></p>
+      </div>
+
+      <div class="confirm-buttons">
+        <button class="btn btn-cancel" id="confirmNo" type="button">Annuler</button>
+        <button class="btn btn-confirm-danger" id="confirmYes" type="button">
+          <i class="bi bi-trash3 me-1"></i> Supprimer
+        </button>
       </div>
     </div>
   </div>
 
   <div class="container py-5">
 
-    {# En-tête #}
-    <div class="panier-header text-center mb-5">
-      <div class="panier-icon mb-3">
-        <i class="bi bi-cart3"></i>
-      </div>
-      <h1 class="display-5 fw-bold mb-2">Mon Panier</h1>
+    {# Header #}
+    <div class="panier-header text-center">
 
+      <div class="panier-icon mb-3"><i class="bi bi-cart3"></i></div>
+      <h1 class="display-5 fw-bold mb-2">Mon Panier</h1>
       <p class="text-muted" id="cart-items-text">
         {% if produits|length > 0 %}
           {{ produits|length }} article(s) dans votre panier
@@ -75,49 +479,71 @@
       </p>
     </div>
 
-    {# ✅ Bloc OpenFDA (uniquement si panier non vide et check effectué) #}
+    {# ✅ ORDONNANCE STATUS (AUTO-HIDE 5s) #}
+    {% if ordonnanceStatus %}
+      {% if ordonnanceStatus == 'approved' %}
+        <div class="alert alert-success border-0 shadow-sm mb-4 alert-ordonnance" id="ordonnanceAlert" style="border-left:5px solid #10b981 !important;">
+          <div class="d-flex align-items-center gap-3">
+            <div style="font-size:3rem;"><i class="bi bi-check-circle-fill"></i></div>
+            <div class="flex-grow-1">
+              <h5 class="mb-1 fw-bold">Ordonnance Validée ✅</h5>
+              {% if ordonnanceDrugs is not empty %}
+                <p class="mb-1">Médicaments trouvés : <strong>{{ ordonnanceDrugs|join(', ') }}</strong></p>
+              {% endif %}
+              <small class="text-muted">Vous pouvez maintenant valider votre commande</small>
+            </div>
+          </div>
+        </div>
+      {% elseif ordonnanceStatus == 'refused' %}
+        <div class="alert alert-danger border-0 shadow-sm mb-4 alert-ordonnance" id="ordonnanceAlert" style="border-left:5px solid #ef4444 !important;">
+          <div class="d-flex align-items-center gap-3">
+            <div style="font-size:3rem;"><i class="bi bi-x-circle-fill"></i></div>
+            <div class="flex-grow-1">
+              <h5 class="mb-1 fw-bold">Ordonnance Refusée ❌</h5>
+              <p class="mb-1">Les médicaments n'ont pas été détectés.</p>
+              {% if ordonnanceOcrText %}
+                <details class="mt-2">
+                  <summary style="cursor:pointer;font-weight:600;">Voir texte OCR</summary>
+                  <pre class="mt-2 p-2 bg-light rounded" style="font-size:0.85rem;max-height:200px;overflow:auto;">{{ ordonnanceOcrText }}</pre>
+                </details>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      {% endif %}
+    {% endif %}
+
+    {# ✅ OpenFDA BLOCK #}
     {% if produits is not empty and interactionResult is defined and interactionResult.checked %}
       <div class="ai-check-wrap" id="openfda-block">
         <div class="ai-check-head">
-          <div class="ai-check-left">
-            <i class="bi bi-cpu-fill"></i>
-            Vérification OpenFDA
-          </div>
-
+          <div class="ai-check-left"><i class="bi bi-cpu-fill"></i> Vérification OpenFDA</div>
           {% if interactionResult.api_available %}
-            <span class="ai-pill online">
-              <i class="bi bi-check-circle-fill"></i> Système actif
-            </span>
+            <span class="ai-pill online"><i class="bi bi-check-circle-fill"></i> Actif</span>
           {% else %}
-            <span class="ai-pill offline">
-              <i class="bi bi-exclamation-triangle-fill"></i> Hors ligne
-            </span>
+            <span class="ai-pill offline"><i class="bi bi-exclamation-triangle-fill"></i> Hors ligne</span>
           {% endif %}
         </div>
 
         <div class="ai-body">
-
           {% if interactionResult.interactions is defined and interactionResult.interactions is not empty %}
-
-            {% set mode = 'warning' %}
-            {% if interactionResult.severity is defined and interactionResult.severity == 'danger' %}
-              {% set mode = 'danger' %}
-            {% endif %}
+            {% set mode = (interactionResult.severity == 'danger') ? 'danger' : 'warning' %}
 
             <div class="ai-alert {{ mode }}">
-              <h5 class="d-flex align-items-center gap-2">
+              <h5>
                 {% if mode == 'danger' %}
                   <i class="bi bi-exclamation-octagon-fill"></i>
-                  {{ interactionResult.message ?? 'Alerte danger : interaction(s) détectée(s)' }}
+                  {{ interactionResult.message ?? 'Alerte danger' }}
                 {% else %}
                   <i class="bi bi-exclamation-triangle-fill"></i>
-                  {{ interactionResult.message ?? 'Attention : interaction(s) détectée(s)' }}
+                  {{ interactionResult.message ?? 'Attention' }}
                 {% endif %}
               </h5>
-              <p>{{ interactionResult.interactions|length }} interaction(s) trouvée(s). Vérifiez les recommandations.</p>
+              <p>{{ interactionResult.interactions|length }} interaction(s) trouvée(s)</p>
             </div>
 
             {% for interaction in interactionResult.interactions %}
+              {% set accId = 'acc-' ~ loop.index %}
               <div class="ai-item">
                 <div class="ai-badges">
                   {% if interaction.severity == 'high' %}
@@ -130,71 +556,81 @@
                   <span class="ai-badge">OpenFDA</span>
                 </div>
 
-                <div class="ai-pair">
-                  {{ interaction.drug1 }} <span class="text-muted">×</span> {{ interaction.drug2 }}
-                </div>
+                <div class="ai-pair">{{ interaction.drug1 }} <span class="text-muted">×</span> {{ interaction.drug2 }}</div>
 
-                <div class="mt-2 text-muted">
-                  {{ interaction.description|slice(0, 250) }}{% if interaction.description|length > 250 %}...{% endif %}
-                </div>
-
-                <div class="mt-2">
-                  <button type="button" class="ai-accordion-btn" data-acc="acc-{{ loop.index }}">
-                    Voir détails
-                  </button>
-
-                  <div id="acc-{{ loop.index }}" class="ai-accordion">
-                    <div class="ai-block">
-                      {{ interaction.description }}
+                <div class="ai-summary">
+                  <div class="d-flex justify-content-between flex-wrap gap-2">
+                    <div>
+                      <div class="k">Niveau</div>
+                      <div class="v">
+                        {% if interaction.severity == 'high' %}Danger élevé{% elseif interaction.severity == 'medium' %}Attention{% else %}Info{% endif %}
+                      </div>
+                    </div>
+                    <div>
+                      <div class="k">Source</div>
+                      <div class="v">OpenFDA</div>
                     </div>
                   </div>
                 </div>
 
-                <div class="ai-rec">
-                  <strong>Recommandation :</strong> {{ interaction.recommendation }}
+                <div class="mt-2 text-muted">
+                  {{ interaction.description|slice(0,220) }}{% if interaction.description|length > 220 %}...{% endif %}
                 </div>
+
+                <button type="button"
+                        class="ai-accordion-btn"
+                        aria-expanded="false"
+                        aria-controls="{{ accId }}"
+                        data-acc="{{ accId }}">
+                  <i class="bi bi-chevron-down"></i> Voir détails
+                </button>
+
+                <div id="{{ accId }}" class="ai-accordion" aria-hidden="true">
+                  <div class="ai-block">{{ interaction.description }}</div>
+                </div>
+
+                <div class="ai-rec"><strong>Recommandation :</strong> {{ interaction.recommendation }}</div>
               </div>
             {% endfor %}
 
-            {% if interactionResult.severity is defined and interactionResult.severity == 'danger' %}
-              <div class="ai-block lock mt-3" id="danger-lock-block">
-                <div class="fw-bold mb-1">
-                  <i class="bi bi-lock-fill me-2"></i>Validation bloquée
-                </div>
-                <div class="small">
-                  Pour votre sécurité, vous ne pouvez pas valider cette commande. Consultez un professionnel de santé.
-                </div>
+            {# ✅ Scanner ordonnance visible quand DANGER + blocage #}
+            {% if interactionResult.severity == 'danger' and not canValidate %}
+              <div class="ai-block lock mt-3" id="ordonnance-scan-block">
+                <div class="title"><i class="bi bi-lock-fill"></i> Validation bloquée</div>
+                <div class="small mb-3">Pour débloquer, scannez votre ordonnance (OCR).</div>
+
+                <form method="post" enctype="multipart/form-data" action="{{ path('panier_ordonnance_scan') }}" id="ordonnanceForm">
+                  <label class="form-label fw-bold">📸 Scanner l'ordonnance</label>
+                  <input type="file" name="ordonnance" class="form-control mb-2" accept="image/*" required>
+                  <button class="btn btn-warning w-100" type="submit" id="btnOrdonnanceScan">
+                    <i class="bi bi-cpu me-2"></i> Scanner et débloquer
+                  </button>
+                  <div class="small text-muted mt-2" id="ordonnanceHint" style="display:none;">
+                    ⏳ Scan en cours… merci de patienter.
+                  </div>
+                </form>
               </div>
             {% endif %}
 
           {% elseif interactionResult.api_available %}
             <div class="ai-alert safe">
-              <h5 class="d-flex align-items-center gap-2">
-                <i class="bi bi-shield-check-fill"></i>
-                Aucun risque majeur détecté
-              </h5>
-              <p>Les produits de votre panier ont été vérifiés via OpenFDA.</p>
+              <h5><i class="bi bi-shield-check-fill"></i> Aucun risque majeur détecté</h5>
+              <p>Les produits ont été vérifiés via OpenFDA</p>
             </div>
           {% else %}
             <div class="ai-alert warning">
-              <h5 class="d-flex align-items-center gap-2">
-                <i class="bi bi-wifi-off"></i>
-                Vérification indisponible
-              </h5>
-              <p>Impossible de vérifier les interactions pour le moment (API hors ligne ou produits non trouvés).</p>
+              <h5><i class="bi bi-wifi-off"></i> Vérification indisponible</h5>
+              <p>API hors ligne ou données non disponibles.</p>
             </div>
           {% endif %}
-
         </div>
       </div>
     {% endif %}
 
-    {# Panier vide #}
+    {# PANIER VIDE #}
     {% if produits is empty %}
       <div class="empty-cart text-center py-5" id="empty-cart-block">
-        <div class="empty-cart-icon mb-4">
-          <i class="bi bi-cart-x"></i>
-        </div>
+        <div class="empty-cart-icon mb-4"><i class="bi bi-cart-x"></i></div>
         <h3 class="mb-3">Votre panier est vide</h3>
         <p class="text-muted mb-4">Découvrez nos produits et commencez vos achats !</p>
         <a href="{{ path('front_produit_index') }}" class="btn btn-primary btn-lg px-5">
@@ -202,6 +638,7 @@
         </a>
       </div>
     {% else %}
+
       <div class="row g-4" id="cart-content">
 
         {# Liste produits #}
@@ -209,10 +646,7 @@
           <div class="card border-0 shadow-sm">
             <div class="card-header bg-white border-0 py-3">
               <div class="d-flex justify-content-between align-items-center">
-                <h5 class="mb-0 fw-bold">
-                  Articles (<span id="cart-count-products">{{ produits|length }}</span>)
-                </h5>
-
+                <h5 class="mb-0 fw-bold">Articles (<span id="cart-count-products">{{ produits|length }}</span>)</h5>
                 <button class="btn btn-outline-danger btn-sm" id="btnViderPanier" type="button">
                   <i class="bi bi-trash me-1"></i>Vider le panier
                 </button>
@@ -227,10 +661,9 @@
                      data-qty="{{ produit.quantite_panier }}">
 
                   <div class="row g-3 align-items-center">
-
                     <div class="col-md-2 col-3">
                       <div class="product-image">
-                        <img src="{{ produit.imageProduit }}" alt="{{ produit.nomProduit }}">
+                        <img src="{{ asset('uploads/produits/' ~ produit.imageProduit) }}" alt="{{ produit.nomProduit }}">
                       </div>
                     </div>
 
@@ -246,24 +679,19 @@
 
                     <div class="col-md-2 col-6">
                       <small class="text-muted d-block mb-2 text-center">Quantité</small>
-
                       <div class="qty-control">
                         <button class="qty-btn btn-minus" type="button"
-                                data-id="{{ produit.id_produit }}"
-                                data-nom="{{ produit.nomProduit }}">
+                                data-id="{{ produit.id_produit }}" data-nom="{{ produit.nomProduit }}"
+                                aria-label="Diminuer">
                           <i class="bi bi-dash"></i>
                         </button>
 
-                        <input type="text"
-                               class="qty-input"
-                               id="qty-{{ produit.id_produit }}"
-                               value="{{ produit.quantite_panier }}"
-                               data-stock="{{ produit.quantiteProduit }}"
-                               readonly>
+                        <input type="text" class="qty-input" id="qty-{{ produit.id_produit }}"
+                               value="{{ produit.quantite_panier }}" readonly>
 
                         <button class="qty-btn btn-plus" type="button"
-                                data-id="{{ produit.id_produit }}"
-                                data-nom="{{ produit.nomProduit }}">
+                                data-id="{{ produit.id_produit }}" data-nom="{{ produit.nomProduit }}"
+                                aria-label="Augmenter">
                           <i class="bi bi-plus"></i>
                         </button>
                       </div>
@@ -272,18 +700,19 @@
                     <div class="col-md-2 col-12">
                       <div class="text-center text-md-end">
                         <small class="text-muted d-block mb-1">Total</small>
-                        <span class="fw-bold fs-5 text-primary line-total" id="line-{{ produit.id_produit }}">
+                        <span class="fw-bold fs-5 text-primary" id="line-{{ produit.id_produit }}">
                           {{ (produit.prixProduit * produit.quantite_panier)|number_format(2, '.', '') }}
                         </span>
                         <span class="text-muted">DT</span>
                       </div>
 
                       <div class="text-center text-md-end mt-2">
-                        <button class="btn btn-link text-danger btn-sm p-0 btn-supprimer"
+                        <button class="btn-supprimer"
                                 type="button"
                                 data-id="{{ produit.id_produit }}"
-                                data-nom="{{ produit.nomProduit }}">
-                          <i class="bi bi-trash me-1"></i>Supprimer
+                                data-nom="{{ produit.nomProduit }}"
+                                title="Supprimer">
+                          <i class="bi bi-trash"></i>
                         </button>
                       </div>
                     </div>
@@ -301,107 +730,493 @@
           </div>
         </div>
 
-        {# Résumé #}
+        {# Résumé (RIGHT) — sticky + offset navbar #}
         <div class="col-lg-4">
-          <div class="card border-0 shadow-sm sticky-top" style="top: 100px;">
-            <div class="card-header bg-primary text-white py-3">
-              <h5 class="mb-0"><i class="bi bi-receipt me-2"></i>Résumé</h5>
-            </div>
-
-            <div class="card-body">
-              <div class="summary-line">
-                <span class="text-muted">Sous-total</span>
-                <span class="fw-bold"><span id="cart-subtotal">{{ total|number_format(2, '.', '') }}</span> DT</span>
+          <div class="sticky-summary">
+            <div class="card border-0 shadow-sm summary-card">
+              <div class="card-header text-white py-3">
+                <h5 class="mb-0"><i class="bi bi-receipt me-2"></i>Résumé</h5>
               </div>
 
-              <div class="summary-line">
-                <span class="text-muted">Livraison</span>
-                <span class="text-success fw-bold">Gratuite</span>
+              <div class="card-body">
+                <div class="summary-line d-flex justify-content-between">
+                  <span class="text-muted">Sous-total</span>
+                  <span class="fw-bold"><span id="cart-subtotal">{{ total|number_format(2, '.', '') }}</span> DT</span>
+                </div>
+
+                <hr>
+
+                <div class="summary-total d-flex justify-content-between align-items-center">
+                  <span class="fs-5 fw-bold">Total</span>
+                  <span class="fs-4 fw-bold text-primary"><span id="cart-total">{{ total|number_format(2, '.', '') }}</span> DT</span>
+                </div>
+
+                {% if not canValidate %}
+                  <button class="btn btn-success w-100 btn-lg mt-4 shadow-sm btn-validate-blocked"
+                          id="btnCheckout" type="button" disabled>
+                    <i class="bi bi-lock-fill me-2"></i>Validation bloquée
+                  </button>
+                  <div class="small text-muted mt-2">
+                    💡 Si OpenFDA détecte un danger, scannez l’ordonnance pour débloquer.
+                  </div>
+                {% else %}
+                  <a href="{{ path('commande_valider') }}"
+                     class="btn btn-success w-100 btn-lg mt-4 shadow-sm" id="btnCheckout">
+                    <i class="bi bi-check-circle me-2"></i>Valider la commande
+                  </a>
+
+                {% endif %}
+                    <button id="themeToggle" class="btn btn-outline-primary btn-sm mt-3">
+  <i class="bi bi-moon-stars"></i> Mode sombre
+</button>
               </div>
-
-              <hr>
-
-              <div class="summary-total">
-                <span class="fs-5 fw-bold">Total</span>
-                <span class="fs-4 fw-bold text-primary">
-                  <span id="cart-total">{{ total|number_format(2, '.', '') }}</span>
-                  <span class="text-muted">DT</span>
-                </span>
-              </div>
-
-              {% if interactionResult is defined and interactionResult.severity is defined and interactionResult.severity == 'danger' %}
-                <button class="btn btn-success w-100 btn-lg mt-4 shadow-sm btn-validate-blocked" disabled>
-                  <i class="bi bi-lock-fill me-2"></i>Validation bloquée
-                </button>
-              {% else %}
-                <a href="{{ path('commande_valider') }}" class="btn btn-success w-100 btn-lg mt-4 shadow-sm" id="btn-valider">
-                  <i class="bi bi-check-circle me-2"></i>Valider la commande
-                </a>
-              {% endif %}
-
-              <div class="mt-4 p-3 bg-light rounded">
-                <h6 class="small fw-bold mb-2">
-                  <i class="bi bi-shield-check text-success me-1"></i>Paiement sécurisé
-                </h6>
-                <p class="small text-muted mb-0">Vos informations sont protégées</p>
-              </div>
-
-              <div class="mt-3 p-3 bg-light rounded">
-                <h6 class="small fw-bold mb-2">
-                  <i class="bi bi-truck text-primary me-1"></i>Livraison rapide
-                </h6>
-                <p class="small text-muted mb-0">Sous 2-3 jours ouvrables</p>
-              </div>
-
             </div>
           </div>
         </div>
 
       </div>
     {% endif %}
+
   </div>
 </div>
+
+{# Flash -> Toast #}
+<script>
+(function(){
+  window.__FLASH_SUCCESS__ = [];
+  window.__FLASH_ERROR__ = [];
+  {% for message in app.flashes('success') %}
+    window.__FLASH_SUCCESS__.push("{{ message|e('js') }}");
+  {% endfor %}
+  {% for message in app.flashes('error') %}
+    window.__FLASH_ERROR__.push("{{ message|e('js') }}");
+  {% endfor %}
+})();
+</script>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const toastContainer = document.getElementById('toast-container');
+
+  // confirm modal elements
+  const confirmOverlay = document.getElementById('confirmOverlay');
+  const confirmMessage = document.getElementById('confirmMessage');
+  const confirmYes = document.getElementById('confirmYes');
+  const confirmNo = document.getElementById('confirmNo');
+  const confirmClose = document.getElementById('confirmClose');
+
+  const checkoutBtn = document.getElementById('btnCheckout');
+
+  let currentAction = null;
+  let lastSeverity = null;
+
+  // ============ TOAST ============
+  function showToast(message, color = 'success') {
+    if (!message || message.trim() === '') {
+      message = color === 'success' ? 'Succès ✅' : 'Une erreur est survenue ❌';
+    }
+
+    // bootstrap toast si dispo
+    if (toastContainer && window.bootstrap && bootstrap.Toast) {
+      const icon = color === 'success' ? 'check-circle' : 'x-circle';
+      const toastEl = document.createElement('div');
+      toastEl.className = `toast align-items-center text-white bg-${color} border-0 shadow-lg`;
+      toastEl.role = 'alert';
+      toastEl.innerHTML = `
+        <div class="d-flex">
+          <div class="toast-body">
+            <i class="bi bi-${icon} me-2"></i>${message}
+          </div>
+          <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+        </div>
+      `;
+      toastContainer.appendChild(toastEl);
+      const toast = new bootstrap.Toast(toastEl, { delay: 3000 });
+      toast.show();
+      toastEl.addEventListener('hidden.bs.toast', () => toastEl.remove());
+      return;
+    }
+
+    // fallback simple
+    const simple = document.createElement('div');
+    simple.style.position = 'fixed';
+    simple.style.top = '110px';
+    simple.style.left = '50%';
+    simple.style.transform = 'translateX(-50%)';
+    simple.style.zIndex = '9999';
+    simple.style.maxWidth = '420px';
+    simple.style.width = '92%';
+    simple.style.borderRadius = '14px';
+    simple.style.padding = '12px 14px';
+    simple.style.fontWeight = '800';
+    simple.style.boxShadow = '0 16px 40px rgba(0,0,0,.12)';
+    simple.style.background = (color === 'success') ? 'rgba(0,191,166,.14)' : 'rgba(239,68,68,.14)';
+    simple.style.border = (color === 'success') ? '1px solid rgba(0,191,166,.22)' : '1px solid rgba(239,68,68,.22)';
+    simple.style.color = (color === 'success') ? '#064e3b' : '#7f1d1d';
+    simple.textContent = message;
+    document.body.appendChild(simple);
+    setTimeout(() => simple.remove(), 2400);
+  }
+
+  // flashes
+  try {
+    (window.__FLASH_SUCCESS__ || []).forEach(m => showToast(m, 'success'));
+    (window.__FLASH_ERROR__ || []).forEach(m => showToast(m, 'danger'));
+  } catch (e) {}
+
+  // Auto-hide ordonnance alert
+  (function(){
+    const a=document.getElementById('ordonnanceAlert');
+    if(!a) return;
+    setTimeout(()=>{
+      a.classList.add('hiding');
+      setTimeout(()=>a.remove(), 350);
+    }, 5000);
+  })();
+
+  // ============ CONFIRM POPUP ============
+  function openConfirm(message, actionObj, yesLabel = 'Supprimer', yesIsDanger = true){
+    currentAction = actionObj || null;
+    if (confirmMessage) confirmMessage.textContent = message || 'Confirmer ?';
+
+    if (confirmYes) {
+      confirmYes.className = yesIsDanger ? 'btn btn-confirm-danger' : 'btn btn-success';
+      confirmYes.innerHTML = yesIsDanger
+        ? `<i class="bi bi-trash3 me-1"></i> ${yesLabel}`
+        : `<i class="bi bi-check-circle me-1"></i> ${yesLabel}`;
+    }
+
+    confirmOverlay?.classList.remove('d-none');
+    confirmOverlay?.setAttribute('aria-hidden','false');
+  }
+
+  function closeConfirm(){
+    confirmOverlay?.classList.add('d-none');
+    confirmOverlay?.setAttribute('aria-hidden','true');
+    currentAction = null;
+  }
+
+  confirmClose?.addEventListener('click', closeConfirm);
+  confirmNo?.addEventListener('click', closeConfirm);
+
+  // click dehors
+  confirmOverlay?.addEventListener('click', (e) => {
+    if (e.target === confirmOverlay) closeConfirm();
+  });
+
+  // ESC
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && confirmOverlay && !confirmOverlay.classList.contains('d-none')) {
+      closeConfirm();
+    }
+  });
+
+  // ============ BADGE NAVBAR ============
+  function updateCartBadge(count) {
+    const badge = document.getElementById('cart-count');
+    if (!badge) return;
+    badge.textContent = count;
+    if (count <= 0) badge.classList.add('d-none');
+    else badge.classList.remove('d-none');
+  }
+
+  // ============ TOTALS ============
+  function recalcTotals() {
+    let subtotal = 0;
+    document.querySelectorAll('.cart-item.produit-row').forEach((row) => {
+      const price = parseFloat(row.dataset.price || '0');
+      const qty = parseInt(row.dataset.qty || '0', 10);
+      subtotal += price * qty;
+    });
+    subtotal = Math.round(subtotal * 100) / 100;
+
+    const subtotalEl = document.getElementById('cart-subtotal');
+    const totalEl = document.getElementById('cart-total');
+    if (subtotalEl) subtotalEl.textContent = subtotal.toFixed(2);
+    if (totalEl) totalEl.textContent = subtotal.toFixed(2);
+  }
+
+  function refreshHeaderCounts() {
+    const rows = document.querySelectorAll('.cart-item.produit-row');
+    const countProducts = rows.length;
+
+    const countProductsEl = document.getElementById('cart-count-products');
+    if (countProductsEl) countProductsEl.textContent = countProducts;
+
+    const textEl = document.getElementById('cart-items-text');
+    if (textEl) {
+      textEl.textContent =
+        countProducts > 0
+          ? `${countProducts} article(s) dans votre panier`
+          : `Votre panier est vide`;
+    }
+  }
+
+  function getQtyFromUI(id) {
+    const input = document.getElementById(`qty-${id}`);
+    return input ? parseInt(input.value || '0', 10) : 0;
+  }
+
+  function removeRow(id) {
+    const row = document.getElementById(`cart-row-${id}`);
+    if (row) row.remove();
+
+    recalcTotals();
+    refreshHeaderCounts();
+
+    const remaining = document.querySelectorAll('.cart-item.produit-row').length;
+    if (remaining === 0) setTimeout(() => location.reload(), 250);
+  }
+
+  function updateQtyUI(id, newQty) {
+    const row = document.getElementById(`cart-row-${id}`);
+
+    const qtyInput = document.getElementById(`qty-${id}`);
+    if (qtyInput) qtyInput.value = newQty;
+
+    if (row) row.dataset.qty = newQty;
+
+    const price = row ? parseFloat(row.dataset.price || '0') : 0;
+    const lineTotal = document.getElementById(`line-${id}`);
+    if (lineTotal) lineTotal.textContent = (price * newQty).toFixed(2);
+
+    recalcTotals();
+    refreshHeaderCounts();
+  }
+
+  // ============ POST JSON ============
+  async function postJson(url, bodyObj = null) {
+    const options = {
+      method: 'POST',
+      headers: {
+        'X-Requested-With': 'XMLHttpRequest',
+        Accept: 'application/json',
+      },
+    };
+    if (bodyObj) {
+      options.headers['Content-Type'] = 'application/json';
+      options.body = JSON.stringify(bodyObj);
+    }
+    const res = await fetch(url, options);
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.message || 'Erreur');
+    return data;
+  }
+
+  // ============ CHECKOUT BLOCK ============
+  function setCheckoutBlocked(blocked, msg) {
+    if (!checkoutBtn) return;
+
+    checkoutBtn.classList.toggle('btn-validate-blocked', blocked);
+
+    if (blocked) {
+      checkoutBtn.setAttribute('aria-disabled', 'true');
+      checkoutBtn.setAttribute('title', msg || '🚨 Interaction dangereuse');
+      checkoutBtn.onclick = (e) => {
+        e.preventDefault();
+        showToast('🚨 Validation bloquée : interaction dangereuse détectée.', 'danger');
+      };
+    } else {
+      checkoutBtn.removeAttribute('aria-disabled');
+      checkoutBtn.removeAttribute('title');
+      checkoutBtn.onclick = null;
+    }
+  }
+
+  // ============ REFRESH OpenFDA ============
+  async function refreshOpenFdaUI(showToastOnDanger = false) {
+    try {
+      const res = await fetch('/panier/check-interactions', { headers: { Accept: 'application/json' } });
+      const data = await res.json().catch(() => null);
+      if (!data || !data.checked) return;
+
+      const sev = data.severity || 'safe';
+      const canValidate = data.canValidate !== false;
+
+      const severityChanged = lastSeverity !== sev;
+      lastSeverity = sev;
+
+      if (sev === 'danger' && !canValidate) {
+        setCheckoutBlocked(true, data.message);
+        if (showToastOnDanger && severityChanged) showToast(data.message || '🚨 Interaction dangereuse détectée !', 'danger');
+      } else {
+        setCheckoutBlocked(false);
+      }
+    } catch (e) {
+      console.warn('OpenFDA refresh failed', e);
+    }
+  }
+
+  // ============ EVENT DELEGATION ============
+  document.addEventListener('click', async (e) => {
+
+    // ---- OpenFDA Voir détails ----
+    const accBtn = e.target.closest('.ai-accordion-btn');
+    if (accBtn) {
+      const id = accBtn.getAttribute('data-acc') || accBtn.getAttribute('aria-controls');
+      const panel = id ? document.getElementById(id) : null;
+      if (!panel) return;
+
+      const isOpen = panel.classList.contains('show');
+      panel.classList.toggle('show', !isOpen);
+      panel.setAttribute('aria-hidden', isOpen ? 'true' : 'false');
+      accBtn.setAttribute('aria-expanded', isOpen ? 'false' : 'true');
+      accBtn.innerHTML = isOpen
+        ? '<i class="bi bi-chevron-down"></i> Voir détails'
+        : '<i class="bi bi-chevron-up"></i> Masquer détails';
+      return;
+    }
+
+    // ---- Supprimer ----
+    const delBtn = e.target.closest('.btn-supprimer');
+    if (delBtn) {
+      const id = delBtn.dataset.id;
+      const nom = delBtn.dataset.nom || 'Produit';
+      openConfirm(
+        `Voulez-vous vraiment supprimer "${nom}" de votre panier ?`,
+        { url: `/panier/supprimer/${id}`, type: 'delete', id, nom },
+        'Supprimer',
+        true
+      );
+      return;
+    }
+
+    // ---- Vider ----
+    const clearBtn = e.target.closest('#btnViderPanier');
+    if (clearBtn) {
+      openConfirm(
+        'Êtes-vous sûr de vouloir vider votre panier ?',
+        { url: `/panier/vider`, type: 'clear' },
+        'Vider',
+        true
+      );
+      return;
+    }
+
+    // ---- Plus ----
+    const plusBtn = e.target.closest('.btn-plus');
+    if (plusBtn) {
+      const id = plusBtn.dataset.id;
+      const nom = plusBtn.dataset.nom || 'Produit';
+      try {
+        plusBtn.disabled = true;
+        const data = await postJson(`/panier/augmenter/${id}`);
+        const newQty = (typeof data.quantite !== 'undefined')
+          ? parseInt(data.quantite, 10)
+          : (getQtyFromUI(id) + 1);
+
+        updateQtyUI(id, newQty);
+        showToast(`Quantité de "${nom}" augmentée ✅`, 'success');
+        if (typeof data.count !== 'undefined') updateCartBadge(parseInt(data.count, 10));
+        await refreshOpenFdaUI(true);
+      } catch (err) {
+        showToast(err.message || 'Erreur', 'danger');
+      } finally {
+        plusBtn.disabled = false;
+      }
+      return;
+    }
+
+    // ---- Minus ----
+    const minusBtn = e.target.closest('.btn-minus');
+    if (minusBtn) {
+      const id = minusBtn.dataset.id;
+      const nom = minusBtn.dataset.nom || 'Produit';
+      try {
+        minusBtn.disabled = true;
+        const data = await postJson(`/panier/diminuer/${id}`);
+        let newQty = (typeof data.quantite !== 'undefined')
+          ? parseInt(data.quantite, 10)
+          : (getQtyFromUI(id) - 1);
+
+        if (isNaN(newQty)) newQty = 0;
+
+        if (newQty <= 0) {
+          removeRow(id);
+          showToast(`"${nom}" supprimé du panier ✅`, 'success');
+        } else {
+          updateQtyUI(id, newQty);
+          showToast(`Quantité de "${nom}" diminuée ✅`, 'success');
+        }
+
+        if (typeof data.count !== 'undefined') updateCartBadge(parseInt(data.count, 10));
+        await refreshOpenFdaUI(false);
+      } catch (err) {
+        showToast(err.message || 'Erreur', 'danger');
+      } finally {
+        minusBtn.disabled = false;
+      }
+      return;
+    }
+  });
+
+  // ============ CONFIRM YES ============
+  confirmYes?.addEventListener('click', async () => {
+    if (!currentAction) { closeConfirm(); return; }
+    const action = currentAction;
+    closeConfirm();
+
+    try {
+      const data = await postJson(action.url);
+
+      if (action.type === 'delete' && action.id) {
+        removeRow(action.id);
+        showToast('Produit supprimé ✅', 'success');
+      }
+
+      if (action.type === 'clear') {
+        showToast('Panier vidé ✅', 'success');
+        setTimeout(() => location.reload(), 250);
+        return;
+      }
+
+      if (typeof data.count !== 'undefined') updateCartBadge(parseInt(data.count, 10));
+      await refreshOpenFdaUI(false);
+
+    } catch (err) {
+      showToast(err.message || 'Erreur réseau', 'danger');
+    }
+  });
+
+  // ============ Ordonnance UX ============
+  const ordForm = document.getElementById('ordonnanceForm');
+  if (ordForm) {
+    ordForm.addEventListener('submit', () => {
+      const btn = document.getElementById('btnOrdonnanceScan');
+      const hint = document.getElementById('ordonnanceHint');
+      if (btn) btn.disabled = true;
+      if (hint) hint.style.display = 'block';
+    });
+  }
+
+  // init
+  recalcTotals();
+  refreshHeaderCounts();
+  refreshOpenFdaUI(false);
+});
+
+
+  const btn = document.getElementById("themeToggle");
+
+  if (localStorage.getItem("theme") === "dark") {
+    document.body.classList.add("dark");
+  }
+
+  if (btn) {
+    btn.addEventListener("click", () => {
+      document.body.classList.toggle("dark");
+      localStorage.setItem("theme", document.body.classList.contains("dark") ? "dark" : "light");
+    });
+  }
+
+</script>
 
 {% endblock %}
 
 {% block stylesheets %}
   {{ parent() }}
-  <link rel="stylesheet" href="{{ asset('assets/css/panier.css') }}">
 {% endblock %}
 
 {% block javascripts %}
   {{ parent() }}
-  <script src="{{ asset('assets/js/panier.js') }}"></script>
-
-  {# ✅ Accordéon OpenFDA #}
-  <script>
-    document.addEventListener('DOMContentLoaded', () => {
-      document.querySelectorAll('.ai-accordion-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-          const id = btn.getAttribute('data-acc');
-          const block = document.getElementById(id);
-          if (!block) return;
-          block.classList.toggle('show');
-          btn.textContent = block.classList.contains('show') ? 'Masquer détails' : 'Voir détails';
-        });
-      });
-    });
-  </script>
-
-  {# ✅ Twig -> JS (flash messages) #}
-  <script>
-    (function () {
-      {% for message in app.flashes('success') %}
-        if (typeof window.showToast === 'function') {
-          window.showToast("{{ message|e('js') }}", 'success');
-        }
-      {% endfor %}
-
-      {% for message in app.flashes('error') %}
-        if (typeof window.showToast === 'function') {
-          window.showToast("{{ message|e('js') }}", 'danger');
-        }
-      {% endfor %}
-    })();
-  </script>
 {% endblock %}

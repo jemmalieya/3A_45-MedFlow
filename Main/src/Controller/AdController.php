@@ -12,10 +12,13 @@ use App\Repository\PostRepository;
 
 use App\Repository\ProduitRepository;
 use App\Repository\CommandeRepository;
+use Doctrine\DBAL\Connection;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\HttpFoundation\StreamedResponse;
+
 //#[IsGranted('ROLE_ADMIN')]
 use Dompdf\Dompdf;
 use Dompdf\Options;
@@ -33,6 +36,10 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
 // Brevo email via API (same logic as registration)
 
 use App\Entity\User;
+use App\Service\GeminiService;
+use App\Service\OcrService;
+use App\Service\EpidemieDetectionService;
+
 
 
 
@@ -85,27 +92,35 @@ final class AdController extends AbstractController
         $livrees = $commandeRepo->count(['statut_commande' => 'Livrée']);
         $annulees = $commandeRepo->count(['statut_commande' => 'Annulée']);
 
-        // CA total (payées uniquement)
         $caTotal = 0.0;
         try {
             $caTotal = (float) ($em->createQuery(
-                'SELECT COALESCE(SUM(c.montant_total), 0) FROM App\Entity\Commande c WHERE c.paid_at IS NOT NULL'
+                'SELECT COALESCE(SUM(c.montant_total), 0) FROM App\\Entity\\Commande c WHERE c.paid_at IS NOT NULL'
             )->getSingleScalarResult() ?? 0);
-        } catch (\Exception $e) {}
+        } catch (\Throwable $e) {
+        }
 
-        // CA ce mois (payées uniquement)
         $caMois = 0.0;
-        $currentYear = (int) date('Y');
-        $currentMonth = (int) date('m');
+        $nowY = (int) date('Y');
+        $nowM = (int) date('m');
 
-        foreach ($commandes as $commande) {
-            if ($commande->getPaidAt()) {
-                $y = (int) $commande->getPaidAt()->format('Y');
-                $m = (int) $commande->getPaidAt()->format('m');
-                if ($y === $currentYear && $m === $currentMonth) {
-                    $caMois += (float) $commande->getMontantTotal();
+        try {
+            $commandesPayees = $em->createQuery(
+                'SELECT c FROM App\\Entity\\Commande c WHERE c.paid_at IS NOT NULL'
+            )->getResult();
+
+            foreach ($commandesPayees as $c) {
+                $paidAt = $c->getPaidAt();
+                if (!$paidAt) {
+                    continue;
+                }
+                $y = (int) $paidAt->format('Y');
+                $m = (int) $paidAt->format('m');
+                if ($y === $nowY && $m === $nowM) {
+                    $caMois += (float) $c->getMontantTotal();
                 }
             }
+        } catch (\Throwable $e) {
         }
 
         return $this->render('dashboard_ad/commandes_liste.html.twig', [
@@ -120,135 +135,6 @@ final class AdController extends AbstractController
             'caMois' => $caMois,
         ]);
     }
-
-    // ========== PAGE STATISTIQUES ==========
-    #[Route('/statistiques', name: 'ad_statistiques')]
-    public function statistiques(
-        UserRepository $userRepo,
-        ProduitRepository $produitRepo,
-        CommandeRepository $commandeRepo,
-        EntityManagerInterface $em
-    ): Response {
-        $totalUsers = $userRepo->count([]);
-        $totalProduits = $produitRepo->count([]);
-        $totalCommandes = $commandeRepo->count([]);
-
-        // CA total (payées uniquement)
-        $caTotal = 0.0;
-        try {
-            $caTotal = (float) ($em->createQuery(
-                'SELECT COALESCE(SUM(c.montant_total), 0) FROM App\Entity\Commande c WHERE c.paid_at IS NOT NULL'
-            )->getSingleScalarResult() ?? 0);
-        } catch (\Exception $e) {}
-
-        // CA ce mois (optionnel)
-        $caMois = 0.0;
-        $nowY = (int) date('Y');
-        $nowM = (int) date('m');
-
-        try {
-            $commandesPayees = $em->createQuery(
-                'SELECT c FROM App\Entity\Commande c WHERE c.paid_at IS NOT NULL'
-            )->getResult();
-
-            foreach ($commandesPayees as $c) {
-                $y = (int) $c->getPaidAt()->format('Y');
-                $m = (int) $c->getPaidAt()->format('m');
-                if ($y === $nowY && $m === $nowM) {
-                    $caMois += (float) $c->getMontantTotal();
-                }
-            }
-        } catch (\Exception $e) {}
-
-        // ✅ CA par mois (12 derniers mois) — MySQL/MariaDB
-        // Retour: [ ['month' => 'Jan', 'total' => 1200], ... ]
-        $caParMois = [];
-        try {
-            // 12 derniers mois (YYYY-MM)
-            $months = [];
-            $cursor = new \DateTimeImmutable('first day of this month');
-            for ($i = 11; $i >= 0; $i--) {
-                $d = $cursor->modify("-{$i} months");
-                $months[] = $d->format('Y-m');
-            }
-
-            // Query DB (group by YYYY-MM)
-            $rows = $em->getConnection()->fetchAllAssociative("
-                SELECT DATE_FORMAT(paid_at, '%Y-%m') AS ym, COALESCE(SUM(montant_total), 0) AS total
-                FROM commande
-                WHERE paid_at IS NOT NULL
-                GROUP BY ym
-                ORDER BY ym ASC
-            ");
-
-            $map = [];
-            foreach ($rows as $r) {
-                $map[$r['ym']] = (float) $r['total'];
-            }
-
-            // Format final (labels courts)
-            $moisLabel = ['Jan','Fév','Mar','Avr','Mai','Juin','Juil','Aoû','Sep','Oct','Nov','Déc'];
-            foreach ($months as $ym) {
-                [$y, $m] = explode('-', $ym);
-                $mInt = (int) $m;
-                $caParMois[] = [
-                    'month' => $moisLabel[$mInt - 1],
-                    'total' => $map[$ym] ?? 0.0,
-                ];
-            }
-        } catch (\Exception $e) {
-            // si erreur => chart vide
-            $caParMois = [];
-        }
-
-        // ✅ Top 5 produits les plus vendus (uniquement commandes payées)
-        $topProduits = [];
-        try {
-            $topProduits = $em->createQuery(
-                'SELECT p.nom_produit AS nom_produit, SUM(lc.quantite_commandee) as total_vendu
-                 FROM App\Entity\LigneCommande lc
-                 JOIN lc.produit p
-                 JOIN lc.commande c
-                 WHERE c.paid_at IS NOT NULL
-                 GROUP BY p.id_produit, p.nom_produit
-                 ORDER BY total_vendu DESC'
-            )->setMaxResults(5)->getResult();
-        } catch (\Exception $e) {}
-
-        // Produits en stock faible
-        $produitsRupture = $produitRepo->createQueryBuilder('p')
-            ->where('p.quantite_produit <= 5')
-            ->orderBy('p.quantite_produit', 'ASC')
-            ->setMaxResults(10)
-            ->getQuery()
-            ->getResult();
-
-        // Commandes par statut
-        $commandesParStatut = [
-            'En attente' => $commandeRepo->count(['statut_commande' => 'En attente']),
-            'En cours' => $commandeRepo->count(['statut_commande' => 'En cours']),
-            'En livraison' => $commandeRepo->count(['statut_commande' => 'En livraison']),
-            'Livrée' => $commandeRepo->count(['statut_commande' => 'Livrée']),
-            'Annulée' => $commandeRepo->count(['statut_commande' => 'Annulée']),
-        ];
-
-        // Dernières commandes
-        $dernieresCommandes = $commandeRepo->findBy([], ['date_creation_commande' => 'DESC'], 5);
-
-        return $this->render('dashboard_ad/statistiques.html.twig', [
-            'totalUsers' => $totalUsers,
-            'totalProduits' => $totalProduits,
-            'totalCommandes' => $totalCommandes,
-            'caTotal' => $caTotal,
-            'caMois' => $caMois,
-            'caParMois' => $caParMois,
-            'topProduits' => $topProduits,
-            'produitsRupture' => $produitsRupture,
-            'commandesParStatut' => $commandesParStatut,
-            'dernieresCommandes' => $dernieresCommandes,
-        ]);
-    }
-
 
 
 
@@ -288,6 +174,97 @@ final class AdController extends AbstractController
         return $this->file($full, $docs['files'][$i]['original'] ?? basename($full));
     }
 
+    #[Route('/ad/staff-requests/{id}/analyze/{i}', name: 'admin_staff_request_analyze', requirements: ['id' => '\\d+', 'i' => '\\d+'], methods: ['POST'])]
+    public function staffRequestAnalyze(
+        User $user,
+        int $i,
+        EntityManagerInterface $em,
+        OcrService $ocr,
+        GeminiService $gemini
+    ): JsonResponse {
+        $docs = $user->getStaffDocuments();
+        if (!is_array($docs) || !isset($docs['files']) || !is_array($docs['files']) || !isset($docs['files'][$i]) || !is_array($docs['files'][$i])) {
+            return $this->json(['success' => false, 'error' => 'Document introuvable.'], 404);
+        }
+
+        $rel = $docs['files'][$i]['stored'] ?? null;
+        if (!is_string($rel) || $rel === '') {
+            return $this->json(['success' => false, 'error' => 'Chemin introuvable.'], 404);
+        }
+
+        $projectDir = (string) $this->getParameter('kernel.project_dir');
+        $baseDir = realpath($projectDir . '/var/staff_requests');
+        $full = realpath($projectDir . '/var/' . $rel);
+
+        $baseNorm = $baseDir === false ? '' : str_replace('\\', '/', $baseDir);
+        $fullNorm = $full === false ? '' : str_replace('\\', '/', $full);
+        $baseNorm = rtrim(strtolower($baseNorm), '/') . '/';
+        $fullNorm = strtolower($fullNorm);
+
+        if ($baseDir === false || $full === false || !str_starts_with($fullNorm, $baseNorm)) {
+            return $this->json(['success' => false, 'error' => 'Chemin interdit.'], 404);
+        }
+        if (!is_file($full)) {
+            return $this->json(['success' => false, 'error' => 'Fichier manquant.'], 404);
+        }
+
+        $mime = (string) ($docs['files'][$i]['mime'] ?? '');
+        $ocrText = null;
+        $ocrError = null;
+
+        if (str_starts_with($mime, 'image/')) {
+            $res = $ocr->extractText($full);
+            $ocrText = is_string($res['text'] ?? null) ? trim((string) $res['text']) : null;
+            $ocrError = is_string($res['error'] ?? null) ? (string) $res['error'] : null;
+
+            if (is_string($ocrText) && $ocrText !== '') {
+                $docs['files'][$i]['ocrText'] = mb_substr($ocrText, 0, 4000);
+            }
+        }
+
+        // Build (optional) AI suggestion for THIS document if not already stored
+        $aiSuggestion = is_string($docs['files'][$i]['aiSuggestion'] ?? null) ? trim((string) $docs['files'][$i]['aiSuggestion']) : '';
+        if ($aiSuggestion === '' && is_string($ocrText) && trim($ocrText) !== '') {
+            $meta = is_array($docs['meta'] ?? null) ? $docs['meta'] : [];
+            $metaText = sprintf(
+                "specialite=%s; etablissement=%s; numero=%s; role=%s; type=%s",
+                (string) ($meta['specialite'] ?? ''),
+                (string) ($meta['etablissement'] ?? ''),
+                (string) ($meta['numero'] ?? ''),
+                (string) ($meta['roleWanted'] ?? ''),
+                (string) ($meta['typeStaffWanted'] ?? '')
+            );
+
+            $prompt = "Tu es un assistant pour un admin MedFlow.\n"
+                ."On a un document (photo) soumis pour une demande de rôle.\n"
+                ."Méta: {$metaText}\n\n"
+                ."Texte OCR (peut contenir des erreurs):\n".mb_substr($ocrText, 0, 3500)."\n\n"
+                ."Donne une courte synthèse (4 à 7 puces) et signale si tu vois: nom/prénom, numéros (CIN, ordre, etc.), spécialité, incohérences évidentes.\n"
+                ."Ne pas inventer si ce n'est pas clairement présent.";
+
+            try {
+                $aiSuggestion = trim($gemini->generate($prompt));
+                if ($aiSuggestion !== '') {
+                    $docs['files'][$i]['aiSuggestion'] = mb_substr($aiSuggestion, 0, 3000);
+                } else {
+                    $aiSuggestion = '';
+                }
+            } catch (\Throwable $e) {
+                $aiSuggestion = '';
+            }
+        }
+
+        $user->setStaffDocuments($docs);
+        $em->flush();
+
+        return $this->json([
+            'success' => true,
+            'ocrText' => $docs['files'][$i]['ocrText'] ?? null,
+            'aiSuggestion' => $docs['files'][$i]['aiSuggestion'] ?? null,
+            'ocrError' => $ocrError,
+        ]);
+    }
+
     #[Route('/ad/staff-requests/{id}/approve', name: 'admin_staff_request_approve', methods: ['POST'])]
     public function staffRequestApprove(User $user, Request $request, EntityManagerInterface $em): Response
     {
@@ -312,8 +289,14 @@ final class AdController extends AbstractController
 
         $user->setStaffRequestStatus('APPROVED');
         $user->setStaffReviewedAt(new \DateTime());
-        $user->setStaffReviewedBy($this->getUser()?->getId());
+        $me = $this->getUser();
+        $user->setStaffReviewedBy($me instanceof User ? $me->getId() : null);
         $user->setStaffRequestReason(null);
+
+        // If this was a staff pre-registration, unlock the account
+        if (strtoupper((string) $user->getStatutCompte()) === 'EN_ATTENTE_ADMIN') {
+            $user->setStatutCompte(null);
+        }
         $em->flush();
 
         // Notify user by Brevo API (same logic as registration)
@@ -345,7 +328,8 @@ final class AdController extends AbstractController
         $reason = trim((string) $request->request->get('reason', ''));
         $user->setStaffRequestReason($reason ?: null);
         $user->setStaffReviewedAt(new \DateTime());
-        $user->setStaffReviewedBy($this->getUser()?->getId());
+        $me = $this->getUser();
+        $user->setStaffReviewedBy($me instanceof User ? $me->getId() : null);
         $em->flush();
 
         // Notify user by Brevo API (same logic as registration)
@@ -637,12 +621,15 @@ final class AdController extends AbstractController
         if ($stats['blocked'] > 0) $tips[] = "Comptes bloqués : vérifier l’origine et décider déblocage/suppression.";
         if ($tips === []) $tips[] = "Aucune anomalie critique détectée.";
 
+        $me = $this->getUser();
+        $staffName = $me instanceof User ? $me->getPrenom() : null;
+
         $html = $this->renderView('dashboard_ad/patients/report_pdf.html.twig', [
             'stats' => $stats,
             'top' => $top,
             'tips' => $tips,
             'generatedAt' => new \DateTimeImmutable(),
-            'staffName' => $this->getUser()?->getPrenom(),
+            'staffName' => $staffName,
         ]);
 
         $options = new Options();
@@ -929,7 +916,7 @@ final class AdController extends AbstractController
     }
     
 // ✅ READ-ONLY: Liste événements (dans design Duralux)
-#[Route('/ad/evenements', name: 'ad_evenements_liste', methods: ['GET'])]
+#[Route('/evenements', name: 'ad_evenements_liste', methods: ['GET'])]
 public function evenementsListe(Request $request, EvenementRepository $repo): Response
 {
     $sort = (string) $request->query->get('sort', 'date_desc');
@@ -953,7 +940,7 @@ public function evenementsListe(Request $request, EvenementRepository $repo): Re
 }
 
 // ✅ READ-ONLY: Demandes/Participants (liste par événement + stats)
-#[Route('/ad/participants', name: 'ad_participants', methods: ['GET'])]
+#[Route('/participants', name: 'ad_participants', methods: ['GET'])]
 public function participants(EvenementRepository $repo): Response
 {
     $events = $repo->findBy([], ['date_debut_event' => 'DESC']);
@@ -978,7 +965,7 @@ public function participants(EvenementRepository $repo): Response
 }
 
 // ✅ READ-ONLY: Ressources (liste + tri + search)
-#[Route('/ad/ressources', name: 'ad_ressources', methods: ['GET'])]
+#[Route('/ressources', name: 'ad_ressources', methods: ['GET'])]
 public function ressources(Request $request, RessourceRepository $repo): Response
 {
     $search = trim((string) $request->query->get('search', ''));
@@ -1009,7 +996,7 @@ public function ressources(Request $request, RessourceRepository $repo): Respons
 }
 
 // ✅ READ-ONLY: Stats événements (tu peux garder tes stats JS/AJAX si tu veux après)
-#[Route('/ad/stats-evenements', name: 'ad_stats_evenements', methods: ['GET'])]
+#[Route('/stats-evenements', name: 'ad_stats_evenements', methods: ['GET'])]
 public function statsEvenements(EvenementRepository $repo): Response
 {
     $events = $repo->findAll();
@@ -1045,7 +1032,7 @@ public function statsEvenements(EvenementRepository $repo): Response
 }
 
 // ✅ READ-ONLY: Stats ressources (KPI + top)
-#[Route('/ad/stats-ressources', name: 'ad_stats_ressources', methods: ['GET'])]
+#[Route('/stats-ressources', name: 'ad_stats_ressources', methods: ['GET'])]
 public function statsRessources(RessourceRepository $repo): Response
 {
     $kpi = method_exists($repo, 'getKpiStats') ? $repo->getKpiStats() : [];
@@ -1061,6 +1048,7 @@ public function statsRessources(RessourceRepository $repo): Response
         'topEventsR' => $topEvents,
     ]);
 }
+
 
 
 
@@ -1097,9 +1085,20 @@ public function statsRessources(RessourceRepository $repo): Response
                 'prescriptions' => $prescriptions,
             ];
         }
+
+        // Rendez-vous statistics
+        $totalRendezVous = $rendezVousRepo->count([]);
+        $rdvDemande = $rendezVousRepo->count(['statut' => 'Demande']);
+        $rdvConfirme = $rendezVousRepo->count(['statut' => 'Confirmé']);
+        $rdvTerminee = $rendezVousRepo->count(['statut' => 'Terminée']);
+
         return $this->render('dashboard_ad/cons_ad.html.twig', [
             'controller_name' => 'AdController',
             'doctors' => $doctorsData,
+            'totalRendezVous' => $totalRendezVous,
+            'rdvDemande' => $rdvDemande,
+            'rdvConfirme' => $rdvConfirme,
+            'rdvTerminee' => $rdvTerminee,
         ]);
     }
     #[Route('/ad/statcons', name: 'app_ad_statcons')]
@@ -1144,47 +1143,45 @@ public function statsRessources(RessourceRepository $repo): Response
             $doctorsConsultationsCounts[] = $count;
         }
 
-        // Rendez-vous per month (line chart)
-        $rdvMonthLabels = [];
-        $rdvMonthCounts = [];
-        // Rendez-vous per month (line chart)
-        $rdvMonthLabels = [];
-        $rdvMonthCounts = [];
-        $rdvMonthMap = [];
+
+        // Rendez-vous per day (line chart)
+        $rdvDayLabels = [];
+        $rdvDayCounts = [];
+        $rdvDayMap = [];
         $allRdv = $rendezVousRepo->findAll();
         foreach ($allRdv as $rdv) {
             if ($rdv->getDatetime()) {
-                $month = $rdv->getDatetime()->format('Y-m');
-                if (!isset($rdvMonthMap[$month])) {
-                    $rdvMonthMap[$month] = 0;
+                $day = $rdv->getDatetime()->format('Y-m-d');
+                if (!isset($rdvDayMap[$day])) {
+                    $rdvDayMap[$day] = 0;
                 }
-                $rdvMonthMap[$month]++;
+                $rdvDayMap[$day]++;
             }
         }
-        ksort($rdvMonthMap);
-        foreach ($rdvMonthMap as $month => $count) {
-            $rdvMonthLabels[] = $month;
-            $rdvMonthCounts[] = $count;
+        ksort($rdvDayMap);
+        foreach ($rdvDayMap as $day => $count) {
+            $rdvDayLabels[] = $day;
+            $rdvDayCounts[] = $count;
         }
 
-        // Fiches médicales per month (line chart)
-        $ficheMonthLabels = [];
-        $ficheMonthCounts = [];
-        $ficheMonthMap = [];
+        // Fiches médicales per day (line chart)
+        $ficheDayLabels = [];
+        $ficheDayCounts = [];
+        $ficheDayMap = [];
         $allFiches = $ficheRepo->findAll();
         foreach ($allFiches as $fiche) {
             if ($fiche->getCreatedAt()) {
-                $month = $fiche->getCreatedAt()->format('Y-m');
-                if (!isset($ficheMonthMap[$month])) {
-                    $ficheMonthMap[$month] = 0;
+                $day = $fiche->getCreatedAt()->format('Y-m-d');
+                if (!isset($ficheDayMap[$day])) {
+                    $ficheDayMap[$day] = 0;
                 }
-                $ficheMonthMap[$month]++;
+                $ficheDayMap[$day]++;
             }
         }
-        ksort($ficheMonthMap);
-        foreach ($ficheMonthMap as $month => $count) {
-            $ficheMonthLabels[] = $month;
-            $ficheMonthCounts[] = $count;
+        ksort($ficheDayMap);
+        foreach ($ficheDayMap as $day => $count) {
+            $ficheDayLabels[] = $day;
+            $ficheDayCounts[] = $count;
         }
 
         return $this->render('dashboard_ad/stat_cons.html.twig', [
@@ -1198,10 +1195,14 @@ public function statsRessources(RessourceRepository $repo): Response
             'ficheDiagnosticCounts' => $ficheDiagnosticCounts,
             'doctorsConsultationsLabels' => $doctorsConsultationsLabels,
             'doctorsConsultationsCounts' => $doctorsConsultationsCounts,
-            'rdvMonthLabels' => $rdvMonthLabels,
-            'rdvMonthCounts' => $rdvMonthCounts,
-            'ficheMonthLabels' => $ficheMonthLabels,
-            'ficheMonthCounts' => $ficheMonthCounts,
+            'rdvMonthLabels' => $rdvMonthLabels ?? [],
+            'rdvMonthCounts' => $rdvMonthCounts ?? [],
+            'ficheMonthLabels' => $ficheMonthLabels ?? [],
+            'ficheMonthCounts' => $ficheMonthCounts ?? [],
+            'rdvDayLabels' => $rdvDayLabels,
+            'rdvDayCounts' => $rdvDayCounts,
+            'ficheDayLabels' => $ficheDayLabels,
+            'ficheDayCounts' => $ficheDayCounts,
         ]);
     }
     #[Route('/reclamations', name: 'ad_reclamations_liste', methods: ['GET'])]
@@ -1395,4 +1396,206 @@ public function statsRessources(RessourceRepository $repo): Response
             'byMonth' => array_values($byMonth),
         ]);
     }
+        // ============================================================
+//  Détection Épidémique — Dashboard YASSMIIIIIIINEEEEEEEEEEEEEEEEE
+// ============================================================
+#[Route('/admin/epidemie-detection', name: 'admin_epidemie_detection', methods: ['GET'])]
+public function epidemieDashboard(Request $request, EpidemieDetectionService $epi): Response
+{
+    $country = (string) $request->query->get('country', 'Tunisia');
+    $daysApi = (int) $request->query->get('days', 60);
+    $lat     = (float) $request->query->get('lat', 36.8);
+    $lon     = (float) $request->query->get('lon', 10.18);
+
+    $whoOutbreaks = $epi->getWhoOutbreaks();
+    $meteoCorrel  = $epi->getInfluenzaData($country);
+    $meteoHisto   = $epi->getMeteoHistorique($lat, $lon);
+
+    $localChart    = $epi->localSignalsChart(7, 30);
+    $tendances     = $epi->getTendances6Mois();
+    $topParMaladie = $epi->getTopProduitsByMaladie(30);
+
+    // ✅ couleur KPI selon risque
+    $risqueColor = match ($localChart['risk']) {
+        'Élevé'  => 'danger',
+        'Modéré' => 'warning',
+        default  => 'success',
+    };
+
+    return $this->render('dashboard_ad/epidemie_dashboard.html.twig', [
+        'country'       => $country,
+        'daysApi'       => $daysApi,
+        'lat'           => $lat,
+        'lon'           => $lon,
+
+        'whoOutbreaks'  => $whoOutbreaks,
+        'meteoCorrel'   => $meteoCorrel,
+        'meteoHisto'    => $meteoHisto,
+
+        'localChart'    => $localChart,
+        'tendances'     => $tendances,
+        'topParMaladie' => $topParMaladie,
+
+        'risqueColor'   => $risqueColor, // 👈 IMPORTANT
+    ]);
+}
+
+#[Route('/admin/epidemie-detection/export-csv', name: 'admin_epidemie_export_csv', methods: ['GET'])]
+public function epidemieExportCsv(EpidemieDetectionService $epi): StreamedResponse
+{
+    $localChart = $epi->localSignalsChart(7, 30);
+    $csvContent = $epi->exportSignalsCsv($localChart['meta']);
+
+    $response = new StreamedResponse(function () use ($csvContent) {
+        echo $csvContent;
+    });
+
+    $filename = 'signaux_epidemie_' . date('Y-m-d') . '.csv';
+    $response->headers->set('Content-Type', 'text/csv; charset=UTF-8');
+    $response->headers->set('Content-Disposition', "attachment; filename=\"{$filename}\"");
+
+    return $response;
+}
+// ============================================================
+//  API JSON (pour refresh AJAX)
+// ============================================================
+#[Route('/admin/epidemie-detection/api', name: 'admin_epidemie_api_json', methods: ['GET'])]
+public function epidemieApiJson(EpidemieDetectionService $epi): Response
+{
+    return $this->json([
+        'localChart'    => $epi->localSignalsChart(7, 30),
+        'tendances'     => $epi->getTendances6Mois(),
+        'who'           => $epi->getWhoOutbreaks(),
+        'meteo'         => $epi->getMeteoHistorique(),
+        'topParMaladie' => $epi->getTopProduitsByMaladie(30),
+    ]);
+}
+// ========== PAGE STATISTIQUES ==========
+    #[Route('/statistiques', name: 'ad_statistiques')]
+    public function statistiques(
+        UserRepository $userRepo,
+        ProduitRepository $produitRepo,
+        CommandeRepository $commandeRepo,
+        EntityManagerInterface $em
+    ): Response {
+        $totalUsers = $userRepo->count([]);
+        $totalProduits = $produitRepo->count([]);
+        $totalCommandes = $commandeRepo->count([]);
+
+        // CA total (payées uniquement)
+        $caTotal = 0.0;
+        try {
+            $caTotal = (float) ($em->createQuery(
+                'SELECT COALESCE(SUM(c.montant_total), 0) FROM App\Entity\Commande c WHERE c.paid_at IS NOT NULL'
+            )->getSingleScalarResult() ?? 0);
+        } catch (\Exception $e) {}
+
+        // CA ce mois (optionnel)
+        $caMois = 0.0;
+        $nowY = (int) date('Y');
+        $nowM = (int) date('m');
+
+        try {
+            $commandesPayees = $em->createQuery(
+                'SELECT c FROM App\Entity\Commande c WHERE c.paid_at IS NOT NULL'
+            )->getResult();
+
+            foreach ($commandesPayees as $c) {
+                $y = (int) $c->getPaidAt()->format('Y');
+                $m = (int) $c->getPaidAt()->format('m');
+                if ($y === $nowY && $m === $nowM) {
+                    $caMois += (float) $c->getMontantTotal();
+                }
+            }
+        } catch (\Exception $e) {}
+
+        // ✅ CA par mois (12 derniers mois) — MySQL/MariaDB
+        // Retour: [ ['month' => 'Jan', 'total' => 1200], ... ]
+        $caParMois = [];
+        try {
+            // 12 derniers mois (YYYY-MM)
+            $months = [];
+            $cursor = new \DateTimeImmutable('first day of this month');
+            for ($i = 11; $i >= 0; $i--) {
+                $d = $cursor->modify("-{$i} months");
+                $months[] = $d->format('Y-m');
+            }
+
+            // Query DB (group by YYYY-MM)
+            $rows = $em->getConnection()->fetchAllAssociative("
+                SELECT DATE_FORMAT(paid_at, '%Y-%m') AS ym, COALESCE(SUM(montant_total), 0) AS total
+                FROM commande
+                WHERE paid_at IS NOT NULL
+                GROUP BY ym
+                ORDER BY ym ASC
+            ");
+
+            $map = [];
+            foreach ($rows as $r) {
+                $map[$r['ym']] = (float) $r['total'];
+            }
+
+            // Format final (labels courts)
+            $moisLabel = ['Jan','Fév','Mar','Avr','Mai','Juin','Juil','Aoû','Sep','Oct','Nov','Déc'];
+            foreach ($months as $ym) {
+                [$y, $m] = explode('-', $ym);
+                $mInt = (int) $m;
+                $caParMois[] = [
+                    'month' => $moisLabel[$mInt - 1],
+                    'total' => $map[$ym] ?? 0.0,
+                ];
+            }
+        } catch (\Exception $e) {
+            // si erreur => chart vide
+            $caParMois = [];
+        }
+
+        // ✅ Top 5 produits les plus vendus (uniquement commandes payées)
+        $topProduits = [];
+        try {
+            $topProduits = $em->createQuery(
+                'SELECT p.nom_produit AS nom_produit, SUM(lc.quantite_commandee) as total_vendu
+                 FROM App\Entity\LigneCommande lc
+                 JOIN lc.produit p
+                 JOIN lc.commande c
+                 WHERE c.paid_at IS NOT NULL
+                 GROUP BY p.id_produit, p.nom_produit
+                 ORDER BY total_vendu DESC'
+            )->setMaxResults(5)->getResult();
+        } catch (\Exception $e) {}
+
+        // Produits en stock faible
+        $produitsRupture = $produitRepo->createQueryBuilder('p')
+            ->where('p.quantite_produit <= 5')
+            ->orderBy('p.quantite_produit', 'ASC')
+            ->setMaxResults(10)
+            ->getQuery()
+            ->getResult();
+
+        // Commandes par statut
+        $commandesParStatut = [
+            'En attente' => $commandeRepo->count(['statut_commande' => 'En attente']),
+            'En cours' => $commandeRepo->count(['statut_commande' => 'En cours']),
+            'En livraison' => $commandeRepo->count(['statut_commande' => 'En livraison']),
+            'Livrée' => $commandeRepo->count(['statut_commande' => 'Livrée']),
+            'Annulée' => $commandeRepo->count(['statut_commande' => 'Annulée']),
+        ];
+
+        // Dernières commandes
+        $dernieresCommandes = $commandeRepo->findBy([], ['date_creation_commande' => 'DESC'], 5);
+
+        return $this->render('dashboard_ad/statistiques.html.twig', [
+            'totalUsers' => $totalUsers,
+            'totalProduits' => $totalProduits,
+            'totalCommandes' => $totalCommandes,
+            'caTotal' => $caTotal,
+            'caMois' => $caMois,
+            'caParMois' => $caParMois,
+            'topProduits' => $topProduits,
+            'produitsRupture' => $produitsRupture,
+            'commandesParStatut' => $commandesParStatut,
+            'dernieresCommandes' => $dernieresCommandes,
+        ]);
+    }
+
 }

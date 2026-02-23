@@ -76,6 +76,7 @@
                 <div>
                   <div class="fw-semibold">{{ u.prenom }} {{ u.nom }}</div>
                   <div class="text-muted small">#{{ u.id }}</div>
+                  {{ include('components/_user_gamification.html.twig', { user: u, compact: true }) }}
                 </div>
               </div>
             </td>
@@ -116,6 +117,8 @@
                     {% set url = path('admin_staff_request_doc', {id: u.id, i: loop.index0}) %}
                     <button type="button" class="btn btn-sm {% if isImg %}btn-outline-primary{% else %}btn-outline-secondary{% endif %}"
                             data-doc-url="{{ url }}" data-doc-name="{{ d.original }}" data-doc-mime="{{ d.mime }}"
+                            data-user-id="{{ u.id }}" data-doc-index="{{ loop.index0 }}"
+                          data-doc-ai="{{ (d.aiSuggestion ?? '')|e('html_attr') }}"
                             data-action="preview-doc">
                       {% if isImg %}<i class="feather-image me-1"></i>{% else %}<i class="feather-file-text me-1"></i>{% endif %}
                       {{ d.original ?: 'Document ' ~ loop.index }}
@@ -246,13 +249,145 @@
       const url = btn.getAttribute('data-doc-url');
       const name = btn.getAttribute('data-doc-name') || 'Document';
       const mime = btn.getAttribute('data-doc-mime') || '';
+      const userId = btn.getAttribute('data-user-id');
+      const docIndex = btn.getAttribute('data-doc-index');
       docTitle.textContent = name;
       docBody.innerHTML = '<div class="text-center py-4"><div class="spinner-border" role="status"></div></div>';
       docDl.href = url;
       docModal.show();
       // Attempt inline preview
       if (mime.startsWith('image/')) {
-        docBody.innerHTML = '<img src="'+url+'" alt="'+name+'" class="img-fluid rounded shadow">';
+        const escapeHtml = (s) => {
+          return String(s ?? '')
+            .replaceAll('&', '&amp;')
+            .replaceAll('<', '&lt;')
+            .replaceAll('>', '&gt;')
+            .replaceAll('"', '&quot;')
+            .replaceAll("'", '&#039;');
+        };
+
+        // Minimal markdown-ish rendering for Gemini output: bullets (*) and **bold**.
+        // Everything is escaped first, then we inject a small set of safe tags.
+        const formatAi = (raw) => {
+          const text = String(raw ?? '').replace(/\r\n/g, '\n');
+          if (!text.trim()) return '';
+
+          const lines = text.split('\n');
+          let html = '';
+          let inList = false;
+
+          const flushList = () => {
+            if (inList) {
+              html += '</ul>';
+              inList = false;
+            }
+          };
+
+          const boldify = (escapedLine) => {
+            return escapedLine.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+          };
+
+          for (const originalLine of lines) {
+            const line = originalLine ?? '';
+            const trimmed = line.trim();
+
+            if (!trimmed) {
+              flushList();
+              continue;
+            }
+
+            if (trimmed === '---') {
+              flushList();
+              html += '<hr class="my-3">';
+              continue;
+            }
+
+            const bulletMatch = trimmed.match(/^([*\-])\s+(.*)$/);
+            if (bulletMatch) {
+              if (!inList) {
+                html += '<ul class="mb-3 ps-3">';
+                inList = true;
+              }
+              const item = boldify(escapeHtml(bulletMatch[2] || ''));
+              html += '<li class="mb-1">' + item + '</li>';
+              continue;
+            }
+
+            flushList();
+            const p = boldify(escapeHtml(trimmed));
+            html += '<p class="mb-2">' + p + '</p>';
+          }
+
+          flushList();
+          return html;
+        };
+
+        const renderExtra = ({ statusText, errorText, aiText }) => {
+          const status = (statusText || '').trim();
+          const error = (errorText || '').trim();
+          const ai = (aiText || '').trim();
+
+          if (!status && !error && !ai) return '';
+
+          let extra = '<hr>';
+          if (status) {
+            extra += '<div class="alert alert-info py-2 mb-3">' + escapeHtml(status) + '</div>';
+          }
+          if (error) {
+            extra += '<div class="alert alert-warning py-2 mb-3">' + escapeHtml(error) + '</div>';
+          }
+
+          // Cleaner order: show summary first, then raw OCR.
+          if (ai) {
+            extra += '<div class="mb-3">'
+              + '<div class="fw-semibold mb-1">Suggestion IA</div>'
+              + '<div class="bg-light border rounded p-3 small" style="white-space:normal">' + formatAi(ai) + '</div>'
+              + '</div>';
+          }
+          return extra;
+        };
+
+        const ai0 = btn.getAttribute('data-doc-ai') || '';
+        docBody.innerHTML = '<img src="'+url+'" alt="'+escapeHtml(name)+'" class="img-fluid rounded shadow">'
+          + renderExtra({
+            statusText: (!ai0) ? 'Analyse OCR/IA en cours…' : '',
+            errorText: '',
+            aiText: ai0,
+          });
+
+        if (!ai0 && userId && docIndex) {
+          try {
+            const tpl = '{{ path('admin_staff_request_analyze', {id: 0, i: 0}) }}';
+            const analyzeUrl = tpl.replace('/0/analyze/0', `/${userId}/analyze/${docIndex}`);
+            const res = await fetch(analyzeUrl, {
+              method: 'POST',
+              headers: { 'X-Requested-With': 'XMLHttpRequest' },
+            });
+            const data = await res.json();
+
+            if (data && data.success) {
+              const ai1 = data.aiSuggestion || '';
+              btn.setAttribute('data-doc-ai', ai1);
+              if (docModalEl.classList.contains('show')) {
+                docBody.innerHTML = '<img src="'+url+'" alt="'+escapeHtml(name)+'" class="img-fluid rounded shadow">'
+                  + renderExtra({
+                    statusText: '',
+                    errorText: data.ocrError ? String(data.ocrError) : '',
+                    aiText: ai1,
+                  });
+              }
+            } else if (docModalEl.classList.contains('show')) {
+              docBody.innerHTML = '<img src="'+url+'" alt="'+escapeHtml(name)+'" class="img-fluid rounded shadow">'
+                + renderExtra({
+                  statusText: '',
+                  errorText: (data && data.error) ? String(data.error) : 'Analyse indisponible',
+                  aiText: ai0,
+                });
+            }
+          } catch (err) {
+            // ignore
+          }
+        }
       } else if (mime === 'application/pdf') {
         docBody.innerHTML = '<div style="height:60vh"><iframe src="'+url+'" class="w-100 h-100" frameborder="0"></iframe></div>';
       } else {

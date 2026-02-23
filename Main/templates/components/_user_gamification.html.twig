@@ -1,0 +1,37 @@
+{# Usage:
+  {{ include('components/_user_gamification.html.twig', { user: app.user }) }}
+  {{ include('components/_user_gamification.html.twig', { user: u, compact: true }) }}
+#}
+
+{% set compact = compact|default(false) %}
+{% set g = user_gamification(user) %}
+
+{% set score = g.score|default(0) %}
+{% set barClass = score >= 80 ? 'bg-success' : (score >= 50 ? 'bg-warning' : 'bg-danger') %}
+
+<div class="{% if compact %}mt-2{% else %}mt-3{% endif %}">
+  <div class="d-flex align-items-center justify-content-between gap-2 flex-wrap">
+    <div class="fw-semibold{% if compact %} small{% endif %}">Sécurité du compte</div>
+    <span class="badge text-bg-secondary{% if compact %} small{% endif %}">{{ score }}%</span>
+  </div>
+  <div class="progress" style="height: {% if compact %}6px{% else %}10px{% endif %};">
+    <div class="progress-bar {{ barClass }}" role="progressbar" style="width: {{ score }}%;" aria-valuenow="{{ score }}" aria-valuemin="0" aria-valuemax="100"></div>
+  </div>
+
+  <div class="d-flex flex-wrap gap-2{% if compact %} mt-2{% else %} mt-3{% endif %}">
+    {% for b in g.badges|default([]) %}
+      {% if b.variant in ['primary','secondary','success','info','warning','danger','light','dark'] %}
+        {% set variant = b.variant %}
+      {% else %}
+        {% set variant = 'secondary' %}
+      {% endif %}
+
+      {# Button-like chip (span, not interactive) #}
+      {% set chipBase = 'btn btn-sm rounded-pill px-3 py-1 fw-semibold user-select-none pe-none' %}
+      {% set chipTone = b.locked ? ('btn-outline-' ~ variant) : ('btn-' ~ variant) %}
+      <span class="{{ chipBase }} {{ chipTone }}{% if compact %} small{% endif %}{% if b.locked %} opacity-75{% endif %}">
+        {{ b.label }}
+      </span>
+    {% endfor %}
+  </div>
+</div>

@@ -1,0 +1,176 @@
+{# templates/ressource/_ressource_item.html.twig #}
+
+{% set submitted = itemForm.vars.submitted %}
+
+{% macro input_class(field, base) %}
+  {% set cls = base %}
+  {% if field.vars.submitted %}
+    {% if field.vars.errors|length > 0 %}
+      {% set cls = cls ~ ' is-invalid' %}
+    {% else %}
+      {% set cls = cls ~ ' is-valid' %}
+    {% endif %}
+  {% endif %}
+  {{ cls }}
+{% endmacro %}
+{% import _self as ui %}
+
+<div class="card shadow-sm border-0 mb-4 ressource-item">
+  <div class="card-body">
+
+    <div class="d-flex justify-content-between align-items-start mb-3">
+      <div>
+        <h6 class="font-weight-bold text-primary mb-1">
+          <i class="fas fa-layer-group mr-1"></i> Ressource
+        </h6>
+        <small class="text-muted">Remplis les infos de cette ressource.</small>
+      </div>
+
+      <button type="button" class="btn btn-sm btn-danger js-remove-ressource" title="Supprimer cette ressource">
+        <i class="fas fa-trash"></i>
+      </button>
+    </div>
+
+    {# ===== Infos générales ===== #}
+    <div class="row">
+      <div class="col-md-6">
+        <div class="form-group">
+          <label class="res-label"><i class="fas fa-calendar-alt mr-1"></i> Événement</label>
+          {{ form_widget(itemForm.evenement, {'attr': {'class': ui.input_class(itemForm.evenement, 'form-control')}}) }}
+          {% if submitted %}{{ form_errors(itemForm.evenement) }}{% endif %}
+        </div>
+      </div>
+
+      <div class="col-md-6">
+        <div class="form-group">
+          <label class="res-label"><i class="fas fa-tags mr-1"></i> Type</label>
+          {{ form_widget(itemForm.typeRessource, {'attr': {'class': ui.input_class(itemForm.typeRessource, 'form-control js-type-ressource')}}) }}
+          {% if submitted %}{{ form_errors(itemForm.typeRessource) }}{% endif %}
+          <small class="text-muted">Le formulaire affiche seulement les champs utiles.</small>
+        </div>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="col-md-6">
+        <div class="form-group">
+          <label class="res-label"><i class="fas fa-pen mr-1"></i> Nom de la ressource</label>
+          {{ form_widget(itemForm.nomRessource, {'attr': {'class': ui.input_class(itemForm.nomRessource, 'form-control'), 'placeholder': 'Ex: Agenda PDF / Badge / Projecteur'}}) }}
+          {% if submitted %}{{ form_errors(itemForm.nomRessource) }}{% endif %}
+        </div>
+      </div>
+
+      <div class="col-md-6">
+        <div class="form-group">
+          <label class="res-label"><i class="fas fa-folder-open mr-1"></i> Catégorie</label>
+          {{ form_widget(itemForm.categorieRessource, {'attr': {'class': ui.input_class(itemForm.categorieRessource, 'form-control'), 'placeholder': 'Ex: Document / Matériel / Stock'}}) }}
+          {% if submitted %}{{ form_errors(itemForm.categorieRessource) }}{% endif %}
+        </div>
+      </div>
+    </div>
+
+    <hr class="my-4">
+
+    {# ===== Détails selon type ===== #}
+    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-2">
+      <h6 class="font-weight-bold mb-0 text-primary">
+        <i class="fas fa-sliders-h mr-1"></i> Détails selon le type
+      </h6>
+      <small class="text-muted">Astuce : utilise “Stock” si tu veux gérer une quantité.</small>
+    </div>
+
+    <div class="alert alert-primary res-hint mb-4 js-typeHint" role="alert">
+      <i class="fas fa-bolt mr-1"></i> Sélectionne un type pour afficher les champs correspondants.
+    </div>
+
+    {# ===== FILE ===== #}
+    <div class="js-field-file d-none">
+      <div class="card border-0 res-soft mb-3">
+        <div class="card-body py-3">
+          <div class="res-soft-title"><i class="fas fa-file mr-1"></i> Mode Fichier</div>
+          <small class="text-muted">Indique le chemin (upload possible plus tard).</small>
+        </div>
+      </div>
+
+     <div class="form-group">
+        <label class="res-label"><i class="fas fa-upload mr-1"></i> Upload fichier</label>
+        {{ form_widget(itemForm.uploadFile, {'attr': {'class': 'form-control'}}) }}
+         {% if submitted %}{{ form_errors(itemForm.uploadFile) }}{% endif %}
+       <small class="text-muted">Ce fichier sera uploadé sur Cloudinary automatiquement.</small>
+     </div>
+  </div>
+
+    {# ===== LINK ===== #}
+    <div class="js-field-link d-none">
+      <div class="card border-0 res-soft mb-3">
+        <div class="card-body py-3">
+          <div class="res-soft-title"><i class="fas fa-link mr-1"></i> Mode Lien externe</div>
+          <small class="text-muted">Colle une URL valide (Drive, Docs, site…).</small>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="res-label"><i class="fas fa-link mr-1"></i> URL externe</label>
+        {{ form_widget(itemForm.urlExterneRessource, {'attr': {'class': ui.input_class(itemForm.urlExterneRessource, 'form-control'), 'placeholder':'https://...'}}) }}
+        {% if submitted %}{{ form_errors(itemForm.urlExterneRessource) }}{% endif %}
+      </div>
+    </div>
+
+    {# ===== STOCK ===== #}
+    <div class="js-field-stock d-none">
+      <div class="card border-0 res-soft mb-3">
+        <div class="card-body py-3">
+          <div class="res-soft-title"><i class="fas fa-box mr-1"></i> Mode Stock / Matériel</div>
+          <small class="text-muted">Quantité + unité (pcs, kg, boîte…).</small>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="col-md-4">
+          <div class="form-group">
+            <label class="res-label"><i class="fas fa-sort-numeric-up mr-1"></i> Quantité disponible</label>
+            {{ form_widget(itemForm.quantiteDisponibleRessource, {'attr': {'class': ui.input_class(itemForm.quantiteDisponibleRessource, 'form-control'), 'placeholder':'Ex: 50', 'min':0}}) }}
+            {% if submitted %}{{ form_errors(itemForm.quantiteDisponibleRessource) }}{% endif %}
+          </div>
+        </div>
+
+        <div class="col-md-4">
+          <div class="form-group">
+            <label class="res-label"><i class="fas fa-balance-scale mr-1"></i> Unité</label>
+            {{ form_widget(itemForm.uniteRessource, {'attr': {'class': ui.input_class(itemForm.uniteRessource, 'form-control'), 'placeholder':'Ex: pcs'}}) }}
+            {% if submitted %}{{ form_errors(itemForm.uniteRessource) }}{% endif %}
+          </div>
+        </div>
+
+        <div class="col-md-4">
+          <div class="form-group">
+            <label class="res-label"><i class="fas fa-truck mr-1"></i> Fournisseur</label>
+            {{ form_widget(itemForm.fournisseurRessource, {'attr': {'class': ui.input_class(itemForm.fournisseurRessource, 'form-control'), 'placeholder':'Ex: Fournisseur X'}}) }}
+            {% if submitted %}{{ form_errors(itemForm.fournisseurRessource) }}{% endif %}
+          </div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="res-label"><i class="fas fa-coins mr-1"></i> Coût estimé</label>
+        {{ form_widget(itemForm.coutEstimeRessource, {'attr': {'class': ui.input_class(itemForm.coutEstimeRessource, 'form-control'), 'placeholder':'Ex: 120.500'}}) }}
+        {% if submitted %}{{ form_errors(itemForm.coutEstimeRessource) }}{% endif %}
+        <small class="text-muted">Optionnel — utile pour le budget de l’événement.</small>
+      </div>
+    </div>
+
+    <hr class="my-4">
+
+    <h6 class="font-weight-bold text-primary">
+      <i class="fas fa-sticky-note mr-1"></i> Notes
+    </h6>
+    <small class="text-muted d-block mb-2">Optionnel : précise ce qui manque / comment l’obtenir.</small>
+
+    <div class="form-group">
+      <label class="res-label"><i class="fas fa-sticky-note mr-1"></i> Notes</label>
+      {{ form_widget(itemForm.notesRessource, {'attr': {'class': ui.input_class(itemForm.notesRessource, 'form-control'), 'rows':4, 'placeholder':'Ex: À imprimer avant le 12/02, demander à …'}}) }}
+      {% if submitted %}{{ form_errors(itemForm.notesRessource) }}{% endif %}
+    </div>
+
+  </div>
+</div>

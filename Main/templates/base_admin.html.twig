@@ -58,7 +58,6 @@
                             <li class="nxl-item"><a class="nxl-link" href="{{ path('admin_patients_index') }}">Liste patients</a></li>
                             <li class="nxl-item"><a class="nxl-link" href="{{ path('admin_patients_stats') }}">Statistiques</a></li>
                             <li class="nxl-item"><a class="nxl-link" href="{{ path('admin_patients_report_pdf') }}">Rapport PDF</a></li>
-                            <li class="nxl-item"><a class="nxl-link" href="{{ path('admin_staff_requests_index') }}">Demandes de rôle</a></li>
                         </ul>
                     </li>
 
@@ -96,6 +95,13 @@
             </a>
         </li>
 
+        {# ✅ Bouton Détection Épidémie corrigé (même style que les autres) #}
+        <li>
+            <a href="{{ path('admin_epidemie_detection') }}" class="nxl-link">
+                <i class="feather-activity me-2"></i> Détection Épidémie
+            </a>
+        </li>
+
         <li>
             <a href="{{ path('ad_statistiques') }}" class="nxl-link">
                 <i class="feather-bar-chart-2 me-2"></i> Statistiques
@@ -104,13 +110,20 @@
     </ul>
 </li>
 
-<ul class="nxl-submenu">
-    <li class="nxl-item"><a class="nxl-link" href="{{ path('ad_evenements_liste') }}">Liste des événements</a></li>
-    <li class="nxl-item"><a class="nxl-link" href="{{ path('ad_participants') }}">Participants (Demandes)</a></li>
-    <li class="nxl-item"><a class="nxl-link" href="{{ path('ad_ressources') }}">Ressources</a></li>
-    <li class="nxl-item"><a class="nxl-link" href="{{ path('ad_stats_evenements') }}">Stats événements</a></li>
-    <li class="nxl-item"><a class="nxl-link" href="{{ path('ad_stats_ressources') }}">Stats ressources</a></li>
-  </ul>
+<li class="nxl-item nxl-hasmenu">
+    <a href="javascript:void(0);" class="nxl-link">
+        <span class="nxl-micon"><i class="feather-calendar"></i></span>
+        <span class="nxl-mtext">Événements</span>
+        <span class="nxl-arrow"><i class="feather-chevron-right"></i></span>
+    </a>
+
+    <ul class="nxl-submenu">
+        <li class="nxl-item"><a class="nxl-link" href="{{ path('ad_evenements_liste') }}">Liste des événements</a></li>
+        <li class="nxl-item"><a class="nxl-link" href="{{ path('ad_participants') }}">Participants (Demandes)</a></li>
+        <li class="nxl-item"><a class="nxl-link" href="{{ path('ad_ressources') }}">Ressources</a></li>
+        <li class="nxl-item"><a class="nxl-link" href="{{ path('ad_stats_evenements') }}">Stats événements</a></li>
+        <li class="nxl-item"><a class="nxl-link" href="{{ path('ad_stats_ressources') }}">Stats ressources</a></li>
+    </ul>
 </li>
 
 <li class="nxl-item nxl-hasmenu">

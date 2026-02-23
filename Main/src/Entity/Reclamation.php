@@ -60,6 +60,199 @@ class Reclamation
     #[ORM\Column(length: 255, nullable: true)]
     private ?string $pieceJointePath = null;
 
+    #[ORM\Column(length: 20, nullable: true)]
+private ?string $pieceJointeResourceType = null; // image | raw
+
+#[ORM\Column(length: 10, nullable: true)]
+private ?string $pieceJointeFormat = null; // pdf, png...
+
+#[ORM\Column(nullable: true)]
+private ?int $pieceJointeBytes = null;
+
+#[ORM\Column(length: 255, nullable: true)]
+private ?string $pieceJointeOriginalName = null;
+// pieceJointeResourceType
+public function getPieceJointeResourceType(): ?string
+{
+    return $this->pieceJointeResourceType;
+}
+
+public function setPieceJointeResourceType(?string $pieceJointeResourceType): self
+{
+    $this->pieceJointeResourceType = $pieceJointeResourceType;
+    return $this;
+}
+
+// pieceJointeFormat
+public function getPieceJointeFormat(): ?string
+{
+    return $this->pieceJointeFormat;
+}
+
+public function setPieceJointeFormat(?string $pieceJointeFormat): self
+{
+    $this->pieceJointeFormat = $pieceJointeFormat;
+    return $this;
+}
+
+// pieceJointeBytes
+public function getPieceJointeBytes(): ?int
+{
+    return $this->pieceJointeBytes;
+}
+
+public function setPieceJointeBytes(?int $pieceJointeBytes): self
+{
+    $this->pieceJointeBytes = $pieceJointeBytes;
+    return $this;
+}
+
+// pieceJointeOriginalName
+public function getPieceJointeOriginalName(): ?string
+{
+    return $this->pieceJointeOriginalName;
+}
+
+public function setPieceJointeOriginalName(?string $pieceJointeOriginalName): self
+{
+    $this->pieceJointeOriginalName = $pieceJointeOriginalName;
+    return $this;
+}
+#[ORM\Column(type: 'text', nullable: true)]
+private ?string $contenuOriginal = null;
+
+#[ORM\Column(type: 'text', nullable: true)]
+private ?string $descriptionOriginal = null;
+
+#[ORM\Column(length: 10, nullable: true)]
+private ?string $langueOriginale = null; // "en", "ar", "fr"
+
+#[ORM\Column(type: 'text', nullable: true)]
+private ?string $contenuFrancais = null;
+
+#[ORM\Column(type: 'text', nullable: true)]
+private ?string $descriptionFrancais = null;
+
+#[ORM\Column(nullable: true)]
+private ?int $urgenceScore = null; // 0..100
+
+#[ORM\Column(length: 20, nullable: true)]
+private ?string $sentiment = null; // "NEGATIVE"/"NEUTRAL"/"POSITIVE"
+
+#[ORM\Column(type: 'datetime_immutable', nullable: true)]
+private ?\DateTimeImmutable $translatedAt = null;
+
+#[ORM\Column(type: 'datetime_immutable', nullable: true)]
+private ?\DateTimeImmutable $analysisAt = null;
+
+// ====== contenuOriginal ======
+public function getContenuOriginal(): ?string
+{
+    return $this->contenuOriginal;
+}
+
+public function setContenuOriginal(?string $contenuOriginal): self
+{
+    $this->contenuOriginal = $contenuOriginal;
+    return $this;
+}
+
+// ====== descriptionOriginal ======
+public function getDescriptionOriginal(): ?string
+{
+    return $this->descriptionOriginal;
+}
+
+public function setDescriptionOriginal(?string $descriptionOriginal): self
+{
+    $this->descriptionOriginal = $descriptionOriginal;
+    return $this;
+}
+
+// ====== langueOriginale ======
+public function getLangueOriginale(): ?string
+{
+    return $this->langueOriginale;
+}
+
+public function setLangueOriginale(?string $langueOriginale): self
+{
+    $this->langueOriginale = $langueOriginale;
+    return $this;
+}
+
+// ====== contenuFrancais ======
+public function getContenuFrancais(): ?string
+{
+    return $this->contenuFrancais;
+}
+
+public function setContenuFrancais(?string $contenuFrancais): self
+{
+    $this->contenuFrancais = $contenuFrancais;
+    return $this;
+}
+
+// ====== descriptionFrancais ======
+public function getDescriptionFrancais(): ?string
+{
+    return $this->descriptionFrancais;
+}
+
+public function setDescriptionFrancais(?string $descriptionFrancais): self
+{
+    $this->descriptionFrancais = $descriptionFrancais;
+    return $this;
+}
+
+// ====== urgenceScore ======
+public function getUrgenceScore(): ?int
+{
+    return $this->urgenceScore;
+}
+
+public function setUrgenceScore(?int $urgenceScore): self
+{
+    $this->urgenceScore = $urgenceScore;
+    return $this;
+}
+
+// ====== sentiment ======
+public function getSentiment(): ?string
+{
+    return $this->sentiment;
+}
+
+public function setSentiment(?string $sentiment): self
+{
+    $this->sentiment = $sentiment;
+    return $this;
+}
+
+// ====== translatedAt ======
+public function getTranslatedAt(): ?\DateTimeImmutable
+{
+    return $this->translatedAt;
+}
+
+public function setTranslatedAt(?\DateTimeImmutable $translatedAt): self
+{
+    $this->translatedAt = $translatedAt;
+    return $this;
+}
+
+// ====== analysisAt ======
+public function getAnalysisAt(): ?\DateTimeImmutable
+{
+    return $this->analysisAt;
+}
+
+public function setAnalysisAt(?\DateTimeImmutable $analysisAt): self
+{
+    $this->analysisAt = $analysisAt;
+    return $this;
+}
+
     #[ORM\Column(length: 50)]
     private ?string $statutReclamation = null;
 
@@ -321,6 +514,35 @@ public function onUpdate(): void
     $this->date_modification_r = new \DateTimeImmutable();
 }
 
+public function updatePrioriteFromSentiment(): self
+{
+    // Normalisation
+    $score = max(0, min(100, (int)($this->urgenceScore ?? 0)));
+    $sent  = strtoupper(trim((string)($this->sentiment ?? 'NEUTRAL')));
 
+    /**
+     * Règles PRO (simple + défendable en soutenance)
+     * - Sentiment NEGATIVE augmente fortement la priorité
+     * - Sentiment POSITIVE diminue (si pas urgent)
+     * - Score d’urgence détermine le niveau final
+     */
+
+    // Base score selon émotion
+    $emotionBoost = match ($sent) {
+        'NEGATIVE' => 20,
+        'POSITIVE' => -10,
+        default    => 0, // NEUTRAL ou inconnu
+    };
+
+    $final = max(0, min(100, $score + $emotionBoost));
+
+    // Mapping score -> priorité
+    if ($final >= 75)      $this->priorite = 'CRITIQUE';
+    elseif ($final >= 45)  $this->priorite = 'ELEVEE';
+    elseif ($final >= 15)  $this->priorite = 'NORMALE';
+    else                   $this->priorite = 'BASSE';
+
+    return $this;
+}
 
 }

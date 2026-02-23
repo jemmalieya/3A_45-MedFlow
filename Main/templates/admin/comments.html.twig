@@ -1,0 +1,518 @@
+
+
+{% extends 'base_dashboard.html.twig' %}
+
+{% block title %}Commentaires bloqués{% endblock %}
+
+{% block body %}
+<style>
+  /* ✅ Même charte/design que ta page Réclamations */
+  :root{
+    --mf-vivid-blue:#003399;
+    --mf-main:#0097B2;
+    --mf-vivid-turq:#00BFA6;
+    --mf-pastel-blue:#6797FF;
+    --mf-pastel-azure:#8FD5FF;
+    --mf-light-blue:#B3D5FF;
+    --mf-white:#FFFFFF;
+    --mf-black:#000000;
+    --mf-vivid-red:#BC0B09;
+
+    --mf-text:#0f172a;
+    --mf-muted: rgba(16,24,40,.68);
+    --mf-border:#e2e8f0;
+    --mf-bg:#f8f9fc;
+
+    --mf-grad-a: var(--mf-main);
+    --mf-grad-b: var(--mf-pastel-blue);
+  }
+
+  .page-header{
+    background: linear-gradient(135deg, var(--mf-grad-a) 0%, var(--mf-grad-b) 100%);
+    color: var(--mf-white);
+    padding: 40px 30px;
+    border-radius: 12px;
+    margin-bottom: 22px;
+    box-shadow: 0 10px 30px rgba(0,151,178,.28);
+  }
+  .page-header h1{
+    font-size: 2.15rem;
+    font-weight: 900;
+    margin-bottom: 8px;
+    letter-spacing: -.4px;
+  }
+  .page-header p{margin:0; font-size:1.05rem; opacity:.95;}
+
+  .card{
+    border:none;
+    border-radius:12px;
+    box-shadow: 0 5px 20px rgba(0,0,0,.08);
+    overflow:hidden;
+    transition: all .3s ease;
+    background: var(--mf-white);
+  }
+  .card:hover{
+    box-shadow: 0 10px 35px rgba(0,0,0,.15);
+    transform: translateY(-2px);
+  }
+  .card-header{
+    background: linear-gradient(135deg, var(--mf-grad-a) 0%, var(--mf-grad-b) 100%);
+    color: var(--mf-white);
+    border:none;
+    padding: 18px 22px;
+  }
+  .card-header h6{
+    font-size: 1.05rem;
+    font-weight: 800;
+    letter-spacing: .3px;
+    margin:0;
+  }
+  .card-body{ padding: 22px; background: var(--mf-white); }
+
+  .toolbar{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+    align-items:center;
+    justify-content:flex-end;
+  }
+  .toolbar .form-control{
+    border:2px solid rgba(255,255,255,.75);
+    border-radius: 10px;
+    padding: 8px 12px;
+    font-size:.92rem;
+    background: rgba(255,255,255,.14);
+    color: var(--mf-white);
+  }
+  .toolbar .form-control::placeholder{ color: rgba(255,255,255,.90); }
+  .toolbar .form-control:focus{
+    outline:none;
+    box-shadow: 0 0 0 3px rgba(179,213,255,.35);
+    border-color: var(--mf-white);
+    background: rgba(255,255,255,.18);
+  }
+  .toolbar select.form-control option{ color:#111827; }
+
+  .btn-primary{
+    background: linear-gradient(135deg, var(--mf-main) 0%, var(--mf-vivid-turq) 100%);
+    border:none;
+    border-radius: 10px;
+    padding: 8px 14px;
+    font-weight:800;
+    transition: all .3s ease;
+    color: var(--mf-white);
+    white-space:nowrap;
+  }
+  .btn-primary:hover{
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(0,151,178,.28);
+    color: var(--mf-white);
+  }
+  .btn-info{
+    background: linear-gradient(135deg, var(--mf-vivid-blue) 0%, var(--mf-pastel-blue) 100%);
+    border:none;
+    color: var(--mf-white);
+    border-radius: 10px;
+    padding: 8px 14px;
+    font-weight:800;
+    transition: all .3s ease;
+    white-space:nowrap;
+  }
+  .btn-info:hover{
+    transform: translateY(-2px);
+    box-shadow: 0 6px 15px rgba(0,51,153,.25);
+    color: var(--mf-white);
+  }
+  .btn-secondary{
+    background: linear-gradient(135deg, #111827 0%, #000000 100%);
+    border:none;
+    color: var(--mf-white);
+    border-radius: 10px;
+    padding: 8px 14px;
+    font-weight:800;
+    transition: all .3s ease;
+    white-space:nowrap;
+  }
+  .btn-secondary:hover{
+    transform: translateY(-2px);
+    box-shadow: 0 6px 15px rgba(0,0,0,.25);
+    color: var(--mf-white);
+  }
+  .btn-outline-light{
+    border-radius: 10px;
+    padding: 8px 14px;
+    font-weight:800;
+    white-space:nowrap;
+  }
+
+  .table{ margin-bottom:0; table-layout: fixed; }
+  .table thead th{
+    background: linear-gradient(135deg, rgba(143,213,255,.35) 0%, rgba(179,213,255,.35) 100%);
+    color: #063a44;
+    font-weight: 900;
+    border-bottom: 2px solid var(--mf-border);
+    padding: 14px;
+    font-size: .82rem;
+    text-transform: uppercase;
+    letter-spacing: .35px;
+    white-space: nowrap;
+  }
+  .table tbody td{
+    padding: 14px;
+    vertical-align: top;
+    border-color: var(--mf-border);
+  }
+  .table tbody tr{ transition: all .25s ease; }
+  .table tbody tr:hover{
+    background-color: var(--mf-bg);
+    box-shadow: inset 0 0 0 1px var(--mf-border);
+  }
+
+  .pill{
+    display:inline-flex;
+    align-items:center;
+    gap:.45rem;
+    padding:.35rem .75rem;
+    border-radius:999px;
+    font-weight:900;
+    font-size:.78rem;
+    border: 1px solid transparent;
+    white-space: nowrap;
+    line-height: 1.1;
+  }
+  .pill-ok{
+    background: rgba(0,191,166,.14);
+    color: #007a68;
+    border-color: rgba(0,191,166,.30);
+  }
+  .pill-bad{
+    background: rgba(188,11,9,.12);
+    color: var(--mf-vivid-red);
+    border-color: rgba(188,11,9,.28);
+  }
+  .pill-info{
+    background: rgba(0,151,178,.14);
+    color: #006a7d;
+    border-color: rgba(0,151,178,.30);
+  }
+  .pill-neutral{
+    background: rgba(0,0,0,.06);
+    color: #111827;
+    border-color: rgba(0,0,0,.10);
+  }
+
+  .cell-title{ font-weight: 950; color: var(--mf-text); }
+  .cell-sub{ color: var(--mf-muted); font-size: .86rem; }
+  .truncate-2{
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .alert{
+    border:none;
+    border-radius:10px;
+    border-left:4px solid;
+    margin-bottom: 18px;
+    animation: slideIn .35s ease;
+  }
+  .alert-danger{
+    background: linear-gradient(135deg, rgba(188,11,9,.12) 0%, rgba(188,11,9,.18) 100%);
+    border-left-color: var(--mf-vivid-red);
+    color: #6a0a08;
+  }
+  .alert-success{
+    background: linear-gradient(135deg, rgba(0,191,166,.14) 0%, rgba(0,191,166,.22) 100%);
+    border-left-color: var(--mf-vivid-turq);
+    color: #055a4f;
+  }
+  .alert-info{
+    background: linear-gradient(135deg, rgba(143,213,255,.22) 0%, rgba(179,213,255,.22) 100%);
+    border-left-color: var(--mf-main);
+    color: #063a44;
+  }
+  @keyframes slideIn{ from{opacity:0; transform: translateY(-10px);} to{opacity:1; transform: translateY(0);} }
+
+  .content-box{
+    background: rgba(143,213,255,.18);
+    border: 1px solid rgba(0,151,178,.22);
+    border-radius: 12px;
+    padding: 12px 14px;
+  }
+  .code-chip{
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    font-weight: 900;
+    font-size: .78rem;
+    padding:.25rem .55rem;
+    border-radius:999px;
+    border:1px solid rgba(0,0,0,.10);
+    background: rgba(255,255,255,.75);
+    color:#111827;
+    display:inline-flex;
+    align-items:center;
+    gap:.35rem;
+  }
+</style>
+
+<section class="section py-4">
+  <div class="container-fluid">
+
+    <div class="page-header">
+      <h1><i class="bi bi-shield-check me-2"></i>Commentaires bloqués</h1>
+      <p>
+        {{ blockedComments|length }} commentaire(s) •
+        <span class="pill pill-neutral"><i class="bi bi-shield-lock"></i> Admin</span>
+        <span class="pill pill-bad ms-2"><i class="bi bi-x-octagon-fill"></i> Bloqués</span>
+      </p>
+    </div>
+
+    {# Flash messages #}
+    {% for msg in app.flashes('success') %}
+      <div class="alert alert-success">
+        <strong>✅ Succès :</strong> {{ msg }}
+      </div>
+    {% endfor %}
+    {% for msg in app.flashes('error') %}
+      <div class="alert alert-danger">
+        <strong>❌ Erreur :</strong> {{ msg }}
+      </div>
+    {% endfor %}
+
+    <div class="card shadow mb-4">
+      <div class="card-header d-flex justify-content-between align-items-center flex-wrap" style="gap:10px;">
+        <h6 class="m-0 font-weight-bold text-white">
+          <i class="bi bi-chat-left-text me-2"></i>Liste des commentaires bloqués
+        </h6>
+
+        <div class="toolbar">
+          <a href="{{ path('admin_moderation_stats') }}" class="btn btn-outline-light btn-sm">
+            <i class="bi bi-graph-up-arrow me-1"></i> Stat Modération
+          </a>
+
+         
+        </div>
+      </div>
+
+      <div class="card-body">
+        {% if blockedComments is empty %}
+          <div class="alert alert-info">
+            <strong>ℹ️ Info :</strong> Aucun commentaire bloqué pour le moment.
+          </div>
+        {% else %}
+          <div class="table-responsive">
+            <table id="blockedCommentsTable" class="table table-bordered table-hover" width="100%" cellspacing="0">
+              <thead>
+                <tr>
+                  <th style="width:240px;">Utilisateur</th>
+                  <th style="width:420px;">Commentaire</th>
+                  <th style="width:220px;">Post</th>
+                  <th style="width:190px;">Date</th>
+                  <th style="width:220px;">IA</th>
+                  <th style="width:240px;" class="text-end">Actions</th>
+                </tr>
+              </thead>
+
+              <tbody>
+                {% for c in blockedComments %}
+                  {% set username = (c.user ? ((c.user.prenom ?? '') ~ ' ' ~ (c.user.nom ?? '')) : 'Utilisateur inconnu')|trim %}
+                  {% set createdAt = c.moderatedAt ? c.moderatedAt : (c.dateCreation ? c.dateCreation : null) %}
+                  {% set score = c.moderationScore is not null ? c.moderationScore : null %}
+                  {% set scoreVal = score is not null ? (score * 100) : null %}
+
+                  <tr class="main-row"
+                      data-created="{{ createdAt ? createdAt|date('Y-m-d H:i:s') : '' }}"
+                      data-score="{{ scoreVal is not null ? scoreVal : 0 }}"
+                      data-user="{{ username|lower }}">
+
+                    <td>
+                      <div class="cell-title">
+                        <i class="bi bi-person-circle me-1"></i>
+                        {{ username ?: 'Utilisateur inconnu' }}
+                      </div>
+                      <div class="mt-2">
+                        <span class="pill pill-bad"><i class="bi bi-x-circle-fill"></i> Bloqué</span>
+                        <span class="pill pill-neutral ms-2"><i class="bi bi-key"></i> #{{ c.id }}</span>
+                      </div>
+                    </td>
+
+                    <td>
+                      <div class="content-box">
+                        <div class="cell-title truncate-2">
+                          {{ c.contenu }}
+                        </div>
+                        <div class="cell-sub mt-2">
+                          <i class="bi bi-shield-exclamation me-1"></i>
+                          Ce commentaire a été bloqué automatiquement.
+                        </div>
+                      </div>
+                    </td>
+
+                    <td>
+                      {% if c.post %}
+                        <div class="cell-title">
+                          <i class="bi bi-journal-text me-1"></i> Post #{{ c.post.id }}
+                        </div>
+                        <div class="cell-sub mt-1">
+                          <a href="{{ path('post_show', {id: c.post.id}) }}" target="_blank" class="text-decoration-none">
+                            Ouvrir le post <i class="bi bi-box-arrow-up-right ms-1"></i>
+                          </a>
+                        </div>
+                      {% else %}
+                        <span class="pill pill-neutral"><i class="bi bi-dash-circle"></i> Aucun post</span>
+                      {% endif %}
+                    </td>
+
+                    <td class="small text-dark">
+                      {% if createdAt %}
+                        <span class="pill pill-info">
+                          <i class="bi bi-clock-history"></i>
+                          {{ createdAt|date('d/m/Y H:i') }}
+                        </span>
+                      {% else %}
+                        <span class="text-muted">-</span>
+                      {% endif %}
+                    </td>
+
+                    <td>
+                      <div class="d-flex flex-wrap gap-2 align-items-center">
+                        <span class="pill pill-neutral">
+                          <i class="bi bi-cpu"></i> {{ c.moderationLabel ?? 'N/A' }}
+                        </span>
+
+                        {% if scoreVal is not null %}
+                          <span class="pill pill-bad" title="Score IA">
+                            <i class="bi bi-activity"></i> {{ scoreVal|round(1) }}%
+                          </span>
+                        {% else %}
+                          <span class="pill pill-neutral"><i class="bi bi-dash-lg"></i> Score —</span>
+                        {% endif %}
+                      </div>
+
+                      <div class="cell-sub mt-2">
+                        <span class="code-chip"><i class="bi bi-robot"></i> IA active</span>
+                        <span class="code-chip ms-1"><i class="bi bi-shield-lock"></i> Auto-modération</span>
+                      </div>
+                    </td>
+
+                    <td class="text-end text-nowrap">
+                      <div class="d-inline-flex align-items-center" style="gap:8px;">
+                        <form method="post" action="{{ path('admin_moderation_comment_approve', {id: c.id}) }}">
+                          <input type="hidden" name="_token" value="{{ csrf_token('approve_comment_' ~ c.id) }}">
+                          <button class="btn btn-sm btn-primary" title="Approuver">
+                            <i class="bi bi-check2-circle me-1"></i>Approuver
+                          </button>
+                        </form>
+
+                        <form method="post"
+                              action="{{ path('admin_moderation_comment_reject', {id: c.id}) }}"
+                              class="js-delete-form">
+                          <input type="hidden" name="_token" value="{{ csrf_token('reject_comment_' ~ c.id) }}">
+                          <button class="btn btn-sm btn-secondary" title="Supprimer">
+                            <i class="bi bi-trash me-1"></i>Supprimer
+                          </button>
+                        </form>
+                      </div>
+                    </td>
+
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+
+          <div class="mt-3 small text-muted">
+            <i class="bi bi-cpu me-1"></i>
+            Les commentaires sont bloqués automatiquement. L’admin peut approuver ou supprimer.
+          </div>
+        {% endif %}
+      </div>
+    </div>
+
+  </div>
+</section>
+
+{# ✅ SweetAlert2 (suppression) + tri + search (même esprit que ta page Réclamations) #}
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+  (function(){
+    'use strict';
+
+    // ✅ Delete confirmation (SweetAlert)
+    document.addEventListener('submit', async function(e){
+      const form = e.target.closest('.js-delete-form');
+      if(!form) return;
+      e.preventDefault();
+
+      const res = await Swal.fire({
+        title: 'Supprimer ce commentaire ?',
+        text: 'Cette action est irréversible.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Supprimer',
+        cancelButtonText: 'Annuler',
+        reverseButtons: true,
+        allowOutsideClick: false
+      });
+
+      if(res.isConfirmed) form.submit();
+    });
+
+    function sortRows(rows, mode){
+      const arr = Array.from(rows);
+
+      const getCreated = (tr) => {
+        const s = tr.getAttribute('data-created') || '';
+        const d = Date.parse(s.replace(' ', 'T')) || 0;
+        return d;
+      };
+
+      const getScore = (tr) => parseFloat(tr.getAttribute('data-score') || '0') || 0;
+      const getUser  = (tr) => (tr.getAttribute('data-user') || '').toLowerCase();
+
+      if(mode === 'date_asc') arr.sort((a,b) => getCreated(a) - getCreated(b));
+      if(mode === 'date_desc') arr.sort((a,b) => getCreated(b) - getCreated(a));
+      if(mode === 'score_asc') arr.sort((a,b) => getScore(a) - getScore(b));
+      if(mode === 'score_desc') arr.sort((a,b) => getScore(b) - getScore(a));
+      if(mode === 'user_az') arr.sort((a,b) => getUser(a).localeCompare(getUser(b)));
+      if(mode === 'user_za') arr.sort((a,b) => getUser(b).localeCompare(getUser(a)));
+
+      return arr;
+    }
+
+    document.addEventListener('DOMContentLoaded', function(){
+      const table = document.getElementById('blockedCommentsTable');
+      if(!table) return;
+      const tbody = table.querySelector('tbody');
+      if(!tbody) return;
+
+      const sortSelect = document.getElementById('commentsSortSelect');
+      const searchInput = document.getElementById('searchComments');
+
+      const originalRows = Array.from(tbody.querySelectorAll('tr.main-row')).map(r => r.cloneNode(true));
+
+      function render(){
+        const q = (searchInput && searchInput.value) ? searchInput.value.toLowerCase().trim() : '';
+        const mode = sortSelect ? sortSelect.value : 'date_desc';
+
+        let rows = originalRows.map(r => r.cloneNode(true));
+
+        if(q){
+          rows = rows.filter(r => r.textContent.toLowerCase().includes(q));
+        }
+
+        rows = sortRows(rows, mode);
+
+        tbody.innerHTML = '';
+        rows.forEach(r => tbody.appendChild(r));
+      }
+
+      if(sortSelect) sortSelect.addEventListener('change', render);
+      if(searchInput) searchInput.addEventListener('input', render);
+
+      render();
+    });
+
+  })();
+</script>
+{% endblock %}

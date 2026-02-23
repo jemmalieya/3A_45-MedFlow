@@ -17,7 +17,6 @@
 
 {% import _self as ui %}
 
-{{ form_start(form, { attr: { novalidate: 'novalidate' } }) }}
 
 {# ✅ IMPORTANT: erreurs globales (Callback, etc.) #}
 {% if submitted and form.vars.errors|length > 0 %}
@@ -120,11 +119,17 @@
         </div>
       </div>
       <div class="form-group">
-        {{ form_widget(form.cheminFichierRessource, {'attr': {'class': ui.input_class(form.cheminFichierRessource, 'form-control'), 'placeholder':'Ex: /uploads/agenda.pdf'}}) }}
-        {% if submitted %}{{ form_errors(form.cheminFichierRessource) }}{% endif %}
+       {{ form_widget(form.cheminFichierRessource, {
+  'attr': {
+    'class': ui.input_class(form.cheminFichierRessource, 'form-control'),
+    'placeholder':'Auto : URL Cloudinary…',
+    'readonly': true
+  }
+}) }}
+      {% if submitted %}{{ form_errors(form.cheminFichierRessource) }}{% endif %}
       </div>
     </div>
-
+     
     {# ===== Champs LINK ===== #}
     <div class="js-field-link d-none">
       <div class="card border-0 res-soft mb-3">
@@ -186,8 +191,11 @@
     <small class="text-muted d-block mb-2">Optionnel : précise ce qui manque / comment l’obtenir.</small>
     {{ form_widget(form.notesRessource, {'attr': {'class': ui.input_class(form.notesRessource, 'form-control'), 'rows':4, 'placeholder':'Ex: À imprimer avant le 12/02, demander à …'}}) }}
     {% if submitted %}{{ form_errors(form.notesRessource) }}{% endif %}
+  
+
 
   </div>
+  
 
   <div class="card-footer bg-white border-0 d-flex justify-content-end">
     <a href="{{ path('admin_ressource_index') }}" class="btn btn-light mr-2">
@@ -197,11 +205,15 @@
       <i class="fas fa-save mr-1"></i> Enregistrer
     </button>
   </div>
+
+
+
+  
 </div>
 
 {# ✅ render le reste (ex: _token) #}
 {{ form_rest(form) }}
-{{ form_end(form) }}
+
 
 {# ===== JS (affichage dynamique selon type) ===== #}
 <script>

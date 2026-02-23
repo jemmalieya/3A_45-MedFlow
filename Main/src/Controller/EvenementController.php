@@ -10,7 +10,9 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
-
+use App\Service\AiRiskService;
+use App\Service\AiEventRecommenderService;
+use Symfony\Component\HttpFoundation\Session\SessionInterface;
 use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\Mime\Email;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
@@ -20,6 +22,11 @@ use Dompdf\Dompdf;
 use Dompdf\Options;
 use App\Service\WeatherService;   
 
+use Symfony\Component\HttpFoundation\File\UploadedFile;
+
+
+
+use App\Entity\Ressource;
 
 
 
@@ -63,7 +70,9 @@ public function index(EvenementRepository $repo): Response
 public function show(
     Evenement $evenement,
     WeatherService $weather,
-    EvenementRepository $repo
+    EvenementRepository $repo,
+    AiEventRecommenderService $aiRec,
+    SessionInterface $session
 ): Response
 {
     // =============================
@@ -91,57 +100,79 @@ public function show(
     // =============================
     // 3) Construire "recommended" : score + raisons + popularité
     // =============================
-    $recommended = [];
-    $now = new \DateTime();
+   // =============================
+// 2) IA Recommandation (personnalisée user/session)
+// =============================
+$user = $this->getUser();
 
-    foreach ($recs as $ev) {
-        $score = 0;
-        $reasons = [];
+// (A) stocker un mini historique session (pour invités aussi)
+$hist = $session->get('rec_hist', [
+    'types' => [],
+    'villes' => [],
+]);
+if ($evenement->getTypeEvent())  $hist['types'][]  = (string)$evenement->getTypeEvent();
+if ($evenement->getVilleEvent()) $hist['villes'][] = (string)$evenement->getVilleEvent();
+$hist['types']  = array_values(array_slice(array_unique($hist['types']), -5));
+$hist['villes'] = array_values(array_slice(array_unique($hist['villes']), -5));
+$session->set('rec_hist', $hist);
 
-        // Même type (+3)
-        if ($evenement->getTypeEvent() && $ev->getTypeEvent() === $evenement->getTypeEvent()) {
-            $score += 3;
-            $reasons[] = 'Même type';
-        }
+// (B) récupérer des candidats
+$candidates = $repo->findCandidatesForAiRecommendation($evenement, 25);
 
-        // Même ville (+2)
-        if ($evenement->getVilleEvent() && $ev->getVilleEvent() === $evenement->getVilleEvent()) {
-            $score += 2;
-            $reasons[] = 'Même ville';
-        }
+// (C) construire payloads
+$currentPayload = [
+    'id' => $evenement->getId(),
+    'titre' => (string)$evenement->getTitreEvent(),
+    'ville' => (string)$evenement->getVilleEvent(),
+    'type'  => (string)$evenement->getTypeEvent(),
+    'date_debut' => $evenement->getDateDebutEvent()?->format('Y-m-d'),
+    'date_fin'   => $evenement->getDateFinEvent()?->format('Y-m-d'),
+];
 
-        // Proche en date (+1) si <= 30 jours
-        $d = $ev->getDateDebutEvent();
-        if ($d instanceof \DateTimeInterface) {
-            $diffDays = (int) $now->diff($d)->format('%r%a');
-            if ($diffDays >= 0 && $diffDays <= 30) {
-                $score += 1;
-                $reasons[] = 'Date proche';
-            }
-        }
+$userPayload = [
+    'is_logged' => $user instanceof \App\Entity\User,
+    'session_preferences' => $hist,
+];
 
-        // Populaire (+2) si >= 3 demandes acceptées
-        $accepted = method_exists($ev, 'countDemandesByStatus') ? (int) $ev->countDemandesByStatus('accepted') : 0;
-        if ($accepted >= 3) {
-            $score += 2;
-            $reasons[] = 'Populaire';
-        }
+if ($user instanceof \App\Entity\User) {
+    $userPayload['id'] = $user->getId();
+    $userPayload['nom'] = (string)$user->getNom().' '.(string)$user->getPrenom();
+    // si tu as des champs préférences, ajoute-les ici
+    // $userPayload['ville'] = $user->getVilleUser();
+    // $userPayload['interets'] = $user->getInterets();
+}
 
-        // (Optionnel) si score = 0, tu peux ignorer
-        // if ($score === 0) continue;
+$candsPayload = [];
+foreach ($candidates as $ev) {
+    $candsPayload[] = [
+        'id' => $ev->getId(),
+        'titre' => (string)$ev->getTitreEvent(),
+        'ville' => (string)$ev->getVilleEvent(),
+        'type'  => (string)$ev->getTypeEvent(),
+        'date_debut' => $ev->getDateDebutEvent()?->format('Y-m-d'),
+        'popularite' => method_exists($ev, 'countAcceptedDemandes') ? (int)$ev->countAcceptedDemandes() : 0,
+    ];
+}
 
-        $recommended[] = [
-            'event' => $ev,
-            'score' => $score,        // max 8
-            'accepted' => $accepted,
-            'reasons' => $reasons,
-        ];
-    }
+// (D) appel IA : renvoie [{id, score, reasons}]
+$aiRanks = $aiRec->recommend($currentPayload, $userPayload, $candsPayload, 6);
 
-    // Trier score DESC
-    usort($recommended, function ($a, $b) {
-        return $b['score'] <=> $a['score'];
-    });
+// (E) reconstruire le tableau "recommended" attendu par Twig
+$byId = [];
+foreach ($candidates as $ev) $byId[$ev->getId()] = $ev;
+
+$recommended = [];
+foreach ($aiRanks as $row) {
+    $id = (int)$row['id'];
+    if (!isset($byId[$id])) continue;
+
+    $recommended[] = [
+        'event' => $byId[$id],
+        'score' => $row['score'], // 0-10
+        'accepted' => method_exists($byId[$id], 'countAcceptedDemandes') ? (int)$byId[$id]->countAcceptedDemandes() : 0,
+        'reasons' => $row['reasons'] ?? [],
+    ];
+  }
 
     // =============================
     // 4) Render
@@ -272,14 +303,28 @@ public function adminIndex(Request $request, EvenementRepository $repo): Respons
                     'evenements' => $evenements,
                     ]);
     }
-   
-    #[Route('/admin/evenements/{id}', name: 'admin_evenement_show', requirements: ['id' => '\d+'], methods: ['GET'])]
-    public function adminShow(Evenement $evenement): Response
-    {
-          return $this->render('admin/showEvents_adm.html.twig', [
-                  'evenement' => $evenement,
-                    ]);
-    }
+   #[Route('/admin/evenements/{id}', name: 'admin_evenement_show', requirements: ['id' => '\d+'], methods: ['GET'])]
+public function adminShow(Evenement $evenement, EvenementRepository $repo, AiRiskService $ai): Response
+{
+   $payload = [
+    'titre' => (string) $evenement->getTitreEvent(),
+    'ville' => (string) $evenement->getVilleEvent(),
+    'type'  => (string) $evenement->getTypeEvent(),
+    'statut'=> (string) $evenement->getStatutEvent(),
+    'date_debut' => $evenement->getDateDebutEvent()?->format('Y-m-d'),
+    'date_fin'   => $evenement->getDateFinEvent()?->format('Y-m-d'),
+    'accepted'   => (int) $evenement->countAcceptedDemandes(),
+    'pending'    => (int) $evenement->countDemandesByStatus('pending'),
+    'refused'    => (int) $evenement->countDemandesByStatus('refused'),
+];
+
+$riskData = $ai->analyzeEventRisk($payload);
+
+    return $this->render('admin/showEvents_adm.html.twig', [
+        'evenement' => $evenement,
+        'riskData' => $riskData, // ✅ maintenant Twig la trouve
+    ]);
+}
 
 
 
@@ -350,7 +395,7 @@ public function demandesIndex(EvenementRepository $repo): Response
 }
 
 #[Route('/admin/evenements/{id}/demandes', name: 'admin_evenement_demandes_show', requirements: ['id' => '\d+'], methods: ['GET'])]
-public function demandesShow(Evenement $evenement, EvenementRepository $repo): Response
+public function demandesShow(Evenement $evenement, EvenementRepository $repo, AiRiskService $ai): Response
 {
     $demandes = $evenement->getDemandesJson();
 
@@ -362,7 +407,19 @@ public function demandesShow(Evenement $evenement, EvenementRepository $repo): R
     });
 
     // ✅ IA Risk ici
-    $riskData = $this->calculateRiskScore($evenement, $repo);
+   $payload = [
+    'titre' => (string) $evenement->getTitreEvent(),
+    'ville' => (string) $evenement->getVilleEvent(),
+    'type'  => (string) $evenement->getTypeEvent(),
+    'statut'=> (string) $evenement->getStatutEvent(),
+    'date_debut' => $evenement->getDateDebutEvent()?->format('Y-m-d'),
+    'date_fin'   => $evenement->getDateFinEvent()?->format('Y-m-d'),
+    'accepted'   => (int) $evenement->countAcceptedDemandes(),
+    'pending'    => (int) $evenement->countDemandesByStatus('pending'),
+    'refused'    => (int) $evenement->countDemandesByStatus('refused'),
+];
+
+$riskData = $ai->analyzeEventRisk($payload);
 
     return $this->render('admin/demandesEvents_show.html.twig', [
         'evenement' => $evenement,
@@ -855,65 +912,65 @@ private function mapStatutColors(string $statut): array
 
     // default
     return ['#0097B2', '#007C91', '#ffffff']; // teal MedFlow
-}private function calculateRiskScore(Evenement $evenement, EvenementRepository $repo): array
+}
+
+#[Route('/evenements/{id}/accessibilite/live', name: 'app_evenement_access_live', requirements: ['id' => '\d+'], methods: ['GET'])]
+public function accessLive(Evenement $evenement): Response
 {
-    $risk = 0;
-    $reasons = [];
-    $now = new \DateTime();
+    return $this->render('evenement/access_live.html.twig', [
+        'evenement' => $evenement,
+    ]);
+}
+#[Route('/evenements/{id}/accessibilite/save', name: 'app_evenement_access_save', requirements: ['id' => '\d+'], methods: ['POST'])]
+public function saveTranscript(Request $request, Evenement $evenement, EntityManagerInterface $em): JsonResponse
+{
+   $text = trim((string)$request->request->get('text', ''));
 
-    // 1️⃣ Peu d'inscriptions
-    $inscriptions = (int) $evenement->countAcceptedDemandes();
-    if ($inscriptions < 5) {
-        $risk += 40;
-        $reasons[] = "Peu d'inscriptions";
+
+    if ($text === '' || mb_strlen($text) < 2) {
+        return $this->json(['ok' => false, 'message' => 'Transcription vide.'], 400);
     }
 
-    // 2️⃣ Date proche (< 7 jours)
-    $debut = $evenement->getDateDebutEvent();
-    if ($debut instanceof \DateTimeInterface) {
-        $diff = (int) $now->diff($debut)->days;
-        if ($debut > $now && $diff <= 7) {
-            $risk += 20;
-            $reasons[] = "Date très proche";
-        }
-    }
+    $liveUrl = $this->generateUrl(
+        'app_evenement_access_live',
+        ['id' => $evenement->getId()],
+        UrlGeneratorInterface::ABSOLUTE_URL
+    );
 
-    // 3️⃣ Type peu performant ✅ (chez toi c'est type_event)
-    $type = $evenement->getTypeEvent();
-    if ($type) {
-        $allEvents = $repo->findBy(['type_event' => $type]);
+    $r = new Ressource();
+    $r->setEvenement($evenement);
+    $r->setNomRessource('Transcription Accessibilité — ' . (new \DateTime())->format('d/m/Y H:i'));
+    $r->setCategorieRessource('Accessibilité');
+    $r->setTypeRessource('external_link');
+    $r->setUrlExterneRessource($liveUrl);
+    $r->setNotesRessource($text);
+    $r->setEstPubliqueRessource(true);
 
-        $totalDemandes = 0;
-        foreach ($allEvents as $ev) {
-            $totalDemandes += (int) $ev->countAcceptedDemandes();
-        }
+    $em->persist($r);
+    $em->flush();
 
-        if ($totalDemandes < 10) {
-            $risk += 20;
-            $reasons[] = "Type peu populaire";
-        }
-    }
+    return $this->json(['ok' => true]);
+}
+#[Route('/admin/evenements/{id}/risk-ai', name: 'admin_evenement_risk_ai', requirements: ['id' => '\d+'], methods: ['GET'])]
+public function riskAi(Evenement $evenement, AiRiskService $ai): JsonResponse
+{
+    $this->denyAccessUnlessGranted('ROLE_STAFF');
 
-    // 4️⃣ Ville peu performante ✅ (chez toi c'est ville_event)
-    $ville = $evenement->getVilleEvent();
-    if ($ville) {
-        $eventsVille = $repo->findBy(['ville_event' => $ville]);
-
-        $totalVille = 0;
-        foreach ($eventsVille as $ev) {
-            $totalVille += (int) $ev->countAcceptedDemandes();
-        }
-
-        if ($totalVille < 10) {
-            $risk += 20;
-            $reasons[] = "Ville peu performante";
-        }
-    }
-
-    return [
-        'riskScore' => min($risk, 100),
-        'reasons' => $reasons,
+    $payload = [
+        'titre' => (string) $evenement->getTitreEvent(),
+        'ville' => (string) $evenement->getVilleEvent(),
+        'type'  => (string) $evenement->getTypeEvent(),
+        'statut'=> (string) $evenement->getStatutEvent(),
+        'date_debut' => $evenement->getDateDebutEvent()?->format('Y-m-d'),
+        'date_fin'   => $evenement->getDateFinEvent()?->format('Y-m-d'),
+        'accepted'   => (int) $evenement->countAcceptedDemandes(),
+        'pending'    => (int) $evenement->countDemandesByStatus('pending'),
+        'refused'    => (int) $evenement->countDemandesByStatus('refused'),
     ];
+
+    $result = $ai->analyzeEventRisk($payload);
+
+    return $this->json(['ok' => true, 'ai' => $result]);
 }
 
 }

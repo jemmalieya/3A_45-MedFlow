@@ -1,354 +1,437 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="fr">
 
 <head>
-
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
     <meta name="description" content="">
     <meta name="author" content="">
+    <title>{% block title %}MedFlow Dashboard{% endblock %}</title>
 
-    <title>SB Admin 2 - Dashboard</title>
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 
-    <!-- Custom fonts for this template-->
+    <!-- Custom fonts for SB Admin 2 -->
     <link href="{{ asset('assets_dash/vendor/fontawesome-free/css/all.min.css') }}" rel="stylesheet" type="text/css">
     <link href="https://fonts.googleapis.com/css?family=Nunito:200,200i,300,300i,400,400i,600,600i,700,700i,800,800i,900,900i" rel="stylesheet">
-    {# CSS global SB Admin DOIT être avant le block #}
+
+    <!-- SB Admin global CSS -->
     <link href="{{ asset('assets_dash/css/sb-admin-2.min.css') }}" rel="stylesheet">
+
+    <!-- Tes CSS -->
     <link rel="stylesheet" href="{{ asset('assets_dash/css/ressource.css') }}">
+    <link rel="stylesheet" href="{{ asset('assets_dash/css/evenement-cards-lite.css') }}">
+    <link rel="stylesheet" href="{{ asset('assets_dash/css/evenement-demandes.css') }}">
+    <link rel="stylesheet" href="{{ asset('assets_dash/css/evenement-index.css') }}">
 
-<link rel="stylesheet" href="{{ asset('assets_dash/css/evenement-cards-lite.css') }}">
-<link rel="stylesheet" href="{{ asset('assets_dash/css/evenement-demandes.css') }}">
-<link rel="stylesheet" href="{{ asset('assets_dash/css/evenement-index.css') }}">  {# ✅ sans espace #}
+    {# ✅ CSS spécifique page enfant #}
+    {% block stylesheets %}{% endblock %}
 
+    {# ✅ THEME GLOBAL (charte + homogénéité) #}
+    <style>
+        :root{
+            /* CHARTE */
+            --mf-vivid-blue:#003399;
+            --mf-main:#0097B2;         /* ✅ MAIN COLOR */
+            --mf-vivid-turq:#00BFA6;
+            --mf-pastel-blue:#6797FF;
+            --mf-pastel-azure:#8FD5FF;
+            --mf-light-blue:#B3D5FF;
+            --mf-white:#FFFFFF;
+            --mf-black:#000000;
+            --mf-red:#BC0B09;
 
-{# ✅ CSS spécifique à chaque page (cards, demandes, index...) #}
-{% block stylesheets %}{% endblock %}
+            --mf-grad-a: var(--mf-main);
+            --mf-grad-b: var(--mf-pastel-blue);
 
+            --mf-bg:#f8f9fc;
+            --mf-border:#e2e8f0;
+            --mf-shadow: 0 14px 40px rgba(16,24,40,.08);
+        }
+
+        /* ====== SIDEBAR ====== */
+        .sidebar.bg-gradient-primary{
+            background: linear-gradient(180deg, var(--mf-grad-a) 0%, var(--mf-grad-b) 100%) !important;
+        }
+
+        /* logo + brand */
+        .sidebar-brand{
+            padding: 1.15rem 1rem !important;
+            border-bottom: 1px solid rgba(255,255,255,.10);
+        }
+        .sidebar-brand-text{
+            font-weight: 900;
+            letter-spacing: .5px;
+            text-transform: uppercase;
+        }
+
+        /* links */
+        .sidebar .nav-item .nav-link{
+            border-radius: 12px;
+            margin: .25rem .65rem;
+            padding: .8rem .85rem;
+            transition: all .2s ease;
+        }
+        .sidebar .nav-item .nav-link:hover{
+            background: rgba(255,255,255,.12);
+            transform: translateX(2px);
+        }
+        .sidebar .nav-item.active .nav-link{
+            background: rgba(255,255,255,.18);
+            box-shadow: inset 0 0 0 1px rgba(255,255,255,.14);
+        }
+        .sidebar .nav-item .nav-link i{
+            opacity: .95;
+        }
+
+        /* heading */
+        .sidebar-heading{
+            color: rgba(255,255,255,.80) !important;
+            font-weight: 800;
+            letter-spacing: .08em;
+        }
+        .sidebar-divider{
+            border-top: 1px solid rgba(255,255,255,.14) !important;
+        }
+
+        /* collapse inner */
+        .collapse-inner{
+            border-radius: 14px !important;
+            box-shadow: 0 18px 35px rgba(0,0,0,.12);
+        }
+        .collapse-item{
+            border-radius: 10px !important;
+            margin: .1rem .35rem;
+            padding: .55rem .75rem;
+            font-weight: 700;
+        }
+        .collapse-item:hover{
+            background: rgba(0,151,178,.10) !important;
+            color: #0b5564 !important;
+        }
+        .collapse-item.active{
+            background: rgba(0,151,178,.14) !important;
+            color: #0b5564 !important;
+            font-weight: 900 !important;
+        }
+
+        /* Sidebar toggler */
+        #sidebarToggle{
+            background: rgba(255,255,255,.18) !important;
+        }
+
+        /* ====== TOPBAR ====== */
+        .topbar.navbar-light.bg-white{
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(16,24,40,.06);
+            border: 1px solid rgba(16,24,40,.06);
+        }
+
+        /* search input group */
+        .navbar-search .form-control{
+            border-radius: 14px 0 0 14px !important;
+            border: 2px solid rgba(0,151,178,.16) !important;
+            background: #fff !important;
+        }
+        .navbar-search .btn.btn-primary{
+            border-radius: 0 14px 14px 0 !important;
+        }
+
+        /* ====== BOUTONS (global) ====== */
+        .btn-primary{
+            background: linear-gradient(135deg, var(--mf-main) 0%, var(--mf-vivid-turq) 100%) !important;
+            border: none !important;
+            border-radius: 12px !important;
+            font-weight: 800 !important;
+            transition: all .25s ease;
+            box-shadow: 0 10px 24px rgba(0,151,178,.18);
+        }
+        .btn-primary:hover{
+            transform: translateY(-2px);
+            box-shadow: 0 14px 30px rgba(0,151,178,.26);
+        }
+
+        .btn-outline-primary{
+            border-color: rgba(0,151,178,.45) !important;
+            color: #0b5564 !important;
+            border-radius: 12px !important;
+            font-weight: 800 !important;
+        }
+        .btn-outline-primary:hover{
+            background: rgba(0,151,178,.10) !important;
+            border-color: rgba(0,151,178,.55) !important;
+        }
+
+        /* badges counters */
+        .badge-danger.badge-counter{
+            background: var(--mf-red) !important;
+        }
+
+        /* cards global look */
+        .card{
+            border: none !important;
+            border-radius: 16px !important;
+            box-shadow: var(--mf-shadow);
+            overflow: hidden;
+        }
+        .card-header{
+            border: none !important;
+        }
+
+        /* small polish */
+        #content{
+            padding-left: 1rem !important;
+            padding-right: 1rem !important;
+        }
+
+        /* Make SB Admin "primary" match our theme */
+        .text-primary{ color: var(--mf-main) !important; }
+        .bg-primary{ background: var(--mf-main) !important; }
+        .border-left-primary{ border-left: .25rem solid var(--mf-main) !important; }
+    </style>
 
 </head>
 
 <body id="page-top">
 
-    <!-- Page Wrapper -->
-    <div id="wrapper">
+<div id="wrapper">
 
-        <!-- Sidebar -->
-        <ul class="navbar-nav bg-gradient-primary sidebar sidebar-dark accordion" id="accordionSidebar">
+    <!-- Sidebar -->
+    <ul class="navbar-nav bg-gradient-primary sidebar sidebar-dark accordion" id="accordionSidebar">
 
-            <!-- Sidebar - Brand -->
-            <a class="sidebar-brand d-flex align-items-center justify-content-center" href="index.html">
-                <div class="sidebar-brand-icon rotate-n-15">
-                    
-                </div>
-                <img src="{{ asset('assets/img/img.png') }}" alt="Health Icon" class="medflow-logo" style="width: 40px; height: 40px; margin-left: 10px; transform: rotate(0deg);">
-                <div class="sidebar-brand-text mx-3">MedFlow </div>
+        <!-- Sidebar - Brand -->
+        <a class="sidebar-brand d-flex align-items-center justify-content-center" href="{{ path('app_admin') }}">
+            <img src="{{ asset('assets/img/img.png') }}" alt="MedFlow" class="medflow-logo"
+                 style="width: 40px; height: 40px; margin-left: 10px;">
+            <div class="sidebar-brand-text mx-3">MEDFLOW</div>
+        </a>
+
+        <hr class="sidebar-divider my-0">
+
+        <!-- Dashboard -->
+        <li class="nav-item {{ app.request.attributes.get('_route') == 'app_admin' ? 'active' : '' }}">
+            <a class="nav-link" href="{{ path('app_admin') }}">
+                <i class="fas fa-fw fa-tachometer-alt"></i>
+                <span>Dashboard</span>
             </a>
+        </li>
 
-            <!-- Divider -->
-            <hr class="sidebar-divider my-0">
+        <hr class="sidebar-divider">
+        <div class="sidebar-heading">Gestions</div>
 
-            <!-- Nav Item - Dashboard -->
-            <li class="nav-item active">
-                <a class="nav-link" href="{{ path('app_admin') }}"
-                    <i class="fas fa-fw fa-tachometer-alt"></i>
-                    <span>Dashboard</span></a>
-            </li>
-     
-
-            
-
-            <!-- Divider -->
-            <hr class="sidebar-divider">
-
-            <!-- Heading -->
-            <div class="sidebar-heading">
-                Gestions
-            </div>
-
-{% if app.user is defined and app.user.getRoleSysteme() == 'STAFF' and app.user.getTypeStaff() == 'RESP_BLOG' %}
-<!-- Nav Item - Réclamations -->
-<li class="nav-item {{ app.request.attributes.get('_route') == 'admin_reclamations' ? 'active' : '' }}">
-  <a class="nav-link" href="{{ path('admin_reclamations') }}">
-    <i class="fas fa-fw fa-exclamation-circle"></i>
-    <span>Réclamations</span>
-  </a>
-</li>
-<!-- Nav Item - Stat Blog -->
-<li class="nav-item {{ app.request.attributes.get('_route') == 'admin_blog_stats' ? 'active' : '' }}">
-    <a class="nav-link" href="{{ path('admin_blog_stats') }}">
-        <i class="fas fa-fw fa-chart-bar"></i>
-        <span>Stat Blog</span>
-    </a>
-</li>
-
-<li class="nav-item {{ app.request.attributes.get('_route') == 'admin_posts_pending' ? 'active' : '' }}">
-    <a class="nav-link" href="{{ path('admin_posts_pending') }}">
-        <i class="fas fa-fw fa-check-circle"></i>
-        <span>Posts en attente</span>
-    </a>
-</li>
-
-
-
-{% endif %}
-
-
-{% if app.user is defined and app.user.getRoleSysteme() == 'STAFF' and app.user.getTypeStaff() == 'RESP_PATIENTS' %}
-    <li class="nav-item {{ app.request.attributes.get('_route') == 'app_fiche_by_staff' ? 'active' : '' }}">
-        <a class="nav-link" href="{{ path('app_fiche_by_staff', {'idStaff': app.session.get('doctor_id')}) }}">
-            <i class="fas fa-fw fa-stethoscope"></i>
-            <span>Mes Consultations</span>
-        </a>
-    </li>
-    <li class="nav-item {{ app.request.attributes.get('_route') == 'consultation_stats' ? 'active' : '' }}">
-        <a class="nav-link" href="{{ path('consultation_stats') }}">
-            <i class="fas fa-fw fa-chart-bar"></i>
-            <span>Statistiques</span>
-        </a>
-    </li>
-{% endif %}
-            
-
-
-{% if app.user is defined and app.user.getRoleSysteme() == 'STAFF' and app.user.getTypeStaff() == 'RESP_USERS' %}
-    <li class="nav-item {{ app.request.attributes.get('route') starts with 'staff_patients' ? 'active' : '' }}">
-        <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapsePatients"
-            aria-expanded="true" aria-controls="collapsePatients">
-             <i class="fas fa-fw fa-user-injured"></i>
-            <span>Patients (Radar)</span>
-        </a>
-        <div id="collapsePatients" class="collapse" aria-labelledby="headingPatients" data-parent="#accordionSidebar">
-            <div class="bg-white py-2 collapse-inner rounded">
-                <h6 class="collapse-header">Suivi & Qualité :</h6>
-                <a class="collapse-item {{ app.request.attributes.get('_route') == 'staff_patients_radar' ? 'active' : '' }}" href="{{ path('staff_patients_radar') }}">🧭 Patient Radar</a>
-                <a class="collapse-item {{ app.request.attributes.get('_route') == 'staff_patients_list' ? 'active' : '' }}" href="{{ path('staff_patients_list') }}">📋 Liste des patients</a>
-                <a class="collapse-item {{ app.request.attributes.get('_route') == 'staff_patients_stats' ? 'active' : '' }}" href="{{ path('staff_patients_stats') }}">📊 Statistiques</a>
-                <a class="collapse-item" href="{{ path('staff_patients_export_csv') }}">⬇️ Export CSV</a>
-            </div>
-        </div>
-    </li>
-{% endif %}
-{% if app.user is defined and app.user.getRoleSysteme() == 'STAFF' and app.user.getTypeStaff() == 'RESP_PRODUCTS' %}
-<li class="nav-item">
-    <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseProducts"
-        aria-expanded="true" aria-controls="collapseProducts">
-        <i class="fas fa-fw fa-box"></i>
-        <span>Produits</span>
-    </a>
-    <div id="collapseProducts" class="collapse" aria-labelledby="headingProducts" data-parent="#accordionSidebar">
-        <div class="bg-white py-2 collapse-inner rounded">
-            <h6 class="collapse-header">Gestion des Produits :</h6>
-            <a class="collapse-item" href="{{ path('admin_produits_index') }}">Voir tous les produits</a>
-        
-
-
-
-<a class="collapse-item" href="{{ path('admin_bi_dashboard', {days: 7}) }}">
-  <i class="bi bi-graph-up-arrow me-1"></i> Dashboard Admin BI
-</a>
-
-
-
-            <a class="collapse-item" href="#">Autres actions</a>
-        </div>
-    </div>
-</li>
-{% endif %}
-
-{% if app.user is defined and app.user.getRoleSysteme() == 'STAFF' and app.user.getTypeStaff() == 'RESP_EVEN' %}
-            <li class="nav-item">
-  <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseEvents"
-     aria-expanded="true" aria-controls="collapseEvents">
-    <i class="fas fa-fw fa-calendar-alt"></i>
-    <span>Gestion des Événements</span>
-  </a>
-
-  <div id="collapseEvents" class="collapse" aria-labelledby="headingEvents" data-parent="#accordionSidebar">
-
-    {# ✅ BOX 1 : Événements #}
-    <div class="bg-white py-2 collapse-inner rounded mb-2">
-      <h6 class="collapse-header">Événements :</h6>
-      <a class="collapse-item" href="{{ path('admin_evenement_cards') }}">Voir tous les événements</a>
-      <a class="collapse-item" href="{{ path('admin_evenement_index') }}">Autres actions</a>
-      <a class="collapse-item" href="{{ path('admin_evenement_demandes_index') }}">Demandes de participation</a>
-    </div>
-
-    {# ✅ BOX 2 : Ressources #}
-    <div class="bg-white py-2 collapse-inner rounded">
-      <h6 class="collapse-header">Ressources :</h6>
-      <a class="collapse-item" href="{{ path('admin_ressource_index') }}">Gérer les ressources</a>
-      <a class="collapse-item" href="{{ path('admin_ressource_new') }}">Ajouter une ressource</a>
-    </div>
-
-  </div>
-</li>
-{% endif %}
-
-
-
-            <!-- Nav Item - Pages Collapse Menu -->
-            <li class="nav-item">
-                <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapsePages"
-                    aria-expanded="true" aria-controls="collapsePages">
-                    <i class="fas fa-fw fa-folder"></i>
-                    <span>Pages</span>
+        {# ===== BLOG (RESP_BLOG) ===== #}
+        {% if app.user is defined and app.user.getRoleSysteme() == 'STAFF' and app.user.getTypeStaff() == 'RESP_BLOG' %}
+            <li class="nav-item {{ app.request.attributes.get('_route') == 'admin_reclamations' ? 'active' : '' }}">
+                <a class="nav-link" href="{{ path('admin_reclamations') }}">
+                    <i class="fas fa-fw fa-exclamation-circle"></i>
+                    <span>Réclamations</span>
                 </a>
-                <div id="collapsePages" class="collapse" aria-labelledby="headingPages" data-parent="#accordionSidebar">
+            </li>
+
+            <li class="nav-item {{ app.request.attributes.get('_route') == 'admin_blog_stats' ? 'active' : '' }}">
+                <a class="nav-link" href="{{ path('admin_blog_stats') }}">
+                    <i class="fas fa-fw fa-chart-bar"></i>
+                    <span>Stat Blog</span>
+                </a>
+            </li>
+
+            <li class="nav-item {{ app.request.attributes.get('_route') == 'admin_posts_pending' ? 'active' : '' }}">
+                <a class="nav-link" href="{{ path('admin_posts_pending') }}">
+                    <i class="fas fa-fw fa-check-circle"></i>
+                    <span>Posts en attente</span>
+                </a>
+            </li>
+              <li class="nav-item">
+  <a class="nav-link" href="{{ path('admin_moderation_comments') }}">
+    🧠Commentaires bloqués
+  </a>
+</li>
+        {% endif %}
+
+        {# ===== PATIENTS (RESP_PATIENTS) ===== #}
+        {% if app.user is defined and app.user.getRoleSysteme() == 'STAFF' and app.user.getTypeStaff() == 'RESP_PATIENTS' %}
+            <li class="nav-item {{ app.request.attributes.get('_route') == 'accueil_docteur' ? 'active' : '' }}">
+        <a class="nav-link" href="{{ path('accueil_docteur', {'idStaff': app.session.get('doctor_id')}) }}">
+            <i class="fas fa-fw fa-chart-bar"></i>
+            <span>Accueil</span>
+        </a>
+        </li>
+            <li class="nav-item {{ app.request.attributes.get('_route') == 'app_fiche_by_staff' ? 'active' : '' }}">
+                <a class="nav-link" href="{{ path('app_fiche_by_staff', {'idStaff': app.session.get('doctor_id')}) }}">
+                    <i class="fas fa-fw fa-stethoscope"></i>
+                    <span>Mes Consultations</span>
+                </a>
+            </li>
+            <li class="nav-item {{ app.request.attributes.get('_route') == 'consultation_stats' ? 'active' : '' }}">
+                <a class="nav-link" href="{{ path('consultation_stats') }}">
+                    <i class="fas fa-fw fa-chart-bar"></i>
+                    <span>Statistiques</span>
+                </a>
+            </li>
+        {% endif %}
+
+        {# ===== USERS (RESP_USERS) ===== #}
+        {% if app.user is defined and app.user.getRoleSysteme() == 'STAFF' and app.user.getTypeStaff() == 'RESP_USERS' %}
+            <li class="nav-item {{ app.request.attributes.get('_route') starts with 'staff_patients' ? 'active' : '' }}">
+                <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapsePatients"
+                   aria-expanded="true" aria-controls="collapsePatients">
+                    <i class="fas fa-fw fa-user-injured"></i>
+                    <span>Patients (Radar)</span>
+                </a>
+                <div id="collapsePatients" class="collapse" aria-labelledby="headingPatients" data-parent="#accordionSidebar">
                     <div class="bg-white py-2 collapse-inner rounded">
-                        <h6 class="collapse-header">Login Screens:</h6>
-                        <a class="collapse-item" href="login.html">Login</a>
-                        <a class="collapse-item" href="register.html">Register</a>
-                        <a class="collapse-item" href="forgot-password.html">Forgot Password</a>
-                        <div class="collapse-divider"></div>
-                        <h6 class="collapse-header">Other Pages:</h6>
-                        <a class="collapse-item" href="{{ path('app_fiche_by_staff', {'idStaff': 2}) }}">Appointements</a>
-                        <a class="collapse-item" href="blank.html">Blank Page</a>
+                        <h6 class="collapse-header">Suivi & Qualité :</h6>
+                        <a class="collapse-item {{ app.request.attributes.get('_route') == 'staff_patients_radar' ? 'active' : '' }}"
+                           href="{{ path('staff_patients_radar') }}">🧭 Patient Radar</a>
+                        <a class="collapse-item {{ app.request.attributes.get('_route') == 'staff_patients_list' ? 'active' : '' }}"
+                           href="{{ path('staff_patients_list') }}">📋 Liste des patients</a>
+                        <a class="collapse-item {{ app.request.attributes.get('_route') == 'staff_patients_stats' ? 'active' : '' }}"
+                           href="{{ path('staff_patients_stats') }}">📊 Statistiques</a>
+                        <a class="collapse-item" href="{{ path('staff_patients_export_csv') }}">⬇️ Export CSV</a>
                     </div>
                 </div>
             </li>
-           
+        {% endif %}
+
+        {# ===== PRODUITS (RESP_PRODUCTS) ===== #}
+        {% if app.user is defined and app.user.getRoleSysteme() == 'STAFF' and app.user.getTypeStaff() == 'RESP_PRODUCTS' %}
             <li class="nav-item">
-        <a class="nav-link" href="{{ path('app_logout') }}">
-            <i class="fas fa-fw "></i>
-            <span>Déconnexion</span>
-        </a>
-    </li>
-       
-            <!-- Nav Item - Tables -->
-            <!-- Nav Item - Events Collapse Menu -->
+                <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseProducts"
+                   aria-expanded="true" aria-controls="collapseProducts">
+                    <i class="fas fa-fw fa-box"></i>
+                    <span>Produits</span>
+                </a>
+                <div id="collapseProducts" class="collapse" aria-labelledby="headingProducts" data-parent="#accordionSidebar">
+                    <div class="bg-white py-2 collapse-inner rounded">
+                        <h6 class="collapse-header">Gestion des Produits :</h6>
+                        <a class="collapse-item" href="{{ path('admin_produits_index') }}">Voir tous les produits</a>
+                        <a class="collapse-item" href="{{ path('admin_bi_dashboard', {days: 7}) }}">
+                            <i class="bi bi-graph-up-arrow me-1"></i> Dashboard Admin BI
+                        </a>
+                        <a class="collapse-item" href="#">Autres actions</a>
+                    </div>
+                </div>
+            </li>
+        {% endif %}
 
+        {# ===== EVENEMENTS (RESP_EVEN) ===== #}
+        {% if app.user is defined and app.user.getRoleSysteme() == 'STAFF' and app.user.getTypeStaff() == 'RESP_EVEN' %}
+            <li class="nav-item">
+                <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseEvents"
+                   aria-expanded="true" aria-controls="collapseEvents">
+                    <i class="fas fa-fw fa-calendar-alt"></i>
+                    <span>Gestion des Événements</span>
+                </a>
 
+                <div id="collapseEvents" class="collapse" aria-labelledby="headingEvents" data-parent="#accordionSidebar">
 
-            
+                    <div class="bg-white py-2 collapse-inner rounded mb-2">
+                        <h6 class="collapse-header">Événements :</h6>
+                        <a class="collapse-item" href="{{ path('admin_evenement_cards') }}">Voir tous les événements</a>
+                        <a class="collapse-item" href="{{ path('admin_evenement_index') }}">Autres actions</a>
+                        <a class="collapse-item" href="{{ path('admin_evenement_demandes_index') }}">Demandes de participation</a>
+                    </div>
 
-            <!-- Divider -->
-            <hr class="sidebar-divider d-none d-md-block">
+                    <div class="bg-white py-2 collapse-inner rounded">
+                        <h6 class="collapse-header">Ressources :</h6>
+                        <a class="collapse-item" href="{{ path('admin_ressource_index') }}">Gérer les ressources</a>
+                        <a class="collapse-item" href="{{ path('admin_ressource_new') }}">Ajouter une ressource</a>
+                    </div>
 
-            <!-- Sidebar Toggler (Sidebar) -->
-            <div class="text-center d-none d-md-inline">
-                <button class="rounded-circle border-0" id="sidebarToggle"></button>
-            </div>
+                </div>
+            </li>
+        {% endif %}
 
-        </ul>
-        <!-- End of Sidebar -->
+        <hr class="sidebar-divider d-none d-md-block">
 
-        <!-- Content Wrapper -->
-        <div id="content-wrapper" class="d-flex flex-column">
+        <li class="nav-item">
+            <a class="nav-link" href="{{ path('app_logout') }}">
+                <i class="fas fa-fw fa-sign-out-alt"></i>
+                <span>Déconnexion</span>
+            </a>
+        </li>
 
-            <!-- Main Content -->
-            <div id="content" class="px-4">
-
-                <!-- Topbar -->
-                <nav class="navbar navbar-expand navbar-light bg-white topbar mb-4 static-top shadow">
-
-                    <!-- Sidebar Toggle (Topbar) -->
-                    <button id="sidebarToggleTop" class="btn btn-link d-md-none rounded-circle mr-3">
-                        <i class="fa fa-bars"></i>
-                    </button>
-
-                    <!-- Topbar Search -->
-                    <form class="d-none d-sm-inline-block form-inline mr-auto ml-md-3 my-2 my-md-0 mw-100 navbar-search">
-                        <div class="input-group">
-                            <input type="text" class="form-control bg-light border-0 small" placeholder="Search for..."
-                                aria-label="Search" aria-describedby="basic-addon2">
-                            <div class="input-group-append">
-                                <button class="btn btn-primary" type="button">
-                                    <i class="fas fa-search fa-sm"></i>
-                                </button>
-                            </div>
-                        </div>
-                    </form>
-
-                    <!-- Topbar Navbar -->
-                    <ul class="navbar-nav ml-auto">
-
-                        <!-- Nav Item - Search Dropdown (Visible Only XS) -->
-                        <li class="nav-item dropdown no-arrow d-sm-none">
-                            <a class="nav-link dropdown-toggle" href="#" id="searchDropdown" role="button"
-                                data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                                <i class="fas fa-search fa-fw"></i>
-                            </a>
-                            <!-- Dropdown - Messages -->
-                            <div class="dropdown-menu dropdown-menu-right p-3 shadow animated--grow-in"
-                                aria-labelledby="searchDropdown">
-                                <form class="form-inline mr-auto w-100 navbar-search">
-                                    <div class="input-group">
-                                        <input type="text" class="form-control bg-light border-0 small"
-                                            placeholder="Search for..." aria-label="Search"
-                                            aria-describedby="basic-addon2">
-                                        <div class="input-group-append">
-                                            <button class="btn btn-primary" type="button">
-                                                <i class="fas fa-search fa-sm"></i>
-                                            </button>
-                                        </div>
-                                    </div>
-                                </form>
-                            </div>
-                        </li>
-
-                        <!-- Nav Item - Alerts -->
-                        <li class="nav-item dropdown no-arrow mx-1">
-                            <a class="nav-link dropdown-toggle" href="#" id="alertsDropdown" role="button"
-                                data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                                <i class="fas fa-bell fa-fw"></i>
-                                <!-- Counter - Alerts -->
-                                <span class="badge badge-danger badge-counter">3+</span>
-                            </a>
-                            <!-- Dropdown - Alerts -->
-                            <div class="dropdown-list dropdown-menu dropdown-menu-right shadow animated--grow-in"
-                                aria-labelledby="alertsDropdown">
-                                <h6 class="dropdown-header">
-                                    Alerts Center
-                                </h6>
-                                <a class="dropdown-item d-flex align-items-center" href="#">
-                                    <div class="mr-3">
-                                        <div class="icon-circle bg-primary">
-                                            <i class="fas fa-file-alt text-white"></i>
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <div class="small text-gray-500">December 12, 2019</div>
-                                        <span class="font-weight-bold">A new monthly report is ready to download!</span>
-                                    </div>
-                                </a>
-                            </div>
-                        </li>
-
-                    </ul>
-
-                </nav>
-                <!-- End of Topbar -->
-
-                {% block body %}
-                <!-- The specific content for this page will go here -->
-                {% endblock %}
-
-            </div>
+        <div class="text-center d-none d-md-inline">
+            <button class="rounded-circle border-0" id="sidebarToggle"></button>
         </div>
 
+    </ul>
+    <!-- End Sidebar -->
+
+    <!-- Content Wrapper -->
+    <div id="content-wrapper" class="d-flex flex-column">
+        <div id="content" class="px-4">
+
+            <!-- Topbar -->
+            <nav class="navbar navbar-expand navbar-light bg-white topbar mb-4 static-top shadow">
+
+                <button id="sidebarToggleTop" class="btn btn-link d-md-none rounded-circle mr-3">
+                    <i class="fa fa-bars"></i>
+                </button>
+
+                <!-- Topbar Search -->
+                <form class="d-none d-sm-inline-block form-inline mr-auto ml-md-3 my-2 my-md-0 mw-100 navbar-search">
+                    <div class="input-group">
+                        <input type="text" class="form-control border-0 small" placeholder="Search for..."
+                               aria-label="Search" aria-describedby="basic-addon2">
+                        <div class="input-group-append">
+                            <button class="btn btn-primary" type="button">
+                                <i class="fas fa-search fa-sm"></i>
+                            </button>
+                        </div>
+                    </div>
+                </form>
+
+                <!-- Topbar Navbar -->
+                <ul class="navbar-nav ml-auto">
+
+                    <li class="nav-item dropdown no-arrow mx-1">
+                        <a class="nav-link dropdown-toggle" href="#" id="alertsDropdown" role="button"
+                           data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                            <i class="fas fa-bell fa-fw"></i>
+                            <span class="badge badge-danger badge-counter">3+</span>
+                        </a>
+
+                        <div class="dropdown-list dropdown-menu dropdown-menu-right shadow animated--grow-in"
+                             aria-labelledby="alertsDropdown">
+                            <h6 class="dropdown-header">Alerts Center</h6>
+                            <a class="dropdown-item d-flex align-items-center" href="#">
+                                <div class="mr-3">
+                                    <div class="icon-circle bg-primary">
+                                        <i class="fas fa-file-alt text-white"></i>
+                                    </div>
+                                </div>
+                                <div>
+                                    <div class="small text-gray-500">Today</div>
+                                    <span class="font-weight-bold">A new report is ready!</span>
+                                </div>
+                            </a>
+                        </div>
+                    </li>
+
+                </ul>
+
+            </nav>
+            <!-- End Topbar -->
+
+            {% block body %}{% endblock %}
+
+        </div>
     </div>
-       <!-- Bootstrap core JavaScript-->
-    <script src="{{ asset('assets_dash/vendor/jquery/jquery.min.js') }}"></script>
-    <script src="{{ asset('assets_dash/vendor/bootstrap/js/bootstrap.bundle.min.js') }}"></script>
-    <script src="{{ asset('assets_dash/js/demo/chart-area-demo.js') }}"></script>
-    <script src="{{ asset('assets_dash/js/demo/chart-pie-demo.js') }}"></script>
+
+</div>
+
+<!-- JS -->
+<script src="{{ asset('assets_dash/vendor/jquery/jquery.min.js') }}"></script>
+<script src="{{ asset('assets_dash/vendor/bootstrap/js/bootstrap.bundle.min.js') }}"></script>
+<script src="{{ asset('assets_dash/vendor/jquery-easing/jquery.easing.min.js') }}"></script>
+<script src="{{ asset('assets_dash/js/sb-admin-2.min.js') }}"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
 
-    <!-- Core plugin JavaScript-->
-    <script src="{{ asset('assets_dash/vendor/jquery-easing/jquery.easing.min.js') }}"></script>
-
-    <!-- Custom scripts for all pages-->
-    <script src="{{ asset('assets_dash/js/sb-admin-2.min.js') }}"></script>
-
-    {# ✅ ICI : block JS pour pages enfants (stats, etc.) #}
-    {% block javascripts %}
-        <!-- Chart.js local -->
-        <script src="{{ asset('assets_dash/vendor/chart.js/Chart.min.js') }}"></script>
-    {% endblock %}
-
+{% block javascripts %}
+    <script src="{{ asset('assets_dash/vendor/chart.js/Chart.min.js') }}"></script>
+{% endblock %}
 
 </body>
 </html>

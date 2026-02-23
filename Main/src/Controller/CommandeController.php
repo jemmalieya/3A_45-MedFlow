@@ -2,24 +2,25 @@
 
 namespace App\Controller;
 
-use App\Service\AdminBIService;
-use App\Service\TwilioSmsService;
 use App\Entity\Commande;
 use App\Entity\LigneCommande;
 use App\Entity\Produit;
+use App\Service\AdminBIService;
+use App\Service\TwilioSmsService;
 use Doctrine\ORM\EntityManagerInterface;
+use Dompdf\Dompdf;
+use Dompdf\Options;
+use Stripe\Stripe;
+use Stripe\Checkout\Session as StripeCheckoutSession;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpFoundation\ResponseHeaderBag;
 use Symfony\Component\HttpFoundation\Session\SessionInterface;
 use Symfony\Component\Routing\Annotation\Route;
-use Dompdf\Dompdf;
-use Dompdf\Options;
-use Symfony\Component\HttpFoundation\ResponseHeaderBag;
-use Stripe\Stripe;
-use Stripe\Checkout\Session as StripeCheckoutSession;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
+use App\Service\GeocodingService;
 
 class CommandeController extends AbstractController
 {
@@ -30,6 +31,8 @@ class CommandeController extends AbstractController
     #[Route('/admin/commandes', name: 'admin_commandes_index', methods: ['GET'])]
     public function adminIndex(EntityManagerInterface $em): Response
     {
+        // $this->denyAccessUnlessGranted('ROLE_ADMIN'); // ✅ optionnel
+
         $commandes = $em->getRepository(Commande::class)->findBy([], ['date_creation_commande' => 'DESC']);
 
         return $this->render('admin/commande.html.twig', [
@@ -38,16 +41,24 @@ class CommandeController extends AbstractController
     }
 
     #[Route('/admin/commandes/{id}', name: 'admin_commande_show', methods: ['GET'])]
-    public function adminShow(Commande $commande): Response
+    public function adminShow(Commande $commande, EntityManagerInterface $em): Response
     {
+        // $this->denyAccessUnlessGranted('ROLE_ADMIN'); // ✅ optionnel
+
+        // ✅ IMPORTANT : renvoyer aussi la liste des commandes (comme l’ancien)
+        $commandes = $em->getRepository(Commande::class)->findBy([], ['date_creation_commande' => 'DESC']);
+
         return $this->render('admin/commande.html.twig', [
-            'commande' => $commande
+            'commande'  => $commande,
+            'commandes' => $commandes,
         ]);
     }
 
     #[Route('/admin/commandes/{id}/statut', name: 'admin_commande_statut', methods: ['POST'])]
     public function adminChangerStatut(Request $request, Commande $commande, EntityManagerInterface $em): Response
     {
+        // $this->denyAccessUnlessGranted('ROLE_ADMIN'); // ✅ optionnel
+
         $nouveauStatut = (string) $request->request->get('statut');
         $statutsAutorises = ['En attente', 'En cours', 'En livraison', 'Expédiée', 'Livrée', 'Annulée'];
 
@@ -70,6 +81,8 @@ class CommandeController extends AbstractController
     #[Route('/admin/commandes/{id}/start-livraison', name: 'admin_commande_start_livraison', methods: ['POST'])]
     public function adminStartLivraison(Commande $commande, EntityManagerInterface $em): Response
     {
+        // $this->denyAccessUnlessGranted('ROLE_ADMIN'); // ✅ optionnel
+
         if ($commande->getStatutCommande() !== 'En cours') {
             $this->addFlash('error', 'Impossible de démarrer : statut actuel = ' . $commande->getStatutCommande());
             return $this->redirectToRoute('admin_commande_show', ['id' => $commande->getIdCommande()]);
@@ -85,6 +98,8 @@ class CommandeController extends AbstractController
     #[Route('/admin/commandes/{id}/delete', name: 'admin_commande_delete', methods: ['POST'])]
     public function adminDelete(Commande $commande, EntityManagerInterface $em): Response
     {
+        // $this->denyAccessUnlessGranted('ROLE_ADMIN'); // ✅ optionnel
+
         foreach ($commande->getLigneCommandes() as $ligne) {
             $em->remove($ligne);
         }
@@ -101,6 +116,8 @@ class CommandeController extends AbstractController
     #[Route('/admin/commandes/{id}/facture', name: 'admin_commande_facture_pdf', methods: ['GET'])]
     public function adminFacturePdf(Commande $commande): Response
     {
+        // $this->denyAccessUnlessGranted('ROLE_ADMIN'); // ✅ optionnel
+
         $html = $this->renderView('commande/facture_pdf.html.twig', ['commande' => $commande]);
 
         $options = new Options();
@@ -178,13 +195,18 @@ class CommandeController extends AbstractController
      * ========================= */
 
     #[Route('/commande/stripe/checkout', name: 'commande_stripe_checkout', methods: ['POST'])]
-    public function stripeCheckout(SessionInterface $session, EntityManagerInterface $em): Response
+    public function stripeCheckout(Request $request, SessionInterface $session, EntityManagerInterface $em): Response
     {
         $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
 
         $stripeSecret = $_ENV['STRIPE_SECRET_KEY'] ?? null;
-        $appUrl = $_ENV['APP_URL'] ?? 'http://127.0.0.1:8000';
-
+        if (!$stripeSecret) {
+            $this->addFlash('error', 'STRIPE_SECRET_KEY introuvable.');
+            return $this->redirectToRoute('commande_valider');
+        }
+    
+        // ✅ URL exacte du serveur qui tourne (avec le bon port)
+        $appUrl = $request->getSchemeAndHttpHost();   // ex: http://127.0.0.1:8000
         if (!$stripeSecret) {
             $this->addFlash('error', 'STRIPE_SECRET_KEY introuvable.');
             return $this->redirectToRoute('commande_valider');
@@ -204,7 +226,7 @@ class CommandeController extends AbstractController
         $commande = new Commande();
         $commande->setDateCreationCommande(new \DateTimeImmutable());
         $commande->setStatutCommande('En attente');
-        $commande->setUser($this->getUser()); // ✅ main logique
+        $commande->setUser($this->getUser());
 
         $em->persist($commande);
 
@@ -272,7 +294,7 @@ class CommandeController extends AbstractController
     }
 
     /* =========================
-     * PAIEMENT SUCCESS
+     * PAIEMENT SUCCESS / CANCEL
      * ========================= */
 
     #[Route('/commande/paiement/success', name: 'commande_paiement_success', methods: ['GET'])]
@@ -316,7 +338,6 @@ class CommandeController extends AbstractController
             return $this->redirectToRoute('front_produit_index');
         }
 
-        // ✅ appartient au user
         if ($commande->getUser() !== $this->getUser()) {
             $this->addFlash('error', 'Accès non autorisé à cette commande.');
             return $this->redirectToRoute('front_produit_index');
@@ -466,6 +487,8 @@ class CommandeController extends AbstractController
     #[Route('/admin/bi', name: 'admin_bi_dashboard')]
     public function dashboard(Request $request, AdminBIService $bi): Response
     {
+        // $this->denyAccessUnlessGranted('ROLE_ADMIN'); // ✅ optionnel
+
         $days = (int) $request->query->get('days', 30);
         $from = $request->query->get('from');
         $to   = $request->query->get('to');
@@ -492,34 +515,47 @@ class CommandeController extends AbstractController
      * SUIVI LIVRAISON (MAP)
      * ========================= */
 
-    #[Route('/commande/{id}/livraison-demo', name: 'commande_livraison_demo', methods: ['GET'])]
-    public function livraisonDemoPage(Commande $commande): Response
-    {
-        // ✅ Sécurité : commande appartient au user
-        $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
-        if ($commande->getUser() !== $this->getUser()) {
-            $this->addFlash('error', 'Accès non autorisé.');
-            return $this->redirectToRoute('mes_commandes');
-        }
-
-        // Départ (pharmacie) : Tunis centre (démo)
-        $startLat = 36.8065;
-        $startLng = 10.1815;
-
-        // Destination démo : Ariana
-        $adresse = "Ariana, Tunisie";
-        $destLat = 36.8665;
-        $destLng = 10.1647;
-
-        return $this->render('commande/livraison_demo.html.twig', [
-            'commande' => $commande,
-            'adresse' => $adresse,
-            'startLat' => $startLat,
-            'startLng' => $startLng,
-            'destLat' => $destLat,
-            'destLng' => $destLng,
-        ]);
-    }
+     #[Route('/commande/{id}/livraison-demo', name: 'commande_livraison_demo', methods: ['GET'])]
+     public function livraisonDemoPage(Commande $commande, GeocodingService $geo): Response
+     {
+         $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
+         if ($commande->getUser() !== $this->getUser()) {
+             $this->addFlash('error', 'Accès non autorisé.');
+             return $this->redirectToRoute('mes_commandes');
+         }
+     
+         // ✅ Départ pharmacie (fixe)
+         $startLat = 36.8065;
+         $startLng = 10.1815;
+     
+         // ✅ Adresse du user (depuis ta table user)
+         $user = $commande->getUser();
+         $adresseUser = trim((string) ($user?->getAdresseUser() ?? ''));
+     
+         if ($adresseUser === '') {
+             $adresseFull = 'Tunis, Tunisie';
+             $adresseAffiche = 'Adresse non renseignée (Tunis par défaut)';
+         } else {
+             $adresseFull = $adresseUser . ', Tunisie';
+             $adresseAffiche = $adresseUser;
+         }
+     
+         // ✅ Geocoding externe (Nominatim) mais robuste : peut retourner null
+         $geoResult = $geo->geocode($adresseFull);
+     
+         // ✅ fallback si pas trouvé
+         $destLat = $geoResult['lat'] ?? 36.8665;
+         $destLng = $geoResult['lng'] ?? 10.1647;
+     
+         return $this->render('commande/livraison_demo.html.twig', [
+             'commande' => $commande,
+             'adresse'  => $adresseAffiche,
+             'startLat' => $startLat,
+             'startLng' => $startLng,
+             'destLat'  => $destLat,
+             'destLng'  => $destLng,
+         ]);
+     }
 
     #[Route('/api/commande/{id}/statut', name: 'api_commande_statut', methods: ['GET'])]
     public function apiCommandeStatut(Commande $commande): JsonResponse
@@ -531,32 +567,41 @@ class CommandeController extends AbstractController
     }
 
     #[Route('/api/commande/{id}/livraison/route', name: 'api_commande_livraison_route', methods: ['GET'])]
-    public function livraisonRoute(Commande $commande, HttpClientInterface $http): JsonResponse
+    public function livraisonRoute(Commande $commande, HttpClientInterface $http, GeocodingService $geo): JsonResponse
     {
         $startLat = 36.8065;
         $startLng = 10.1815;
-        $destLat = 36.8665;
-        $destLng = 10.1647;
-
+    
+        $user = $commande->getUser();
+        $adresseUser = trim((string) ($user?->getAdresseUser() ?? ''));
+    
+        $adresseFull = $adresseUser !== '' ? ($adresseUser . ', Tunisie') : 'Tunis, Tunisie';
+    
+        $geoResult = $geo->geocode($adresseFull);
+    
+        $destLat = $geoResult['lat'] ?? 36.8665;
+        $destLng = $geoResult['lng'] ?? 10.1647;
+    
         $url = sprintf(
             'https://router.project-osrm.org/route/v1/driving/%f,%f;%f,%f?overview=full&geometries=geojson',
             $startLng, $startLat,
             $destLng, $destLat
         );
-
+    
         try {
             $res = $http->request('GET', $url);
             $data = $res->toArray(false);
-
+    
             if (!isset($data['routes'][0]['geometry']['coordinates'])) {
                 return new JsonResponse(['success' => false, 'message' => 'Route introuvable'], 500);
             }
-
+    
             $coords = array_map(fn($c) => [$c[1], $c[0]], $data['routes'][0]['geometry']['coordinates']);
-
+    
             return new JsonResponse([
                 'success' => true,
                 'coords' => $coords,
+                'dest' => ['lat' => $destLat, 'lng' => $destLng],
             ]);
         } catch (\Throwable $e) {
             return new JsonResponse([

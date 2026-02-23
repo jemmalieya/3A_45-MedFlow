@@ -47,11 +47,15 @@
               <span id="statutBadge" class="badge rounded-pill px-4 py-2 fs-6 statut-badge">
                 {{ commande.statutCommande }}
               </span>
+              <button id="themeToggle" class="btn btn-outline-light btn-sm ms-2">
+  <i class="bi bi-moon-stars"></i> Mode sombre
+</button>
             </div>
           </div>
         </div>
 
         <div class="card-body p-4">
+
           {# Produits #}
           <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
             <h5 class="m-0"><i class="bi bi-box-seam me-2"></i>Produits commandés</h5>
@@ -72,15 +76,31 @@
                   <th class="text-end">Sous-total</th>
                 </tr>
               </thead>
+
               <tbody>
                 {% for ligne in commande.ligneCommandes %}
+
+                  {# ✅ Construction robuste du src image :
+                     - si imageProduit est une URL http(s) -> on l’utilise
+                     - sinon -> on suppose fichier local dans uploads/produits/
+                     - si vide -> image fallback
+                  #}
+                  {% set img = ligne.produit.imageProduit %}
+                  {% set isUrl = img and (img starts with 'http://' or img starts with 'https://') %}
+                  {% set srcImg = isUrl
+                    ? img
+                    : (img ? asset('uploads/produits/' ~ img) : asset('assets/img/placeholder-product.png'))
+                  %}
+
                   <tr>
                     <td>
                       <div class="d-flex align-items-center">
                         <img
-                          src="{{ ligne.produit.imageProduit }}"
+                          src="{{ srcImg }}"
                           alt="{{ ligne.produit.nomProduit }}"
                           class="thumb me-3"
+                          loading="lazy"
+                          onerror="this.src='{{ asset('assets/img/placeholder-product.png') }}'"
                         >
                         <div>
                           <div class="fw-semibold">{{ ligne.produit.nomProduit }}</div>
@@ -88,16 +108,22 @@
                         </div>
                       </div>
                     </td>
+
                     <td class="text-center">
                       <span class="badge bg-primary rounded-pill fs-6">{{ ligne.quantite_commandee }}</span>
                     </td>
-                    <td class="text-end">{{ ligne.produit.prixProduit|number_format(2, '.', '') }} Dt</td>
+
+                    <td class="text-end">
+                      {{ ligne.produit.prixProduit|number_format(2, '.', '') }} Dt
+                    </td>
+
                     <td class="text-end fw-bold text-success">
                       {{ (ligne.produit.prixProduit * ligne.quantite_commandee)|number_format(2, '.', '') }} Dt
                     </td>
                   </tr>
                 {% endfor %}
               </tbody>
+
               <tfoot class="table-light">
                 <tr class="fw-bold fs-5">
                   <td colspan="3" class="text-end">Total :</td>
@@ -214,60 +240,277 @@
 </div>
 
 <style>
-  .header-grad{
-    background: linear-gradient(135deg, #0ea5e9 0%, #2563eb 60%, #4f46e5 100%);
-  }
-  .chip{
-    width: 40px; height: 40px; border-radius: 14px;
-    display:flex; align-items:center; justify-content:center;
-    background: rgba(255,255,255,.18);
-    border: 1px solid rgba(255,255,255,.25);
-  }
-  .thumb{
-    width: 58px; height: 58px; object-fit: cover;
-    border-radius: 14px; border: 1px solid rgba(0,0,0,.06);
-  }
-  .soft-card{
-    border-radius: 18px;
-    background: rgba(255,255,255,.85);
-    backdrop-filter: blur(6px);
-  }
-  .meta{
-    font-size: .80rem;
-    color: rgba(0,0,0,.55);
-    margin-bottom: 2px;
-  }
-  .val{
-    font-weight: 600;
-  }
-  .statut-badge{
-    background: rgba(255,255,255,.22);
-    border: 1px solid rgba(255,255,255,.28);
-  }
-  .pulse {
-    animation: pulse 0.65s ease-in-out;
-  }
-  @keyframes pulse {
-    0% { transform: scale(1); box-shadow: 0 0 0 rgba(255,255,255,.0); }
-    50% { transform: scale(1.06); box-shadow: 0 0 30px rgba(255,255,255,.35); }
-    100% { transform: scale(1); box-shadow: 0 0 0 rgba(255,255,255,.0); }
-  }
+:root{
+  --primary:#00BFA6;
+  --primary-dark:#0097B2;
+  --danger:#BC0B09;
+
+  --bg:#f6fbfb;
+  --gray-50:#f9fafb;
+  --gray-100:#f3f4f6;
+  --gray-200:#e5e7eb;
+  --gray-600:#4b5563;
+  --gray-800:#1f2937;
+
+  --shadow-sm:0 2px 10px rgba(0,0,0,.06);
+  --shadow-md:0 12px 28px rgba(0,0,0,.10);
+  --shadow-lg:0 20px 46px rgba(0,0,0,.14);
+
+  --ring: 0 0 0 .22rem rgba(0,151,178,.18);
+}
+
+/* ✅ Header (SOLID) */
+.header-grad{
+  background: var(--primary-dark) !important;
+  position: relative;
+  overflow: hidden;
+}
+.header-grad::after{
+  content:"";
+  position:absolute;
+  inset:-2px;
+  background:
+    radial-gradient(900px 240px at 16% 15%, rgba(255,255,255,.18), transparent 58%),
+    radial-gradient(900px 240px at 85% 0%, rgba(255,255,255,.12), transparent 60%);
+  pointer-events:none;
+}
+
+/* ✅ Chip icon */
+.chip{
+  width: 42px; height: 42px;
+  border-radius: 16px;
+  display:flex; align-items:center; justify-content:center;
+  background: rgba(255,255,255,.16);
+  border: 1px solid rgba(255,255,255,.26);
+  box-shadow: 0 10px 22px rgba(0,0,0,.10);
+}
+
+/* ✅ Badge statut (base glass) */
+.statut-badge{
+  background: rgba(255,255,255,.18) !important;
+  border: 1px solid rgba(255,255,255,.28) !important;
+  color:#fff !important;
+  font-weight: 900;
+  letter-spacing: .2px;
+}
+
+/* ✅ Badge statut (couleur auto via classes ajoutées en JS) */
+.statut-badge.is-waiting{ background: rgba(255,255,255,.18) !important; }
+.statut-badge.is-progress{ background: rgba(0,191,166,.22) !important; }
+.statut-badge.is-shipped{ background: rgba(0,151,178,.30) !important; }
+.statut-badge.is-delivered{ background: rgba(16,185,129,.26) !important; }
+.statut-badge.is-canceled{ background: rgba(188,11,9,.22) !important; }
+
+/* ✅ Thumb produit */
+.thumb{
+  width: 60px;
+  height: 60px;
+  object-fit: cover;
+  border-radius: 16px;
+  border: 1px solid rgba(0,151,178,.14);
+  background: #fff;
+  box-shadow: 0 10px 22px rgba(15,23,42,.08);
+  transition: transform .22s ease, box-shadow .22s ease, border-color .22s ease;
+}
+.thumb:hover{
+  transform: scale(1.08) rotate(1deg);
+  border-color: rgba(0,151,178,.35);
+  box-shadow: 0 16px 32px rgba(0,151,178,.18);
+}
+
+/* ✅ Table look */
+.table{
+  border-radius: 16px;
+  overflow:hidden;
+  background:#fff;
+}
+.table thead th{
+  font-weight: 900;
+  color: var(--gray-800);
+}
+.table-hover tbody tr{
+  transition: background .15s ease, transform .15s ease;
+}
+.table-hover tbody tr:hover{
+  background: rgba(0,191,166,.06);
+}
+
+/* ✅ Quantité badge (turquoise) */
+.badge.bg-primary{
+  background: var(--primary-dark) !important;
+  border: 1px solid rgba(255,255,255,.25);
+  font-weight: 900;
+}
+
+/* ✅ Sous-total / Total */
+.text-success{
+  color: var(--primary-dark) !important;
+}
+
+/* ✅ Cards “Livraison / Résumé” */
+.soft-card{
+  border-radius: 18px;
+  background:#fff;
+  border: 1px solid rgba(0,151,178,.12);
+  box-shadow: var(--shadow-sm);
+}
+.soft-card .card-body h6{
+  font-weight: 1000;
+  color: var(--gray-800);
+}
+
+/* ✅ meta/value */
+.meta{
+  font-size: .82rem;
+  color: rgba(0,0,0,.55);
+  margin-bottom: 2px;
+}
+.val{
+  font-weight: 800;
+  color: var(--gray-800);
+}
+
+/* ✅ Buttons (solid turquoise) */
+.btn:focus{ box-shadow: var(--ring) !important; }
+
+.btn-success{
+  background: var(--primary) !important;
+  color:#003b3a !important;
+  border: none !important;
+  font-weight: 1000;
+  box-shadow: 0 12px 26px rgba(0,191,166,.20);
+}
+.btn-success:hover{
+  background: #00a892 !important;
+  transform: translateY(-1px);
+  box-shadow: 0 16px 34px rgba(0,191,166,.28);
+}
+
+.btn-primary{
+  background: var(--primary-dark) !important;
+  border: none !important;
+  font-weight: 1000;
+  box-shadow: 0 12px 26px rgba(0,151,178,.18);
+}
+.btn-primary:hover{
+  background: #00849b !important;
+  transform: translateY(-1px);
+  box-shadow: 0 16px 34px rgba(0,151,178,.26);
+}
+
+.btn-outline-primary{
+  background: #fff !important;
+  border: 2px solid rgba(0,151,178,.30) !important;
+  color: var(--primary-dark) !important;
+  font-weight: 1000;
+  box-shadow: 0 10px 22px rgba(15,23,42,.06);
+}
+.btn-outline-primary:hover{
+  background: rgba(0,191,166,.10) !important;
+  border-color: rgba(0,151,178,.45) !important;
+  transform: translateY(-1px);
+}
+
+/* ✅ pulse animation (si statut change) */
+.pulse { animation: pulse .65s ease-in-out; }
+@keyframes pulse {
+  0% { transform: scale(1); box-shadow: 0 0 0 rgba(255,255,255,0); }
+  50% { transform: scale(1.06); box-shadow: 0 0 30px rgba(255,255,255,.35); }
+  100% { transform: scale(1); box-shadow: 0 0 0 rgba(255,255,255,0); }
+}
+/* =========================
+   🌙 DARK MODE — DÉTAIL COMMANDE
+   ========================= */
+body.dark{
+  background:#0b1220 !important;
+  color:#e5e7eb !important;
+}
+
+body.dark .card,
+body.dark .soft-card,
+body.dark .table,
+body.dark .table thead,
+body.dark .table tfoot,
+body.dark .modal-content,
+body.dark .alert{
+  background:#0f172a !important;
+  color:#e5e7eb !important;
+  border-color: rgba(0,151,178,.35) !important;
+}
+
+body.dark .header-grad{
+  background:#0097B2 !important;
+}
+
+body.dark .text-muted{
+  color:#94a3b8 !important;
+}
+
+body.dark .meta{ color:#94a3b8 !important; }
+body.dark .val{ color:#e5e7eb !important; }
+
+body.dark .badge.bg-primary{
+  background: rgba(0,151,178,.65) !important;
+}
+
+body.dark .btn-outline-primary,
+body.dark .btn-outline-light{
+  background: transparent !important;
+  color:#7dd3fc !important;
+  border-color: rgba(0,151,178,.45) !important;
+}
+
+body.dark .table-hover tbody tr:hover{
+  background: rgba(0,151,178,.15) !important;
+}
 </style>
 
+
 <script>
-  document.addEventListener("DOMContentLoaded", () => {
-    const badge = document.getElementById("statutBadge");
-    if (!badge) return;
+document.addEventListener("DOMContentLoaded", () => {
+  const badge = document.getElementById("statutBadge");
+  if (!badge) return;
 
-    const current = badge.innerText.trim();
-    const key = "last_status_cmd_{{ commande.idCommande }}";
-    const old = localStorage.getItem(key);
+  const current = badge.innerText.trim();
+  const key = "last_status_cmd_{{ commande.idCommande }}";
+  const old = localStorage.getItem(key);
 
-    if (old && old !== current) {
-      badge.classList.add("pulse");
-      setTimeout(() => badge.classList.remove("pulse"), 900);
-    }
-    localStorage.setItem(key, current);
-  });
+  // ✅ Pulse si changement
+  if (old && old !== current) {
+    badge.classList.add("pulse");
+    setTimeout(() => badge.classList.remove("pulse"), 900);
+  }
+  localStorage.setItem(key, current);
+
+  // ✅ Couleur selon statut (sans toucher ton HTML)
+  badge.classList.remove("is-waiting","is-progress","is-shipped","is-delivered","is-canceled");
+
+  const norm = current.toLowerCase();
+  if (norm.includes("attente")) badge.classList.add("is-waiting");
+  else if (norm.includes("en cours") || norm.includes("préparation")) badge.classList.add("is-progress");
+  else if (norm.includes("expédi")) badge.classList.add("is-shipped");
+  else if (norm.includes("livr")) badge.classList.add("is-delivered");
+  else if (norm.includes("annul")) badge.classList.add("is-canceled");
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+  const btn = document.getElementById("themeToggle");
+
+  // Charger thème sauvegardé
+  if (localStorage.getItem("theme") === "dark") {
+    document.body.classList.add("dark");
+  }
+
+  if (btn) {
+    btn.addEventListener("click", () => {
+      document.body.classList.toggle("dark");
+      localStorage.setItem(
+        "theme",
+        document.body.classList.contains("dark") ? "dark" : "light"
+      );
+    });
+  }
+});
 </script>
+
 {% endblock %}

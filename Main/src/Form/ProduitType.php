@@ -6,12 +6,15 @@ use App\Entity\Produit;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\OptionsResolver\OptionsResolver;
+
 use Symfony\Component\Form\Extension\Core\Type\TextType;
 use Symfony\Component\Form\Extension\Core\Type\TextareaType;
 use Symfony\Component\Form\Extension\Core\Type\NumberType;
 use Symfony\Component\Form\Extension\Core\Type\IntegerType;
 use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
-use Symfony\Component\Form\Extension\Core\Type\UrlType;
+use Symfony\Component\Form\Extension\Core\Type\FileType;
+
+use Symfony\Component\Validator\Constraints\File;
 
 class ProduitType extends AbstractType
 {
@@ -67,7 +70,7 @@ class ProduitType extends AbstractType
                 'attr' => ['class' => 'form-select']
             ])
 
-            // ✅ ICI LA VRAIE CORRECTION
+            // ✅ Status en radios
             ->add('status_produit', ChoiceType::class, [
                 'label' => false,
                 'choices' => [
@@ -75,18 +78,28 @@ class ProduitType extends AbstractType
                     'Rupture' => 'Rupture',
                     'Indisponible' => 'Indisponible',
                 ],
-                'expanded' => true,   // ✅ radios
-                'multiple' => false,  // ✅ une seule valeur
-                'data' => $options['data']->getStatusProduit() ?? 'Disponible', // ✅ default
+                'expanded' => true,
+                'multiple' => false,
+                'data' => $options['data']?->getStatusProduit() ?? 'Disponible',
                 'attr' => ['class' => 'status-radio-group'],
             ])
 
-            ->add('image_produit', UrlType::class, [
-                'label' => 'URL de l\'image',
+            // ✅ Upload image (non mappé) -> local only
+            ->add('imageFile', FileType::class, [
+                'label' => 'Image du produit',
+                'mapped' => false,
+                'required' => false, // ⚠️ on force en controller en create
                 'attr' => [
                     'class' => 'form-control',
-                    'placeholder' => 'https://exemple.com/image.jpg'
-                ]
+                    'accept' => 'image/*',
+                ],
+                'constraints' => [
+                    new File([
+                        'maxSize' => '3M',
+                        'mimeTypes' => ['image/jpeg', 'image/png', 'image/webp'],
+                        'mimeTypesMessage' => 'Formats acceptés : JPG, PNG, WEBP',
+                    ])
+                ],
             ]);
     }
 
@@ -94,6 +107,9 @@ class ProduitType extends AbstractType
     {
         $resolver->setDefaults([
             'data_class' => Produit::class,
+            'mode' => 'create', // create/edit
         ]);
+
+        $resolver->setAllowedValues('mode', ['create', 'edit']);
     }
 }

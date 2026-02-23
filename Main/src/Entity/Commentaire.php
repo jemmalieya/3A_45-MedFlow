@@ -34,6 +34,64 @@ class Commentaire
     #[ORM\ManyToOne(targetEntity: User::class, inversedBy: 'commentaires')]
     #[ORM\JoinColumn(nullable: false)]
     private ?User $user = null;
+ 
+    // src/Entity/Commentaire.php
+
+#[ORM\Column(length: 20)]
+private string $status = 'published'; // published | blocked | pending
+
+#[ORM\Column(nullable: true)]
+private ?float $moderationScore = null;
+
+#[ORM\Column(length: 50, nullable: true)]
+private ?string $moderationLabel = null;
+
+#[ORM\Column(nullable: true)]
+private ?\DateTimeImmutable $moderatedAt = null;
+
+public function getStatus(): string
+{
+    return $this->status;
+}
+
+public function setStatus(string $status): self
+{
+    $this->status = $status;
+    return $this;
+}
+
+public function getModerationScore(): ?float
+{
+    return $this->moderationScore;
+}
+
+public function setModerationScore(?float $moderationScore): self
+{
+    $this->moderationScore = $moderationScore;
+    return $this;
+}
+
+public function getModerationLabel(): ?string
+{
+    return $this->moderationLabel;
+}
+
+public function setModerationLabel(?string $moderationLabel): self
+{
+    $this->moderationLabel = $moderationLabel;
+    return $this;
+}
+
+public function getModeratedAt(): ?\DateTimeImmutable
+{
+    return $this->moderatedAt;
+}
+
+public function setModeratedAt(?\DateTimeImmutable $moderatedAt): self
+{
+    $this->moderatedAt = $moderatedAt;
+    return $this;
+}
 
     public function __construct()
     {

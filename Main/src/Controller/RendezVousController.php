@@ -71,7 +71,6 @@ class RendezVousController extends AbstractController
     public function appointment(Request $request, EntityManagerInterface $em, ?int $idStaff = null): Response
     {
         $rendezVous = new RendezVous();
-        // Set patient from session patient_id
         $session = $request->getSession();
         $patientId = $session->get('patient_id');
         if ($patientId) {
@@ -80,25 +79,19 @@ class RendezVousController extends AbstractController
                 $rendezVous->setPatient($patient);
             }
         }
-        // Set staff to User with idStaff if provided
         if ($idStaff !== null) {
             $staff = $em->getRepository(\App\Entity\User::class)->find($idStaff);
             if ($staff) {
                 $rendezVous->setStaff($staff);
             }
         }
-        
-        $form = $this->createForm(RendezVousType::class, $rendezVous);
+        $form = $this->createForm(RendezVousType::class, $rendezVous, ['validation_groups' => ['Default']]);
         $form->handleRequest($request);
-
         if ($form->isSubmitted()) {
             if ($form->isValid()) {
-                $this->addFlash('success', 'DEBUG: Form is valid and submitted.');
                 try {
                     $rendezVous->setCreatedAt(new \DateTime());
-                    $this->addFlash('success', 'DEBUG: Before persist.');
                     $em->persist($rendezVous);
-                    $this->addFlash('success', 'DEBUG: Before flush.');
                     $em->flush();
                     $this->addFlash('success', 'Rendez-vous créé avec succès.');
                     return $this->redirectToRoute('rendezvous_list');
@@ -106,10 +99,9 @@ class RendezVousController extends AbstractController
                     $this->addFlash('error', 'Erreur: ' . $e->getMessage());
                 }
             } else {
-                $this->addFlash('error', 'DEBUG: Form is submitted but NOT valid.');
+                $this->addFlash('error', 'Erreur de Soumettre.');
             }
         }
-
         return $this->render('rendez_vous/appointement.html.twig', [
             'form' => $form->createView(),
             'idStaff' => $idStaff,
@@ -201,25 +193,18 @@ class RendezVousController extends AbstractController
         return $this->redirectToRoute('rendezvous_list');
     }
 
-    #[Route('/rendezvous/{id}/edit', name: 'rendezvous_edit', methods: ['POST'])]
+
+    #[Route('/rendezvous/{id}/edit', name: 'modify_rendezvous', methods: ['GET', 'POST'])]
     public function edit(Request $request, EntityManagerInterface $em, int $id): Response
     {
-        if (!$this->isCsrfTokenValid('edit'.$id, $request->request->get('_token'))) {
-            $this->addFlash('error', 'Jeton CSRF invalide.');
-            return $this->redirectToRoute('rendezvous_list');
-        }
-
         $repo = $em->getRepository(RendezVous::class);
         $r = $repo->find($id);
         if (!$r) {
             $this->addFlash('error', 'Rendez-vous introuvable.');
             return $this->redirectToRoute('rendezvous_list');
         }
-
-        // Create a form for editing, bind to the entity
-        $form = $this->createForm(RendezVousType::class, $r);
+        $form = $this->createForm(RendezVousType::class, $r, ['validation_groups' => ['edit']]);
         $form->handleRequest($request);
-
         if ($form->isSubmitted() && $form->isValid()) {
             try {
                 $em->persist($r);
@@ -227,20 +212,17 @@ class RendezVousController extends AbstractController
                 $this->addFlash('success', 'Rendez-vous mis à jour.');
                 return $this->redirectToRoute('rendezvous_list');
             } catch (\Exception $e) {
-                $this->addFlash('error', 'Erreur lors de la mise à jour: ' . $e->getMessage());
-                // Render list with edit form and errors
-                return $this->renderListWithEditForm($em, $request, $r, $form);
+                $form->addError(new \Symfony\Component\Form\FormError('Erreur lors de la mise à jour: ' . $e->getMessage()));
             }
         }
-
-        // If not valid, show errors and open the edit row
-        $this->addFlash('error', 'Erreur de validation.');
-        return $this->renderListWithEditForm($em, $request, $r, $form);
-
+        return $this->render('rendez_vous/modifyRendezvous.html.twig', [
+            'form' => $form->createView(),
+            'rendezvous' => $r,
+        ]);
     }
 
     // Helper to render list page with edit form and errors
-    private function renderListWithEditForm(EntityManagerInterface $em, Request $request, $editRdv, $editForm)
+    private function renderListWithEditForm(EntityManagerInterface $em, Request $request, $editRdv, $editForm, $openEditModal = false)
     {
         $requestStack = $this->container->get('request_stack');
         $session = $requestStack->getCurrentRequest()->getSession();
@@ -271,14 +253,16 @@ class RendezVousController extends AbstractController
                 }
             }
         }
-        return $this->render('rendez_vous/rendezvous_list.html.twig', [
+        $args = [
             'rendezvous' => $rendezvous,
             'patientId' => $patientId,
             'fiches_medicales' => $fiches_medicales,
             'prescriptions' => $prescriptions,
             'editForm' => $editForm->createView(),
             'openEdit' => $editRdv->getId(),
-        ]);
+            'openEditModal' => $openEditModal,
+        ];
+        return $this->render('rendez_vous/rendezvous_list.html.twig', $args);
     }
     #[Route('/iaasssistante', name: 'app_ia_assistante')]
     public function iaAssistante(UserRepository $userRepo): Response

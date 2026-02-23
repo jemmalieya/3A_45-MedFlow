@@ -17,8 +17,8 @@ class RendezVous
     private ?int $id = null;
     
     #[ORM\Column(nullable: true)]
-    #[Assert\NotNull(message: 'La date et l\'heure sont obligatoires')]
-    #[Assert\GreaterThan('now', message: 'La date et l\'heure doivent être dans le futur')]
+    #[Assert\NotNull(message: 'La date et l\'heure sont obligatoires', groups: ['Default', 'edit'])]
+    #[Assert\GreaterThan('now', message: 'La date et l\'heure doivent être dans le futur', groups: ['Default'])]
     private ?\DateTime $datetime = null;
 
     #[ORM\Column(length: 50)]
@@ -30,8 +30,10 @@ class RendezVous
     #[ORM\Column(length: 255)]
     #[Assert\NotBlank(message: 'Le motif est obligatoire')]
     #[Assert\Length(
+        min: 5,
         max: 150,
-        maxMessage: 'Le motif ne peut pas dépasser 150 caractères'
+        minMessage: 'Le motif doit entre 5 et 150 caractères',
+        maxMessage: 'Le motif doit entre 5 et 150 caractères'
     )]
     private ?string $motif = null;
 

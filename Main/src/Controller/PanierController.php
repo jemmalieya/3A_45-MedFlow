@@ -4,20 +4,19 @@ namespace App\Controller;
 
 use App\Entity\Produit;
 use App\Service\DrugInteractionService;
+use App\Service\OcrService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\Session\SessionInterface;
 use Symfony\Component\Routing\Annotation\Route;
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\File\UploadedFile;
 
 #[Route('/panier')]
 class PanierController extends AbstractController
 {
-    /* =========================
-     * PAGE PANIER (FRONT)
-     * ========================= */
-
     #[Route('', name: 'panier_index', methods: ['GET'])]
     public function index(
         SessionInterface $session,
@@ -36,26 +35,47 @@ class PanierController extends AbstractController
             $qty = (int)($item['quantite'] ?? 0);
             if ($qty <= 0) continue;
 
-            // Propriété temporaire pour Twig (OK même sans setter)
             $produit->quantite_panier = $qty;
-
             $produitsPanier[] = $produit;
             $total += (float)$produit->getPrixProduit() * $qty;
         }
 
-        // Résultat interactions (affichage Twig)
         $interactionResult = $interactionService->checkCartInteractions($panier);
+
+        // ✅ canValidate (ordonnance permet de débloquer SI danger)
+        $canValidate = true;
+
+        if (($interactionResult['severity'] ?? null) === 'danger') {
+            $canValidate = false;
+
+            $ok = (bool) $session->get('ordonnance_ok', false);
+            $hash = $this->cartHash($panier);
+            $hashSaved = (string) $session->get('ordonnance_cart_hash', '');
+
+            if ($ok && $hashSaved === $hash) {
+                $canValidate = true;
+            }
+        }
+
+        // ✅ status ordonnance (affiché une seule fois)
+        $ordonnanceStatus = $session->get('ordonnance_status');
+        $ordonnanceDrugs = $session->get('ordonnance_drugs_found', []);
+        $ordonnanceOcrText = $session->get('ordonnance_ocr_text');
+
+        $session->remove('ordonnance_status');
+        $session->remove('ordonnance_drugs_found');
+        $session->remove('ordonnance_ocr_text');
 
         return $this->render('panier/index.html.twig', [
             'produits' => $produitsPanier,
             'total' => $total,
             'interactionResult' => $interactionResult,
+            'canValidate' => $canValidate,
+            'ordonnanceStatus' => $ordonnanceStatus,
+            'ordonnanceDrugs' => $ordonnanceDrugs,
+            'ordonnanceOcrText' => $ordonnanceOcrText,
         ]);
     }
-
-    /* =========================
-     * AJAX : recalcul interactions
-     * ========================= */
 
     #[Route('/check-interactions', name: 'panier_check_interactions', methods: ['GET'])]
     public function checkInteractions(
@@ -63,23 +83,32 @@ class PanierController extends AbstractController
         DrugInteractionService $interactionService
     ): JsonResponse {
         $panier = $session->get('panier', []);
-        return new JsonResponse($interactionService->checkCartInteractions($panier));
-    }
+        $interactionResult = $interactionService->checkCartInteractions($panier);
 
-    /* =========================
-     * BADGE NAVBAR (COUNT)
-     * ========================= */
+        $canValidate = true;
+
+        if (($interactionResult['severity'] ?? null) === 'danger') {
+            $canValidate = false;
+
+            $ok = (bool) $session->get('ordonnance_ok', false);
+            $hash = $this->cartHash($panier);
+            $hashSaved = (string) $session->get('ordonnance_cart_hash', '');
+
+            if ($ok && $hashSaved === $hash) {
+                $canValidate = true;
+            }
+        }
+
+        $interactionResult['canValidate'] = $canValidate;
+
+        return new JsonResponse($interactionResult);
+    }
 
     #[Route('/count', name: 'panier_count', methods: ['GET'])]
     public function count(SessionInterface $session): JsonResponse
     {
-        $panier = $session->get('panier', []);
-        return new JsonResponse(['count' => $this->getCount($panier)]);
+        return new JsonResponse(['count' => $this->getCount($session->get('panier', []))]);
     }
-
-    /* =========================
-     * Vérifier quantité déjà ajoutée
-     * ========================= */
 
     #[Route('/verifier/{id}', name: 'panier_verifier', methods: ['GET'])]
     public function verifier(Produit $produit, SessionInterface $session): JsonResponse
@@ -92,194 +121,225 @@ class PanierController extends AbstractController
         ]);
     }
 
-    /* =========================
-     * Ajouter produit
-     * ========================= */
+    // ✅ IMPORTANT: dès que panier change -> ordonnance invalidée (sinon faux déblocage)
+    private function invalidateOrdonnance(SessionInterface $session): void
+    {
+        $session->remove('ordonnance_ok');
+        $session->remove('ordonnance_cart_hash');
+    }
 
-    #[Route('/ajouter/{id}', name: 'panier_ajouter', methods: ['POST', 'GET'])]
+    #[Route('/ajouter/{id}', name: 'panier_ajouter', methods: ['POST','GET'])]
     public function ajouter(Produit $produit, SessionInterface $session): JsonResponse
     {
+        $this->invalidateOrdonnance($session);
+
         $panier = $session->get('panier', []);
         $id = $produit->getId_produit();
 
-        // ✅ Vérifier statut
         if ($produit->getStatusProduit() !== 'Disponible') {
-            return new JsonResponse([
-                'success' => false,
-                'message' => 'Ce produit n\'est plus disponible.',
-                'count' => $this->getCount($panier),
-                'quantite' => isset($panier[$id]) ? (int)($panier[$id]['quantite'] ?? 0) : 0,
-            ], 400);
+            return new JsonResponse(['success' => false, 'message' => 'Produit indisponible.'], 400);
         }
 
-        // ✅ Vérifier stock
         $stock = (int)($produit->getQuantiteProduit() ?? 0);
-        $quantiteDansPanier = isset($panier[$id]) ? (int)($panier[$id]['quantite'] ?? 0) : 0;
+        $q = isset($panier[$id]) ? (int)($panier[$id]['quantite'] ?? 0) : 0;
 
-        if ($stock > 0 && $quantiteDansPanier >= $stock) {
-            return new JsonResponse([
-                'success' => false,
-                'message' => 'Stock insuffisant ! Maximum disponible : ' . $stock,
-                'count' => $this->getCount($panier),
-                'quantite' => $quantiteDansPanier,
-            ], 400);
+        if ($stock > 0 && $q >= $stock) {
+            return new JsonResponse(['success' => false, 'message' => 'Stock insuffisant !'], 400);
         }
 
-        // ✅ Ajouter
-        if (!isset($panier[$id])) {
-            $panier[$id] = [
-                'quantite' => 0,
-                'prix' => (float)$produit->getPrixProduit(),
-            ];
-        }
-
-        $panier[$id]['quantite'] = (int)($panier[$id]['quantite'] ?? 0) + 1;
+        $panier[$id]['quantite'] = $q + 1;
         $panier[$id]['prix'] = (float)$produit->getPrixProduit();
-
         $session->set('panier', $panier);
 
         return new JsonResponse([
             'success' => true,
-            'message' => $produit->getNomProduit() . ' ajouté au panier ✅',
+            'message' => $produit->getNomProduit().' ajouté ✅',
             'count' => $this->getCount($panier),
             'quantite' => (int)$panier[$id]['quantite'],
         ]);
     }
-
-    /* =========================
-     * Augmenter quantité
-     * ========================= */
 
     #[Route('/augmenter/{id}', name: 'panier_augmenter', methods: ['POST'])]
     public function augmenter(Produit $produit, SessionInterface $session): JsonResponse
     {
+        $this->invalidateOrdonnance($session);
+
         $panier = $session->get('panier', []);
         $id = $produit->getId_produit();
 
         if (!isset($panier[$id])) {
-            return new JsonResponse([
-                'success' => false,
-                'message' => 'Produit non trouvé dans le panier.',
-                'count' => $this->getCount($panier),
-                'quantite' => 0,
-            ], 400);
+            return new JsonResponse(['success' => false, 'message' => 'Produit absent du panier.'], 400);
         }
 
-        // ✅ Stock check
         $stock = (int)($produit->getQuantiteProduit() ?? 0);
-        $nouvelleQuantite = (int)($panier[$id]['quantite'] ?? 0) + 1;
+        $newQty = (int)($panier[$id]['quantite'] ?? 0) + 1;
 
-        if ($stock > 0 && $nouvelleQuantite > $stock) {
-            // on "cap" sur stock (optionnel) OU on refuse
-            return new JsonResponse([
-                'success' => false,
-                'message' => 'Stock épuisé ! Maximum : ' . $stock,
-                'count' => $this->getCount($panier),
-                'quantite' => (int)($panier[$id]['quantite'] ?? 0),
-            ], 400);
+        if ($stock > 0 && $newQty > $stock) {
+            return new JsonResponse(['success' => false, 'message' => 'Stock épuisé.'], 400);
         }
 
-        $panier[$id]['quantite'] = $nouvelleQuantite;
+        $panier[$id]['quantite'] = $newQty;
         $session->set('panier', $panier);
 
         return new JsonResponse([
             'success' => true,
+            'quantite' => $newQty,
             'count' => $this->getCount($panier),
-            'quantite' => (int)$panier[$id]['quantite'],
         ]);
     }
-
-    /* =========================
-     * Diminuer quantité
-     * ========================= */
 
     #[Route('/diminuer/{id}', name: 'panier_diminuer', methods: ['POST'])]
     public function diminuer(Produit $produit, SessionInterface $session): JsonResponse
     {
+        $this->invalidateOrdonnance($session);
+
         $panier = $session->get('panier', []);
         $id = $produit->getId_produit();
 
         if (!isset($panier[$id])) {
-            return new JsonResponse([
-                'success' => false,
-                'message' => 'Produit non trouvé dans le panier.',
-                'count' => $this->getCount($panier),
-                'quantite' => 0,
-            ], 400);
+            return new JsonResponse(['success' => false, 'message' => 'Produit absent du panier.'], 400);
         }
 
-        $panier[$id]['quantite'] = (int)($panier[$id]['quantite'] ?? 0) - 1;
+        $panier[$id]['quantite'] = (int)$panier[$id]['quantite'] - 1;
 
         if ($panier[$id]['quantite'] <= 0) {
             unset($panier[$id]);
             $session->set('panier', $panier);
-
-            return new JsonResponse([
-                'success' => true,
-                'message' => 'Produit retiré du panier.',
-                'count' => $this->getCount($panier),
-                'quantite' => 0,
-            ]);
+            return new JsonResponse(['success' => true, 'quantite' => 0, 'count' => $this->getCount($panier)]);
         }
 
         $session->set('panier', $panier);
 
         return new JsonResponse([
             'success' => true,
-            'count' => $this->getCount($panier),
             'quantite' => (int)$panier[$id]['quantite'],
+            'count' => $this->getCount($panier),
         ]);
     }
-
-    /* =========================
-     * Supprimer un produit
-     * ========================= */
 
     #[Route('/supprimer/{id}', name: 'panier_supprimer', methods: ['POST'])]
     public function supprimer(Produit $produit, SessionInterface $session): JsonResponse
     {
+        $this->invalidateOrdonnance($session);
+
         $panier = $session->get('panier', []);
-        $id = $produit->getId_produit();
-
-        if (!isset($panier[$id])) {
-            return new JsonResponse([
-                'success' => false,
-                'message' => 'Produit non trouvé.',
-                'count' => $this->getCount($panier),
-            ], 400);
-        }
-
-        unset($panier[$id]);
+        unset($panier[$produit->getId_produit()]);
         $session->set('panier', $panier);
 
-        return new JsonResponse([
-            'success' => true,
-            'message' => 'Produit supprimé du panier.',
-            'count' => $this->getCount($panier),
-        ]);
+        return new JsonResponse(['success' => true, 'count' => $this->getCount($panier)]);
     }
-
-    /* =========================
-     * Vider le panier
-     * ========================= */
 
     #[Route('/vider', name: 'panier_vider', methods: ['POST'])]
     public function vider(SessionInterface $session): JsonResponse
     {
         $session->remove('panier');
-        return new JsonResponse([
-            'success' => true,
-            'message' => 'Panier vidé.',
-            'count' => 0
-        ]);
-    }
+        $this->invalidateOrdonnance($session);
 
-    /* =========================
-     * Utils
-     * ========================= */
+        return new JsonResponse(['success' => true, 'count' => 0]);
+    }
 
     private function getCount(array $panier): int
     {
         return array_sum(array_map(fn($i) => (int)($i['quantite'] ?? 0), $panier));
+    }
+
+    private function cartHash(array $panier): string
+    {
+        ksort($panier);
+        return hash('sha256', json_encode($panier));
+    }
+
+    private function normalize(string $s): string
+    {
+        $s = mb_strtoupper($s);
+        $s = iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $s) ?: $s;
+        $s = preg_replace('/[^A-Z0-9\s]/', ' ', $s);
+        $s = preg_replace('/\s+/', ' ', $s);
+        return trim($s);
+    }
+
+    #[Route('/ordonnance/scan', name: 'panier_ordonnance_scan', methods: ['POST'])]
+    public function scanOrdonnance(
+        Request $request,
+        SessionInterface $session,
+        DrugInteractionService $interactionService,
+        OcrService $ocr
+    ): Response {
+        $panier = $session->get('panier', []);
+        if (empty($panier)) {
+            $session->set('ordonnance_status', 'refused');
+            $this->addFlash('error', 'Panier vide.');
+            return $this->redirectToRoute('panier_index');
+        }
+
+        $interaction = $interactionService->checkCartInteractions($panier);
+        if (($interaction['severity'] ?? null) !== 'danger') {
+            $session->set('ordonnance_status', 'approved');
+            $this->addFlash('success', 'Pas d’interaction dangereuse → ordonnance non nécessaire ✅');
+            return $this->redirectToRoute('panier_index');
+        }
+
+        /** @var UploadedFile|null $file */
+        $file = $request->files->get('ordonnance');
+        if (!$file) {
+            $session->set('ordonnance_status', 'refused');
+            $this->addFlash('error', 'Veuillez choisir une image d’ordonnance.');
+            return $this->redirectToRoute('panier_index');
+        }
+
+        $ext = strtolower((string) $file->guessExtension());
+        if (!in_array($ext, ['jpg','jpeg','png','webp'], true)) {
+            $session->set('ordonnance_status', 'refused');
+            $this->addFlash('error', 'Format non supporté. JPG/PNG/WEBP uniquement.');
+            return $this->redirectToRoute('panier_index');
+        }
+
+        $dir = $this->getParameter('kernel.project_dir') . '/public/uploads/ordonnances';
+        @mkdir($dir, 0777, true);
+
+        $filename = 'ord_' . uniqid() . '.' . $ext;
+        $file->move($dir, $filename);
+        $path = $dir . '/' . $filename;
+
+        try {
+            $text = $ocr->extractText($path, 'fre');
+        } catch (\Throwable $e) {
+            $session->set('ordonnance_status', 'refused');
+            $this->addFlash('error', 'OCR échoué: '.$e->getMessage());
+            return $this->redirectToRoute('panier_index');
+        }
+
+        $ocrNorm = $this->normalize($text);
+        $pairs = $interaction['interactions'] ?? [];
+
+        $ok = false;
+        $foundDrugs = [];
+
+        foreach ($pairs as $it) {
+            $d1 = $this->normalize((string)($it['drug1'] ?? ''));
+            $d2 = $this->normalize((string)($it['drug2'] ?? ''));
+
+            if ($d1 && $d2 && str_contains($ocrNorm, $d1) && str_contains($ocrNorm, $d2)) {
+                $ok = true;
+                $foundDrugs[] = (string)$it['drug1'];
+                $foundDrugs[] = (string)$it['drug2'];
+                break;
+            }
+        }
+
+        if (!$ok) {
+            $session->set('ordonnance_status', 'refused');
+            $session->set('ordonnance_ocr_text', mb_substr($text, 0, 300));
+            $this->addFlash('error', 'Ordonnance scannée ❌ mais médicaments non détectés.');
+            return $this->redirectToRoute('panier_index');
+        }
+
+        $session->set('ordonnance_ok', true);
+        $session->set('ordonnance_cart_hash', $this->cartHash($panier));
+        $session->set('ordonnance_status', 'approved');
+        $session->set('ordonnance_drugs_found', array_values(array_unique($foundDrugs)));
+
+        $this->addFlash('success', 'Ordonnance validée ✅ Commande débloquée.');
+        return $this->redirectToRoute('panier_index');
     }
 }

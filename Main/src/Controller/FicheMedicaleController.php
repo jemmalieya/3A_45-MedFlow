@@ -111,10 +111,12 @@ final class FicheMedicaleController extends AbstractController
         if ($request->isMethod('POST')) {
             // Temporary debug log to inspect incoming POST payload when validation fails
             try {
-                $logger->debug('Consultation POST payload', [
-                    'post' => $request->request->all(),
-                    'raw' => $request->getContent(),
-                ]);
+                $postAll = $request->request->all();
+                $raw = $request->getContent();
+                $this->addFlash('error', '[DEBUG] POST all: ' . json_encode($postAll));
+                $this->addFlash('error', '[DEBUG] POST raw: ' . $raw);
+                $prescRows = $postAll['prescription_rows'] ?? null;
+                $this->addFlash('error', '[DEBUG] prescription_rows: ' . json_encode($prescRows));
             } catch (\Throwable $e) {
                 // swallow logging errors to avoid interfering with flow
             }
@@ -128,6 +130,7 @@ final class FicheMedicaleController extends AbstractController
                 $diagnostic = trim($request->request->get('diagnostic') ?? '');
                 $observations = trim($request->request->get('observations') ?? '');
                 $resultats = trim($request->request->get('resultatsExamens') ?? '');
+                $signature = $request->request->get('signature') ?? null;
 
                 // PHP Server-side validation (controle de saisie)
                 $validationErrors = [];
@@ -253,6 +256,7 @@ final class FicheMedicaleController extends AbstractController
                     $dureeRaw = isset($row['duree']) ? trim((string) $row['duree']) : '';
                     $instructions = isset($row['instructions']) ? trim((string) $row['instructions']) : '';
 
+                    // Only validate if at least one field is filled (non-empty row)
                     if ($nomMedicament === '' && $dose === '' && $frequence === '' && $dureeRaw === '' && $instructions === '') {
                         continue;
                     }
@@ -304,11 +308,24 @@ final class FicheMedicaleController extends AbstractController
                         'instructions' => $instructions === '' ? null : $instructions,
                     ];
                 }
+                // Enforce at least one valid prescription
+                if (count($validPrescriptions) === 0) {
+                    $this->addFlash('error', 'At least one prescription is required.');
+                    if ($fiche && $fiche->getRendezVous()) {
+                        return $this->redirectToRoute('app_fiche_by_staff', ['idStaff' => $fiche->getRendezVous()->getStaff()->getId()]);
+                    }
+                    return $this->redirectToRoute('consultation_view', [
+                        'rendezvous' => $request->request->get('rendezvous_id'),
+                        'start' => $request->request->get('startTime'),
+                        'type' => $type,
+                    ]);
+                }
 
                 // Set validated fields into fiche object
                 $fiche->setDiagnostic($diagnostic);
                 $fiche->setObservations($observations);
                 $fiche->setResultatsExamens($resultats);
+                $fiche->setSignature($signature);
 
                 $end = new \DateTime();
                 $fiche->setEndTime($end);
@@ -328,8 +345,7 @@ final class FicheMedicaleController extends AbstractController
                 }
 
                 $em->persist($fiche);
-                $em->flush();
-
+                // Persist fiche and prescriptions together before flush
                 foreach ($validPrescriptions as $p) {
                     $prescription = new Prescription();
                     $prescription->setNomMedicament($p['nomMedicament']);
@@ -342,6 +358,7 @@ final class FicheMedicaleController extends AbstractController
                     $fiche->addPrescription($prescription);
                     $em->persist($prescription);
                 }
+                $em->persist($fiche);
                 $em->flush();
 
                 $staffId = $fiche->getRendezVous()?->getStaff()?->getId();
@@ -392,4 +409,6 @@ final class FicheMedicaleController extends AbstractController
         $staffId = $fiche->getRendezVous()?->getStaff()?->getId();
         return $this->redirectToRoute('app_fiche_by_staff', ['idStaff' => $staffId]);
     }
+    
 }
+        

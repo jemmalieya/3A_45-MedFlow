@@ -367,12 +367,12 @@
                                                     </td>
                                                     <td>{{ appointment.mode }}</td>
                                                     <td>{{ appointment.motif }}</td>
-                                                    <td>{{ appointment.patient ? appointment.patient.id : 'Non défini' }}</td>
+                                                    <td>{{ appointment.patient ? appointment.patient.prenom : 'Non défini' }}</td>
                                                     <td>
                                                         {% if appointment.staff and appointment.staff.id == app.session.get('doctor_id') %}
-                                                            <strong>Moi ({{ appointment.staff.id }})</strong>
+                                                            <strong>Moi ({{ appointment.staff.prenom }})</strong>
                                                         {% else %}
-                                                            {{ appointment.staff ? appointment.staff.id : 'Non défini' }}
+                                                            {{ appointment.staff ? appointment.staff.prenom : 'Non défini' }}
                                                         {% endif %}
                                                     </td>
                                                     <td>{{ appointment.createdAt|date('Y-m-d H:i') }}</td>
@@ -514,6 +514,14 @@
                                     <option value="diagnostic_za">Diagnostic Z-A</option>
                                 </select>
                                 <input type="text" id="searchMedicalFiles" class="form-control form-control-sm" style="max-width: 250px; border: 2px solid white;" placeholder="🔍 Search medical files...">
+                                <form id="ocrUploadForm" method="post" enctype="multipart/form-data" style="display:inline-block;">
+                                    <input type="file" name="file" accept=".pdf,.png,.jpg,.jpeg" style="display:none;" id="medicalFileUploadInput" required>
+                                    <button type="button" class="btn btn-sm btn-success" onclick="document.getElementById('medicalFileUploadInput').click();">Upload</button>
+                                    <button type="submit" class="btn btn-sm btn-primary">Extract</button>
+                                </form>
+                                <div id="ocrResult"></div>
+
+                                
                             </div>
                         </div>
                         <div class="card-body">
@@ -629,6 +637,13 @@
                                             <option value="medicament_za">Médicament Z-A</option>
                                         </select>
                                         <input type="text" id="searchPrescriptions" class="form-control form-control-sm" style="max-width: 250px; border: 2px solid white;" placeholder="🔍 Search prescriptions...">
+                                        <!-- Prescription OCR Upload Form -->
+                                <form id="prescriptionOcrUploadForm" method="post" enctype="multipart/form-data" style="display:inline-block;">
+                                    <input type="file" name="file" accept=".pdf,.png,.jpg,.jpeg" style="display:none;" id="prescriptionFileUploadInput" required>
+                                    <button type="button" class="btn btn-sm btn-success" onclick="document.getElementById('prescriptionFileUploadInput').click();">Upload</button>
+                                    <button type="submit" class="btn btn-sm btn-primary">Extract</button>
+                                </form>
+                                <div id="prescriptionOcrResult"></div>
                                     </div>
                                 </div>
                                 <div class="card-body">
@@ -682,6 +697,45 @@
                                 </div>
                             </div>
 
+
+
+                    <!-- OCR Extraction Modal -->
+<div class="modal fade" id="ocrExtractModal" tabindex="-1" role="dialog" aria-labelledby="ocrExtractModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="ocrExtractModalLabel">Extracted Data</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+            </div>
+            <div class="modal-body" id="ocrExtractModalBody">
+                <!-- Extracted content will be injected here -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="ocrExtractSaveBtn">Save</button>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- Prescription OCR Extraction Modal -->
+<div class="modal fade" id="prescriptionOcrExtractModal" tabindex="-1" role="dialog" aria-labelledby="prescriptionOcrExtractModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="prescriptionOcrExtractModalLabel">Extracted Prescription Data</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+            </div>
+            <div class="modal-body" id="prescriptionOcrExtractModalBody">
+                <!-- Extracted content will be injected here -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="prescriptionOcrExtractSaveBtn">Save</button>
+            </div>
+        </div>
+    </div>
+</div>
+
                     <!-- Single edit modal (outside table to avoid focus/layout bugs) -->
                     <div class="modal fade" id="editFicheModal" tabindex="-1" role="dialog" aria-labelledby="editFicheModalLabel" aria-hidden="true" style="z-index: 1050;">
                         <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
@@ -723,6 +777,89 @@
 <!-- Bootstrap & jQuery from CDN (ensure they're loaded) -->
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+document.getElementById('ocrUploadForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const fileInput = document.getElementById('medicalFileUploadInput');
+    if (!fileInput.files.length) {
+        document.getElementById('ocrResult').innerHTML = '<div class="alert alert-danger">Please select a file.</div>';
+        return;
+    }
+    const formData = new FormData();
+    formData.append('file', fileInput.files[0]);
+    fetch('/api/extract-medical-document', {
+        method: 'POST',
+        body: formData
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.error) {
+            document.getElementById('ocrResult').innerHTML = '<div class="alert alert-danger">' + data.error + '</div>';
+        } else {
+            // Show modal with extracted data
+            let html = '<div style="background:#f8f9fc;padding:20px;border-radius:8px;">';
+            html += '<h5 style="color:#764ba2;">Extracted Text</h5>';
+            html += '<pre style="background:#fff;border-radius:6px;padding:12px;max-height:200px;overflow:auto;">' + data.raw_text + '</pre>';
+            html += '<h5 style="color:#667eea;">Parsed Data</h5>';
+            html += '<div style="background:#fff;border-radius:6px;padding:12px;">';
+                html += '<div class="form-group mb-2"><label><strong>Rendezvous ID:</strong></label> <input type="text" class="form-control form-control-sm" id="ocrExtractRendezVousId" value="' + (data.parsed.rendez_vous_id || '') + '"></div>';
+                html += '<div class="form-group mb-2"><label><strong>Diagnostic:</strong></label> <input type="text" class="form-control form-control-sm" id="ocrExtractDiagnostic" value="' + (data.parsed.diagnostic || '') + '"></div>';
+                html += '<div class="form-group mb-2"><label><strong>Observations:</strong></label> <input type="text" class="form-control form-control-sm" id="ocrExtractObservations" value="' + (data.parsed.observations || '') + '"></div>';
+                html += '<div class="form-group mb-2"><label><strong>Exam Results:</strong></label> <input type="text" class="form-control form-control-sm" id="ocrExtractExamResults" value="' + (data.parsed.resultatsExamens || '') + '"></div>';
+                html += '<div class="form-group mb-2"><label><strong>Start Time:</strong></label> <input type="text" class="form-control form-control-sm" id="ocrExtractStartTime" value="' + (data.parsed.startTime || '') + '"></div>';
+                html += '<div class="form-group mb-2"><label><strong>End Time:</strong></label> <input type="text" class="form-control form-control-sm" id="ocrExtractEndTime" value="' + (data.parsed.endTime || '') + '"></div>';
+                html += '<div class="form-group mb-2"><label><strong>Duration (minutes):</strong></label> <input type="text" class="form-control form-control-sm" id="ocrExtractDuration" value="' + (data.parsed.dureeMinutes || '') + '"></div>';
+                html += '<div class="form-group mb-2"><label><strong>Created At:</strong></label> <input type="text" class="form-control form-control-sm" id="ocrExtractCreatedAt" value="' + (data.parsed.createdAt || '') + '"></div>';
+            html += '</div></div>';
+            // Save extracted fiche to backend
+            document.getElementById('ocrExtractSaveBtn').addEventListener('click', function() {
+                    const rendezVousId = document.getElementById('ocrExtractRendezVousId').value;
+                    const diagnostic = document.getElementById('ocrExtractDiagnostic').value;
+                    const observations = document.getElementById('ocrExtractObservations').value;
+                    const examResults = document.getElementById('ocrExtractExamResults').value;
+                    const startTime = document.getElementById('ocrExtractStartTime').value;
+                    const endTime = document.getElementById('ocrExtractEndTime').value;
+                    const duration = document.getElementById('ocrExtractDuration').value;
+                    const createdAt = document.getElementById('ocrExtractCreatedAt').value;
+                    fetch('/api/save-extracted-fiche', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest'
+                        },
+                        body: JSON.stringify({
+                            rendez_vous_id: rendezVousId,
+                            diagnostic: diagnostic,
+                            observations: observations,
+                            resultatsExamens: examResults,
+                            startTime: startTime,
+                            endTime: endTime,
+                            dureeMinutes: duration,
+                            createdAt: createdAt
+                        })
+                    })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success) {
+                        $('#ocrExtractModal').modal('hide');
+                        document.getElementById('ocrResult').innerHTML = '<div class="alert alert-success">Extracted fiche saved successfully!</div>';
+                    } else {
+                        document.getElementById('ocrResult').innerHTML = '<div class="alert alert-danger">' + (data.error || 'Failed to save fiche.') + '</div>';
+                    }
+                })
+                .catch(err => {
+                    document.getElementById('ocrResult').innerHTML = '<div class="alert alert-danger">Error: ' + err + '</div>';
+                });
+            });
+            document.getElementById('ocrExtractModalBody').innerHTML = html;
+            $('#ocrExtractModal').modal('show');
+        }
+    })
+    .catch(err => {
+        document.getElementById('ocrResult').innerHTML = '<div class="alert alert-danger">Error: ' + err + '</div>';
+    });
+});
+</script>
 <script type="text/javascript">
     window.FICHES_EDIT = {};
     {% if fiches is not empty %}
@@ -1156,5 +1293,86 @@
         }
     });
 })();
+</script>
+
+<script>
+document.getElementById('prescriptionOcrUploadForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const fileInput = document.getElementById('prescriptionFileUploadInput');
+    if (!fileInput.files.length) {
+        document.getElementById('prescriptionOcrResult').innerHTML = '<div class="alert alert-danger">Please select a file.</div>';
+        return;
+    }
+    const formData = new FormData();
+    formData.append('file', fileInput.files[0]);
+    fetch('/api/extract-prescription-document', {
+        method: 'POST',
+        body: formData
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.error) {
+            document.getElementById('prescriptionOcrResult').innerHTML = '<div class="alert alert-danger">' + data.error + '</div>';
+        } else {
+            // Show modal with extracted prescription data
+            let html = '<div style="background:#f8f9fc;padding:20px;border-radius:8px;">';
+            html += '<h5 style="color:#764ba2;">Extracted Text</h5>';
+            html += '<pre style="background:#fff;border-radius:6px;padding:12px;max-height:200px;overflow:auto;">' + data.raw_text + '</pre>';
+            html += '<h5 style="color:#667eea;">Parsed Data</h5>';
+            html += '<div style="background:#fff;border-radius:6px;padding:12px;">';
+            html += '<div class="form-group mb-2"><label><strong>Fiche ID:</strong></label> <input type="text" class="form-control form-control-sm" id="prescriptionExtractFicheId" value="' + (data.parsed.fiche_id || '') + '"></div>';
+            html += '<div class="form-group mb-2"><label><strong>Médicament:</strong></label> <input type="text" class="form-control form-control-sm" id="prescriptionExtractNomMedicament" value="' + (data.parsed.nomMedicament || '') + '"></div>';
+            html += '<div class="form-group mb-2"><label><strong>Dose:</strong></label> <input type="text" class="form-control form-control-sm" id="prescriptionExtractDose" value="' + (data.parsed.dose || '') + '"></div>';
+            html += '<div class="form-group mb-2"><label><strong>Fréquence:</strong></label> <input type="text" class="form-control form-control-sm" id="prescriptionExtractFrequence" value="' + (data.parsed.frequence || '') + '"></div>';
+            html += '<div class="form-group mb-2"><label><strong>Durée (jours):</strong></label> <input type="number" class="form-control form-control-sm" id="prescriptionExtractDuree" value="' + (data.parsed.duree || '') + '"></div>';
+            html += '<div class="form-group mb-2"><label><strong>Instructions:</strong></label> <input type="text" class="form-control form-control-sm" id="prescriptionExtractInstructions" value="' + (data.parsed.instructions || '') + '"></div>';
+            html += '<div class="form-group mb-2"><label><strong>Created At:</strong></label> <input type="text" class="form-control form-control-sm" id="prescriptionExtractCreatedAt" value="' + (data.parsed.createdAt || '') + '"></div>';
+            html += '</div></div>';
+            // Save extracted prescription to backend
+            document.getElementById('prescriptionOcrExtractSaveBtn').addEventListener('click', function() {
+                const ficheId = document.getElementById('prescriptionExtractFicheId').value;
+                const nomMedicament = document.getElementById('prescriptionExtractNomMedicament').value;
+                const dose = document.getElementById('prescriptionExtractDose').value;
+                const frequence = document.getElementById('prescriptionExtractFrequence').value;
+                const duree = document.getElementById('prescriptionExtractDuree').value;
+                const instructions = document.getElementById('prescriptionExtractInstructions').value;
+                const createdAt = document.getElementById('prescriptionExtractCreatedAt').value;
+                fetch('/api/save-extracted-prescription', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    body: JSON.stringify({
+                        fiche_id: ficheId,
+                        nomMedicament: nomMedicament,
+                        dose: dose,
+                        frequence: frequence,
+                        duree: duree,
+                        instructions: instructions,
+                        createdAt: createdAt
+                    })
+                })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success) {
+                        $('#prescriptionOcrExtractModal').modal('hide');
+                        document.getElementById('prescriptionOcrResult').innerHTML = '<div class="alert alert-success">Extracted prescription saved successfully!</div>';
+                    } else {
+                        document.getElementById('prescriptionOcrResult').innerHTML = '<div class="alert alert-danger">' + (data.error || 'Failed to save prescription.') + '</div>';
+                    }
+                })
+                .catch(err => {
+                    document.getElementById('prescriptionOcrResult').innerHTML = '<div class="alert alert-danger">Error: ' + err + '</div>';
+                });
+            });
+            document.getElementById('prescriptionOcrExtractModalBody').innerHTML = html;
+            $('#prescriptionOcrExtractModal').modal('show');
+        }
+    })
+    .catch(err => {
+        document.getElementById('prescriptionOcrResult').innerHTML = '<div class="alert alert-danger">Error: ' + err + '</div>';
+    });
+});
 </script>
 {% endblock %}

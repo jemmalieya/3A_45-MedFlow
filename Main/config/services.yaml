@@ -1,59 +1,153 @@
 # config/services.yaml
 
 parameters:
+
+    # ===============================
+    # 📁 Upload directories
+    # ===============================
     pieces_jointes_directory: '%kernel.project_dir%/public/uploads/pieces_jointes'
     profile_pictures_directory: '%kernel.project_dir%/public/uploads/profile'
+    produits_images_dir: '%kernel.project_dir%/public/uploads/produits'
+
+    # ===============================
+    # 🌍 APIs externes
+    # ===============================
     openfda.api_key: '%env(OPENFDA_API_KEY)%'
     openfda.timeout: '%env(int:OPENFDA_TIMEOUT)%'
+
     groq.api_key: '%env(GROQ_API_KEY)%'
     groq.model: '%env(GROQ_MODEL)%'
-    gemini_api_key: '%env(GEMINI_API_KEY)%'
 
-  
+    gemini_api_key: '%env(GEMINI_API_KEY)%'
+    ocrspace.api_key: '%env(OCRSPACE_API_KEY)%'
+
+    api_ninjas_key: '%env(API_NINJAS_KEY)%'
+    openweather_api_key: '%env(OPENWEATHER_API_KEY)%'
+
+    # ===============================
+    # 🔍 OCR Configuration
+    # ===============================
+    ocr_tesseract_path_default: 'tesseract'
+    ocr_tesseract_lang_default: 'fra+eng'
+
+    ocr.tesseract_path: '%env(default:ocr_tesseract_path_default:TESSERACT_PATH)%'
+    ocr.tesseract_lang: '%env(default:ocr_tesseract_lang_default:TESSERACT_LANG)%'
+
+    # ===============================
+    # 👤 Face Login (MediaPipe)
+    # ===============================
+    face_login_similarity_default: 90
+    face_login_similarity: '%env(int:default:face_login_similarity_default:FACE_LOGIN_SIMILARITY)%'
+
+    face_login_lock_max_fail_default: 3
+    face_login_lock_max_fail: '%env(int:default:face_login_lock_max_fail_default:FACE_LOGIN_LOCK_MAX_FAIL)%'
+
+    face_login_lock_minutes_default: 15
+    face_login_lock_minutes: '%env(int:default:face_login_lock_minutes_default:FACE_LOGIN_LOCK_MINUTES)%'
+
+    # ===============================
+    # 🔐 2FA (TOTP)
+    # ===============================
+    two_factor_remember_days_default: 30
+    two_factor_remember_days: '%env(int:default:two_factor_remember_days_default:TWO_FACTOR_REMEMBER_DAYS)%'
+
+    # ===============================
+    # 🛡 Google reCAPTCHA
+    # ===============================
+    recaptcha_site_key_default: ''
+    recaptcha_secret_key_default: ''
+
+    recaptcha.site_key: '%env(default:recaptcha_site_key_default:RECAPTCHA_SITE_KEY)%'
+    recaptcha.secret_key: '%env(default:recaptcha_secret_key_default:RECAPTCHA_SECRET_KEY)%'
+    huggingface_api_key: '%env(HUGGINGFACE_API_KEY)%'
+    huggingface.api_token: '%env(HUGGINGFACE_API_TOKEN)%'
+    huggingface.toxic_model: '%env(HUGGINGFACE_TOXIC_MODEL)%'
+    moderation.toxic_threshold: '%env(float:MODERATION_TOXIC_THRESHOLD)%'
 
 services:
     _defaults:
         autowire: true
         autoconfigure: true
 
-    # Stripe
-    App\Service\StripePaymentService:
-        arguments:
-            $stripeSecretKey: '%env(STRIPE_SECRET_KEY)%'
-            $appUrl: '%env(APP_URL)%'
-
-    # Twilio
-    App\Service\TwilioSmsService:
-        arguments:
-            $sid: '%env(TWILIO_SID)%'
-            $token: '%env(TWILIO_TOKEN)%'
-            $from: '%env(TWILIO_FROM)%'
-
-    # Auto-register services in src/
+    # ==================================
+    # 📦 Auto-register services
+    # ==================================
     App\:
         resource: '../src/'
         exclude:
             - '../src/DependencyInjection/'
             - '../src/Entity/'
             - '../src/Kernel.php'
-    # Gemini Service
-    # Gemini Service
+
+    # ==================================
+    # 💳 Stripe
+    # ==================================
+    App\Service\StripePaymentService:
+        arguments:
+            $stripeSecretKey: '%env(STRIPE_SECRET_KEY)%'
+            $appUrl: '%env(APP_URL)%'
+
+    # ==================================
+    # 🤖 AI Services
+    # ==================================
     App\Service\GeminiService:
         arguments:
             $geminiApiKey: '%gemini_api_key%'
             $geminiModel: 'gemini-2.5-flash'
 
-    # OpenFDA (Service d'interactions médicamenteuses)
-    App\Service\OpenFdaService:
-        arguments:
-            $apiKey: '%openfda.api_key%'
-            
     App\Service\GroqService:
         arguments:
             $apiKey: '%groq.api_key%'
             $model: '%groq.model%'
 
+    App\Service\AiRiskService:
+        arguments:
+            $groqKey: '%groq.api_key%'
+            $groqModel: '%groq.model%'
 
+    App\Service\AiEventRecommenderService:
+        arguments:
+            $groqKey: '%groq.api_key%'
+            $groqModel: '%groq.model%'
+
+    App\Service\AiPrescriptionService:
+        arguments:
+            $huggingfaceApiKey: '%huggingface_api_key%'
+
+    App\Service\DialogflowService:
+        arguments:
+            $projectId: 'medflow-ai-assistant'
+            $credentialsPath: '%kernel.project_dir%/config/medflow-ai-assistant-ba2dd08bcd44.json'
+
+    # ==================================
+    # 💊 Santé & Epidémie
+    # ==================================
+    App\Service\OpenFdaService:
+        arguments:
+            $apiKey: '%openfda.api_key%'
+
+    App\Service\EpidemieDetectionService:
+        arguments:
+            $apiNinjasKey: '%api_ninjas_key%'
+            $openWeatherApiKey: '%openweather_api_key%'
+
+    # ==================================
+    # 🔍 OCR Service (fusion propre)
+    # ==================================
+    App\Service\OcrService:
+        arguments:
+            $ocrspaceKey: '%ocrspace.api_key%'
+
+    # ==================================
+    # 🔐 reCAPTCHA
+    # ==================================
+    App\Service\RecaptchaService:
+        arguments:
+            $secretKey: '%recaptcha.secret_key%'
+
+    # ==================================
+    # 📧 Mailer personnalisé
+    # ==================================
     mailer.transports.my:
         class: Symfony\Component\Mailer\Transport\TransportInterface
         factory: ['@mailer.transport_factory', 'fromDsn']
@@ -64,8 +158,22 @@ services:
         class: Symfony\Component\Mailer\Mailer
         arguments:
             - '@mailer.transports.my'
-            
-    App\Service\DialogflowService:
+
+    # ==================================
+    # 🔲 QR Code
+    # ==================================
+    App\Service\QrCodeService:
         arguments:
-            $projectId: 'medflow-ai-assistant' # Replace with your Dialogflow project ID
-            $credentialsPath: '%kernel.project_dir%/config/medflow-ai-assistant-ba2dd08bcd44.json'
+            $projectDir: '%kernel.project_dir%'
+    App\Service\CalusinaryEventservice:
+        arguments:
+            $cloudinaryUrl: '%env(resolve:CLOUDINARY_URL)%'
+    Cloudinary\Cloudinary:
+        arguments:
+         - '%env(CLOUDINARY_URL)%'
+     
+    App\Service\AiCommentModerationService:
+        arguments:
+           $hfToken: '%huggingface.api_token%'
+           $hfModel: '%huggingface.toxic_model%'
+           $threshold: '%moderation.toxic_threshold%'

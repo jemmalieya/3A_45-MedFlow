@@ -10,9 +10,10 @@
       <h1 class="h3 mb-1">Fiche patient</h1>
       <p class="text-muted mb-0">{{ patient.nom }} {{ patient.prenom }}</p>
     </div>
-    <a href="{{ path('admin_patients_index') }}" class="btn btn-outline-secondary">
-      ← Liste
-    </a>
+    <div class="d-flex gap-2">
+      <a href="{{ path('admin_patients_stats') }}" class="btn btn-outline-primary">Statistiques</a>
+      <a href="{{ path('admin_patients_index') }}" class="btn btn-outline-secondary">← Liste</a>
+    </div>
   </div>
 
   <div class="row g-4">

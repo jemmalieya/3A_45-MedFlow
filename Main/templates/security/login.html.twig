@@ -2,156 +2,6 @@
 
 {% block title %}Connexion{% endblock %}
 
-{% block stylesheets %}
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
-
-  <script>
-    (function () {
-      var storageKey = 'medflow-theme';
-      var saved = null;
-      try { saved = localStorage.getItem(storageKey); } catch (e) { saved = null; }
-      var prefersDark = false;
-      try { prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches; } catch (e) { prefersDark = false; }
-      var theme = saved || (prefersDark ? 'dark' : 'light');
-      document.documentElement.setAttribute('data-bs-theme', theme);
-    })();
-  </script>
-
-  <style>
-    :root[data-bs-theme="dark"]{
-      --auth-bg: #0b1220;
-      --auth-card-bg: rgba(15, 23, 42, 0.85);
-      --auth-card-border: rgba(255,255,255,.12);
-      --auth-card-shadow: 0 30px 90px rgba(0,0,0,.45);
-      --auth-input-bg: rgba(255,255,255,.08);
-      --auth-input-border: rgba(255,255,255,.18);
-      --auth-input-color: #fff;
-      --auth-placeholder: rgba(255,255,255,.45);
-      --auth-btn-shadow: 0 18px 55px rgba(var(--bs-primary-rgb), .35);
-    }
-
-    :root[data-bs-theme="light"]{
-      --auth-bg: var(--bs-body-bg);
-      --auth-card-bg: rgba(255,255,255,.92);
-      --auth-card-border: rgba(0,0,0,.10);
-      --auth-card-shadow: 0 20px 60px rgba(0,0,0,.12);
-      --auth-input-bg: rgba(0,0,0,.02);
-      --auth-input-border: rgba(0,0,0,.14);
-      --auth-input-color: var(--bs-body-color);
-      --auth-placeholder: rgba(0,0,0,.45);
-      --auth-btn-shadow: 0 14px 45px rgba(var(--bs-primary-rgb), .22);
-    }
-
-    .auth-page{
-      min-height: 100vh;
-      display: flex;
-      align-items: center;
-      background:
-        radial-gradient(1200px circle at 10% 10%, rgba(var(--bs-primary-rgb), .18), transparent 45%),
-        radial-gradient(900px circle at 90% 20%, rgba(var(--bs-success-rgb), .12), transparent 40%),
-        var(--auth-bg);
-    }
-
-    .glass-card{
-      background: var(--auth-card-bg);
-      border: 1px solid var(--auth-card-border);
-      box-shadow: var(--auth-card-shadow);
-      backdrop-filter: blur(10px);
-      border-radius: 18px;
-      color: var(--bs-body-color);
-    }
-
-    .form-label{ color: var(--bs-body-color); }
-
-    .form-control{
-      background: var(--auth-input-bg) !important;
-      border: 1px solid var(--auth-input-border) !important;
-      color: var(--auth-input-color) !important;
-      border-radius: 12px;
-      padding: .85rem .95rem;
-      transition: all .25s ease;
-    }
-    .form-control::placeholder{ color: var(--auth-placeholder); }
-    .form-control:focus{
-      box-shadow: 0 0 0 .2rem rgba(var(--bs-primary-rgb), .25);
-      border-color: rgba(var(--bs-primary-rgb), .60) !important;
-      color: var(--auth-input-color) !important;
-    }
-
-    .small-link{ color: var(--bs-link-color); }
-    .small-link:hover{ color: var(--bs-link-hover-color); text-decoration: underline; }
-
-    .btn-glow{
-      border-radius: 12px;
-      padding: .85rem 1rem;
-      font-weight: 800;
-      box-shadow: var(--auth-btn-shadow);
-    }
-    .btn-primary{
-      background: linear-gradient(135deg, rgba(var(--bs-primary-rgb), 1), rgba(var(--bs-primary-rgb), .82));
-      border: none;
-    }
-    .btn-primary:hover{
-      filter: brightness(1.05);
-    }
-
-    #themeToggle{
-      border-radius: 999px;
-      padding: .35rem .55rem;
-      line-height: 1;
-      --bs-btn-color: var(--bs-body-color);
-      --bs-btn-border-color: rgba(var(--bs-body-color-rgb), .25);
-      --bs-btn-hover-bg: rgba(var(--bs-body-color-rgb), .08);
-      --bs-btn-hover-border-color: rgba(var(--bs-body-color-rgb), .35);
-    }
-
-    .btn-google{
-      border-radius: 12px;
-      padding: .85rem 1rem;
-      font-weight: 700;
-      --bs-btn-color: var(--bs-body-color);
-      --bs-btn-border-color: rgba(var(--bs-body-color-rgb), .25);
-      --bs-btn-hover-bg: rgba(var(--bs-body-color-rgb), .08);
-      --bs-btn-hover-border-color: rgba(var(--bs-body-color-rgb), .35);
-    }
-
-    .auth-brand{
-      display: flex;
-      align-items: center;
-      gap: .75rem;
-      margin-bottom: 1.25rem;
-    }
-    .auth-brand__logo{
-      width: 44px;
-      height: 44px;
-      border-radius: 12px;
-      background: rgba(var(--bs-body-color-rgb), .06);
-      border: 1px solid rgba(var(--bs-body-color-rgb), .12);
-      display: grid;
-      place-items: center;
-      overflow: hidden;
-      flex: 0 0 auto;
-    }
-    .auth-brand__logo img{
-      width: 32px;
-      height: 32px;
-      object-fit: contain;
-    }
-    .auth-brand__title{
-      font-weight: 800;
-      letter-spacing: .2px;
-      line-height: 1.1;
-      margin: 0;
-    }
-    .auth-brand__subtitle{
-      margin: 0;
-      font-size: .92rem;
-      color: var(--bs-secondary-color);
-    }
-  </style>
-{% endblock %}
-
 {% block body %}
 <div class="auth-page">
   <div class="container py-5">
@@ -231,13 +81,19 @@
 
           <div class="mb-3">
             <label class="form-label">Mot de passe</label>
-            <input
-              type="password"
-              name="password"
-              class="form-control"
-              placeholder="••••••••"
-              autocomplete="current-password"
-            >
+            <div class="input-group">
+              <input
+                type="password"
+                id="login_password"
+                name="password"
+                class="form-control"
+                placeholder="••••••••"
+                autocomplete="current-password"
+              >
+              <button type="button" class="btn btn-outline-secondary" data-password-toggle="login_password" aria-label="Afficher le mot de passe">
+                <i class="bi bi-eye"></i>
+              </button>
+            </div>
             <div class="text-end mt-2">
               <a href="{{ path('forgot_password') }}" class="small-link text-decoration-none">
                 Mot de passe oublié ?
@@ -247,11 +103,58 @@
           </div>
 
           <input type="hidden" name="_csrf_token" value="{{ csrf_token('authenticate') }}">
+          <input type="hidden" name="faceEmbedding" value="" data-face-embedding>
+
+          {% if recaptcha_site_key %}
+            <div class="d-flex justify-content-center mt-3">
+              <div class="g-recaptcha" data-sitekey="{{ recaptcha_site_key }}"></div>
+            </div>
+          {% endif %}
 
           <div class="d-grid mt-4">
             <button class="btn btn-primary btn-glow" type="submit">
-              Se connecter
+              <i class="bi bi-box-arrow-in-right me-2"></i>Se connecter
             </button>
+          </div>
+
+          {# ✅ Face login (same form, posts to /login/face via JS) #}
+          <div class="text-center my-3 text-muted">— ou —</div>
+          <div class="d-grid">
+            <button type="button" class="btn btn-outline-primary" data-face-login-open>
+              <i class="bi bi-camera me-2"></i> Se connecter par visage
+            </button>
+          </div>
+
+          <div class="mt-3" data-face-login-box hidden>
+            <div class="auth-surface rounded-3 p-3">
+              <div class="d-flex align-items-center justify-content-between gap-2 flex-wrap mb-2">
+                <div class="fw-semibold">
+                  <i class="bi bi-camera me-1"></i> Connexion par visage
+                </div>
+                <button type="button" class="btn btn-sm btn-outline-secondary" data-face-login-cancel>
+                  Fermer
+                </button>
+              </div>
+
+              <div class="border rounded-3 p-2 bg-white">
+                <div class="rounded-3 overflow-hidden" style="height: 260px;">
+                  <video data-face-video class="w-100" playsinline autoplay muted style="width:100%;height:100%;object-fit:cover;"></video>
+                </div>
+              </div>
+
+              <div class="d-flex gap-2 mt-3">
+                <button type="button" class="btn btn-primary btn-glow" data-face-login-capture>
+                  <i class="bi bi-shield-check me-1"></i> Vérifier mon visage
+                </button>
+                <button type="button" class="btn btn-outline-secondary" data-face-login-retry hidden>
+                  Réessayer
+                </button>
+              </div>
+
+              <div class="small text-muted mt-2" data-face-login-status aria-live="polite"></div>
+              <div class="alert alert-success mt-3 d-none" data-face-login-success role="alert" aria-live="polite"></div>
+              <div class="alert alert-danger mt-3 d-none" data-face-login-error role="alert" aria-live="polite"></div>
+            </div>
           </div>
 
           {# ✅ Google button (no second form!) #}
@@ -275,41 +178,397 @@
   </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+{% endblock %}
+
+{% block page_scripts %}
 <script>
   (function () {
-    var storageKey = 'medflow-theme';
-    var root = document.documentElement;
+    const form = document.querySelector('form');
+    if (!form) return;
 
-    function setIcons(theme) {
-      var sun = document.getElementById('themeIconSun');
-      var moon = document.getElementById('themeIconMoon');
-      if (!sun || !moon) return;
-      if (theme === 'dark') {
-        sun.classList.remove('d-none');
-        moon.classList.add('d-none');
-      } else {
-        sun.classList.add('d-none');
-        moon.classList.remove('d-none');
+    const openBtn = form.querySelector('[data-face-login-open]');
+    const box = form.querySelector('[data-face-login-box]');
+    const video = form.querySelector('[data-face-video]');
+    const captureBtn = form.querySelector('[data-face-login-capture]');
+    const cancelBtn = form.querySelector('[data-face-login-cancel]');
+    const retryBtn = form.querySelector('[data-face-login-retry]');
+    const errBox = form.querySelector('[data-face-login-error]');
+            const okBox = form.querySelector('[data-face-login-success]');
+    const statusBox = form.querySelector('[data-face-login-status]');
+    const faceInput = form.querySelector('[data-face-embedding]');
+    const emailInput = form.querySelector('input[name="emailUser"]');
+
+    if (!openBtn || !box || !video || !captureBtn || !cancelBtn || !retryBtn || !faceInput || !emailInput) return;
+
+    let stream = null;
+    const initialAction = form.getAttribute('action') || '';
+
+    const showErr = (msg) => {
+      if (!errBox) return;
+      errBox.textContent = msg || 'Erreur.';
+      errBox.classList.remove('d-none');
+    };
+
+    const hideErr = () => {
+      if (!errBox) return;
+      errBox.textContent = '';
+      errBox.classList.add('d-none');
+    };
+
+    const showOk = (msg) => {
+      if (!okBox) return;
+      okBox.textContent = msg || 'Succès.';
+      okBox.classList.remove('d-none');
+    };
+
+    const hideOk = () => {
+      if (!okBox) return;
+      okBox.textContent = '';
+      okBox.classList.add('d-none');
+    };
+
+    const setStatus = (msg) => {
+      if (!statusBox) return;
+      statusBox.textContent = msg || '';
+    };
+
+    const showRetry = (show) => {
+      retryBtn.hidden = !show;
+    };
+
+    const detachStream = () => {
+      try { video.pause(); } catch (e) {}
+      try { video.srcObject = null; } catch (e) {}
+    };
+
+    const hardStopStream = () => {
+      try {
+        if (stream) {
+          stream.getTracks().forEach(t => t.stop());
+        }
+      } catch (e) {}
+      stream = null;
+      detachStream();
+    };
+
+    const startCamera = async () => {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        throw new Error('Caméra indisponible sur ce navigateur.');
       }
-    }
 
-    function applyTheme(theme) {
-      root.setAttribute('data-bs-theme', theme);
-      setIcons(theme);
-      try { localStorage.setItem(storageKey, theme); } catch (e) {}
-    }
+      // Reuse the same stream while the page is open to avoid repeated permission prompts.
+      const isUsable = (s) => {
+        try {
+          return !!s && s.getTracks().some(t => t.readyState === 'live');
+        } catch (e) {
+          return false;
+        }
+      };
 
-    var current = root.getAttribute('data-bs-theme') || 'dark';
-    setIcons(current);
+      if (!isUsable(stream)) {
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false });
+        } catch (e) {
+          const name = (e && e.name) ? String(e.name) : '';
+          if (name === 'NotAllowedError' || name === 'PermissionDeniedError') {
+            throw new Error('Accès caméra refusé. Autorisez la caméra puis réessayez.');
+          }
+          if (name === 'NotFoundError' || name === 'DevicesNotFoundError') {
+            throw new Error('Aucune caméra détectée.');
+          }
+          throw e;
+        }
+      }
+      video.srcObject = stream;
+      await video.play().catch(() => {});
+    };
 
-    var toggle = document.getElementById('themeToggle');
-    if (toggle) {
-      toggle.addEventListener('click', function () {
-        var theme = root.getAttribute('data-bs-theme') === 'dark' ? 'light' : 'dark';
-        applyTheme(theme);
+    // ===== MediaPipe (FaceDetector + ImageEmbedder) =====
+    const mediapipeWasmRoot = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.0/wasm';
+    const mediapipeModuleUrl = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.0';
+
+    const faceDetectorModelUrl = 'https://storage.googleapis.com/mediapipe-models/face_detector/blaze_face_short_range/float16/1/blaze_face_short_range.tflite';
+    const imageEmbedderModelUrl = 'https://storage.googleapis.com/mediapipe-models/image_embedder/mobilenet_v3_small/float32/1/mobilenet_v3_small.tflite';
+
+    let mpPromise = null;
+    const getMp = async () => {
+      if (mpPromise) return mpPromise;
+      mpPromise = (async () => {
+        const vision = await import(mediapipeModuleUrl);
+        const fileset = await vision.FilesetResolver.forVisionTasks(mediapipeWasmRoot);
+
+        const createWithDelegate = async (delegate) => {
+          const faceDetector = await vision.FaceDetector.createFromOptions(fileset, {
+            baseOptions: { modelAssetPath: faceDetectorModelUrl, ...(delegate ? { delegate } : {}) },
+            runningMode: 'VIDEO',
+          });
+
+          const embedder = await vision.ImageEmbedder.createFromOptions(fileset, {
+            baseOptions: { modelAssetPath: imageEmbedderModelUrl, ...(delegate ? { delegate } : {}) },
+            runningMode: 'IMAGE',
+          });
+
+          return { faceDetector, embedder };
+        };
+
+        try {
+          return await createWithDelegate('GPU');
+        } catch (e) {
+          return await createWithDelegate(null);
+        }
+
+      })();
+      return mpPromise;
+    };
+
+    const l2Normalize = (vec) => {
+      let norm = 0;
+      for (let i = 0; i < vec.length; i++) norm += vec[i] * vec[i];
+      norm = Math.sqrt(norm);
+      if (!Number.isFinite(norm) || norm <= 0) throw new Error('Capture impossible.');
+      for (let i = 0; i < vec.length; i++) vec[i] = vec[i] / norm;
+      return vec;
+    };
+
+    const averageAndNormalize = (vectors) => {
+      if (!Array.isArray(vectors) || vectors.length === 0) {
+        throw new Error('Capture impossible.');
+      }
+      const dim = vectors[0].length;
+      if (!dim || dim < 64) {
+        throw new Error('Capture impossible.');
+      }
+
+      const sum = new Array(dim).fill(0);
+      for (const v of vectors) {
+        if (!Array.isArray(v) || v.length !== dim) {
+          throw new Error('Capture impossible.');
+        }
+        for (let i = 0; i < dim; i++) sum[i] += Number(v[i]) || 0;
+      }
+
+      const avg = sum.map(x => x / vectors.length);
+      return l2Normalize(avg);
+    };
+
+    const getSingleFaceBbox = (detections) => {
+      if (!Array.isArray(detections) || detections.length !== 1) {
+        throw new Error('Veuillez cadrer un seul visage.');
+      }
+      const d = detections[0];
+      const score = d && d.categories && d.categories[0] && typeof d.categories[0].score === 'number'
+        ? Number(d.categories[0].score)
+        : null;
+      if (score !== null && score < 0.6) {
+        throw new Error('Veuillez cadrer un seul visage (détection faible).');
+      }
+      const bb = d && d.boundingBox ? d.boundingBox : null;
+      if (!bb) throw new Error('Veuillez cadrer un seul visage.');
+      const x = Number(bb.originX);
+      const y = Number(bb.originY);
+      const w = Number(bb.width);
+      const h = Number(bb.height);
+      if (![x, y, w, h].every(Number.isFinite) || w <= 0 || h <= 0) {
+        throw new Error('Veuillez cadrer un seul visage.');
+      }
+      const vw = video.videoWidth || 0;
+      const vh = video.videoHeight || 0;
+      if (vw && vh) {
+        const minSide = Math.min(vw, vh);
+        if (Math.min(w, h) < minSide * 0.18) {
+          throw new Error('Rapprochez-vous de la caméra (visage trop petit).');
+        }
+      }
+      return { x, y, w, h };
+    };
+
+    const cropFaceToCanvas = (bbox) => {
+      const vw = video.videoWidth || 0;
+      const vh = video.videoHeight || 0;
+      if (!vw || !vh) throw new Error('Caméra non prête.');
+
+      const pad = 0.35 * Math.max(bbox.w, bbox.h);
+      let sx = bbox.x - pad;
+      let sy = bbox.y - pad;
+      let sw = bbox.w + pad * 2;
+      let sh = bbox.h + pad * 2;
+
+      sx = Math.max(0, Math.min(vw - 1, sx));
+      sy = Math.max(0, Math.min(vh - 1, sy));
+      sw = Math.max(1, Math.min(vw - sx, sw));
+      sh = Math.max(1, Math.min(vh - sy, sh));
+
+      const canvas = document.createElement('canvas');
+      canvas.width = 224;
+      canvas.height = 224;
+      const ctx = canvas.getContext('2d', { willReadFrequently: true });
+      if (!ctx) throw new Error('Capture impossible.');
+
+      ctx.drawImage(video, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
+      return canvas;
+    };
+
+    const extractEmbeddingFromResult = (res) => {
+      const embs = res && res.embeddings ? res.embeddings : null;
+      if (!Array.isArray(embs) || embs.length < 1) throw new Error('Capture impossible.');
+      const e0 = embs[0];
+      const floats = e0 && e0.floatEmbedding ? e0.floatEmbedding : null;
+      if (!floats || typeof floats.length !== 'number') throw new Error('Capture impossible.');
+      const vec = Array.from(floats, v => Number(v));
+      if (vec.length < 64) throw new Error('Capture impossible.');
+      return l2Normalize(vec);
+    };
+
+    const captureEmbeddingOnce = async () => {
+      const w = video.videoWidth || 0;
+      const h = video.videoHeight || 0;
+      if (!w || !h) {
+        throw new Error('Caméra non prête.');
+      }
+
+      const mp = await getMp();
+      const det = mp.faceDetector.detectForVideo(video, performance.now());
+      const bbox = getSingleFaceBbox(det && det.detections ? det.detections : []);
+      const faceCanvas = cropFaceToCanvas(bbox);
+      const embRes = mp.embedder.embed(faceCanvas);
+      return extractEmbeddingFromResult(embRes);
+    };
+
+    const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+    const captureEmbedding = async (onProgress) => {
+      const samples = [];
+      const count = 10;
+      for (let i = 0; i < count; i++) {
+        if (typeof onProgress === 'function') onProgress(i + 1, count);
+        samples.push(await captureEmbeddingOnce());
+        if (i < count - 1) await sleep(90);
+      }
+      if (typeof onProgress === 'function') onProgress(count, count);
+      return averageAndNormalize(samples);
+    };
+
+    const faceLoginAjax = async (payload) => {
+      const fd = new FormData();
+      fd.set('_csrf_token', String(form.querySelector('input[name="_csrf_token"]')?.value || ''));
+      fd.set('emailUser', (emailInput.value || '').trim());
+      fd.set('faceEmbedding', JSON.stringify(payload));
+
+      // Forward reCAPTCHA token as well.
+      const captchaVal = String(form.querySelector('textarea[name="g-recaptcha-response"]')?.value || '');
+      if (captchaVal) fd.set('g-recaptcha-response', captchaVal);
+
+      const res = await fetch('{{ path('app_login_face') }}', {
+        method: 'POST',
+        body: fd,
+        credentials: 'same-origin',
+        headers: {
+          'Accept': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest'
+        },
       });
-    }
+
+      const ct = (res.headers.get('content-type') || '').toLowerCase();
+      if (!ct.includes('application/json')) {
+        throw new Error('Réponse inattendue. Réessayez.');
+      }
+      const data = await res.json().catch(() => ({}));
+      return { ok: !!data.ok, error: data.error || null, redirectTo: data.redirectTo || null };
+    };
+
+    openBtn.addEventListener('click', async () => {
+      hideErr();
+      hideOk();
+      faceInput.value = '';
+      setStatus('');
+      showRetry(false);
+
+      const email = (emailInput.value || '').trim();
+      if (!email) {
+        showErr('Veuillez saisir votre email avant.');
+        emailInput.focus();
+        return;
+      }
+
+      box.hidden = false;
+      openBtn.disabled = true;
+      try {
+        setStatus('Activation de la caméra…');
+        await startCamera();
+
+        setStatus('Chargement du modèle…');
+        await getMp();
+        setStatus('Prêt.');
+      } catch (e) {
+        hardStopStream();
+        box.hidden = true;
+        setStatus('');
+        showErr(e.message || 'Impossible d’activer la caméra.');
+      } finally {
+        openBtn.disabled = false;
+      }
+    });
+
+    cancelBtn.addEventListener('click', () => {
+      hideErr();
+      hideOk();
+      detachStream();
+      box.hidden = true;
+      faceInput.value = '';
+      setStatus('');
+      showRetry(false);
+      if (initialAction) form.setAttribute('action', initialAction); else form.removeAttribute('action');
+    });
+
+    retryBtn.addEventListener('click', () => {
+      hideErr();
+      hideOk();
+      faceInput.value = '';
+      setStatus('Prêt.');
+      showRetry(false);
+    });
+
+    captureBtn.addEventListener('click', () => {
+      hideErr();
+      hideOk();
+      showRetry(false);
+      (async () => {
+        try {
+          captureBtn.disabled = true;
+          cancelBtn.disabled = true;
+          setStatus('Détection du visage…');
+          const vec = await captureEmbedding((i, total) => setStatus(`Capture ${i}/${total}…`));
+          const payload = { v: 2, type: 'mp_image_embedder_face_crop_v1', vec };
+          faceInput.value = JSON.stringify(payload);
+          setStatus('Vérification…');
+
+          const res = await faceLoginAjax(payload);
+          if (res.ok && res.redirectTo) {
+            showOk('Visage vérifié. Connexion…');
+            setStatus('');
+            // Give a short moment for the user to see success.
+            setTimeout(() => {
+              hardStopStream();
+              window.location.assign(res.redirectTo);
+            }, 350);
+            return;
+          }
+
+          showErr(res.error || 'Échec de la connexion. Réessayez.');
+          setStatus('');
+          showRetry(true);
+        } catch (e) {
+          showErr((e && e.message) ? e.message : 'Capture impossible.');
+          setStatus('');
+          showRetry(true);
+        } finally {
+          captureBtn.disabled = false;
+          cancelBtn.disabled = false;
+        }
+      })();
+    });
+
+    window.addEventListener('beforeunload', hardStopStream);
   })();
 </script>
 {% endblock %}

@@ -1,0 +1,92 @@
+/* ===========================
+   DARK MODE — PHARMACIE
+   =========================== */
+
+   body.dark {
+    background: #0f172a !important;
+    color: #e5e7eb !important;
+  }
+  
+  /* Containers */
+  body.dark .mw-1120,
+  body.dark .container {
+    color: #e5e7eb;
+  }
+  
+  /* Cards */
+  body.dark .produit-card,
+  body.dark .reco-zone,
+  body.dark .search-filter-section,
+  body.dark .ai-panel,
+  body.dark .modal-content,
+  body.dark .quick-actions {
+    background: #111827 !important;
+    border-color: rgba(0,191,166,.25) !important;
+    color: #e5e7eb !important;
+  }
+  
+  /* Headers */
+  body.dark .page-header,
+  body.dark .modal-header,
+  body.dark .ai-head {
+    background: #0097B2 !important;
+    color: #ffffff !important;
+  }
+  
+  /* Text */
+  body.dark .card-title,
+  body.dark .reco-title,
+  body.dark .detail-label {
+    color: #f9fafb !important;
+  }
+  
+  body.dark .text-muted,
+  body.dark .detail-value {
+    color: #9ca3af !important;
+  }
+  
+  /* Inputs */
+  body.dark input,
+  body.dark select,
+  body.dark .ai-input {
+    background: #0b1220 !important;
+    color: #e5e7eb !important;
+    border-color: rgba(0,191,166,.4) !important;
+  }
+  
+  /* Buttons */
+  body.dark .btn-details,
+  body.dark .btn-contact,
+  body.dark .btn-tts {
+    background: transparent !important;
+    color: #5eead4 !important;
+    border-color: #5eead4 !important;
+  }
+  
+  body.dark .btn-add-cart,
+  body.dark .ai-send,
+  body.dark .btn-orders,
+  body.dark .ai-fab {
+    background: #0097B2 !important;
+    color: #fff !important;
+  }
+  
+  /* Tables / details rows */
+  body.dark .detail-row {
+    border-color: rgba(255,255,255,.08) !important;
+  }
+  
+  /* AI chat */
+  body.dark .ai-body {
+    background: #0b1220 !important;
+  }
+  
+  body.dark .ai-bot {
+    background: #111827 !important;
+    color: #e5e7eb !important;
+  }
+  
+  body.dark .ai-user {
+    background: #0097B2 !important;
+    color: #fff !important;
+  }

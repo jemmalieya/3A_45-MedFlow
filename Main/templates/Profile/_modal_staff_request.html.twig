@@ -88,6 +88,12 @@
       <input type="file" name="proofs[]" class="form-control" accept="image/*,.pdf" multiple>
     </div>
 
+    {% if recaptcha_site_key %}
+      <div class="d-flex justify-content-center mt-3">
+        <div class="g-recaptcha" data-sitekey="{{ recaptcha_site_key }}"></div>
+      </div>
+    {% endif %}
+
     <div class="alert d-none" id="staffRequestAlert"></div>
   </form>
 </div>

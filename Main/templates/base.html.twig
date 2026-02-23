@@ -121,6 +121,10 @@
   {% set nom = app.user.nom ?? '' %}
   {% set initials = (prenom|slice(0,1) ~ nom|slice(0,1))|upper %}
   {% set pic = app.user.profilePicture ?? null %}
+  {% set picUrl = (pic and (pic starts with 'http'))
+    ? pic
+    : (pic ? asset('uploads/profile/' ~ pic) : null)
+  %}
 
   <div class="dropdown ms-3">
 
@@ -133,8 +137,8 @@
       <div class="profile-trigger__container">
 
         <div class="profile-trigger__avatar">
-          {% if pic %}
-            <img src="{{ asset('uploads/profile/' ~ pic) }}" alt="Photo de profil">
+          {% if picUrl %}
+            <img src="{{ picUrl }}" alt="Photo de profil">
           {% else %}
             <span class="profile-trigger__initials">{{ initials ?: 'U' }}</span>
           {% endif %}
@@ -157,8 +161,8 @@
       <li class="profile-dd__header">
         <div class="d-flex align-items-center gap-3">
           <div class="profile-dd__avatar">
-            {% if pic %}
-              <img src="{{ asset('uploads/profile/' ~ pic) }}" alt="Photo de profil">
+            {% if picUrl %}
+              <img src="{{ picUrl }}" alt="Photo de profil">
             {% else %}
               <span class="profile-dd__initials">{{ initials ?: 'U' }}</span>
             {% endif %}
@@ -243,16 +247,6 @@
         </button>
       </li>
 
-      <li>
-        <button type="button" class="dropdown-item profile-dd__item js-open-modal"
-                data-url="{{ path('profile_modal_staff_request') }}"
-                data-title="Demande de rôle">
-          <span class="profile-dd__icon"><i class="bi bi-briefcase"></i></span>
-          <span class="profile-dd__text">Demander un rôle / accès</span>
-          <span class="profile-dd__chev"><i class="bi bi-chevron-right"></i></span>
-        </button>
-      </li>
-
       <li><hr class="dropdown-divider profile-dd__divider"></li>
 
       <li>
@@ -275,6 +269,38 @@
   </header>
 
   {# ====== GLOBAL MODAL (PROFILE) ====== #}
+  <style>
+    /* ===== MedFlow brand tokens (Profile modals only) ===== */
+    #globalModal, .profile-dd__menu{
+      --mf-primary: #0097B2; /* Dark Turquoise */
+      --mf-primary-rgb: 0, 151, 178;
+      --mf-blue: #003399;   /* Vivid Blue */
+      --mf-blue-rgb: 0, 51, 153;
+
+      --mf-surface: #ffffff;
+      --mf-border: rgba(15, 23, 42, .10);
+      --mf-shadow: 0 24px 70px rgba(2, 6, 23, .18);
+    }
+
+    #globalModal .modal-dialog{ max-width: 920px; }
+    #globalModal .modal-content{
+      border: 1px solid var(--mf-border);
+      border-radius: 18px;
+      overflow: hidden;
+      box-shadow: var(--mf-shadow);
+      background: var(--mf-surface);
+    }
+
+    #globalModal .modal-header{
+      border-bottom: 1px solid rgba(255,255,255,.18);
+      background: linear-gradient(135deg,
+        rgba(var(--mf-primary-rgb), .18),
+        rgba(var(--mf-blue-rgb), .10)
+      );
+    }
+    #globalModal .modal-title{ font-weight: 800; letter-spacing: .2px; }
+    #globalModal .btn-close{ opacity: .85; }
+  </style>
   <div class="modal fade" id="globalModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered">
       <div class="modal-content">
@@ -465,6 +491,612 @@
         }
 
         modalBody.innerHTML = html;
+
+        // ===== 2FA UI (inside profile edit modal) =====
+        const init2faUi = (root) => {
+          const badge = root.querySelector('[data-2fa-badge]');
+          const actions = root.querySelector('[data-2fa-actions]');
+          const enableBtn = root.querySelector('[data-2fa-enable]');
+          const disableBtn = root.querySelector('[data-2fa-disable]');
+          const setupBox = root.querySelector('[data-2fa-setup]');
+          const secretInput = root.querySelector('[data-2fa-secret]');
+          const qrBox = root.querySelector('[data-2fa-qr]');
+          const codeInput = root.querySelector('[data-2fa-code]');
+          const confirmBtn = root.querySelector('[data-2fa-confirm]');
+          const cancelBtn = root.querySelector('[data-2fa-cancel]');
+          const errBox = root.querySelector('[data-2fa-error]');
+
+          const disableBox = root.querySelector('[data-2fa-disable-box]');
+          const disableCode = root.querySelector('[data-2fa-disable-code]');
+          const disableConfirm = root.querySelector('[data-2fa-disable-confirm]');
+          const disableCancel = root.querySelector('[data-2fa-disable-cancel]');
+          const disableErr = root.querySelector('[data-2fa-disable-error]');
+
+          if (!badge || !actions || !enableBtn || !setupBox || !secretInput || !qrBox || !codeInput || !confirmBtn || !cancelBtn || !disableBtn || !disableBox || !disableCode || !disableConfirm || !disableCancel) {
+            return; // Not the profile edit modal
+          }
+
+          const showErr = (box, msg) => {
+            if (!box) return;
+            box.textContent = msg || 'Erreur.';
+            box.classList.remove('d-none');
+          };
+          const hideErr = (box) => {
+            if (!box) return;
+            box.textContent = '';
+            box.classList.add('d-none');
+          };
+
+          const setBadge = (enabled) => {
+            if (enabled) {
+              badge.textContent = 'Activé';
+              badge.className = 'badge text-bg-success';
+              disableBtn.hidden = false;
+              enableBtn.hidden = true;
+            } else {
+              badge.textContent = 'Désactivé';
+              badge.className = 'badge text-bg-secondary';
+              disableBtn.hidden = true;
+              enableBtn.hidden = false;
+            }
+          };
+
+          const apiJson = async (url, opts = {}) => {
+            const res = await fetch(url, {
+              method: opts.method || 'GET',
+              headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                ...(opts.headers || {})
+              },
+              body: opts.body ? JSON.stringify(opts.body) : undefined,
+              credentials: 'same-origin'
+            });
+
+            const contentType = (res.headers.get('content-type') || '').toLowerCase();
+            if (!contentType.includes('application/json')) {
+              // Often means redirect to login (HTML) or a server error page.
+              throw new Error('Session expirée ou réponse non JSON. Reconnectez-vous puis réessayez.');
+            }
+
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) {
+              const msg = data && data.error ? data.error : `Erreur (${res.status})`;
+              throw new Error(msg);
+            }
+            return data;
+          };
+
+          const refreshStatus = async () => {
+            badge.textContent = 'Chargement…';
+            badge.className = 'badge text-bg-secondary';
+            setupBox.hidden = true;
+            disableBox.hidden = true;
+            hideErr(errBox);
+            hideErr(disableErr);
+
+            try {
+              const s = await apiJson('/api/2fa/status');
+              setBadge(!!s.enabled);
+            } catch (e) {
+              badge.textContent = 'Indisponible';
+              badge.className = 'badge text-bg-warning';
+            }
+          };
+
+          enableBtn.addEventListener('click', async () => {
+            hideErr(errBox);
+            // Open immediately so the user sees progress/errors.
+            setupBox.hidden = false;
+            qrBox.innerHTML = '<div class="text-center py-4"><div class="spinner-border" role="status"></div></div>';
+            try {
+              enableBtn.disabled = true;
+              const out = await apiJson('/api/2fa/setup', { method: 'POST' });
+              secretInput.value = out.secret || '';
+
+              // Generate QR for authenticator apps (no network needed): otpauth://...
+              const uri = out.otpauth_uri || '';
+              const qrRes = await fetch('/api/2fa/qr?text=' + encodeURIComponent(uri), {
+                headers: { 'Accept': 'image/svg+xml,text/plain,*/*', 'X-Requested-With': 'XMLHttpRequest' },
+                credentials: 'same-origin'
+              });
+              if (!qrRes.ok) {
+                throw new Error('QR non disponible');
+              }
+              const svg = await qrRes.text();
+              const trimmed = (svg || '').trim();
+              if (trimmed.startsWith('data:image/')) {
+                const img = document.createElement('img');
+                img.alt = 'QR Code 2FA';
+                img.className = 'img-fluid';
+                img.src = trimmed;
+                qrBox.innerHTML = '';
+                qrBox.appendChild(img);
+              } else {
+                qrBox.innerHTML = trimmed;
+              }
+
+              codeInput.value = '';
+              codeInput.focus();
+            } catch (e) {
+              showErr(errBox, e.message || 'Erreur lors de la génération du secret.');
+              toastError('2FA', e.message || 'Erreur lors de la génération du secret.');
+            } finally {
+              enableBtn.disabled = false;
+            }
+          });
+
+          cancelBtn.addEventListener('click', () => {
+            hideErr(errBox);
+            setupBox.hidden = true;
+          });
+
+          confirmBtn.addEventListener('click', async () => {
+            hideErr(errBox);
+            const code = (codeInput.value || '').trim();
+            if (!code) {
+              showErr(errBox, 'Entrez le code à 6 chiffres.');
+              return;
+            }
+
+            try {
+              confirmBtn.disabled = true;
+              await apiJson('/api/2fa/confirm', { method: 'POST', body: { code } });
+              setBadge(true);
+              setupBox.hidden = true;
+              toastSuccess('2FA activé', 'La double authentification est maintenant activée.');
+              await refreshStatus();
+            } catch (e) {
+              showErr(errBox, e.message || 'Code invalide.');
+            } finally {
+              confirmBtn.disabled = false;
+            }
+          });
+
+          disableBtn.addEventListener('click', () => {
+            hideErr(disableErr);
+            disableCode.value = '';
+            disableBox.hidden = false;
+            disableCode.focus();
+          });
+
+          disableCancel.addEventListener('click', () => {
+            hideErr(disableErr);
+            disableBox.hidden = true;
+          });
+
+          disableConfirm.addEventListener('click', async () => {
+            hideErr(disableErr);
+            const code = (disableCode.value || '').trim();
+            if (!code) {
+              showErr(disableErr, 'Entrez le code à 6 chiffres.');
+              return;
+            }
+            try {
+              disableConfirm.disabled = true;
+              await apiJson('/api/2fa/disable', { method: 'POST', body: { code } });
+              disableBox.hidden = true;
+              toastSuccess('2FA désactivé', 'La double authentification est désactivée.');
+              await refreshStatus();
+            } catch (e) {
+              showErr(disableErr, e.message || 'Code invalide.');
+            } finally {
+              disableConfirm.disabled = false;
+            }
+          });
+
+          refreshStatus();
+        };
+
+        // ===== Face login UI (inside profile edit modal) =====
+        const initFaceUi = (root) => {
+          const badge = root.querySelector('[data-face-badge]');
+          const lockHint = root.querySelector('[data-face-lock-hint]');
+          const actions = root.querySelector('[data-face-actions]');
+          const enrollBtn = root.querySelector('[data-face-enroll]');
+          const disableBtn = root.querySelector('[data-face-disable]');
+          const enrollBox = root.querySelector('[data-face-enroll-box]');
+          const video = root.querySelector('[data-face-video]');
+          const captureBtn = root.querySelector('[data-face-capture]');
+          const cancelBtn = root.querySelector('[data-face-cancel]');
+          const errBox = root.querySelector('[data-face-error]');
+          const statusBox = root.querySelector('[data-face-status]');
+
+          if (!badge || !actions || !enrollBtn || !disableBtn || !enrollBox || !video || !captureBtn || !cancelBtn) {
+            return; // Not the profile edit modal
+          }
+
+          let stream = null;
+
+          const showErr = (msg) => {
+            if (!errBox) return;
+            errBox.textContent = msg || 'Erreur.';
+            errBox.classList.remove('d-none');
+          };
+          const hideErr = () => {
+            if (!errBox) return;
+            errBox.textContent = '';
+            errBox.classList.add('d-none');
+          };
+
+          const setStatus = (msg) => {
+            if (!statusBox) return;
+            statusBox.textContent = msg || '';
+          };
+
+          const apiJson = async (url, opts = {}) => {
+            const res = await fetch(url, {
+              method: opts.method || 'GET',
+              headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                ...(opts.headers || {})
+              },
+              body: opts.body ? JSON.stringify(opts.body) : undefined,
+              credentials: 'same-origin'
+            });
+
+            const contentType = (res.headers.get('content-type') || '').toLowerCase();
+            if (!contentType.includes('application/json')) {
+              throw new Error('Session expirée ou réponse non JSON. Reconnectez-vous puis réessayez.');
+            }
+
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) {
+              const msg = data && data.error ? data.error : `Erreur (${res.status})`;
+              throw new Error(msg);
+            }
+            return data;
+          };
+
+          const detachStream = () => {
+            try { video.pause(); } catch (e) {}
+            try { video.srcObject = null; } catch (e) {}
+          };
+
+          const hardStopStream = () => {
+            try {
+              if (stream) {
+                stream.getTracks().forEach(t => t.stop());
+              }
+            } catch (e) {}
+            stream = null;
+            detachStream();
+          };
+
+          const startCamera = async () => {
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+              throw new Error('Caméra indisponible sur ce navigateur.');
+            }
+
+            const isUsable = (s) => {
+              try {
+                return !!s && s.getTracks().some(t => t.readyState === 'live');
+              } catch (e) {
+                return false;
+              }
+            };
+
+            if (!isUsable(stream)) {
+              try {
+                stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false });
+              } catch (e) {
+                const name = (e && e.name) ? String(e.name) : '';
+                if (name === 'NotAllowedError' || name === 'PermissionDeniedError') {
+                  throw new Error('Accès caméra refusé. Autorisez la caméra puis réessayez.');
+                }
+                if (name === 'NotFoundError' || name === 'DevicesNotFoundError') {
+                  throw new Error('Aucune caméra détectée.');
+                }
+                throw e;
+              }
+            }
+            video.srcObject = stream;
+            await video.play().catch(() => {});
+          };
+
+          // ===== MediaPipe (FaceDetector + ImageEmbedder) =====
+          const mediapipeWasmRoot = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.0/wasm';
+          const mediapipeModuleUrl = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.0';
+
+          const faceDetectorModelUrl = 'https://storage.googleapis.com/mediapipe-models/face_detector/blaze_face_short_range/float16/1/blaze_face_short_range.tflite';
+          const imageEmbedderModelUrl = 'https://storage.googleapis.com/mediapipe-models/image_embedder/mobilenet_v3_small/float32/1/mobilenet_v3_small.tflite';
+
+          let mpPromise = null;
+          const getMp = async () => {
+            if (mpPromise) return mpPromise;
+            mpPromise = (async () => {
+              const vision = await import(mediapipeModuleUrl);
+              const fileset = await vision.FilesetResolver.forVisionTasks(mediapipeWasmRoot);
+
+              const createWithDelegate = async (delegate) => {
+                const faceDetector = await vision.FaceDetector.createFromOptions(fileset, {
+                  baseOptions: { modelAssetPath: faceDetectorModelUrl, ...(delegate ? { delegate } : {}) },
+                  runningMode: 'VIDEO',
+                });
+
+                const embedder = await vision.ImageEmbedder.createFromOptions(fileset, {
+                  baseOptions: { modelAssetPath: imageEmbedderModelUrl, ...(delegate ? { delegate } : {}) },
+                  runningMode: 'IMAGE',
+                });
+
+                return { faceDetector, embedder };
+              };
+
+              try {
+                return await createWithDelegate('GPU');
+              } catch (e) {
+                return await createWithDelegate(null);
+              }
+            })();
+            return mpPromise;
+          };
+
+          const l2Normalize = (vec) => {
+            let norm = 0;
+            for (let i = 0; i < vec.length; i++) norm += vec[i] * vec[i];
+            norm = Math.sqrt(norm);
+            if (!Number.isFinite(norm) || norm <= 0) throw new Error('Capture impossible.');
+            for (let i = 0; i < vec.length; i++) vec[i] = vec[i] / norm;
+            return vec;
+          };
+
+          const averageAndNormalize = (vectors) => {
+            if (!Array.isArray(vectors) || vectors.length === 0) {
+              throw new Error('Capture impossible.');
+            }
+            const dim = vectors[0].length;
+            if (!dim || dim < 64) {
+              throw new Error('Capture impossible.');
+            }
+
+            const sum = new Array(dim).fill(0);
+            for (const v of vectors) {
+              if (!Array.isArray(v) || v.length !== dim) {
+                throw new Error('Capture impossible.');
+              }
+              for (let i = 0; i < dim; i++) sum[i] += Number(v[i]) || 0;
+            }
+
+            const avg = sum.map(x => x / vectors.length);
+            return l2Normalize(avg);
+          };
+
+          const getSingleFaceBbox = (detections) => {
+            if (!Array.isArray(detections) || detections.length !== 1) {
+              throw new Error('Veuillez cadrer un seul visage.');
+            }
+            const d = detections[0];
+            const score = d && d.categories && d.categories[0] && typeof d.categories[0].score === 'number'
+              ? Number(d.categories[0].score)
+              : null;
+            if (score !== null && score < 0.6) {
+              throw new Error('Veuillez cadrer un seul visage (détection faible).');
+            }
+            const bb = d && d.boundingBox ? d.boundingBox : null;
+            if (!bb) throw new Error('Veuillez cadrer un seul visage.');
+            const x = Number(bb.originX);
+            const y = Number(bb.originY);
+            const w = Number(bb.width);
+            const h = Number(bb.height);
+            if (![x, y, w, h].every(Number.isFinite) || w <= 0 || h <= 0) {
+              throw new Error('Veuillez cadrer un seul visage.');
+            }
+            const vw = video.videoWidth || 0;
+            const vh = video.videoHeight || 0;
+            if (vw && vh) {
+              const minSide = Math.min(vw, vh);
+              if (Math.min(w, h) < minSide * 0.18) {
+                throw new Error('Rapprochez-vous de la caméra (visage trop petit).');
+              }
+            }
+            return { x, y, w, h };
+          };
+
+          const cropFaceToCanvas = (bbox) => {
+            const vw = video.videoWidth || 0;
+            const vh = video.videoHeight || 0;
+            if (!vw || !vh) throw new Error('Caméra non prête.');
+
+            const pad = 0.35 * Math.max(bbox.w, bbox.h);
+            let sx = bbox.x - pad;
+            let sy = bbox.y - pad;
+            let sw = bbox.w + pad * 2;
+            let sh = bbox.h + pad * 2;
+
+            sx = Math.max(0, Math.min(vw - 1, sx));
+            sy = Math.max(0, Math.min(vh - 1, sy));
+            sw = Math.max(1, Math.min(vw - sx, sw));
+            sh = Math.max(1, Math.min(vh - sy, sh));
+
+            const canvas = document.createElement('canvas');
+            canvas.width = 224;
+            canvas.height = 224;
+            const ctx = canvas.getContext('2d', { willReadFrequently: true });
+            if (!ctx) throw new Error('Capture impossible.');
+            ctx.drawImage(video, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
+            return canvas;
+          };
+
+          const extractEmbeddingFromResult = (res) => {
+            const embs = res && res.embeddings ? res.embeddings : null;
+            if (!Array.isArray(embs) || embs.length < 1) throw new Error('Capture impossible.');
+            const e0 = embs[0];
+            const floats = e0 && e0.floatEmbedding ? e0.floatEmbedding : null;
+            if (!floats || typeof floats.length !== 'number') throw new Error('Capture impossible.');
+            const vec = Array.from(floats, v => Number(v));
+            if (vec.length < 64) throw new Error('Capture impossible.');
+            return l2Normalize(vec);
+          };
+
+          const captureEmbeddingOnce = async () => {
+            const w = video.videoWidth || 0;
+            const h = video.videoHeight || 0;
+            if (!w || !h) {
+              throw new Error('Caméra non prête.');
+            }
+
+            const mp = await getMp();
+            const det = mp.faceDetector.detectForVideo(video, performance.now());
+            const bbox = getSingleFaceBbox(det && det.detections ? det.detections : []);
+            const faceCanvas = cropFaceToCanvas(bbox);
+            const embRes = mp.embedder.embed(faceCanvas);
+            return extractEmbeddingFromResult(embRes);
+          };
+
+          const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+          const captureEmbedding = async () => {
+            // Multi-frame average to reduce noise and false accepts.
+            const samples = [];
+            const count = 10;
+            for (let i = 0; i < count; i++) {
+              setStatus(`Capture en cours… (${i + 1}/${count})`);
+              samples.push(await captureEmbeddingOnce());
+              if (i < count - 1) await sleep(90);
+            }
+            return averageAndNormalize(samples);
+          };
+
+          const setBadge = (s) => {
+            if (!lockHint) {
+              // ok
+            } else {
+              lockHint.textContent = '';
+            }
+
+            if (!s || !s.configured) {
+              badge.textContent = 'Indisponible';
+              badge.className = 'badge text-bg-warning';
+              enrollBtn.disabled = true;
+              disableBtn.hidden = true;
+              enrollBox.hidden = true;
+              return;
+            }
+
+            enrollBtn.disabled = false;
+
+            if (s.locked && lockHint) {
+              const until = s.lockedUntil ? new Date(s.lockedUntil) : null;
+              const hhmm = until ? until.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : null;
+              lockHint.textContent = hhmm ? `Trop de tentatives: verrouillé jusqu’à ${hhmm}.` : 'Trop de tentatives: verrouillé temporairement.';
+            }
+
+            if (s.enabled && s.enrolled) {
+              badge.textContent = 'Activé';
+              badge.className = 'badge text-bg-success';
+              disableBtn.hidden = false;
+              enrollBtn.textContent = 'Mettre à jour mon visage';
+            } else {
+              badge.textContent = 'Désactivé';
+              badge.className = 'badge text-bg-secondary';
+              disableBtn.hidden = true;
+              enrollBtn.textContent = 'Enregistrer mon visage';
+            }
+          };
+
+          const refreshStatus = async () => {
+            badge.textContent = 'Chargement…';
+            badge.className = 'badge text-bg-secondary';
+            enrollBox.hidden = true;
+            hideErr();
+
+            try {
+              const s = await apiJson('/api/face/status');
+              setBadge(s);
+            } catch (e) {
+              badge.textContent = 'Indisponible';
+              badge.className = 'badge text-bg-warning';
+              enrollBtn.disabled = true;
+              disableBtn.hidden = true;
+            }
+          };
+
+          enrollBtn.addEventListener('click', async () => {
+            hideErr();
+            setStatus('');
+            detachStream();
+            enrollBox.hidden = false;
+
+            try {
+              enrollBtn.disabled = true;
+              setStatus('Activation de la caméra…');
+              await startCamera();
+              setStatus('Chargement du modèle…');
+              await getMp();
+              setStatus('Prêt.');
+            } catch (e) {
+              hardStopStream();
+              enrollBox.hidden = true;
+              showErr(e.message || 'Impossible d’activer la caméra.');
+              toastError('Visage', e.message || 'Impossible d’activer la caméra.');
+              setStatus('');
+            } finally {
+              enrollBtn.disabled = false;
+            }
+          });
+
+          cancelBtn.addEventListener('click', () => {
+            hideErr();
+            setStatus('');
+            detachStream();
+            enrollBox.hidden = true;
+          });
+
+          captureBtn.addEventListener('click', async () => {
+            hideErr();
+            try {
+              captureBtn.disabled = true;
+              cancelBtn.disabled = true;
+              const vec = await captureEmbedding();
+              const embedding = { v: 2, type: 'mp_image_embedder_face_crop_v1', vec };
+              setStatus('Enregistrement…');
+              await apiJson('/api/face/enroll', { method: 'POST', body: { embedding } });
+              detachStream();
+              enrollBox.hidden = true;
+              setStatus('');
+              toastSuccess('Visage enregistré', 'La connexion par visage est activée.');
+              await refreshStatus();
+            } catch (e) {
+              showErr(e.message || 'Erreur.');
+              setStatus('');
+            } finally {
+              captureBtn.disabled = false;
+              cancelBtn.disabled = false;
+            }
+          });
+
+          disableBtn.addEventListener('click', async () => {
+            hideErr();
+            detachStream();
+            try {
+              disableBtn.disabled = true;
+              await apiJson('/api/face/disable', { method: 'POST' });
+              toastSuccess('Visage désactivé', 'La connexion par visage est désactivée.');
+              await refreshStatus();
+            } catch (e) {
+              showErr(e.message || 'Erreur lors de la désactivation.');
+            } finally {
+              disableBtn.disabled = false;
+            }
+          });
+
+          const modalRoot = document.getElementById('globalModal');
+          if (modalRoot) {
+            // Detach only: keep the same stream alive to avoid repeated permission prompts.
+            modalRoot.addEventListener('hidden.bs.modal', detachStream);
+          }
+
+          window.addEventListener('beforeunload', hardStopStream);
+
+          refreshStatus();
+        };
+
+        init2faUi(modalBody);
+        initFaceUi(modalBody);
+
         // ✅ Preview instantané photo (dans le modal edit)
 const fileInput = modalBody.querySelector('input[type="file"]');
 const previewImg = modalBody.querySelector('.js-profile-preview');
@@ -497,6 +1129,11 @@ if (fileInput && previewImg) {
         modalBody.innerHTML = `<div class="alert alert-danger">Erreur lors du chargement.</div>`;
         toastError('Erreur', "Impossible de charger le contenu.");
         return;
+      }
+
+      // Render reCAPTCHA widgets inside newly injected modal content.
+      if (window.mfRenderRecaptcha) {
+        window.mfRenderRecaptcha(modalBody);
       }
 
       const form = modalBody.querySelector('form');
@@ -564,6 +1201,76 @@ if (fileInput && previewImg) {
 
   <!-- Main JS File -->
   <script src="{{ asset('assets/js/main.js') }}"></script>
+
+  <script src="https://www.google.com/recaptcha/api.js" async defer></script>
+
+  <script>
+    // Render reCAPTCHA widgets inside dynamically injected HTML (ex: global modal).
+    window.mfRenderRecaptcha = window.mfRenderRecaptcha || function mfRenderRecaptcha(root) {
+      root = root || document;
+      if (!root || !root.querySelectorAll) return;
+
+      if (!window.grecaptcha || typeof window.grecaptcha.render !== 'function') {
+        // Script may still be loading.
+        window.setTimeout(function () { window.mfRenderRecaptcha(root); }, 400);
+        return;
+      }
+
+      root.querySelectorAll('.g-recaptcha').forEach(function (el) {
+        if (!el || (el.dataset && el.dataset.rendered === '1')) return;
+        try {
+          window.grecaptcha.render(el, {
+            sitekey: el.getAttribute('data-sitekey') || undefined,
+          });
+          if (el.dataset) el.dataset.rendered = '1';
+        } catch (e) {
+          // ignore
+        }
+      });
+    };
+  </script>
+
+  <script>
+    (function () {
+      function setBtnState(btn, isVisible) {
+        if (!btn) return;
+        btn.setAttribute('aria-pressed', isVisible ? 'true' : 'false');
+        btn.setAttribute('aria-label', isVisible ? 'Masquer le mot de passe' : 'Afficher le mot de passe');
+
+        var icon = btn.querySelector('i');
+        if (!icon) return;
+        icon.classList.toggle('bi-eye', !isVisible);
+        icon.classList.toggle('bi-eye-slash', isVisible);
+      }
+
+      function getInput(btn) {
+        var targetId = btn.getAttribute('data-password-toggle');
+        if (!targetId) return null;
+        return document.getElementById(targetId);
+      }
+
+      document.addEventListener('click', function (e) {
+        var btn = e.target && e.target.closest ? e.target.closest('[data-password-toggle]') : null;
+        if (!btn) return;
+        e.preventDefault();
+
+        var input = getInput(btn);
+        if (!input) return;
+
+        var isVisible = input.type === 'text';
+        input.type = isVisible ? 'password' : 'text';
+        setBtnState(btn, !isVisible);
+      });
+
+      document.addEventListener('DOMContentLoaded', function () {
+        document.querySelectorAll('[data-password-toggle]').forEach(function (btn) {
+          var input = getInput(btn);
+          if (!input) return;
+          setBtnState(btn, input.type === 'text');
+        });
+      });
+    })();
+  </script>
 
   {% block javascripts %}{% endblock %}
   {% block importmap %}{{ importmap('app') }}{% endblock %}

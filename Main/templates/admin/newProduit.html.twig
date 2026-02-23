@@ -47,7 +47,7 @@
         </a>
       </div>
 
-      {# ====== FLASH (on garde pour compat, mais on affiche aussi en Swal) ====== #}
+      {# ====== FLASH -> caché (on affiche en Swal) ====== #}
       <div id="flash-messages-container" class="d-none">
         {% for message in app.flashes('success') %}
           <div class="flash-success" data-message="{{ message|e('html_attr') }}"></div>
@@ -57,8 +57,14 @@
         {% endfor %}
       </div>
 
-      {# ====== FORM ====== #}
-      {{ form_start(form, {'attr': {'novalidate': 'novalidate', 'id': 'addProduitForm'}}) }}
+      {# ✅ IMPORTANT : multipart/form-data obligatoire pour upload #}
+      {{ form_start(form, {
+        'attr': {
+          'novalidate': 'novalidate',
+          'id': 'addProduitForm'
+        },
+        'enctype': 'multipart/form-data'
+      }) }}
 
       <div class="row g-4">
 
@@ -148,23 +154,40 @@
                 {{ ui.okText(form.categorie_produit) }}
               </div>
 
-              {# IMAGE #}
+              {# ✅ IMAGE (UPLOAD LOCAL) #}
               <div class="mb-0">
                 <label class="form-label fw-bold text-dark">
-                  <i class="bi bi-image me-2"></i>URL de l'image <span class="text-danger">*</span>
+                  <i class="bi bi-image me-2"></i>Image du produit <span class="text-danger">*</span>
                 </label>
 
-                <div class="input-group input-group-lg">
-                  <span class="input-group-text bg-light">
-                    <i class="bi bi-link-45deg"></i>
-                  </span>
-                  {{ form_widget(form.image_produit, {'attr': {'class': ui.addClass(form.image_produit, 'form-control')}}) }}
-                </div>
+                <div class="upload-zone p-3">
+                  {# Si ton form n’a PAS imageFile, remplace par le nom exact du champ file #}
+                  {{ form_widget(form.imageFile, {'attr': {
+                    'class': ui.addClass(form.imageFile, 'form-control form-control-lg'),
+                    'accept': 'image/*'
+                  }}) }}
 
-                {% if form.image_produit.vars.submitted and not form.image_produit.vars.valid %}
-                  <div class="invalid-feedback d-block">{{ form_errors(form.image_produit) }}</div>
-                {% endif %}
-                {{ ui.okText(form.image_produit) }}
+                  <div class="small text-muted mt-2">
+                    <i class="bi bi-info-circle me-1"></i>
+                    Formats acceptés : JPG / PNG / WEBP (max 3Mo)
+                  </div>
+
+                  {% if form.imageFile.vars.submitted and not form.imageFile.vars.valid %}
+                    <div class="invalid-feedback d-block">{{ form_errors(form.imageFile) }}</div>
+                  {% endif %}
+                  {{ ui.okText(form.imageFile) }}
+
+                  {# Preview #}
+                  <div class="preview-wrap mt-3" id="previewWrap" style="display:none;">
+                    <div class="d-flex align-items-center gap-3">
+                      <img id="imagePreview" src="" alt="Prévisualisation" class="img-preview">
+                      <div class="small">
+                        <div class="fw-bold text-dark">Prévisualisation</div>
+                        <div class="text-muted" id="previewInfo"></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
 
             </div>
@@ -233,9 +256,6 @@
 {% block stylesheets %}
   {{ parent() }}
   <style>
-    /* ================================
-       ✅ SAME BLUE THEME AS LIST PAGE
-       ================================ */
     :root{
       --blue-50:#eff6ff;
       --blue-100:#dbeafe;
@@ -255,12 +275,10 @@
     }
     .text-dark-50{ color:#6b7280 !important; }
 
-    /* Header gradient like list */
     .bg-gradient-primary{
       background: linear-gradient(135deg, var(--blue-600) 0%, var(--blue-800) 100%) !important;
     }
 
-    /* Cards */
     .card{
       border-radius: 16px;
       overflow: hidden;
@@ -270,24 +288,35 @@
       border-bottom: 2px solid var(--blue-200);
     }
 
-    /* Inputs focus */
     .form-control:focus, .form-select:focus{
       border-color: var(--blue-500);
       box-shadow: 0 0 0 3px rgba(59,130,246,0.12);
     }
 
-    /* Replace any "green" UI -> blue */
     .bg-primary-soft{
       background: linear-gradient(135deg, var(--blue-50) 0%, var(--blue-100) 100%) !important;
       border: 2px solid var(--blue-200) !important;
     }
-    .text-primary{
-      color: var(--blue-700) !important;
+    .text-primary{ color: var(--blue-700) !important; }
+
+    .invalid-feedback, .valid-feedback{ font-weight:600; }
+
+    /* Upload zone */
+    .upload-zone{
+      border: 1px dashed var(--blue-200);
+      border-radius: 16px;
+      background: linear-gradient(135deg, #ffffff 0%, var(--blue-50) 100%);
     }
 
-    /* Feedback */
-    .invalid-feedback{ font-weight:600; }
-    .valid-feedback{ font-weight:600; }
+    .img-preview{
+      width: 84px;
+      height: 84px;
+      object-fit: cover;
+      border-radius: 14px;
+      border: 2px solid var(--blue-100);
+      box-shadow: 0 10px 20px rgba(0,0,0,.08);
+      background: #fff;
+    }
 
     /* Status radios (blue selection) */
     .status-radio-group input[type="radio"]{ display:none; }
@@ -336,13 +365,10 @@
   <script>
     document.addEventListener('DOMContentLoaded', function() {
 
-      // ===========
-      // ✅ Toast (3s) après ajout/erreur via flash
-      // ===========
+      // =========== Toast (flash) ===========
       const successNodes = document.querySelectorAll('#flash-messages-container .flash-success');
       const errorNodes   = document.querySelectorAll('#flash-messages-container .flash-error');
 
-      // Util petit helper
       function toast(icon, title) {
         if (typeof Swal === 'undefined') return;
         Swal.fire({
@@ -358,14 +384,14 @@
       successNodes.forEach(n => toast('success', n.dataset.message || 'Ajouté avec succès ✅'));
       errorNodes.forEach(n => toast('error', n.dataset.message || 'Une erreur est survenue'));
 
-      // ===========
-      // ✅ Confirmation avant submit (SweetAlert2)
-      // ===========
+      // =========== Confirmation avant submit ===========
       const form = document.getElementById('addProduitForm');
       if (!form) return;
 
+      let alreadyConfirmed = false;
+
       form.addEventListener('submit', function(e) {
-        // si Swal pas chargé => submit normal
+        if (alreadyConfirmed) return; // évite boucle
         if (typeof Swal === 'undefined') return;
 
         e.preventDefault();
@@ -388,14 +414,46 @@
           reverseButtons: true
         }).then((result) => {
           if (result.isConfirmed) {
-            // Optionnel: mini toast immédiat avant submit
             toast('info', 'Ajout en cours...');
+            alreadyConfirmed = true;
             form.submit();
-          } else if (result.dismiss === Swal.DismissReason.cancel) {
+          } else {
             toast('error', 'Ajout annulé');
           }
         });
       });
+
+      // =========== Preview image ===========
+      const input = document.querySelector('input[type="file"][name$="[imageFile]"]');
+      const wrap = document.getElementById('previewWrap');
+      const img = document.getElementById('imagePreview');
+      const info = document.getElementById('previewInfo');
+
+      if (input) {
+        input.addEventListener('change', function() {
+          const file = this.files && this.files[0];
+          if (!file) {
+            wrap.style.display = 'none';
+            img.src = '';
+            info.textContent = '';
+            return;
+          }
+
+          if (!file.type.startsWith('image/')) {
+            wrap.style.display = 'none';
+            toast('error', "Le fichier sélectionné n'est pas une image.");
+            return;
+          }
+
+          const url = URL.createObjectURL(file);
+          img.src = url;
+
+          const sizeMb = (file.size / (1024 * 1024)).toFixed(2);
+          info.textContent = `${file.name} • ${sizeMb} Mo`;
+
+          wrap.style.display = 'block';
+        });
+      }
 
     });
   </script>

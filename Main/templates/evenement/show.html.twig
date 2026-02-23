@@ -1,4 +1,6 @@
 {# templates/evenement/show.html.twig #}
+
+
 {% extends 'base.html.twig' %}
 
 {% block title %}Détails Événements - MedFlow{% endblock %}
@@ -12,6 +14,7 @@
 {% endblock %}
 
 {% block body %}
+
 <main class="main">
   <section class="section" style="padding-top: 120px;">
     <div class="container">
@@ -124,6 +127,10 @@
             {% else %}
 
               <div class="mb-3">
+              <a class="btn btn-dark"
+   href="{{ path('app_evenement_access_live', {id: evenement.id}) }}">
+   🎥 Mode Accessibilité (LS) — Live
+</a>
                 <div class="fw-semibold mb-2">Souhaitez-vous participer ?</div>
 
                 <div class="d-flex gap-3 flex-wrap">
@@ -293,6 +300,84 @@
 
 
           </div>
+          {# ===== Transcriptions Accessibilité (Ressources) ===== #}
+{% set trans = [] %}
+{% for r in evenement.ressources %}
+  {% if r.categorieRessource == 'Accessibilité' %}
+    {% set trans = trans|merge([r]) %}
+  {% endif %}
+{% endfor %}
+
+{% if trans|length > 0 %}
+  <div class="mt-4 p-4 bg-white border rounded-4" style="border-color:#e9f3ff !important;">
+    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
+      <h5 class="fw-bold mb-0" style="color:#003399;">
+        <i class="bi bi-chat-left-text me-2" style="color:#0097B2;"></i>
+        Transcriptions Accessibilité
+      </h5>
+      <span class="badge rounded-pill px-3 py-2" style="background:#eef8ff; color:#003399; border:1px solid #d9efff;">
+        {{ trans|length }} ressource(s)
+      </span>
+    </div>
+    {% set trans = [] %}
+{% for r in evenement.ressources %}
+  {% if r.categorieRessource == 'Accessibilité' %}
+    {% set trans = trans|merge([r]) %}
+  {% endif %}
+{% endfor %}
+
+{% if trans|length > 0 %}
+  <div class="card mt-4">
+    <div class="card-body">
+      <h5 class="mb-3">📝 Transcriptions Accessibilité</h5>
+
+      {% for r in trans %}
+        <div class="border rounded p-3 mb-3">
+          <div class="d-flex justify-content-between flex-wrap gap-2">
+            <strong>{{ r.nomRessource }}</strong>
+            <a href="{{ r.urlExterneRessource }}" target="_blank" class="btn btn-sm btn-outline-primary">
+              Ouvrir Live
+            </a>
+          </div>
+
+          {% if r.notesRessource %}
+            <div class="mt-2" style="white-space: pre-wrap;">{{ r.notesRessource }}</div>
+          {% else %}
+            <div class="text-muted mt-2">Aucune transcription.</div>
+          {% endif %}
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+{% endif %}
+
+
+    {% for r in trans %}
+      <div class="border rounded-4 p-3 mb-3" style="border-color:#e6f1ff;">
+        <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
+          <div>
+            <div class="fw-semibold">{{ r.nomRessource }}</div>
+            <div class="text-muted small">
+              Catégorie: {{ r.categorieRessource }} • Type: {{ r.typeRessource }}
+            </div>
+          </div>
+          <a href="{{ r.urlExterneRessource }}" target="_blank" class="btn btn-sm btn-outline-primary">
+            <i class="bi bi-box-arrow-up-right me-1"></i>Ouvrir Live
+          </a>
+        </div>
+
+        {% if r.notesRessource %}
+          <div class="mt-3 p-3 rounded-4" style="background:#f7fbff; border:1px solid #e6f1ff; white-space: pre-wrap;">
+            {{ r.notesRessource }}
+          </div>
+        {% else %}
+          <div class="text-muted mt-2">Aucune transcription.</div>
+        {% endif %}
+      </div>
+    {% endfor %}
+  </div>
+{% endif %}
+
           {# ===== Recommandations ===== #}
 {# ===== Recommandations IA (PRO) ===== #}
 {% if recommended is defined and recommended|length > 0 %}
@@ -331,7 +416,7 @@
                   </span>
 
                   <span class="badge rounded-pill rec-score">
-                    Score {{ item.score }}/8
+                    Score {{ item.score }}/10
                   </span>
                 </div>
 

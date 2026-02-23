@@ -1,41 +1,69 @@
 {# templates/profile/modal_show.html.twig #}
 
 <style>
-  .pf-wrap{animation:pfIn .28s ease-out both}
-  @keyframes pfIn{from{opacity:0;transform:translateY(10px) scale(.99)}to{opacity:1;transform:none}}
+  .pf-wrap{animation:pfIn .22s ease-out both}
+  @keyframes pfIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
   .pf-hero{
     border-radius:18px;
-    background: linear-gradient(135deg, rgba(28,163,180,.18), rgba(13,110,253,.10));
-    border:1px solid rgba(0,0,0,.06);
+    background: linear-gradient(135deg,
+      rgba(var(--mf-primary-rgb), .18),
+      rgba(var(--mf-blue-rgb), .10)
+    );
+    border:1px solid var(--mf-border);
     overflow:hidden;
   }
+
   .pf-avatar{
-    width:78px;height:78px;object-fit:cover;border-radius:999px;
-    border:3px solid rgba(255,255,255,.9);
-    box-shadow:0 10px 22px rgba(0,0,0,.10);
-    animation:pfFloat 2.6s ease-in-out infinite;
+    width:82px;height:82px;object-fit:cover;border-radius:999px;
+    border:3px solid rgba(255,255,255,.92);
+    box-shadow:0 14px 30px rgba(2,6,23,.14);
   }
-  @keyframes pfFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
-  .pf-chip{border-radius:999px;padding:.35rem .7rem;font-weight:600;font-size:.82rem}
-  .pf-kv{border:1px solid rgba(0,0,0,.06);border-radius:14px;padding:12px 14px;background:#fff}
-  .pf-k{font-size:.78rem;color:#6c757d;margin-bottom:2px}
-  .pf-v{font-weight:700}
+
+  .pf-avatar--initials{
+    background: var(--mf-primary);
+    color:#fff;
+    font-weight:900;
+    font-size:24px;
+  }
+
+  .pf-chip{
+    border-radius:999px;
+    padding:.35rem .7rem;
+    font-weight:700;
+    font-size:.82rem;
+    border:1px solid rgba(var(--mf-primary-rgb), .18);
+    background: rgba(var(--mf-primary-rgb), .10);
+    color: rgba(2,6,23,.82);
+  }
+
+  .pf-kv{
+    border:1px solid var(--mf-border);
+    border-radius:16px;
+    padding:12px 14px;
+    background: var(--mf-surface);
+  }
+  .pf-k{font-size:.78rem;color:rgba(2,6,23,.55);margin-bottom:2px}
+  .pf-v{font-weight:800;color:rgba(2,6,23,.86)}
 </style>
 
 {% set prenom = app.user.prenom ?? '' %}
 {% set nom = app.user.nom ?? '' %}
 {% set initials = ((prenom|slice(0,1)) ~ (nom|slice(0,1)))|upper %}
 {% set pic = app.user.profilePicture ?? null %}
+{% set picUrl = (pic and (pic starts with 'http'))
+  ? pic
+  : (pic ? asset('uploads/profile/' ~ pic) : null)
+%}
 
 <div class="pf-wrap">
 
   <div class="pf-hero p-3 p-md-4 mb-3">
     <div class="d-flex align-items-center gap-3">
-      {% if pic %}
-        <img class="pf-avatar" src="{{ asset('uploads/profile/' ~ pic) }}" alt="Photo de profil">
+      {% if picUrl %}
+        <img class="pf-avatar" src="{{ picUrl }}" alt="Photo de profil">
       {% else %}
-        <div class="pf-avatar d-flex align-items-center justify-content-center"
-             style="background:#1CA3B4;color:#fff;font-weight:900;font-size:24px;">
+        <div class="pf-avatar pf-avatar--initials d-flex align-items-center justify-content-center">
           {{ initials ?: 'U' }}
         </div>
       {% endif %}
@@ -43,7 +71,7 @@
       <div class="flex-grow-1">
         <div class="d-flex align-items-center flex-wrap gap-2">
           <h4 class="mb-0 fw-bold">{{ prenom }} {{ nom }}</h4>
-          <span class="pf-chip bg-light text-dark">
+          <span class="pf-chip">
             <i class="bi bi-shield-check me-1"></i>
             Compte sécurisé
           </span>
@@ -54,6 +82,8 @@
       </div>
     </div>
   </div>
+
+  {{ include('components/_user_gamification.html.twig', { user: app.user }) }}
 
   <div class="row g-3">
     <div class="col-md-6">

@@ -59,4 +59,21 @@
             ->getQuery()
             ->getResult();
     }
+    public function findTodayAppointmentsForDoctor($doctor, \DateTimeInterface $start, \DateTimeInterface $end): array
+    {
+        return $this->createQueryBuilder('r')
+            ->andWhere('r.staff = :staff')
+            ->andWhere('r.datetime >= :start')
+            ->andWhere('r.datetime < :end')
+            ->setParameter('staff', $doctor)
+            ->setParameter('start', $start)
+            ->setParameter('end', $end)
+            ->orderBy('r.datetime', 'ASC')
+            ->getQuery()
+            ->getResult();
+    }
 }
+    /**
+     * Find today's appointments for a given doctor (staff)
+     */
+    

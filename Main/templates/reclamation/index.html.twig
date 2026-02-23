@@ -81,7 +81,47 @@
                   </div>
                 {% endif %}
               </div>
+{# ===============================
+   ✅ APERÇU LIVE TRADUCTION (FR)
+   =============================== #}
+<div class="col-12">
+  <div class="card border-0 shadow-sm rounded-4" style="background:#fbfdff;">
+    <div class="card-body p-4">
+      <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+        <div class="fw-bold">
+          <i class="bi bi-translate me-2"></i>Aperçu (version française envoyée)
+        </div>
+        <div class="d-flex align-items-center gap-2">
+          <span class="badge bg-light text-dark border" id="liveTranslateStatus">Prêt</span>
+          <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill" id="btnForceTranslate">
+            <i class="bi bi-arrow-repeat me-1"></i>Actualiser
+          </button>
+        </div>
+      </div>
 
+      <div class="row g-3 mt-2">
+        <div class="col-12 col-lg-6">
+          <div class="p-3 rounded-4 border bg-light">
+            <div class="fw-bold mb-1"><i class="bi bi-card-text me-1"></i>Contenu (FR)</div>
+            <div id="liveContenuFR" style="white-space:pre-wrap;">—</div>
+          </div>
+        </div>
+
+        <div class="col-12 col-lg-6">
+          <div class="p-3 rounded-4 border bg-light">
+            <div class="fw-bold mb-1"><i class="bi bi-file-text me-1"></i>Description (FR)</div>
+            <div id="liveDescriptionFR" style="white-space:pre-wrap;">—</div>
+          </div>
+        </div>
+      </div>
+
+      <small class="text-muted d-block mt-2">
+        <i class="bi bi-info-circle me-1"></i>
+        La traduction se met à jour automatiquement après une courte pause pendant la saisie.
+      </small>
+    </div>
+  </div>
+</div>
               {# =========================================================
                  ✅ DICTÉE VOCALE (Contenu + Description + Type + Publier)
                  ========================================================= #}
@@ -182,24 +222,38 @@
               </div>
 
               {# ===== PIÈCE JOINTE (AVANT BOUTON) ===== #}
-              <div class="col-12">
-                {{ form_label(form.pieceJointePath, 'Pièce jointe (optionnelle)', {'label_attr': {'class': 'form-label text-dark'}}) }}
-                {{ form_widget(form.pieceJointePath, {
-                  attr: {
-                    class: 'form-control ' ~ (form_errors(form.pieceJointePath) ? 'is-invalid' : ''),
-                    style: 'border-radius: 15px; padding: 15px; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); transition: all 0.3s ease;'
-                  }
-                }) }}
-                {% if form_errors(form.pieceJointePath) %}
-                  <div class="invalid-feedback d-block">
-                    {{ form_errors(form.pieceJointePath) }}
-                  </div>
-                {% endif %}
-                <div class="form-text">
-                  Formats conseillés : PDF, JPG, PNG.
-                </div>
-              </div>
-
+             <div class="col-12">
+  {{ form_label(form.pieceJointePath, 'Pièce jointe (optionnelle)', {'label_attr': {'class': 'form-label text-dark'}}) }}
+  {{ form_widget(form.pieceJointePath, {
+    attr: {
+      class: 'form-control ' ~ (form_errors(form.pieceJointePath) ? 'is-invalid' : ''),
+      style: 'border-radius: 15px; padding: 15px; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); transition: all 0.3s ease;',
+      accept: 'image/png,image/jpeg'
+    }
+  }) }}
+  {% if form_errors(form.pieceJointePath) %}
+    <div class="invalid-feedback d-block">
+      {{ form_errors(form.pieceJointePath) }}
+    </div>
+  {% endif %}
+  <div class="form-text">
+    Formats autorisés : JPG, PNG.
+  </div>
+</div>
+<img id="previewImg" style="display:none;max-width:220px;border-radius:12px;margin-top:10px;box-shadow:0 6px 18px rgba(0,0,0,.12);" />
+<script>
+  const input = document.querySelector('input[type="file"][name$="[pieceJointePath]"]');
+  const img = document.getElementById('previewImg');
+  if (input && img) {
+    input.addEventListener('change', () => {
+      const f = input.files && input.files[0];
+      if (!f) { img.style.display='none'; return; }
+      if (!f.type.startsWith('image/')) { img.style.display='none'; return; }
+      img.src = URL.createObjectURL(f);
+      img.style.display='block';
+    });
+  }
+</script>
 
 
               {# ===== ACTIONS ===== #}
@@ -212,7 +266,18 @@
                   Annuler
                 </button>
               </div>
+{# ===============================
+   ✅ META IA (HIDDEN INPUTS)
+   - envoyés au controller
+   =============================== #}
+<input type="hidden" name="langueOriginale" id="ai_langueOriginale" value="fr">
+<input type="hidden" name="contenuOriginal" id="ai_contenuOriginal" value="">
+<input type="hidden" name="descriptionOriginal" id="ai_descriptionOriginal" value="">
+<input type="hidden" name="sentiment" id="ai_sentiment" value="NEUTRAL">
+<input type="hidden" name="urgenceScore" id="ai_urgenceScore" value="0">
 
+<input type="hidden" id="ai_contenuFR" name="contenu_fr" value="">
+<input type="hidden" id="ai_descriptionFR" name="description_fr" value="">
             {{ form_end(form) }}
 
           </div>
@@ -255,6 +320,7 @@ document.getElementById('reformulateReclamationButton')?.addEventListener('click
         });
 
         const data = await response.json();
+        console.log("✅ DATA =", data);
 
         if (data.error) {
             alert('Erreur lors de la reformulation : ' + data.error);
@@ -272,13 +338,6 @@ document.getElementById('reformulateReclamationButton')?.addEventListener('click
     }
 });
 </script>
-
-{# ===============================
-   ✅ Dictée vocale (AVANCÉE)
-   - cible contenu/description
-   - commande "type ..."
-   - commande "publier/envoyer" => submit
-   =============================== #}
 <script>
 (function () {
   const formEl = document.getElementById("reclamationForm");
@@ -328,113 +387,104 @@ document.getElementById('reformulateReclamationButton')?.addEventListener('click
     return (targetSel?.value === "description") ? descEl : contenuEl;
   }
 
-  // ===== Commands =====
+  // ===== Commands helpers =====
   function normalizeText(s) {
-  return (s || "")
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")     // accents
-    .replace(/[’']/g, " ")              // apostrophes
-    .replace(/[\/\-]/g, " ")            // / et -
-    .replace(/[^a-z0-9\s]/g, " ")       // ponctuation
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
-function bestOptionMatch(spoken, options) {
-  const spokenNorm = normalizeText(spoken);
-
-  // ✅ Synonymes / raccourcis -> libellé proche
-  const aliasMap = [
-    { keys: ["rdv", "rendez vous", "rendezvous", "appointment"], label: "rendez vous" },
-    { keys: ["retard", "attente", "excessive", "longue attente"], label: "retard attente excessive" },
-    { keys: ["personnel medical", "medecin", "infirmier"], label: "personnel medical" },
-    { keys: ["personnel administratif", "administration", "secretaire"], label: "personnel administratif" },
-    { keys: ["facturation", "paiement", "payer", "carte"], label: "facturation paiement" },
-    { keys: ["assurance", "prise en charge", "mutuelle"], label: "assurance prise en charge" },
-    { keys: ["urgence", "urgences", "service urgence"], label: "service urgence" },
-    { keys: ["hospitalisation", "hospitaliser", "chambre"], label: "hospitalisation" },
-    { keys: ["qualite", "soins", "mauvais soins"], label: "qualite des soins" },
-    { keys: ["erreur medicale", "faute", "mauvais diagnostic"], label: "erreur medicale" },
-    { keys: ["dossier", "dossier medical", "fiche"], label: "dossier medical" },
-    { keys: ["pharmacie", "medicament", "medicaments"], label: "pharmacie medicaments" },
-    { keys: ["laboratoire", "analyse", "analyses"], label: "laboratoire analyses" },
-    { keys: ["radiologie", "imagerie", "scanner", "irm", "radio"], label: "radiologie imagerie" },
-    { keys: ["hygiene", "proprete", "sale"], label: "hygiene" },
-    { keys: ["securite", "danger", "vol"], label: "securite" },
-    { keys: ["infrastructure", "equipement", "materiel", "panne"], label: "infrastructure equipement" },
-    { keys: ["accueil", "orientation", "reception"], label: "accueil orientation" },
-    { keys: ["autre"], label: "autre" },
-  ];
-
-  let target = spokenNorm;
-  for (const a of aliasMap) {
-    if (a.keys.some(k => spokenNorm.includes(normalizeText(k)))) {
-      target = normalizeText(a.label);
-      break;
-    }
+    return (s || "")
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[’']/g, " ")
+      .replace(/[\/\-]/g, " ")
+      .replace(/[^a-z0-9\s]/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
   }
 
-  const targetWords = new Set(target.split(" ").filter(Boolean));
+  function bestOptionMatch(spoken, options) {
+    const spokenNorm = normalizeText(spoken);
 
-  let best = null;
-  let bestScore = -1;
+    const aliasMap = [
+      { keys: ["rdv", "rendez vous", "rendezvous", "appointment"], label: "rendez vous" },
+      { keys: ["retard", "attente", "excessive", "longue attente"], label: "retard attente excessive" },
+      { keys: ["personnel medical", "medecin", "infirmier"], label: "personnel medical" },
+      { keys: ["personnel administratif", "administration", "secretaire"], label: "personnel administratif" },
+      { keys: ["facturation", "paiement", "payer", "carte"], label: "facturation paiement" },
+      { keys: ["assurance", "prise en charge", "mutuelle"], label: "assurance prise en charge" },
+      { keys: ["urgence", "urgences", "service urgence"], label: "service urgence" },
+      { keys: ["hospitalisation", "hospitaliser", "chambre"], label: "hospitalisation" },
+      { keys: ["qualite", "soins", "mauvais soins"], label: "qualite des soins" },
+      { keys: ["erreur medicale", "faute", "mauvais diagnostic"], label: "erreur medicale" },
+      { keys: ["dossier", "dossier medical", "fiche"], label: "dossier medical" },
+      { keys: ["pharmacie", "medicament", "medicaments"], label: "pharmacie medicaments" },
+      { keys: ["laboratoire", "analyse", "analyses"], label: "laboratoire analyses" },
+      { keys: ["radiologie", "imagerie", "scanner", "irm", "radio"], label: "radiologie imagerie" },
+      { keys: ["hygiene", "proprete", "sale"], label: "hygiene" },
+      { keys: ["securite", "danger", "vol"], label: "securite" },
+      { keys: ["infrastructure", "equipement", "materiel", "panne"], label: "infrastructure equipement" },
+      { keys: ["accueil", "orientation", "reception"], label: "accueil orientation" },
+      { keys: ["autre"], label: "autre" },
+    ];
 
-  for (const opt of options) {
-    const label = opt.textContent || "";
-    const labelNorm = normalizeText(label);
-
-    // score = nombre de mots communs + bonus si contient
-    const words = labelNorm.split(" ").filter(Boolean);
-    let common = 0;
-    for (const w of words) if (targetWords.has(w)) common++;
-
-    let score = common;
-
-    if (labelNorm.includes(target)) score += 10;       // très bon
-    if (target.includes(labelNorm)) score += 6;
-
-    // petit bonus si le premier mot correspond
-    const firstTarget = target.split(" ")[0];
-    if (firstTarget && labelNorm.startsWith(firstTarget)) score += 2;
-
-    if (score > bestScore) {
-      bestScore = score;
-      best = opt;
+    let target = spokenNorm;
+    for (const a of aliasMap) {
+      if (a.keys.some(k => spokenNorm.includes(normalizeText(k)))) {
+        target = normalizeText(a.label);
+        break;
+      }
     }
+
+    const targetWords = new Set(target.split(" ").filter(Boolean));
+
+    let best = null;
+    let bestScore = -1;
+
+    for (const opt of options) {
+      const label = opt.textContent || "";
+      const labelNorm = normalizeText(label);
+
+      const words = labelNorm.split(" ").filter(Boolean);
+      let common = 0;
+      for (const w of words) if (targetWords.has(w)) common++;
+
+      let score = common;
+      if (labelNorm.includes(target)) score += 10;
+      if (target.includes(labelNorm)) score += 6;
+
+      const firstTarget = target.split(" ")[0];
+      if (firstTarget && labelNorm.startsWith(firstTarget)) score += 2;
+
+      if (score > bestScore) {
+        bestScore = score;
+        best = opt;
+      }
+    }
+
+    return bestScore >= 3 ? best : null;
   }
 
-  // ✅ seuil minimal (sinon on ne change pas)
-  return bestScore >= 3 ? best : null;
-}
+  function trySetTypeFromSpeech(rawText) {
+    const t = normalizeText(rawText);
+    if (!t.includes("type")) return false;
 
-function trySetTypeFromSpeech(rawText) {
-  const t = normalizeText(rawText);
+    const after = t.split("type").slice(1).join(" ").trim();
+    if (!after) {
+      setStatus("warn", "Dites: type ...", "Ex: “type rendez-vous” / “type pharmacie”");
+      return true;
+    }
 
-  // déclenche seulement si la phrase contient "type"
-  if (!t.includes("type")) return false;
+    const options = Array.from(typeEl.options || []).filter(o => o.value && o.value !== "");
+    const best = bestOptionMatch(after, options);
 
-  // prend ce qu'il y a après "type"
-  const after = t.split("type").slice(1).join(" ").trim();
-  if (!after) {
-    setStatus("warn", "Dites: type ...", "Ex: “type rendez-vous” / “type pharmacie”");
+    if (best) {
+      typeEl.value = best.value;
+      typeEl.dispatchEvent(new Event("change", { bubbles: true }));
+      setStatus("ok", "Type choisi", `Type: ${best.textContent}`);
+    } else {
+      setStatus("warn", "Type non reconnu", "Dites un mot-clé: rdv, urgence, pharmacie, facturation...");
+    }
+
     return true;
   }
-
-  const options = Array.from(typeEl.options || []).filter(o => o.value && o.value !== "");
-  const best = bestOptionMatch(after, options);
-
-  if (best) {
-    typeEl.value = best.value;
-    typeEl.dispatchEvent(new Event("change", { bubbles: true }));
-    setStatus("ok", "Type choisi", `Type: ${best.textContent}`);
-  } else {
-    setStatus("warn", "Type non reconnu", "Dites un mot-clé: rdv, urgence, pharmacie, facturation...");
-  }
-
-  return true;
-}
-
 
   function trySubmitFromSpeech(rawText) {
     const t = normalize(rawText);
@@ -452,9 +502,20 @@ function trySetTypeFromSpeech(rawText) {
 
     setStatus("ok", "Envoi...", "Publication de la réclamation");
     stopDictation();
-    if (btnSubmit) btnSubmit.click();
-    else formEl.submit();
-    return true;
+
+    if (window.__translateBeforeSubmit) {
+      window.__translateBeforeSubmit().then((ok2) => {
+        if (ok2) {
+          if (btnSubmit) btnSubmit.click();
+          else formEl.submit();
+        }
+      });
+    } else {
+      if (btnSubmit) btnSubmit.click();
+      else formEl.submit();
+    }
+
+    return true; // ✅ un seul return
   }
 
   // ===== Recognition =====
@@ -511,15 +572,11 @@ function trySetTypeFromSpeech(rawText) {
         }
       }
 
-      // Commands on final chunk
+      // ✅ Si commande détectée => on NE MODIFIE PAS le champ (anti-pollution)
       if (gotFinalChunk.trim()) {
         const handledType = trySetTypeFromSpeech(gotFinalChunk);
         const handledSubmit = trySubmitFromSpeech(gotFinalChunk);
-
-        // Si commande => on ne veut pas forcément polluer le champ avec "publier/type"
-        // On laisse simple : le texte est déjà ajouté, mais c’est OK.
-        // Si tu veux le nettoyer, je te le fais aussi.
-        if (handledSubmit) return;
+        if (handledType || handledSubmit) return;
       }
 
       const field = currentTargetField();
@@ -567,5 +624,203 @@ function trySetTypeFromSpeech(rawText) {
   setStatus("idle", "Prêt", "Dites “type …” ou “publier”.");
 })();
 </script>
+<script>
+(function () {
+  const contenuEl = document.getElementById("reclamation_contenu");
+  const descEl    = document.getElementById("reclamation_description");
 
+  const outCont   = document.getElementById("liveContenuFR");
+  const outDesc   = document.getElementById("liveDescriptionFR");
+  const statusEl  = document.getElementById("liveTranslateStatus");
+  const btnForce  = document.getElementById("btnForceTranslate");
+
+  // Hidden inputs (original)
+  const hLang = document.getElementById("ai_langueOriginale");
+  const hCont = document.getElementById("ai_contenuOriginal");
+  const hDesc = document.getElementById("ai_descriptionOriginal");
+
+  // ✅ Hidden inputs (FR) -> ceux-là partent au backend
+  const hContFR = document.getElementById("ai_contenuFR");
+  const hDescFR = document.getElementById("ai_descriptionFR");
+
+  // ✅ Form + bouton submit
+  const form = contenuEl?.closest("form");
+  const submitBtn = form?.querySelector('button[type="submit"], input[type="submit"]');
+
+  if (!contenuEl || !descEl || !outCont || !outDesc || !statusEl || !form || !hContFR) return;
+
+  function setStatus(type, text) {
+    statusEl.textContent = text;
+    statusEl.className =
+      type === "ok" ? "badge bg-success" :
+      type === "warn" ? "badge bg-warning text-dark" :
+      type === "err" ? "badge bg-danger" :
+      "badge bg-light text-dark border";
+  }
+
+  function safeText(el, txt) {
+    el.textContent = (txt || "").trim() || "—";
+  }
+
+  function setSubmitEnabled(enabled) {
+    if (submitBtn) submitBtn.disabled = !enabled;
+  }
+
+  // Détection simple de langue (ok pour ton besoin)
+  function detectLang(text) {
+    const t = (text || "").trim();
+    if (!t) return "fr";
+    if (/[\u0600-\u06FF]/.test(t)) return "ar";
+    const hasLatin = /[a-zA-Z]/.test(t);
+    const hasFrenchAccents = /[àâçéèêëîïôûùüÿñæœ]/i.test(t);
+    if (hasLatin && !hasFrenchAccents) return "en";
+    return "fr";
+  }
+
+  let timer = null;
+  let lastPayloadKey = "";
+  let lastSourceLang = "fr";
+
+  function frIsValid() {
+    // FR obligatoire si langue != fr et contenu non vide
+    const contenu = (contenuEl.value || "").trim();
+    if (!contenu) return true; // rien à publier
+    if (lastSourceLang === "fr") return true;
+    return (hContFR.value || "").trim() !== "";
+  }
+
+  function refreshSubmitState() {
+    setSubmitEnabled(frIsValid());
+  }
+
+  async function runTranslate(force = false) {
+    const contenu = (contenuEl.value || "").trim();
+    const desc    = (descEl.value || "").trim();
+    const baseText = contenu || desc;
+
+    const sourceLang = detectLang(baseText);
+    lastSourceLang = sourceLang;
+
+    // Hidden inputs original
+    if (hLang) hLang.value = sourceLang;
+    if (hCont) hCont.value = contenu;
+    if (hDesc) hDesc.value = desc;
+
+    // Si vide
+    if (!contenu && !desc) {
+      hContFR.value = "";
+      if (hDescFR) hDescFR.value = "";
+      safeText(outCont, "—");
+      safeText(outDesc, "—");
+      setStatus("warn", "Vide");
+      refreshSubmitState();
+      return;
+    }
+
+    // Si déjà FR => on copie tel quel dans FR (obligatoire satisfaite)
+    if (sourceLang === "fr") {
+      hContFR.value = contenu;
+      if (hDescFR) hDescFR.value = desc;
+      safeText(outCont, contenu);
+      safeText(outDesc, desc);
+      setStatus("ok", "FR (identique)");
+      refreshSubmitState();
+      return;
+    }
+
+    // Empêcher submit pendant tentative de traduction
+    setSubmitEnabled(false);
+
+    const payloadKey = sourceLang + "||" + contenu + "||" + desc;
+    if (!force && payloadKey === lastPayloadKey) {
+      refreshSubmitState();
+      return;
+    }
+    lastPayloadKey = payloadKey;
+
+    setStatus("warn", "Traduction…");
+
+    try {
+      const url = "{{ path('reclamation_translate_to_fr') }}";
+
+      const res = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Requested-With": "XMLHttpRequest",
+          "Accept": "application/json"
+        },
+        body: JSON.stringify({
+          sourceLang: sourceLang,
+          contenu: contenu,
+          description: desc
+        })
+      });
+
+      const data = await res.json();
+
+      if (data.ok === false) {
+        // Traduction indisponible => FR doit être saisi manuellement
+        hContFR.value = "";
+        if (hDescFR) hDescFR.value = (data.description_fr || "").trim();
+        safeText(outCont, "⚠️ Traduction indisponible — écris la version FR ici avant de publier.");
+        safeText(outDesc, (data.description_fr || "").trim() || "—");
+        setStatus("err", "FR obligatoire");
+        refreshSubmitState();
+        return;
+      }
+
+      const frCont = (data.contenu_fr || "").trim();
+      const frDesc = (data.description_fr || "").trim();
+
+      // ✅ remplir les champs FR envoyés au backend
+      hContFR.value = frCont;
+      if (hDescFR) hDescFR.value = frDesc;
+
+      safeText(outCont, frCont || "—");
+      safeText(outDesc, frDesc || "—");
+      setStatus("ok", sourceLang.toUpperCase() + " → FR");
+
+      refreshSubmitState();
+    } catch (e) {
+      console.error("Traduction error:", e);
+
+      // Traduction KO => blocage (FR obligatoire)
+      hContFR.value = "";
+      if (hDescFR) hDescFR.value = "";
+      safeText(outCont, "⚠️ Erreur traduction — écris la version FR avant de publier.");
+      safeText(outDesc, "—");
+      setStatus("err", "FR obligatoire");
+      refreshSubmitState();
+    }
+  }
+
+  function scheduleTranslate() {
+    clearTimeout(timer);
+    timer = setTimeout(() => runTranslate(false), 600);
+  }
+
+  contenuEl.addEventListener("input", scheduleTranslate);
+  descEl.addEventListener("input", scheduleTranslate);
+
+  btnForce?.addEventListener("click", () => {
+    lastPayloadKey = "";
+    runTranslate(true);
+  });
+
+  // ✅ Bloquer le submit si FR manquant
+  form.addEventListener("submit", async (e) => {
+    await runTranslate(true);
+    if (!frIsValid()) {
+      e.preventDefault();
+      setStatus("err", "Impossible de publier : version FR obligatoire.");
+      safeText(outCont, "⚠️ Traduction indisponible — saisis la version FR puis republie.");
+      return;
+    }
+  });
+
+  setStatus("ok", "Prêt");
+  refreshSubmitState();
+})();
+</script>
 {% endblock %}

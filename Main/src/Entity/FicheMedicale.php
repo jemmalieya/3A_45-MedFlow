@@ -28,6 +28,9 @@ class FicheMedicale
     #[ORM\Column(type: Types::TEXT, nullable: true)]
     private ?string $resultatsExamens = null;
 
+    #[ORM\Column(type: Types::TEXT, nullable: true)]
+    private ?string $signature = null;
+
     #[ORM\Column]
     private ?\DateTime $startTime = null;
 
@@ -98,7 +101,17 @@ class FicheMedicale
     public function setResultatsExamens(?string $resultatsExamens): static
     {
         $this->resultatsExamens = $resultatsExamens;
+        return $this;
+    }
 
+    public function getSignature(): ?string
+    {
+        return $this->signature;
+    }
+
+    public function setSignature(?string $signature): static
+    {
+        $this->signature = $signature;
         return $this;
     }
 

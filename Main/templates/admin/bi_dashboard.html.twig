@@ -1,673 +1,531 @@
 {% extends 'base_dashboard.html.twig' %}
 {% block title %}Tableau de bord BI{% endblock %}
 
-{% block head %}
+{% block stylesheets %}
 <style>
-  /* ====== BI THEME (Lisibilité + neutre, pas rouge/vert agressif) ====== */
-  :root{
-    --bi-text: #111827;          /* noir lisible */
-    --bi-muted: #4b5563;         /* gris lisible */
-    --bi-border: #e5e7eb;        /* border clean */
-    --bi-bg: #ffffff;
-    --bi-soft: #f8fafc;
-
-    --bi-blue: #2563eb;
-    --bi-blue-soft: #eff6ff;
-
-    --bi-amber: #b45309;
-    --bi-amber-soft: #fff7ed;
-
-    --bi-slate: #334155;
-    --bi-slate-soft: #f1f5f9;
-  }
-
-  /* Texte global */
-  .container-fluid { color: var(--bi-text); }
-  .text-muted { color: var(--bi-muted) !important; }
-  h3,h4,h5 { color: var(--bi-text) !important; }
-
-  /* Cards plus propres */
-  .card{
-    background: var(--bi-bg);
-    border: 1px solid var(--bi-border) !important;
-    border-radius: 14px;
-    box-shadow: 0 10px 24px rgba(17, 24, 39, 0.06);
+  /* ── KPI cards colorées ── */
+  .bi-kpi {
+    border-radius: 16px !important;
+    padding: 1.4rem 1.6rem;
+    color: #fff;
+    position: relative;
     overflow: hidden;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.13) !important;
+    transition: transform .2s, box-shadow .2s;
+    border: none !important;
   }
-  .card-header{
-    background: var(--bi-bg) !important;
-    border-bottom: 1px solid var(--bi-border) !important;
+  .bi-kpi:hover { transform: translateY(-3px); box-shadow: 0 14px 32px rgba(0,0,0,0.18) !important; }
+  .bi-kpi::after {
+    content:''; position:absolute; right:-18px; bottom:-18px;
+    width:90px; height:90px; border-radius:50%;
+    background:rgba(255,255,255,0.12);
   }
-  .card-body.bg-light{ background: var(--bi-soft) !important; }
-
-  /* KPI cards */
-  .kpi-card{ transition: transform .18s ease, box-shadow .18s ease; }
-  .kpi-card:hover{
-    transform: translateY(-2px);
-    box-shadow: 0 14px 32px rgba(17, 24, 39, 0.10);
+  .bi-kpi::before {
+    content:''; position:absolute; right:22px; bottom:22px;
+    width:54px; height:54px; border-radius:50%;
+    background:rgba(255,255,255,0.08);
   }
-
-  /* Boutons 7/30/90 plus clean */
-  .btn-outline-primary{
-    border-color: #c7d2fe;
-    color: #1d4ed8;
-  }
-  .btn-outline-primary:hover{ background: #eef2ff; }
-  .btn-outline-primary.active{
-    background: #1d4ed8 !important;
-    border-color: #1d4ed8 !important;
-    color: #fff !important;
-  }
-
-  /* Badge général */
-  .badge{
-    border-radius: 999px;
-    padding: .45rem .75rem;
-    font-weight: 800;
-    letter-spacing: .2px;
+  .bi-kpi.blue   { background: linear-gradient(135deg,#4e73df,#2e59d9); }
+  .bi-kpi.green  { background: linear-gradient(135deg,#1cc88a,#13a673); }
+  .bi-kpi.orange { background: linear-gradient(135deg,#f6c23e,#c99e00); }
+  .bi-kpi.purple { background: linear-gradient(135deg,#6f42c1,#5a32a3); }
+  .bi-kpi-label  { font-size:10.5px; font-weight:800; text-transform:uppercase; letter-spacing:1.5px; opacity:.85; margin-bottom:8px; }
+  .bi-kpi-value  { font-size:32px; font-weight:900; line-height:1; margin-bottom:4px; }
+  .bi-kpi-sub    { font-size:12.5px; font-weight:600; opacity:.8; }
+  .bi-kpi-var {
+    display:inline-flex; align-items:center; gap:4px;
+    margin-top:10px; background:rgba(255,255,255,0.20);
+    border-radius:20px; padding:3px 11px;
+    font-size:11.5px; font-weight:700;
   }
 
-  /* Chips catégorie (plus clean, lisible) */
-  .chip-cat{
-    background: #f8fafc;
-    border: 1px solid var(--bi-border);
-    color: var(--bi-slate);
-    padding: .35rem .60rem;
-    border-radius: 999px;
-    font-weight: 700;
-    font-size: .85rem;
-    display: inline-block;
+  /* ── KPI secondaires ── */
+  .bi-sm {
+    background:#fff; border-radius:14px !important;
+    padding:1.1rem 1.3rem;
+    border: none !important;
+    box-shadow: 0 4px 18px rgba(78,115,223,0.09) !important;
+    transition:transform .2s;
+    height: 100%;
+  }
+  .bi-sm:hover { transform:translateY(-2px); }
+  .bi-sm-icon {
+    width:36px; height:36px; border-radius:9px;
+    display:flex; align-items:center; justify-content:center;
+    font-size:17px; margin-bottom:8px;
+  }
+  .bi-sm-label { font-size:10px; font-weight:800; color:#8892a4; text-transform:uppercase; letter-spacing:1px; }
+  .bi-sm-value { font-size:24px; font-weight:900; color:#1a1f36; }
+  .bi-sm-sub   { font-size:11.5px; color:#8892a4; font-weight:600; }
+
+  /* ── Chart cards ── */
+  .bi-chart-card {
+    background:#fff; border-radius:16px !important;
+    border:none !important;
+    box-shadow:0 4px 18px rgba(78,115,223,0.09) !important;
+    padding:1.4rem 1.6rem;
+    height:100%;
+  }
+  .bi-card-title { font-size:15px; font-weight:800; color:#1a1f36; margin-bottom:2px; }
+  .bi-card-sub   { font-size:12px; color:#8892a4; font-weight:600; margin-bottom:14px; }
+
+  /* ── Filters ── */
+  .bi-filters {
+    background:#fff; border-radius:14px;
+    padding:1rem 1.4rem; margin-bottom:1.5rem;
+    box-shadow:0 4px 18px rgba(78,115,223,0.08);
+    border:none !important;
+  }
+  .bi-flabel { font-size:10px; font-weight:800; color:#8892a4; text-transform:uppercase; letter-spacing:1px; display:block; margin-bottom:4px; }
+  .bi-finput, .bi-fselect {
+    height:36px; padding:0 12px;
+    border:1.5px solid #e3e8f0 !important; border-radius:9px;
+    font-size:13px; font-weight:600; color:#1a1f36;
+    background:#f4f6fc; outline:none;
+    transition:border-color .18s;
+    width:100%;
+  }
+  .bi-finput:focus, .bi-fselect:focus { border-color:#4e73df !important; outline:none; box-shadow:none; }
+  .bi-fbtn {
+    height:36px; padding:0 18px; border-radius:9px;
+    font-size:13px; font-weight:700; border:none; cursor:pointer;
+    display:inline-flex; align-items:center; gap:6px;
+    background: linear-gradient(135deg,#0097B2,#00BFA6);
+    color:#fff; box-shadow:0 4px 12px rgba(0,151,178,0.28);
+    transition:all .18s;
+  }
+  .bi-fbtn:hover { transform:translateY(-1px); box-shadow:0 6px 16px rgba(0,151,178,0.36); }
+
+  /* ── Period tabs ── */
+  .bi-tab {
+    padding:6px 16px; border-radius:8px; font-size:13px; font-weight:700;
+    border:1.5px solid #e3e8f0; background:#fff; color:#8892a4;
+    text-decoration:none; transition:all .18s; display:inline-block;
+  }
+  .bi-tab:hover, .bi-tab.active {
+    background:#4e73df; color:#fff; border-color:#4e73df;
+    box-shadow:0 4px 12px rgba(78,115,223,0.25);
   }
 
-  /* Tables : titres noirs + meilleur spacing */
-  .table-produits{ margin: 0; }
-  .table-produits thead th{
-    color: var(--bi-text) !important;
-    font-weight: 900 !important;
-    font-size: .82rem !important;
-    text-transform: uppercase;
-    letter-spacing: .35px;
-    background: #fbfdff !important;
-    border-bottom: 1px solid var(--bi-border) !important;
-    padding: 14px 14px !important;
-    white-space: nowrap;
+  /* ── Alerts ── */
+  .bi-alert {
+    border-radius:10px; padding:10px 16px;
+    font-size:13.5px; font-weight:600;
+    display:flex; align-items:center; gap:9px;
+    margin-bottom:8px;
   }
-  .table-produits tbody td{
-    color: var(--bi-text);
-    font-size: .95rem;
-    padding: 14px 14px !important;
-    border-color: var(--bi-border) !important;
-    vertical-align: middle;
+  .bi-alert.warning { background:#fff8e1; border-left:4px solid #f6c23e; color:#7a5200; }
+  .bi-alert.danger  { background:#fdecea; border-left:4px solid #e74a3b; color:#8b1a1a; }
+  .bi-alert.success { background:#e8faf3; border-left:4px solid #1cc88a; color:#0e5c3a; }
+  .bi-alert.info    { background:#e8f4fd; border-left:4px solid #36b9cc; color:#0b4f6c; }
+
+  /* ── Tables ── */
+  .bi-table thead th {
+    font-size:10.5px; font-weight:800; color:#8892a4;
+    text-transform:uppercase; letter-spacing:1px;
+    border-bottom:2px solid #e3e8f0 !important; border-top:none !important;
+    padding:8px 12px;
   }
-  .table-hover tbody tr:hover{ background: #f9fafb !important; }
-
-  /* Valeurs importantes */
-  .val-qty{
-    font-weight: 900;
-    color: var(--bi-blue);
+  .bi-table tbody td {
+    font-size:13.5px; font-weight:600; color:#1a1f36;
+    padding:10px 12px; border-color:#e3e8f0 !important; vertical-align:middle;
   }
-  .val-ca{
-    font-weight: 800;
-    color: var(--bi-slate);
+  .bi-table tbody tr:hover td { background:#f4f6fc; }
+
+  .bi-tag {
+    display:inline-flex; align-items:center;
+    padding:3px 10px; border-radius:20px;
+    font-size:11px; font-weight:800;
   }
+  .stock-ok       { background:rgba(28,200,138,0.12); color:#13a673; }
+  .stock-mid      { background:rgba(246,194,62,0.15);  color:#9a7000; }
+  .stock-low      { background:rgba(231,74,59,0.12);   color:#c0392b; }
+  .status-rupture { background:rgba(231,74,59,0.12);   color:#c0392b; }
+  .status-dispo   { background:rgba(28,200,138,0.12);  color:#13a673; }
+  .status-autre   { background:rgba(111,66,193,0.12);  color:#5a32a3; }
 
-  /* Badges STOCK neutres (pas rouge/vert) */
-  .stock-pill{
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    padding: .40rem .70rem;
-    border-radius: 999px;
-    font-weight: 900;
-    font-size: .85rem;
-    border: 1px solid var(--bi-border);
-    background: var(--bi-slate-soft);
-    color: var(--bi-slate);
+  /* ── Tips ── */
+  .bi-tips {
+    background:linear-gradient(135deg,#1a1f36,#2d3f6b);
+    border-radius:16px; padding:1.6rem 1.8rem; color:#fff;
+    box-shadow:0 8px 28px rgba(30,42,74,0.28); border:none !important;
   }
-  .stock-pill::before{
-    content: "";
-    width: 8px; height: 8px;
-    border-radius: 50%;
-    background: #94a3b8;
-    display: inline-block;
+  .bi-tips-title { font-size:15px; font-weight:800; margin-bottom:14px; display:flex; align-items:center; gap:8px; }
+  .bi-tip {
+    background:rgba(255,255,255,0.08); border-radius:9px;
+    padding:11px 15px; font-size:13.5px; font-weight:600;
+    display:flex; align-items:flex-start; gap:9px;
+    color:rgba(255,255,255,0.88); border-left:3px solid #4e73df;
+    height:100%;
   }
-  /* niveaux (soft) */
-  .stock-ok{ background: var(--bi-blue-soft); border-color: #bfdbfe; color: var(--bi-blue); }
-  .stock-ok::before{ background: #60a5fa; }
+  .bi-tip-dot { color:#4e73df; font-size:17px; line-height:1.3; flex-shrink:0; }
 
-  .stock-mid{ background: var(--bi-amber-soft); border-color: #fed7aa; color: var(--bi-amber); }
-  .stock-mid::before{ background: #fb923c; }
+  .bi-empty { text-align:center; padding:24px; color:#8892a4; font-size:13.5px; font-weight:600; }
 
-  .stock-low{ background: var(--bi-slate-soft); border-color: #cbd5e1; color: #0f172a; }
-  .stock-low::before{ background: #64748b; }
-
-  /* Badge STATUT neutre */
-  .status-pill{
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    padding: .40rem .70rem;
-    border-radius: 999px;
-    font-weight: 900;
-    font-size: .85rem;
-    border: 1px solid var(--bi-border);
-    background: var(--bi-slate-soft);
-    color: #0f172a;
+  .bi-period-badge {
+    display:inline-block; background:rgba(78,115,223,0.10);
+    color:#4e73df; padding:3px 12px; border-radius:20px;
+    font-size:12px; font-weight:700; margin-top:4px;
   }
-  .status-pill::before{
-    content: "";
-    width: 8px; height: 8px;
-    border-radius: 50%;
-    background: #64748b;
-    display: inline-block;
-  }
-  /* Statuts soft (pas rouge/vert) */
-  .status-rupture{ background: #f1f5f9; border-color: #cbd5e1; color: #0f172a; }
-  .status-rupture::before{ background: #0f172a; }
-
-  .status-dispo{ background: var(--bi-blue-soft); border-color: #bfdbfe; color: var(--bi-blue); }
-  .status-dispo::before{ background: #2563eb; }
-
-  .status-autre{ background: var(--bi-amber-soft); border-color: #fed7aa; color: var(--bi-amber); }
-  .status-autre::before{ background: #fb923c; }
-
-  /* Variation badge (si tu gardes) */
-  .variation-badge{ font-size: .85rem; font-weight: 900; padding: .40rem .65rem; }
-  
 </style>
 {% endblock %}
 
 {% block body %}
-<div class="container-fluid py-4">
 
-  <div class="d-flex justify-content-between align-items-center mb-4">
-    <h3 class="mb-0 fw-bold">Tableau de bord BI</h3>
-    <div class="btn-group">
-      {# (ici tu peux garder comme tu as) #}
-      <a class="btn btn-sm btn-outline-primary {{ days == 7 ? 'active' : '' }}" href="{{ path('admin_bi_dashboard', {days: 7, cat: cat}) }}">7 jours</a>
-      <a class="btn btn-sm btn-outline-primary {{ days == 30 ? 'active' : '' }}" href="{{ path('admin_bi_dashboard', {days: 30, cat: cat}) }}">30 jours</a>
-      <a class="btn btn-sm btn-outline-primary {{ days == 90 ? 'active' : '' }}" href="{{ path('admin_bi_dashboard', {days: 90, cat: cat}) }}">90 jours</a>
+<!-- PAGE HEADER -->
+<div class="d-flex align-items-center justify-content-between flex-wrap mb-4 gap-2">
+  <div>
+    <h1 class="h4 mb-0 text-gray-800 font-weight-bold">📊 Tableau de bord BI</h1>
+    <div class="mt-1">
+      <span class="bi-period-badge">
+        Période : {{ from }} → {{ to }}{% if cat %} | {{ cat }}{% endif %}
+      </span>
     </div>
   </div>
-
-  {# Filtres #}
-  <form method="get" class="card mb-4 shadow-sm border-0">
-    <div class="card-body bg-light">
-      <div class="row g-3 align-items-end">
-        <input type="hidden" name="days" value="{{ days }}">
-
-        <div class="col-md-3">
-          <label class="form-label fw-bold">Date de début</label>
-          <input type="date" name="from" class="form-control" value="{{ from }}" required>
-        </div>
-
-        <div class="col-md-3">
-          <label class="form-label fw-bold">Date de fin</label>
-          <input type="date" name="to" class="form-control" value="{{ to }}" required>
-        </div>
-
-        <div class="col-md-4">
-          <label class="form-label fw-bold">Catégorie</label>
-          <select name="cat" class="form-select">
-            <option value="">Toutes les catégories</option>
-            {% for c in categories %}
-              <option value="{{ c }}" {{ cat == c ? 'selected' : '' }}>{{ c }}</option>
-            {% endfor %}
-          </select>
-        </div>
-
-        <div class="col-md-2 d-flex gap-2">
-          <button class="btn btn-primary flex-fill" type="submit">
-            <i class="bi bi-funnel-fill"></i> Filtrer
-          </button>
-          <a class="btn btn-outline-secondary" href="{{ path('admin_bi_dashboard', {days: days}) }}" title="Réinitialiser">
-            <i class="bi bi-arrow-clockwise"></i>
-          </a>
-        </div>
-      </div>
-
-      <div class="mt-3">
-        <span class="badge bg-dark">
-          Période : {{ from }} au {{ to }}
-          {% if cat %} | Catégorie : {{ cat }}{% endif %}
-        </span>
-      </div>
-    </div>
-  </form>
-
-  {# Alertes #}
-  {% if alerts is not empty %}
-    <div class="mb-4">
-      {% for a in alerts %}
-        <div class="alert alert-{{ a.type }} alert-dismissible fade show mb-2 border-0 shadow-sm" role="alert">
-          <strong>{{ a.title }}</strong> — {{ a.message }}
-          <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-      {% endfor %}
-    </div>
-  {% endif %}
-
-  {# KPI principaux (inchangé) #}
-  <div class="row g-3 mb-4">
-    <div class="col-md-3">
-      <div class="card shadow-sm border-0 h-100 kpi-card">
-        <div class="card-body">
-          <div class="d-flex justify-content-between align-items-start mb-2">
-            <div class="flex-grow-1">
-              <p class="text-muted mb-1 fw-semibold small">Chiffre d'affaires</p>
-              <h3 class="mb-0 fw-bold">{{ kpi.ca|number_format(2, ',', ' ') }} DT</h3>
-            </div>
-            <div class="bg-primary bg-opacity-10 p-2 rounded-circle">
-              <i class="bi bi-currency-dollar text-primary fs-4"></i>
-            </div>
-          </div>
-          {% if kpi.variationCA is not null %}
-            <span class="variation-badge badge {% if kpi.variationCA < 0 %}bg-danger{% else %}bg-success{% endif %}">
-              <i class="bi bi-arrow-{{ kpi.variationCA < 0 ? 'down' : 'up' }}"></i>
-              {{ kpi.variationCA|abs|number_format(1, ',', ' ') }}%
-            </span>
-            <small class="text-muted ms-1">vs période précédente</small>
-          {% endif %}
-        </div>
-      </div>
-    </div>
-
-    <div class="col-md-3">
-      <div class="card shadow-sm border-0 h-100 kpi-card">
-        <div class="card-body">
-          <div class="d-flex justify-content-between align-items-start mb-2">
-            <div class="flex-grow-1">
-              <p class="text-muted mb-1 fw-semibold small">Nombre de commandes</p>
-              <h3 class="mb-0 fw-bold">{{ kpi.nbCommandes }}</h3>
-            </div>
-            <div class="bg-success bg-opacity-10 p-2 rounded-circle">
-              <i class="bi bi-cart-check text-success fs-4"></i>
-            </div>
-          </div>
-          {% if kpi.variationCommandes is not null %}
-            <span class="variation-badge badge {% if kpi.variationCommandes < 0 %}bg-danger{% else %}bg-success{% endif %}">
-              <i class="bi bi-arrow-{{ kpi.variationCommandes < 0 ? 'down' : 'up' }}"></i>
-              {{ kpi.variationCommandes|abs|number_format(1, ',', ' ') }}%
-            </span>
-            <small class="text-muted ms-1">vs période précédente</small>
-          {% endif %}
-        </div>
-      </div>
-    </div>
-
-    <div class="col-md-3">
-      <div class="card shadow-sm border-0 h-100 kpi-card">
-        <div class="card-body">
-          <div class="d-flex justify-content-between align-items-start mb-2">
-            <div class="flex-grow-1">
-              <p class="text-muted mb-1 fw-semibold small">Panier moyen</p>
-              <h3 class="mb-0 fw-bold">{{ kpi.panierMoyen|number_format(2, ',', ' ') }} DT</h3>
-            </div>
-            <div class="bg-info bg-opacity-10 p-2 rounded-circle">
-              <i class="bi bi-basket text-info fs-4"></i>
-            </div>
-          </div>
-          {% if kpi.variationPanier is not null %}
-            <span class="variation-badge badge {% if kpi.variationPanier < 0 %}bg-danger{% else %}bg-success{% endif %}">
-              <i class="bi bi-arrow-{{ kpi.variationPanier < 0 ? 'down' : 'up' }}"></i>
-              {{ kpi.variationPanier|abs|number_format(1, ',', ' ') }}%
-            </span>
-            <small class="text-muted ms-1">vs période précédente</small>
-          {% endif %}
-        </div>
-      </div>
-    </div>
-
-    <div class="col-md-3">
-      <div class="card shadow-sm border-0 h-100 kpi-card">
-        <div class="card-body">
-          <div class="d-flex justify-content-between align-items-start mb-2">
-            <div class="flex-grow-1">
-              <p class="text-muted mb-1 fw-semibold small">Taux de conversion</p>
-              <h3 class="mb-0 fw-bold">{{ kpi.tauxConversion|number_format(1, ',', ' ') }}%</h3>
-            </div>
-            <div class="bg-warning bg-opacity-10 p-2 rounded-circle">
-              <i class="bi bi-graph-up text-warning fs-4"></i>
-            </div>
-          </div>
-          <small class="text-muted">{{ kpi.nbValidees }} / {{ kpi.nbCommandes }} validées</small>
-        </div>
-      </div>
-    </div>
+  <div class="d-flex gap-2">
+    <a href="?days=7"  class="bi-tab {% if days == 7  %}active{% endif %}">7j</a>
+    <a href="?days=30" class="bi-tab {% if days == 30 %}active{% endif %}">30j</a>
+    <a href="?days=90" class="bi-tab {% if days == 90 %}active{% endif %}">90j</a>
   </div>
-
-  {# KPI secondaires (inchangé) #}
-  <div class="row g-3 mb-4">
-    <div class="col-md-3">
-      <div class="card shadow-sm border-0 h-100">
-        <div class="card-body">
-          <p class="text-muted mb-1 fw-semibold small">Quantité totale vendue</p>
-          <h4 class="mb-0 fw-bold">{{ kpi.quantiteTotale }} <small class="text-muted fw-normal">unités</small></h4>
-        </div>
-      </div>
-    </div>
-
-    <div class="col-md-3">
-      <div class="card shadow-sm border-0 h-100">
-        <div class="card-body">
-          <p class="text-muted mb-1 fw-semibold small">Commandes en attente</p>
-          <h4 class="mb-0 fw-bold">{{ kpi.nbEnAttente }}</h4>
-        </div>
-      </div>
-    </div>
-
-    <div class="col-md-3">
-      <div class="card shadow-sm border-0 h-100">
-        <div class="card-body">
-          <p class="text-muted mb-1 fw-semibold small">Taux de rupture</p>
-          <h4 class="mb-0 fw-bold {% if kpi.tauxRupture >= 10 %}text-danger{% elseif kpi.tauxRupture >= 5 %}text-warning{% else %}text-success{% endif %}">
-            {{ kpi.tauxRupture|number_format(1, ',', ' ') }}%
-          </h4>
-        </div>
-      </div>
-    </div>
-
-    <div class="col-md-3">
-      <div class="card shadow-sm border-0 h-100">
-        <div class="card-body">
-          <p class="text-muted mb-1 fw-semibold small">Période analysée</p>
-          <h4 class="mb-0 fw-bold">{{ days }} <small class="text-muted fw-normal">jours</small></h4>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  {# Graphique principal (inchangé) #}
-  <div class="row g-3 mb-4">
-    <div class="col-12">
-      <div class="card shadow-sm border-0">
-        <div class="card-header bg-white border-bottom">
-          <h5 class="mb-1 fw-bold">Évolution quotidienne des ventes</h5>
-          <small class="text-muted">
-            CA et quantités vendues par jour
-            {% if cat %} - Catégorie : <strong>{{ cat }}</strong>{% endif %}
-          </small>
-        </div>
-        <div class="card-body">
-          <canvas id="chartVentesJour" height="80"></canvas>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  {# Graphiques secondaires (inchangé) #}
-  <div class="row g-3 mb-4">
-    <div class="col-lg-8">
-      <div class="card shadow-sm border-0">
-        <div class="card-header bg-white border-bottom">
-          <h5 class="mb-0 fw-bold">Performance par catégorie</h5>
-          <small class="text-muted">Quantités et CA par catégorie</small>
-        </div>
-        <div class="card-body">
-          <canvas id="chartCategories" height="100"></canvas>
-        </div>
-      </div>
-    </div>
-
-    <div class="col-lg-4">
-      <div class="card shadow-sm border-0">
-        <div class="card-header bg-white border-bottom">
-          <h5 class="mb-0 fw-bold">Répartition par statut</h5>
-          <small class="text-muted">Distribution des commandes</small>
-        </div>
-        <div class="card-body">
-          <canvas id="chartStatuts" height="200"></canvas>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  {# Tables #}
-  <div class="row g-3 mb-4">
-    <div class="col-lg-7">
-      <div class="card shadow-sm border-0">
-        <div class="card-header bg-white border-bottom">
-          <h5 class="mb-0 fw-bold">Top 10 des produits</h5>
-          <small class="text-muted">Produits les plus vendus sur la période</small>
-        </div>
-        <div class="card-body p-0">
-          <div class="table-responsive">
-            <table class="table table-hover table-produits mb-0">
-              <thead class="table-light">
-                <tr>
-                  <th>Produit</th>
-                  <th>Catégorie</th>
-                  <th class="text-end">Quantité</th>
-                  <th class="text-end">CA (DT)</th>
-                  <th class="text-center">Stock actuel</th>
-                </tr>
-              </thead>
-              <tbody>
-                {% for p in topProduits %}
-                  {% set stockClass = (p.stock_actuel >= 11) ? 'stock-ok' : (p.stock_actuel >= 5 ? 'stock-mid' : 'stock-low') %}
-                  <tr>
-                    <td class="fw-semibold">{{ p.produit }}</td>
-                    <td><span class="chip-cat">{{ p.categorie }}</span></td>
-                    <td class="text-end val-qty">{{ p.quantite }}</td>
-                    <td class="text-end val-ca">{{ p.ca|number_format(0, ',', ' ') }}</td>
-                    <td class="text-center">
-                      <span class="stock-pill {{ stockClass }}">{{ p.stock_actuel }}</span>
-                    </td>
-                  </tr>
-                {% else %}
-                  <tr><td colspan="5" class="text-center text-muted py-4">Aucune donnée disponible</td></tr>
-                {% endfor %}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div class="col-lg-5">
-      <div class="card shadow-sm border-0">
-        <div class="card-header bg-white border-bottom">
-          <h5 class="mb-0 fw-bold">Alertes stock critique</h5>
-          <small class="text-muted">Produits nécessitant un réapprovisionnement</small>
-        </div>
-        <div class="card-body p-0">
-          {% if stocksBas is empty %}
-            <div class="alert alert-success mb-0 border-0 rounded-0">
-              <i class="bi bi-check-circle-fill"></i> Aucun produit en stock critique
-            </div>
-          {% else %}
-            <div class="table-responsive">
-              <table class="table table-hover table-produits mb-0">
-                <thead class="table-light">
-                  <tr>
-                    <th>Produit</th>
-                    <th>Catégorie</th>
-                    <th class="text-center">Stock</th>
-                    <th class="text-center">Statut</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {% for s in stocksBas %}
-                    {% set stockClass2 = (s.quantite_produit >= 11) ? 'stock-ok' : (s.quantite_produit >= 5 ? 'stock-mid' : 'stock-low') %}
-                    {% set st = (s.status_produit|lower) %}
-                    {% set statusClass =
-                      (st == 'rupture') ? 'status-rupture' :
-                      (st == 'disponible') ? 'status-dispo' : 'status-autre'
-                    %}
-                    <tr>
-                      <td class="fw-semibold">{{ s.nom_produit }}</td>
-                      <td><span class="chip-cat">{{ s.categorie_produit }}</span></td>
-                      <td class="text-center">
-                        <span class="stock-pill {{ stockClass2 }}">{{ s.quantite_produit }}</span>
-                      </td>
-                      <td class="text-center">
-                        <span class="status-pill {{ statusClass }}">{{ s.status_produit }}</span>
-                      </td>
-                    </tr>
-                  {% endfor %}
-                </tbody>
-              </table>
-            </div>
-          {% endif %}
-        </div>
-      </div>
-    </div>
-  </div>
-
-  {# Conseils (inchangé) #}
-  <div class="row g-3">
-    <div class="col-12">
-      <div class="card shadow-sm border-0">
-        <div class="card-header bg-white border-bottom">
-          <h5 class="mb-0 fw-bold">Recommandations stratégiques</h5>
-        </div>
-        <div class="card-body">
-          <ul class="mb-0">
-            {% for t in tips %}
-              <li class="mb-2">{{ t }}</li>
-            {% endfor %}
-          </ul>
-        </div>
-      </div>
-    </div>
-  </div>
-
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<!-- FILTRES -->
+<div class="bi-filters mb-4">
+  <form method="get" class="d-flex align-items-end flex-wrap gap-3">
+    <div>
+      <label class="bi-flabel">Date de début</label>
+      <input type="date" name="from" value="{{ from }}" class="bi-finput">
+    </div>
+    <div>
+      <label class="bi-flabel">Date de fin</label>
+      <input type="date" name="to" value="{{ to }}" class="bi-finput">
+    </div>
+    <div>
+      <label class="bi-flabel">Catégorie</label>
+      <select name="cat" class="bi-fselect">
+        <option value="">Toutes les catégories</option>
+        {% for c in categories %}
+          <option value="{{ c }}" {% if c == cat %}selected{% endif %}>{{ c }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <button type="submit" class="bi-fbtn">🔍 Filtrer</button>
+  </form>
+</div>
+
+<!-- ALERTES -->
+{% if alerts is not empty %}
+<div class="mb-3">
+  {% for a in alerts %}
+  <div class="bi-alert {{ a.type }}">
+    {% if a.type == 'danger' %}🔴{% elseif a.type == 'success' %}🟢{% elseif a.type == 'info' %}🔵{% else %}🟡{% endif %}
+    <strong>{{ a.title }}</strong> — {{ a.message }}
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+<!-- KPI PRINCIPAUX -->
+<div class="row mb-3">
+  <div class="col-xl-3 col-md-6 mb-3">
+    <div class="bi-kpi blue h-100">
+      <div class="bi-kpi-label">Chiffre d'affaires</div>
+      <div class="bi-kpi-value">{{ kpi.ca|number_format(2, ',', ' ') }}</div>
+      <div class="bi-kpi-sub">DT</div>
+      {% if kpi.variationCA is not null %}
+      <div class="bi-kpi-var">
+        {% if kpi.variationCA >= 0 %}↑{% else %}↓{% endif %}
+        {{ kpi.variationCA|abs|number_format(1, ',', ' ') }}% vs préc.
+      </div>
+      {% endif %}
+    </div>
+  </div>
+  <div class="col-xl-3 col-md-6 mb-3">
+    <div class="bi-kpi green h-100">
+      <div class="bi-kpi-label">Commandes</div>
+      <div class="bi-kpi-value">{{ kpi.nbCommandes }}</div>
+      <div class="bi-kpi-sub">total période</div>
+      {% if kpi.variationCommandes is not null %}
+      <div class="bi-kpi-var">
+        {% if kpi.variationCommandes >= 0 %}↑{% else %}↓{% endif %}
+        {{ kpi.variationCommandes|abs|number_format(1, ',', ' ') }}% vs préc.
+      </div>
+      {% endif %}
+    </div>
+  </div>
+  <div class="col-xl-3 col-md-6 mb-3">
+    <div class="bi-kpi orange h-100">
+      <div class="bi-kpi-label">Panier moyen</div>
+      <div class="bi-kpi-value">{{ kpi.panierMoyen|number_format(2, ',', ' ') }}</div>
+      <div class="bi-kpi-sub">DT / commande</div>
+      {% if kpi.variationPanier is not null %}
+      <div class="bi-kpi-var">
+        {% if kpi.variationPanier >= 0 %}↑{% else %}↓{% endif %}
+        {{ kpi.variationPanier|abs|number_format(1, ',', ' ') }}% vs préc.
+      </div>
+      {% endif %}
+    </div>
+  </div>
+  <div class="col-xl-3 col-md-6 mb-3">
+    <div class="bi-kpi purple h-100">
+      <div class="bi-kpi-label">Taux de conversion</div>
+      <div class="bi-kpi-value">{{ kpi.tauxConversion|number_format(1, ',', ' ') }}%</div>
+      <div class="bi-kpi-sub">{{ kpi.nbValidees }} / {{ kpi.nbCommandes }} validées</div>
+    </div>
+  </div>
+</div>
+
+<!-- KPI SECONDAIRES -->
+<div class="row mb-4">
+  <div class="col-xl-3 col-md-6 mb-3">
+    <div class="bi-sm">
+      <div class="bi-sm-icon" style="background:rgba(54,185,204,0.12)">📦</div>
+      <div class="bi-sm-label">Qté totale vendue</div>
+      <div class="bi-sm-value">{{ kpi.quantiteTotale }}</div>
+      <div class="bi-sm-sub">unités</div>
+    </div>
+  </div>
+  <div class="col-xl-3 col-md-6 mb-3">
+    <div class="bi-sm">
+      <div class="bi-sm-icon" style="background:rgba(246,194,62,0.15)">⏳</div>
+      <div class="bi-sm-label">En attente</div>
+      <div class="bi-sm-value">{{ kpi.nbEnAttente }}</div>
+      <div class="bi-sm-sub">commandes</div>
+    </div>
+  </div>
+  <div class="col-xl-3 col-md-6 mb-3">
+    <div class="bi-sm">
+      <div class="bi-sm-icon" style="background:rgba(231,74,59,0.12)">🚫</div>
+      <div class="bi-sm-label">Taux de rupture</div>
+      <div class="bi-sm-value">{{ kpi.tauxRupture|number_format(1, ',', ' ') }}%</div>
+      <div class="bi-sm-sub">produits en rupture</div>
+    </div>
+  </div>
+  <div class="col-xl-3 col-md-6 mb-3">
+    <div class="bi-sm">
+      <div class="bi-sm-icon" style="background:rgba(78,115,223,0.12)">📅</div>
+      <div class="bi-sm-label">Période analysée</div>
+      <div class="bi-sm-value">{{ days }}</div>
+      <div class="bi-sm-sub">jours</div>
+    </div>
+  </div>
+</div>
+
+<!-- GRAPHIQUES LIGNE 1 -->
+<div class="row mb-4">
+  <div class="col-xl-8 mb-3">
+    <div class="bi-chart-card">
+      <div class="bi-card-title">📈 Évolution quotidienne des ventes</div>
+      <div class="bi-card-sub">CA et quantités par jour{% if cat %} — {{ cat }}{% endif %}</div>
+      <canvas id="mainChart" style="max-height:250px"></canvas>
+    </div>
+  </div>
+  <div class="col-xl-4 mb-3">
+    <div class="bi-chart-card">
+      <div class="bi-card-title">🍩 Répartition par statut</div>
+      <div class="bi-card-sub">Distribution des commandes</div>
+      <canvas id="statusChart" style="max-height:250px"></canvas>
+    </div>
+  </div>
+</div>
+
+<!-- GRAPHIQUES LIGNE 2 -->
+<div class="row mb-4">
+  <div class="col-xl-6 mb-3">
+    <div class="bi-chart-card">
+      <div class="bi-card-title">🏷️ Performance par catégorie</div>
+      <div class="bi-card-sub">Quantités et CA par catégorie</div>
+      <canvas id="catChart" style="max-height:240px"></canvas>
+    </div>
+  </div>
+  <div class="col-xl-6 mb-3">
+    <div class="bi-chart-card">
+      <div class="bi-card-title">📊 CA par catégorie</div>
+      <div class="bi-card-sub">Chiffre d'affaires comparé</div>
+      <canvas id="caChart" style="max-height:240px"></canvas>
+    </div>
+  </div>
+</div>
+
+<!-- TABLES -->
+<div class="row mb-4">
+  <div class="col-xl-7 mb-3">
+    <div class="bi-chart-card">
+      <div class="bi-card-title">🏆 Top 10 des produits</div>
+      <div class="bi-card-sub">Produits les plus vendus sur la période</div>
+      <div class="table-responsive">
+        <table class="table bi-table mb-0">
+          <thead>
+            <tr>
+              <th>Produit</th><th>Catégorie</th><th>Qté</th><th>CA (DT)</th><th>Stock</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for p in topProduits %}
+            {% set sc = (p.stock_actuel >= 11) ? 'stock-ok' : (p.stock_actuel >= 5 ? 'stock-mid' : 'stock-low') %}
+            <tr>
+              <td>{{ p.produit }}</td>
+              <td>{{ p.categorie }}</td>
+              <td>{{ p.quantite }}</td>
+              <td>{{ p.ca|number_format(0, ',', ' ') }}</td>
+              <td><span class="bi-tag {{ sc }}">{{ p.stock_actuel }}</span></td>
+            </tr>
+            {% else %}
+            <tr><td colspan="5" class="bi-empty">Aucune donnée disponible</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-xl-5 mb-3">
+    <div class="bi-chart-card">
+      <div class="bi-card-title">⚠️ Stock critique</div>
+      <div class="bi-card-sub">Produits à réapprovisionner</div>
+      {% if stocksBas is empty %}
+        <div class="bi-empty">✅ Aucun produit en stock critique</div>
+      {% else %}
+      <div class="table-responsive">
+        <table class="table bi-table mb-0">
+          <thead>
+            <tr><th>Produit</th><th>Catégorie</th><th>Stock</th><th>Statut</th></tr>
+          </thead>
+          <tbody>
+            {% for s in stocksBas %}
+            {% set sc2 = (s.quantite_produit >= 11) ? 'stock-ok' : (s.quantite_produit >= 5 ? 'stock-mid' : 'stock-low') %}
+            {% set stl = s.status_produit|lower %}
+            {% set stc = (stl == 'rupture') ? 'status-rupture' : (stl == 'disponible' ? 'status-dispo' : 'status-autre') %}
+            <tr>
+              <td>{{ s.nom_produit }}</td>
+              <td>{{ s.categorie_produit }}</td>
+              <td><span class="bi-tag {{ sc2 }}">{{ s.quantite_produit }}</span></td>
+              <td><span class="bi-tag {{ stc }}">{{ s.status_produit }}</span></td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<!-- RECOMMANDATIONS -->
+{% if tips is not empty %}
+<div class="bi-tips mb-4">
+  <div class="bi-tips-title">💡 Recommandations stratégiques</div>
+  <div class="row g-2">
+    {% for t in tips %}
+    <div class="col-md-6 col-xl-4">
+      <div class="bi-tip">
+        <span class="bi-tip-dot">›</span>
+        <span>{{ t }}</span>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+<!-- CHARTS JS -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script>
-// Données
-const ventesJour = {{ charts.ventesJour|json_encode|raw }};
-const categories = {{ charts.categories|json_encode|raw }};
-const statuts = {{ charts.statuts|json_encode|raw }};
-
-// Configuration couleurs (inchangée)
-const colors = {
-  primary: 'rgb(13, 110, 253)',
-  success: 'rgb(25, 135, 84)',
-  danger: 'rgb(220, 53, 69)',
-  warning: 'rgb(255, 193, 7)',
-  info: 'rgb(13, 202, 240)',
-  purple: 'rgb(111, 66, 193)',
-  orange: 'rgb(253, 126, 20)'
-};
-
-// Graphique principal : Ventes par jour (CA + Quantité)
-new Chart(document.getElementById('chartVentesJour'), {
-  data: {
-    labels: ventesJour.map(r => r.jour),
-    datasets: [
-      {
-        type: 'line',
-        label: 'CA (DT)',
-        data: ventesJour.map(r => r.ca),
-        borderColor: colors.primary,
-        backgroundColor: 'rgba(13, 110, 253, 0.1)',
-        borderWidth: 3,
-        tension: 0.4,
-        fill: true,
-        yAxisID: 'y1'
-      },
-      {
-        type: 'bar',
-        label: 'Quantité vendue',
-        data: ventesJour.map(r => r.quantite),
-        backgroundColor: 'rgba(25, 135, 84, 0.6)',
-        borderColor: colors.success,
-        borderWidth: 1,
-        yAxisID: 'y'
-      }
-    ]
-  },
-  options: {
+  const _cd = {
     responsive: true,
-    interaction: { mode: 'index', intersect: false },
-    plugins: {
-      legend: { position: 'top', labels: { font: { size: 13, weight: '600' } } },
-      tooltip: {
-        backgroundColor: 'rgba(0,0,0,0.8)',
-        titleFont: { size: 13, weight: 'bold' },
-        bodyFont: { size: 12 }
-      }
-    },
+    maintainAspectRatio: true,
+    plugins: { legend: { labels: { font:{family:'Nunito',weight:'700'}, color:'#8892a4' } } },
     scales: {
-      y: {
-        type: 'linear',
-        display: true,
-        position: 'left',
-        title: { display: true, text: 'Quantité', font: { weight: 'bold' } },
-        grid: { color: 'rgba(0,0,0,0.05)' }
-      },
-      y1: {
-        type: 'linear',
-        display: true,
-        position: 'right',
-        title: { display: true, text: 'CA (DT)', font: { weight: 'bold' } },
-        grid: { drawOnChartArea: false }
-      },
-      x: { grid: { display: false } }
+      x: { grid:{color:'#e3e8f0'}, ticks:{font:{family:'Nunito',weight:'600'},color:'#8892a4'} },
+      y: { grid:{color:'#e3e8f0'}, ticks:{font:{family:'Nunito',weight:'600'},color:'#8892a4'} }
     }
-  }
-});
+  };
 
-// Performance catégories
-new Chart(document.getElementById('chartCategories'), {
-  type: 'bar',
-  data: {
-    labels: categories.map(c => c.categorie),
-    datasets: [
-      {
-        label: 'Quantité',
-        data: categories.map(c => c.quantite),
-        backgroundColor: 'rgba(111, 66, 193, 0.7)',
-        borderColor: colors.purple,
-        borderWidth: 1
-      },
-      {
-        label: 'CA (DT)',
-        data: categories.map(c => c.ca),
-        backgroundColor: 'rgba(253, 126, 20, 0.7)',
-        borderColor: colors.orange,
-        borderWidth: 1
-      }
-    ]
-  },
-  options: {
-    responsive: true,
-    plugins: {
-      legend: { position: 'top', labels: { font: { size: 13, weight: '600' } } }
+  /* Évolution quotidienne */
+  new Chart(document.getElementById('mainChart'), {
+    type: 'line',
+    data: {
+      labels: {{ charts.ventesJour|map(v => v.jour)|json_encode|raw }},
+      datasets: [
+        {
+          label:'CA (DT)',
+          data: {{ charts.ventesJour|map(v => v.ca)|json_encode|raw }},
+          borderColor:'#4e73df', backgroundColor:'rgba(78,115,223,0.10)',
+          borderWidth:2.5, pointRadius:4, pointBackgroundColor:'#4e73df',
+          fill:true, tension:0.4, yAxisID:'y'
+        },
+        {
+          label:'Quantités',
+          data: {{ charts.ventesJour|map(v => v.quantite)|json_encode|raw }},
+          borderColor:'#1cc88a', backgroundColor:'rgba(28,200,138,0.08)',
+          borderWidth:2.5, pointRadius:4, pointBackgroundColor:'#1cc88a',
+          fill:true, tension:0.4, yAxisID:'y1'
+        }
+      ]
     },
-    scales: {
-      y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.05)' } },
-      x: { grid: { display: false } }
+    options: {
+      ..._cd,
+      scales: {
+        x:  _cd.scales.x,
+        y:  { ..._cd.scales.y, position:'left' },
+        y1: { ..._cd.scales.y, position:'right', grid:{drawOnChartArea:false} }
+      }
     }
-  }
-});
+  });
 
-// Statuts
-new Chart(document.getElementById('chartStatuts'), {
-  type: 'doughnut',
-  data: {
-    labels: statuts.map(s => s.label),
-    datasets: [{
-      data: statuts.map(s => s.value),
-      backgroundColor: [
-        'rgba(13, 110, 253, 0.8)',
-        'rgba(25, 135, 84, 0.8)',
-        'rgba(255, 193, 7, 0.8)',
-        'rgba(220, 53, 69, 0.8)',
-        'rgba(13, 202, 240, 0.8)'
-      ],
-      borderWidth: 2,
-      borderColor: '#fff'
-    }]
-  },
-  options: {
-    responsive: true,
-    plugins: {
-      legend: { position: 'bottom', labels: { font: { size: 12 }, padding: 15 } }
+  /* Statuts donut */
+  new Chart(document.getElementById('statusChart'), {
+    type: 'doughnut',
+    data: {
+      labels: {{ charts.statuts|map(s => s.label)|json_encode|raw }},
+      datasets: [{
+        data: {{ charts.statuts|map(s => s.value)|json_encode|raw }},
+        backgroundColor:['#4e73df','#1cc88a','#f6c23e','#e74a3b','#6f42c1','#36b9cc'],
+        borderWidth:3, borderColor:'#fff'
+      }]
+    },
+    options: {
+      responsive:true, maintainAspectRatio:true,
+      plugins:{ legend:{ position:'bottom', labels:{font:{family:'Nunito',weight:'700'},color:'#8892a4',padding:14} } },
+      cutout:'65%'
     }
-  }
-});
+  });
+
+  /* Catégories groupées */
+  new Chart(document.getElementById('catChart'), {
+    type: 'bar',
+    data: {
+      labels: {{ charts.categories|map(c => c.categorie)|json_encode|raw }},
+      datasets: [
+        {
+          label:'Quantité',
+          data: {{ charts.categories|map(c => c.quantite)|json_encode|raw }},
+          backgroundColor:'rgba(78,115,223,0.75)', borderRadius:5, borderSkipped:false
+        },
+        {
+          label:'CA (DT)',
+          data: {{ charts.categories|map(c => c.ca)|json_encode|raw }},
+          backgroundColor:'rgba(28,200,138,0.75)', borderRadius:5, borderSkipped:false
+        }
+      ]
+    },
+    options: _cd
+  });
+
+  /* CA horizontal */
+  new Chart(document.getElementById('caChart'), {
+    type: 'bar',
+    data: {
+      labels: {{ charts.categories|map(c => c.categorie)|json_encode|raw }},
+      datasets: [{
+        label:'CA (DT)',
+        data: {{ charts.categories|map(c => c.ca)|json_encode|raw }},
+        backgroundColor:['#4e73df','#1cc88a','#f6c23e','#e74a3b','#6f42c1','#36b9cc'],
+        borderRadius:5, borderSkipped:false
+      }]
+    },
+    options: { ..._cd, indexAxis:'y', plugins:{legend:{display:false}} }
+  });
 </script>
+
 {% endblock %}

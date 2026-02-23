@@ -1,0 +1,112 @@
+{# templates/ressource/formRessourceBatch.html.twig #}
+
+{{ form_start(form, { attr: { novalidate: 'novalidate' } }) }}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <div>
+    <h6 class="m-0 font-weight-bold text-primary">Ajouter plusieurs ressources</h6>
+    <small class="text-muted">Clique sur + pour ajouter une ressource.</small>
+  </div>
+
+  <button type="button" class="btn btn-outline-primary" id="add-ressource">
+    + Ajouter une ressource
+  </button>
+</div>
+
+<div id="ressources-wrapper"
+     data-prototype="{{ include('ressource/_ressource_item.html.twig', { itemForm: form.ressources.vars.prototype })|e('html_attr') }}">
+
+  {# ✅ IMPORTANT : on affiche ici les items déjà présents (s'il y en a) #}
+  {% for itemForm in form.ressources %}
+    {% include 'ressource/_ressource_item.html.twig' with { itemForm: itemForm } %}
+  {% endfor %}
+
+</div>
+
+<div class="d-flex justify-content-end mt-3">
+  <button class="btn btn-primary" type="submit">
+    <i class="fas fa-save mr-1"></i> Enregistrer toutes les ressources
+  </button>
+</div>
+
+{{ form_widget(form._token) }}
+{{ form_end(form, { render_rest: false }) }}
+
+<script>
+(function () {
+  const wrapper = document.getElementById('ressources-wrapper');
+  const addBtn = document.getElementById('add-ressource');
+
+  function initTypeToggle(container) {
+    const select = container.querySelector('.js-type-ressource');
+    const fileBox = container.querySelector('.js-field-file');
+    const linkBox = container.querySelector('.js-field-link');
+    const stockBox = container.querySelector('.js-field-stock');
+    const hint = container.querySelector('.js-typeHint');
+
+    function hideAll() {
+      if (fileBox) fileBox.classList.add('d-none');
+      if (linkBox) linkBox.classList.add('d-none');
+      if (stockBox) stockBox.classList.add('d-none');
+    }
+
+    function setHint(type) {
+      if (!hint) return;
+      if (type === 'file') {
+        hint.className = 'alert alert-primary res-hint mb-4 js-typeHint';
+        hint.innerHTML = '<i class="fas fa-file mr-1"></i> Mode Fichier : indique le chemin du fichier.';
+      } else if (type === 'external_link') {
+        hint.className = 'alert alert-info res-hint mb-4 js-typeHint';
+        hint.innerHTML = '<i class="fas fa-link mr-1"></i> Mode Lien : colle une URL valide.';
+      } else if (type === 'stock_item') {
+        hint.className = 'alert alert-success res-hint mb-4 js-typeHint';
+        hint.innerHTML = '<i class="fas fa-box mr-1"></i> Mode Stock : quantité + unité.';
+      } else {
+        hint.className = 'alert alert-primary res-hint mb-4 js-typeHint';
+        hint.innerHTML = '<i class="fas fa-bolt mr-1"></i> Sélectionne un type pour afficher les champs correspondants.';
+      }
+    }
+
+    function refresh() {
+      const v = select ? select.value : '';
+      hideAll();
+      setHint(v);
+      if (v === 'file' && fileBox) fileBox.classList.remove('d-none');
+      if (v === 'external_link' && linkBox) linkBox.classList.remove('d-none');
+      if (v === 'stock_item' && stockBox) stockBox.classList.remove('d-none');
+    }
+
+    if (select) {
+      select.addEventListener('change', refresh);
+      refresh();
+    }
+  }
+
+  function addForm() {
+    const proto = wrapper.dataset.prototype;
+    const index = wrapper.querySelectorAll('.ressource-item').length;
+    const html = proto.replace(/__name__/g, index);
+
+    const temp = document.createElement('div');
+    temp.innerHTML = html;
+    const item = temp.firstElementChild;
+
+    wrapper.appendChild(item);
+
+    const removeBtn = item.querySelector('.js-remove-ressource');
+    if (removeBtn) removeBtn.addEventListener('click', () => item.remove());
+
+    initTypeToggle(item);
+  }
+
+  // ✅ Si aucun item n'est rendu par Twig, on ajoute 1 formulaire au départ
+  if (wrapper.querySelectorAll('.ressource-item').length === 0) {
+    addForm();
+  } else {
+    // ✅ sinon on initialise les toggles pour ceux déjà affichés
+    wrapper.querySelectorAll('.ressource-item').forEach(initTypeToggle);
+  }
+
+  addBtn.addEventListener('click', addForm);
+})();
+</script>

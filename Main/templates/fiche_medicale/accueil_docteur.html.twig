@@ -1,0 +1,360 @@
+{% extends 'base_dashboard.html.twig' %}
+
+{% block stylesheets %}
+<style>
+/* =========================
+   GLOBAL THEME VARIABLES
+========================= */
+:root {
+  --primary-gradient: linear-gradient(135deg, #4e73df, #224abe);
+  --bg-light: #f4f6fb;
+  --bg-dark: #121212;
+  --card-light: rgba(255,255,255,0.8);
+  --card-dark: rgba(35,35,35,0.85);
+  --text-light: #2c2c2c;
+  --text-dark: #f1f1f1;
+  --accent: #4e73df;
+}
+
+/* =========================
+   BODY
+========================= */
+body {
+  background: var(--bg-light);
+  transition: all 0.3s ease;
+}
+
+body.dark-mode {
+  background: var(--bg-dark);
+  color: var(--text-dark);
+}
+
+/* =========================
+   GLASS CARD
+========================= */
+.card {
+  border: none;
+  border-radius: 18px;
+  backdrop-filter: blur(12px);
+  background: var(--card-light);
+  box-shadow: 0 10px 25px rgba(0,0,0,0.08);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 15px 35px rgba(0,0,0,0.12);
+}
+
+body.dark-mode .card {
+  background: var(--card-dark);
+}
+
+/* =========================
+   HEADER GRADIENT
+========================= */
+.card-header {
+  background: var(--primary-gradient);
+  color: white;
+  border-radius: 18px 18px 0 0;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+/* =========================
+   WELCOME SECTION
+========================= */
+.dashboard-header {
+  background: var(--primary-gradient);
+  padding: 20px 30px;
+  border-radius: 18px;
+  color: white;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+}
+
+.dashboard-header h2 {
+  font-weight: 600;
+}
+
+.live-clock {
+  font-size: 1.6rem;
+  font-weight: 600;
+  animation: pulse 1s infinite alternate;
+}
+
+@keyframes pulse {
+  from { opacity: 0.7; }
+  to { opacity: 1; }
+}
+
+/* =========================
+   TIMELINE
+========================= */
+.timeline li {
+  transition: all 0.3s ease;
+  border-left: 4px solid var(--accent);
+  padding-left: 15px;
+  position: relative;
+}
+
+.timeline li::before {
+  content: '';
+  position: absolute;
+  left: -9px;
+  top: 15px;
+  width: 14px;
+  height: 14px;
+  background: var(--accent);
+  border-radius: 50%;
+}
+
+.timeline li:hover {
+  transform: scale(1.02);
+  background: rgba(78,115,223,0.08);
+  border-radius: 12px;
+}
+
+/* Current appointment */
+.bg-warning {
+  background: linear-gradient(135deg, #ffcc00, #ff9900) !important;
+}
+
+/* Next appointment */
+.bg-info {
+  background: linear-gradient(135deg, #17a2b8, #0f6674) !important;
+}
+
+/* Deep purple for pending appointments */
+.bg-deep-purple {
+  background: linear-gradient(135deg, #4B006E, #7C1CFF) !important;
+}
+
+/* =========================
+   DARK MODE BUTTON
+========================= */
+#darkModeToggle {
+  border-radius: 50px;
+  transition: all 0.3s ease;
+}
+
+#darkModeToggle:hover {
+  transform: scale(1.05);
+}
+
+/* =========================
+   MODAL STYLE
+========================= */
+.modal-content {
+  border-radius: 18px;
+  border: none;
+}
+</style>
+{% endblock %}
+
+{% block body %}
+<div class="container-fluid px-4">
+  <div class="dashboard-header d-flex justify-content-between align-items-center mb-4">
+    <h2>Welcome Dr. {{ (doctor.nom ~ ' ' ~ doctor.prenom)|default('Unknown') }}</h2>
+    <div id="live-clock" class="live-clock"></div>
+    <button id="darkModeToggle" class="btn btn-outline-secondary ms-3">🌙 Dark Mode</button>
+  </div>
+
+  <div class="card shadow-lg mb-2 mt-2 news-card w-100" id="news-card" style="background-size:cover;background-position:center;min-height:260px;">
+    <div class="card-body text-center" style="background:rgba(255,255,255,0.85);border-radius:18px;min-height:220px;display:flex;flex-direction:column;justify-content:center;">
+      <h4 class="fw-bold mb-3">🧠 AI Medical Insight</h4>
+      <h5 id="news-title" class="fw-bold"></h5>
+      <p id="news-content" class="fs-5"></p>
+    </div>
+  </div>
+<!--
+  <div class="card shadow mb-4 w-100">
+    <div class="card-header text-white" style="background: linear-gradient(135deg,#00c6ff,#0072ff);">
+      <h5 class="mb-0">📊 Consultation Analytics</h5>
+    </div>
+    <div class="card-body">
+      {{ render_chart(chart) }}
+    </div>
+  </div>
+-->
+  <div class="card shadow mb-4 w-100">
+      <div class="card-header bg-primary text-white">
+          <h5 class="mb-0">Today's Appointments — {{ today|date('l, d F Y') }}</h5>
+      </div>
+      <div class="card-body">
+              <ul class="timeline list-unstyled">
+                  {% if appointments|length == 0 %}
+              <div class="text-center text-muted">No appointments today</div>
+                  {% else %}
+                    {% for appt in appointments %}
+                        {% if appt.statut == 'Confirmé' %}
+                            {% set now = "now"|date('Y-m-d H:i:s') %}
+                            {% set isCurrent = appt.datetime <= now and appt.endTime >= now %}
+                            {% set isNext = appt.datetime > now and loop.first %}
+                            <li class="mb-3 p-3 rounded {% if isCurrent %}bg-warning text-dark{% elseif isNext %}bg-info text-white{% endif %}">
+                                <div class="d-flex justify-content-between align-items-center">
+                                  <span class="fw-bold">{{ appt.datetime|date('H:i') }}</span>
+                                  <span><i class="bi bi-person-circle"></i> {{ (appt.patient.nom ~ ' ' ~ appt.patient.prenom)|default('Unknown') }}</span>
+                                  <span><i class="bi bi-clock"></i> {{ appt.statut|capitalize }}</span>
+                                  <span>
+                                    <a href="{{ path('start_consultation', {'id': appt.id}) }}" class="btn btn-sm btn-primary" title="Start a new consultation">
+                                      <i class="fas fa-play-circle"></i> Start
+                                    </a>
+                                  </span>
+                                </div>
+                                {% if isCurrent %}<span class="badge bg-warning">Current</span>{% elseif isNext %}<span class="badge bg-info">Next</span>{% endif %}
+                            </li>
+                        {% endif %}
+                    {% endfor %}
+              </ul>
+          {% endif %}
+      </div>
+  </div>
+
+  <div class="card shadow mb-4 w-100">
+      <div class="card-header bg-deep-purple text-white">
+        <h5 class="mb-0">All Pending Appointments</h5>
+      </div>
+      <div class="card-body">
+          <ul class="timeline list-unstyled">
+              {% if pendingAppointments|length == 0 %}
+                  <div class="text-center text-muted">No pending appointments today</div>
+              {% else %}
+                  {% for appt in pendingAppointments %}
+                      <li class="mb-3 p-3 rounded bg-deep-purple text-white">
+                          <div class="d-flex justify-content-between align-items-center">
+                            <span class="fw-bold">{{ appt.datetime|date('d/m/Y H:i') }}</span>
+                            <span><i class="bi bi-person-circle"></i> {{ (appt.patient.nom ~ ' ' ~ appt.patient.prenom)|default('Unknown') }}</span>
+                            <span><i class="bi bi-clock"></i> {{ appt.statut|capitalize }}</span>
+                            <span>
+                              <form method="post" action="{{ path('confirm_appointment', {'id': appt.id}) }}?idStaff={{ appt.staff.id }}" style="display:inline;">
+                                <input type="hidden" name="_token" value="{{ csrf_token('confirm_appointment' ~ appt.id) }}">
+                                <button type="submit" class="btn btn-sm btn-success" title="Confirm this appointment">
+                                  <i class="fas fa-check"></i> Confirm
+                                </button>
+                              </form>
+                            </span>
+                          </div>
+                      </li>
+                  {% endfor %}
+              {% endif %}
+          </ul>
+      </div>
+  </div>
+</div>
+
+<!-- Reminder Modal -->
+<div class="modal fade" id="reminderModal" tabindex="-1" aria-labelledby="reminderModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="reminderModalLabel">Appointment Reminder</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body" id="reminderModalBody"></div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block javascripts %}
+<script>
+// Live Clock
+function updateClock() {
+  const now = new Date();
+  document.getElementById('live-clock').textContent = now.toLocaleTimeString('en-GB', { hour12: false });
+}
+setInterval(updateClock, 1000);
+updateClock();
+
+// Auto refresh every 60 seconds
+setInterval(() => { location.reload(); }, 60000);
+
+// Dark Mode Toggle
+const darkModeToggle = document.getElementById('darkModeToggle');
+const body = document.body;
+if (localStorage.getItem('darkMode') === 'true') body.classList.add('dark-mode');
+darkModeToggle.addEventListener('click', () => {
+  body.classList.toggle('dark-mode');
+  localStorage.setItem('darkMode', body.classList.contains('dark-mode'));
+});
+
+// Smart Reminder
+let remindedAppointments = JSON.parse(localStorage.getItem('remindedAppointments') || '{}');
+const appointmentsList = [
+  {% for appt in appointments %}
+    {
+      id: '{{ appt.id }}',
+      datetime: '{{ appt.datetime|date('Y-m-d H:i:s') }}',
+      patient: '{{ (appt.patient.nom ~ ' ' ~ appt.patient.prenom)|default('Unknown') }}'
+    },
+  {% endfor %}
+];
+function checkReminders() {
+  const now = new Date();
+  appointmentsList.forEach(appt => {
+    const apptTime = new Date(appt.datetime);
+    const diff = (apptTime - now) / 60000;
+    if (diff > 9.5 && diff < 10.5 && !remindedAppointments[appt.id]) {
+      remindedAppointments[appt.id] = true;
+      localStorage.setItem('remindedAppointments', JSON.stringify(remindedAppointments));
+      document.getElementById('reminderModalBody').textContent = 'Reminder: Appointment with ' + appt.patient + ' in 10 minutes';
+      new bootstrap.Modal(document.getElementById('reminderModal')).show();
+    }
+  });
+}
+setInterval(checkReminders, 30000);
+checkReminders();
+
+// AI Medical Insights Auto-Rotate
+const newsList = {{ news|json_encode|raw }};
+const newsImages = [
+  '/assets/news1.jpg',
+  '/assets/news2.jpg',
+  '/assets/news3.jpg',
+  '/assets/news4.jpg',
+  '/assets/news5.jpg'
+];
+let currentIndex = 0;
+
+function showNews(index) {
+  document.getElementById('news-title').textContent = newsList[index].title;
+  document.getElementById('news-content').textContent = newsList[index].content;
+  const imgUrl = newsImages[index % newsImages.length];
+  document.getElementById('news-card').style.backgroundImage = `url('${imgUrl}')`;
+}
+
+function rotateNews() {
+  currentIndex = (currentIndex + 1) % newsList.length;
+  showNews(currentIndex);
+}
+
+if (newsList.length > 0) {
+  showNews(0);
+  setInterval(rotateNews, 10000); // 10 sec rotation
+}
+
+// Welcome Voice
+window.addEventListener('DOMContentLoaded', function() {
+  const welcomeText = document.querySelector('.dashboard-header h2')?.textContent;
+  if (welcomeText && 'speechSynthesis' in window) {
+    const utterance = new SpeechSynthesisUtterance(welcomeText);
+    utterance.lang = 'en-US';
+    // Try to select a female voice
+    function setFemaleVoice() {
+      const voices = window.speechSynthesis.getVoices();
+      const female = voices.find(v => v.lang.startsWith('en') && v.gender === 'female') || voices.find(v => v.name.toLowerCase().includes('female') || v.name.toLowerCase().includes('woman') || v.name.toLowerCase().includes('girl'));
+      utterance.voice = female || voices.find(v => v.lang.startsWith('en')) || null;
+      window.speechSynthesis.speak(utterance);
+    }
+    if (window.speechSynthesis.getVoices().length) {
+      setFemaleVoice();
+    } else {
+      window.speechSynthesis.onvoiceschanged = setFemaleVoice;
+    }
+  }
+});
+</script>
+{% endblock %}

@@ -1,193 +1,838 @@
+{# ✅ Modif: main color = DARK TURQUOISE (#0097B2)
+   Colle tout ce code (page complète) #}
+
 {% extends 'base_dashboard.html.twig' %}
 
 {% block title %}Réclamations{% endblock %}
 
 {% block body %}
+<style>
+  /* ====== CHARTE GRAPHIQUE ======
+    Vivid Blue      #003399
+    Dark Turquoise  #0097B2   ✅ MAIN COLOR
+    Vivid Turquoise #00BFA6
+    Pastel Blue     #6797FF
+    Pastel Azure    #8FD5FF
+    Light Blue      #B3D5FF
+    White           #FFFFFF
+    Black           #000000
+    Vivid Red       #BC0B09
+  */
+
+  :root{
+    --mf-vivid-blue:#003399;
+    --mf-main:#0097B2;         /* ✅ main color */
+    --mf-vivid-turq:#00BFA6;
+    --mf-pastel-blue:#6797FF;
+    --mf-pastel-azure:#8FD5FF;
+    --mf-light-blue:#B3D5FF;
+    --mf-white:#FFFFFF;
+    --mf-black:#000000;
+    --mf-vivid-red:#BC0B09;
+
+    --mf-text:#0f172a;
+    --mf-muted: rgba(16,24,40,.68);
+    --mf-border:#e2e8f0;
+    --mf-bg:#f8f9fc;
+
+    /* ✅ Dégradés (on garde l’aspect) */
+    --mf-grad-a: var(--mf-main);         /* ✅ start = Dark Turquoise */
+    --mf-grad-b: var(--mf-pastel-blue);  /* end */
+  }
+
+  .page-header{
+    background: linear-gradient(135deg, var(--mf-grad-a) 0%, var(--mf-grad-b) 100%);
+    color: var(--mf-white);
+    padding: 40px 30px;
+    border-radius: 12px;
+    margin-bottom: 22px;
+    box-shadow: 0 10px 30px rgba(0,151,178,.28);
+  }
+  .page-header h1{
+    font-size: 2.2rem;
+    font-weight: 800;
+    margin-bottom: 8px;
+    letter-spacing: -.4px;
+  }
+  .page-header p{margin:0; font-size:1.05rem; opacity:.95;}
+
+  .card{
+    border: none;
+    border-radius: 12px;
+    box-shadow: 0 5px 20px rgba(0,0,0,.08);
+    overflow:hidden;
+    transition: all .3s ease;
+    background: var(--mf-white);
+  }
+  .card:hover{
+    box-shadow: 0 10px 35px rgba(0,0,0,.15);
+    transform: translateY(-2px);
+  }
+  .card-header{
+    background: linear-gradient(135deg, var(--mf-grad-a) 0%, var(--mf-grad-b) 100%);
+    color: var(--mf-white);
+    border:none;
+    padding: 18px 22px;
+  }
+  .card-header h6{
+    font-size: 1.05rem;
+    font-weight: 700;
+    letter-spacing: .3px;
+    margin:0;
+  }
+
+  .toolbar{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+    align-items:center;
+    justify-content:flex-end;
+  }
+  .toolbar .form-control{
+    border:2px solid rgba(255,255,255,.75);
+    border-radius: 10px;
+    padding: 8px 12px;
+    font-size:.92rem;
+    background: rgba(255,255,255,.14);
+    color: var(--mf-white);
+  }
+  .toolbar .form-control::placeholder{ color: rgba(255,255,255,.90); }
+  .toolbar .form-control:focus{
+    outline:none;
+    box-shadow: 0 0 0 3px rgba(179,213,255,.35);
+    border-color: var(--mf-white);
+    background: rgba(255,255,255,.18);
+  }
+  .toolbar select.form-control option{ color:#111827; }
+
+  /* ✅ Boutons (main color = dark turquoise) */
+  .btn-primary{
+    background: linear-gradient(135deg, var(--mf-main) 0%, var(--mf-vivid-turq) 100%);
+    border:none;
+    border-radius: 10px;
+    padding: 8px 14px;
+    font-weight:700;
+    transition: all .3s ease;
+    color: var(--mf-white);
+    white-space:nowrap;
+  }
+  .btn-primary:hover{
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(0,151,178,.28);
+    color: var(--mf-white);
+  }
+
+  .btn-info{
+    background: linear-gradient(135deg, var(--mf-vivid-blue) 0%, var(--mf-pastel-blue) 100%);
+    border:none;
+    color: var(--mf-white);
+    border-radius: 10px;
+    padding: 8px 14px;
+    font-weight:700;
+    transition: all .3s ease;
+    white-space:nowrap;
+  }
+  .btn-info:hover{
+    transform: translateY(-2px);
+    box-shadow: 0 6px 15px rgba(0,51,153,.25);
+    color: var(--mf-white);
+  }
+
+  .btn-secondary{
+    background: linear-gradient(135deg, #111827 0%, #000000 100%);
+    border:none;
+    color: var(--mf-white);
+    border-radius: 10px;
+    padding: 8px 14px;
+    font-weight:700;
+    transition: all .3s ease;
+    white-space:nowrap;
+  }
+  .btn-outline-light{
+    border-radius: 10px;
+    padding: 8px 14px;
+    font-weight:700;
+    white-space:nowrap;
+  }
+
+  .card-body{ padding: 22px; background: var(--mf-white); }
+
+  .table{ margin-bottom:0; table-layout: fixed; }
+  .table thead th{
+    background: linear-gradient(135deg, rgba(143,213,255,.35) 0%, rgba(179,213,255,.35) 100%);
+    color: #063a44;
+    font-weight: 800;
+    border-bottom: 2px solid var(--mf-border);
+    padding: 14px;
+    font-size: .82rem;
+    text-transform: uppercase;
+    letter-spacing: .35px;
+    white-space: nowrap;
+  }
+  .table tbody td{
+    padding: 14px;
+    vertical-align: top;
+    border-color: var(--mf-border);
+  }
+  .table tbody tr{ transition: all .25s ease; }
+  .table tbody tr:hover{
+    background-color: var(--mf-bg);
+    box-shadow: inset 0 0 0 1px var(--mf-border);
+  }
+
+  .pill{
+    display:inline-flex;
+    align-items:center;
+    gap:.45rem;
+    padding:.35rem .75rem;
+    border-radius:999px;
+    font-weight:800;
+    font-size:.78rem;
+    border: 1px solid transparent;
+    white-space: nowrap;
+    line-height: 1.1;
+  }
+  .pill-ok{
+    background: rgba(0,191,166,.14);
+    color: #007a68;
+    border-color: rgba(0,191,166,.30);
+  }
+  .pill-warn{
+    background: rgba(143,213,255,.28);
+    color: #075e6d;
+    border-color: rgba(0,151,178,.28);
+  }
+  .pill-bad{
+    background: rgba(188,11,9,.12);
+    color: var(--mf-vivid-red);
+    border-color: rgba(188,11,9,.28);
+  }
+  .pill-info{
+    background: rgba(0,151,178,.14);
+    color: #006a7d;
+    border-color: rgba(0,151,178,.30);
+  }
+  .pill-neutral{
+    background: rgba(0,0,0,.06);
+    color: #111827;
+    border-color: rgba(0,0,0,.10);
+  }
+
+  .cell-title{ font-weight: 900; color: var(--mf-text); }
+  .cell-sub{ color: var(--mf-muted); font-size: .86rem; }
+  .truncate-2{
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .preview-box{
+    max-height: 96px;
+    overflow: auto;
+    padding-right: 6px;
+  }
+
+  .row-urgent td:first-child{
+    border-left: 4px solid rgba(188,11,9,.85);
+    padding-left: 12px;
+  }
+
+  .ai-box{ display:flex; gap:.45rem; flex-wrap:wrap; align-items:flex-start; }
+  .scorebar{
+    height: 8px; width: 94px;
+    border-radius: 999px;
+    background: rgba(0,0,0,.08);
+    overflow:hidden;
+    display:inline-block;
+    vertical-align: middle;
+    margin-top: 6px;
+  }
+  .scorebar > span{ display:block; height:100%; width:0%; border-radius:999px; background: var(--mf-main); }
+
+  .badge-count{ border-radius:999px; font-weight: 900; }
+
+  .btn-link{
+    font-size: 1.15rem;
+    transition: all .25s ease;
+  }
+  .btn-link:hover{ transform: scale(1.12); }
+
+  .alert{
+    border:none;
+    border-radius:10px;
+    border-left:4px solid;
+    margin-bottom: 18px;
+    animation: slideIn .35s ease;
+  }
+  .alert-danger{
+    background: linear-gradient(135deg, rgba(188,11,9,.12) 0%, rgba(188,11,9,.18) 100%);
+    border-left-color: var(--mf-vivid-red);
+    color: #6a0a08;
+  }
+  .alert-success{
+    background: linear-gradient(135deg, rgba(0,191,166,.14) 0%, rgba(0,191,166,.22) 100%);
+    border-left-color: var(--mf-vivid-turq);
+    color: #055a4f;
+  }
+  @keyframes slideIn{ from{opacity:0; transform: translateY(-10px);} to{opacity:1; transform: translateY(0);} }
+
+  .detail-row{ display:none; }
+  .detail-row.detail-row-open{ display: table-row; }
+  .detail-row td{ vertical-align: top; padding:0; border:0; }
+  .collapse-details{
+    padding: 18px;
+    background: linear-gradient(135deg, rgba(143,213,255,.22) 0%, rgba(179,213,255,.22) 100%);
+    border-radius: 10px;
+    margin: 10px 14px 18px;
+  }
+  .collapse-details .table-sm{
+    background: var(--mf-white);
+    border-radius: 8px;
+    overflow:hidden;
+    margin:0;
+  }
+  .collapse-details .table-sm thead th{
+    background: rgba(143,213,255,.35);
+    font-size: .78rem;
+  }
+  .collapse-details .table-sm tbody td{
+    padding: 10px;
+    font-size: .9rem;
+  }
+</style>
+
 <section class="section py-4">
   <div class="container-fluid">
 
-    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
-      <div>
-        <h2 class="mb-1 fw-bold">
-          <i class="bi bi-exclamation-triangle me-2"></i>Gestion des Réclamations
-        </h2>
-        <p class="text-muted mb-0">{{ reclamations|length }} réclamation(s)</p>
-      </div>
+    <div class="page-header">
+      <h1><i class="bi bi-exclamation-triangle me-2"></i>Gestion des Réclamations</h1>
+      <p>
+        {{ reclamations|length }} réclamation(s) •
+        <span class="pill pill-neutral"><i class="bi bi-shield-lock"></i> Admin</span>
+      </p>
     </div>
-    <div class="d-flex align-items-center gap-2 flex-wrap mt-2">
-  <a href="{{ path('admin_reclamations_stats') }}"
-     class="btn btn-sm btn-outline-primary btn-action">
-    <i class="bi bi-graph-up-arrow me-1"></i> Stat Réclamations
-  </a>
-</div>
 
+    {% if app.flashes('error') %}
+      <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        <strong>❌ Erreur :</strong>
+        {% for message in app.flashes('error') %}
+          <div>{{ message }}</div>
+        {% endfor %}
+        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+    {% endif %}
+    {% if app.flashes('success') %}
+      <div class="alert alert-success alert-dismissible fade show" role="alert">
+        <strong>✅ Succès :</strong>
+        {% for message in app.flashes('success') %}
+          <div>{{ message }}</div>
+        {% endfor %}
+        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+    {% endif %}
 
-    <style>
-      .btn-action {
-        border-radius: 999px;
-        padding: .45rem .85rem;
-        font-weight: 600;
-        transition: transform .15s ease, box-shadow .15s ease;
-      }
-      .btn-action:hover {
-        transform: translateY(-1px);
-        box-shadow: 0 10px 20px rgba(0,0,0,.08);
-      }
-      .btn-eye .count-badge {
-        margin-left: .4rem;
-        border-radius: 999px;
-        font-weight: 700;
-      }
-      .tr-urgent {
-        box-shadow: inset 4px 0 0 rgba(220,53,69,.8);
-      }
+    <div class="card shadow mb-4">
+      <div class="card-header d-flex justify-content-between align-items-center flex-wrap" style="gap:10px;">
+        <h6 class="m-0 font-weight-bold text-white">
+          <i class="bi bi-list-check me-2"></i>Liste des Réclamations
+        </h6>
 
-      /* Statut visible */
-      .status-pill{
-        display: inline-flex;
-        align-items: center;
-        gap: .4rem;
-        padding: .35rem .7rem;
-        border-radius: 999px;
-        font-weight: 800;
-        font-size: .78rem;
-        letter-spacing: .2px;
-      }
-      .status-ok{
-        background: rgba(25,135,84,.15);
-        color: #198754;
-        border: 1px solid rgba(25,135,84,.35);
-      }
-      .status-bad{
-        background: rgba(220,53,69,.12);
-        color: #dc3545;
-        border: 1px solid rgba(220,53,69,.35);
-      }
-    </style>
+        <div class="toolbar">
+          <a href="{{ path('admin_reclamations_stats') }}" class="btn btn-outline-light btn-sm">
+            <i class="bi bi-graph-up-arrow me-1"></i> Stat Réclamations
+          </a>
 
-    <div class="card border-0 shadow-sm">
+          <select id="reclamationsSortSelect" class="form-control form-control-sm" style="max-width: 220px;">
+            <option value="none">Trier...</option>
+            <option value="date_desc">Création ↓ (Récent)</option>
+            <option value="date_asc">Création ↑ (Ancien)</option>
+            <option value="priorite_za">Priorité (Critique → Basse)</option>
+            <option value="priorite_az">Priorité (Basse → Critique)</option>
+            <option value="score_desc">UrgenceScore ↓</option>
+            <option value="score_asc">UrgenceScore ↑</option>
+            <option value="statut_az">Statut A-Z</option>
+            <option value="statut_za">Statut Z-A</option>
+          </select>
+
+          <input type="text" id="searchReclamations" class="form-control form-control-sm" style="max-width: 260px;"
+                 placeholder="🔍 Rechercher...">
+        </div>
+      </div>
+
       <div class="card-body">
-
         <div class="table-responsive">
-          <table class="table align-middle table-hover">
-            <thead class="table-light">
+          <table id="reclamationsTable" class="table table-bordered table-hover" width="100%" cellspacing="0">
+            <thead>
               <tr>
-                <th>Réf</th>
-                <th>Contenu</th>
-                <th>Type</th>
-                <th>Statut</th>
-                <th>Priorité</th>
-                <th>Création</th>
-                <th>Limite</th>
-                <th>Pièce jointe</th>
-                <th>Modif</th>
-                <th>Clôture</th>
-                <th class="text-end">Action</th>
+                <th style="width:140px;">Réf</th>
+                <th style="width:420px;">Contenu</th>
+                <th style="width:170px;">Type</th>
+                <th style="width:170px;">Statut</th>
+                <th style="width:240px;">IA (Lang / Score)</th>
+                <th style="width:160px;">Priorité</th>
+                <th style="width:170px;">Création</th>
+                <th style="width:170px;">Limite</th>
+                <th style="width:150px;">Pièce jointe</th>
+                <th style="width:150px;">Modif</th>
+                <th style="width:150px;">Clôture</th>
+                <th style="width:260px;" class="text-end">Action</th>
               </tr>
             </thead>
 
             <tbody>
-            {% for r in reclamations %}
-              {# ✅ DESIGN: plus de couleur orange et plus de style urgent #}
-              <tr>
+              {% if reclamations is not empty %}
+                {% for r in reclamations %}
+                  {% set score = r.urgenceScore ?? 0 %}
+                  {% set isUrgentRow = (r.priorite in ['CRITIQUE','ELEVEE']) or (score >= 75) %}
 
-                <td class="fw-bold">
-                  #{{ r.referenceReclamation }}
-                </td>
+                  <tr class="main-row {{ isUrgentRow ? 'row-urgent' : '' }}"
+                      data-ref="{{ r.referenceReclamation }}"
+                      data-created="{{ r.dateCreationR ? r.dateCreationR|date('Y-m-d H:i:s') : '' }}"
+                      data-priority="{{ r.priorite ?? '' }}"
+                      data-score="{{ score }}"
+                      data-statut="{{ r.statutReclamation ?? '' }}">
 
-                <td style="max-width: 320px;">
-                  <div class="fw-semibold">{{ r.contenu }}</div>
-                  <div class="text-dark small text-truncate">{{ r.description }}</div>
-                </td>
+                    <td class="fw-bold">
+                      #{{ r.referenceReclamation }}
+                      {% if isUrgentRow %}
+                        <div class="mt-2">
+                          <span class="pill pill-bad"><i class="bi bi-lightning-charge-fill"></i> Urgent</span>
+                        </div>
+                      {% endif %}
+                    </td>
 
-                <td class="fw-semibold text-dark">
-                  {{ r.type }}
-                </td>
+                    <td>
+                      <div class="preview-box">
+                        <div class="cell-title truncate-2">
+                          {{ r.contenuFrancais ? r.contenuFrancais : r.contenu }}
+                        </div>
+                        <div class="cell-sub truncate-2">
+                          {{ r.descriptionFrancais ? r.descriptionFrancais : r.description }}
+                        </div>
 
-                <td>
-                  {% if r.statutReclamation == 'TRAITEE' %}
-                    <span class="status-pill status-ok">
-                      <i class="bi bi-check-circle-fill"></i> Traitée
-                    </span>
-                  {% else %}
-                    <span class="status-pill status-bad">
-                      <i class="bi bi-x-circle-fill"></i> {{ r.statutReclamation }}
-                    </span>
-                  {% endif %}
-                </td>
+                        {% if r.langueOriginale and r.langueOriginale != 'fr' %}
+                          <div class="mt-2 small text-muted">
+                            <i class="bi bi-globe2 me-1"></i>
+                            Original ({{ r.langueOriginale|upper }}):
+                            <span class="text-dark">{{ r.contenuOriginal ?: '-' }}</span>
+                          </div>
+                        {% endif %}
+                      </div>
+                    </td>
 
-                <td class="fw-semibold text-dark">
-                  {{ r.priorite }}
-                </td>
-
-                <td class="small text-dark">
-                  {{ r.dateCreationR ? r.dateCreationR|date('d/m/Y H:i') : '-' }}
-                </td>
-
-                <td class="small text-dark">
-                  {{ r.dateLimite ? r.dateLimite|date('d/m/Y H:i') : '-' }}
-                </td>
-
-                {# ✅ Pièce jointe #}
-                <td class="small text-dark">
-                  {% if r.pieceJointePath %}
-                    <a class="btn btn-sm btn-outline-secondary"
-                       href="{{ asset(r.pieceJointePath) }}" target="_blank">
-                      <i class="bi bi-paperclip me-1"></i>Voir
-                    </a>
-                  {% else %}
-                    <span class="text-muted">-</span>
-                  {% endif %}
-                </td>
-
-                {# ✅ Date modification #}
-                <td class="small text-dark">
-                  {{ r.dateModificationR ? r.dateModificationR|date('d/m/Y H:i') : '-' }}
-                </td>
-
-                {# ✅ Date clôture #}
-                <td class="small text-dark">
-                  {{ r.dateClotureR ? r.dateClotureR|date('d/m/Y H:i') : '-' }}
-                </td>
-
-                <td class="text-end text-nowrap">
-                  <div class="d-inline-flex align-items-center gap-2">
-
-                    <a href="{{ path('admin_reponse_new', { id: r.idReclamation }) }}"
-                       class="btn btn-sm btn-primary btn-action">
-                      <i class="bi bi-reply-fill me-1"></i>Répondre
-                    </a>
-
-                    <a href="{{ path('admin_reponses_by_reclamation', { id: r.idReclamation }) }}"
-                       class="btn btn-sm btn-outline-primary btn-action btn-eye
-                              {% if r.reponses|length == 0 %}disabled{% endif %}"
-                       {% if r.reponses|length == 0 %}aria-disabled="true"{% endif %}>
-                      <i class="fas fa-eye me-1"></i>
-                      Voir réponses
-                      <span class="badge bg-primary text-white count-badge">
-                        {{ r.reponses|length }}
+                    <td class="fw-semibold text-dark">
+                      <span class="pill pill-neutral">
+                        <i class="bi bi-tag"></i> {{ r.type }}
                       </span>
-                    </a>
+                    </td>
 
-                  </div>
-                </td>
+                    <td>
+                      {% if r.statutReclamation == 'TRAITEE' %}
+                        <span class="pill pill-ok"><i class="bi bi-check-circle-fill"></i> Traitée</span>
+                      {% else %}
+                        <span class="pill pill-warn"><i class="bi bi-hourglass-split"></i> {{ r.statutReclamation }}</span>
+                      {% endif %}
+                    </td>
 
-              </tr>
-            {% else %}
-              <tr>
-                <td colspan="11" class="text-center text-muted py-4">
-                  Aucune réclamation trouvée.
-                </td>
-              </tr>
-            {% endfor %}
+                    <td>
+                      <div class="ai-box">
+                        <span class="pill pill-info">
+                          <i class="bi bi-translate"></i>
+                          {{ r.langueOriginale ? r.langueOriginale|upper : '—' }}
+                        </span>
+
+                        <span class="pill {{ score >= 75 ? 'pill-bad' : (score >= 45 ? 'pill-warn' : 'pill-ok') }}">
+                          <i class="bi bi-activity"></i> {{ score }}
+                        </span>
+
+                        <span class="scorebar" title="UrgenceScore : {{ score }}/100">
+                          <span style="width: {{ score }}%;
+                            background: {% if score >= 75 %}var(--mf-vivid-red){% elseif score >= 45 %}var(--mf-pastel-blue){% else %}var(--mf-vivid-turq){% endif %};"></span>
+                        </span>
+                      </div>
+
+                      <div class="small text-muted mt-1">
+                        Sentiment:
+                        {% if r.sentiment %}
+                          <span class="fw-semibold text-dark">{{ r.sentiment }}</span>
+                        {% else %}
+                          <span class="text-muted">—</span>
+                        {% endif %}
+                      </div>
+                    </td>
+
+                    <td class="fw-semibold text-dark">
+                      {% if r.priorite == 'CRITIQUE' %}
+                        <span class="pill pill-bad"><i class="bi bi-exclamation-octagon-fill"></i> CRITIQUE</span>
+                      {% elseif r.priorite == 'ELEVEE' %}
+                        <span class="pill pill-warn"><i class="bi bi-exclamation-triangle-fill"></i> ÉLEVÉE</span>
+                      {% elseif r.priorite == 'NORMALE' %}
+                        <span class="pill pill-info"><i class="bi bi-check2-circle"></i> NORMALE</span>
+                      {% else %}
+                        <span class="pill pill-neutral"><i class="bi bi-dash-circle"></i> BASSE</span>
+                      {% endif %}
+                    </td>
+
+                    <td class="small text-dark">
+                      {{ r.dateCreationR ? r.dateCreationR|date('d/m/Y H:i') : '-' }}
+                    </td>
+
+                    <td class="small text-dark">
+                      {{ r.dateLimite ? r.dateLimite|date('d/m/Y H:i') : '-' }}
+                    </td>
+<td class="small text-dark">
+  {% if r.pieceJointePath %}
+    <button type="button"
+            class="btn btn-sm btn-secondary js-open-proof"
+            data-preview-url="{{ path('reclamation_piece_preview', { id: r.idReclamation }) }}">
+      <i class="bi bi-paperclip me-1"></i>Voir
+    </button>
+  {% else %}
+    <span class="text-muted">-</span>
+  {% endif %}
+</td>
+
+                    <td class="small text-dark">
+                      {{ r.dateModificationR ? r.dateModificationR|date('d/m/Y H:i') : '-' }}
+                    </td>
+
+                    <td class="small text-dark">
+                      {{ r.dateClotureR ? r.dateClotureR|date('d/m/Y H:i') : '-' }}
+                    </td>
+
+                    <td class="text-end text-nowrap">
+                      <div class="d-inline-flex align-items-center" style="gap:8px;">
+                        <button type="button"
+                                class="btn btn-sm btn-info js-toggle-detail"
+                                data-reclamation-ref="{{ r.referenceReclamation }}"
+                                title="Voir détails"
+                                style="padding: 8px 12px;">
+                          <i class="fas fa-chevron-down"></i>
+                        </button>
+
+                        <a href="{{ path('admin_reponse_new', { id: r.idReclamation }) }}"
+                           class="btn btn-sm btn-primary">
+                          <i class="bi bi-reply-fill me-1"></i>Répondre
+                        </a>
+
+                        <a href="{{ path('admin_reponses_by_reclamation', { id: r.idReclamation }) }}"
+                           class="btn btn-sm btn-secondary {% if r.reponses|length == 0 %}disabled{% endif %}"
+                           {% if r.reponses|length == 0 %}aria-disabled="true"{% endif %}>
+                          <i class="bi bi-eye me-1"></i>
+                          Réponses
+                          <span class="badge bg-dark text-white badge-count ms-1">{{ r.reponses|length }}</span>
+                        </a>
+                      </div>
+                    </td>
+                  </tr>
+
+                  <tr class="detail-row" data-detail-for="{{ r.referenceReclamation }}">
+                    <td colspan="12">
+                      <div class="collapse-details">
+                        <div class="d-flex justify-content-between align-items-center flex-wrap" style="gap:10px;">
+                          <div>
+                            <div class="fw-bold text-dark">Détails — Réclamation #{{ r.referenceReclamation }}</div>
+                            <div class="small text-muted">
+                              Type: <span class="text-dark fw-semibold">{{ r.type }}</span> •
+                              Statut: <span class="text-dark fw-semibold">{{ r.statutReclamation }}</span> •
+                              Priorité: <span class="text-dark fw-semibold">{{ r.priorite }}</span>
+                            </div>
+                          </div>
+                          <div class="small text-muted">
+                            <i class="bi bi-cpu me-1"></i>
+                            IA: Langue={{ r.langueOriginale ? r.langueOriginale|upper : '—' }}, Score={{ score }}/100
+                          </div>
+                        </div>
+
+                        <div class="mt-3">
+                          <table class="table table-sm table-bordered">
+                            <thead>
+                              <tr>
+                                <th style="width:120px;"># Réponses</th>
+                                <th>Dernière modif</th>
+                                <th>Clôture</th>
+                                <th style="width:220px;">Lien</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              <tr>
+                                <td class="fw-bold">{{ r.reponses|length }}</td>
+                                <td>{{ r.dateModificationR ? r.dateModificationR|date('d/m/Y H:i') : '-' }}</td>
+                                <td>{{ r.dateClotureR ? r.dateClotureR|date('d/m/Y H:i') : '-' }}</td>
+                                <td>
+                                  <a href="{{ path('admin_reponses_by_reclamation', { id: r.idReclamation }) }}"
+                                     class="btn btn-sm btn-primary">
+                                    <i class="bi bi-eye me-1"></i>Voir les réponses
+                                  </a>
+                                </td>
+                              </tr>
+                            </tbody>
+                          </table>
+                        </div>
+
+                      </div>
+                    </td>
+                  </tr>
+
+                {% endfor %}
+              {% else %}
+                <tr>
+                  <td colspan="12" class="text-center text-muted py-4">
+                    Aucune réclamation trouvée.
+                  </td>
+                </tr>
+              {% endif %}
             </tbody>
-
           </table>
         </div>
 
+        <div class="mt-3 small text-muted">
+          <i class="bi bi-cpu me-1"></i>
+          Les champs IA (Langue, UrgenceScore, Priorité) sont calculés automatiquement.
+        </div>
       </div>
     </div>
 
   </div>
 </section>
+{# ================= MODAL PREVIEW PIECE JOINTE ================= #}
+<div class="modal fade" id="proofModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-xl modal-dialog-centered">
+    <div class="modal-content" style="border-radius:14px; overflow:hidden;">
+      <div class="modal-header" style="background:linear-gradient(135deg, var(--mf-main) 0%, var(--mf-pastel-blue) 100%); color:#fff;">
+        <h5 class="modal-title">
+          <i class="bi bi-paperclip me-2"></i>Pièce jointe — aperçu
+        </h5>
+        <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close" style="opacity:1;">
+  <span aria-hidden="true">&times;</span>
+</button>
+      </div>
+
+      <div class="modal-body" style="background:#fff;">
+        <div id="proofLoading" class="py-4 text-center text-muted" style="display:none;">
+          <div class="spinner-border" role="status" aria-hidden="true"></div>
+          <div class="mt-2">Chargement...</div>
+        </div>
+
+        <div id="proofError" class="alert alert-danger" style="display:none;"></div>
+
+        <div id="proofContent" style="display:none;">
+          <img id="proofImg" src="" alt="Pièce jointe"
+               style="max-width:100%; max-height:70vh; display:none; border-radius:12px; box-shadow:0 10px 30px rgba(0,0,0,.12);" />
+
+          <iframe id="proofFrame" src=""
+                  style="width:100%; height:70vh; border:0; display:none; border-radius:12px; box-shadow:0 10px 30px rgba(0,0,0,.12);"></iframe>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <a id="proofOpenNewTab" href="#" target="_blank" rel="noopener" class="btn btn-secondary">
+          <i class="bi bi-box-arrow-up-right me-1"></i>Ouvrir dans un nouvel onglet
+        </a>
+        <button type="button" class="btn btn-primary" data-dismiss="modal">
+          <i class="bi bi-x-circle me-1"></i>Fermer
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+  (function(){
+    'use strict';
+
+    function priorityWeight(p){
+      switch((p || '').toUpperCase()){
+        case 'CRITIQUE': return 4;
+        case 'ELEVEE': return 3;
+        case 'NORMALE': return 2;
+        case 'BASSE': return 1;
+        default: return 0;
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', function(){
+      var sortSelect = document.getElementById('reclamationsSortSelect');
+      var searchInput = document.getElementById('searchReclamations');
+      var table = document.getElementById('reclamationsTable');
+      if (!table) return;
+      var tbody = table.querySelector('tbody');
+      if (!tbody) return;
+
+      var rowPairs = [];
+      var mains = Array.from(tbody.querySelectorAll('tr.main-row'));
+      mains.forEach(function(mainRow){
+        var ref = mainRow.getAttribute('data-ref');
+        var detailRow = ref ? tbody.querySelector('tr.detail-row[data-detail-for="' + ref + '"]') : null;
+        rowPairs.push([ mainRow.cloneNode(true), detailRow ? detailRow.cloneNode(true) : null ]);
+      });
+
+      var openDetails = {};
+
+      document.addEventListener('click', function(e){
+        var btn = e.target.closest('.js-toggle-detail');
+        if (!btn) return;
+        e.preventDefault();
+        var ref = btn.getAttribute('data-reclamation-ref');
+        openDetails[ref] = !openDetails[ref];
+        renderTable();
+      });
+
+      function renderTable(){
+        var query = (searchInput && searchInput.value) ? searchInput.value.toLowerCase() : '';
+        var mode = sortSelect ? sortSelect.value : 'none';
+
+        var pairs = rowPairs.map(function(pair){
+          return [ pair[0].cloneNode(true), pair[1] ? pair[1].cloneNode(true) : null ];
+        });
+
+        if (query){
+          pairs = pairs.filter(function(pair){
+            return pair[0].textContent.toLowerCase().includes(query);
+          });
+        }
+
+        if (mode === 'date_asc' || mode === 'date_desc'){
+          pairs.sort(function(a,b){
+            var aCreated = a[0].getAttribute('data-created') || '';
+            var bCreated = b[0].getAttribute('data-created') || '';
+            var ad = Date.parse(aCreated.replace(' ', 'T')) || 0;
+            var bd = Date.parse(bCreated.replace(' ', 'T')) || 0;
+            return mode === 'date_asc' ? ad - bd : bd - ad;
+          });
+        } else if (mode === 'priorite_za' || mode === 'priorite_az'){
+          pairs.sort(function(a,b){
+            var ap = priorityWeight(a[0].getAttribute('data-priority'));
+            var bp = priorityWeight(b[0].getAttribute('data-priority'));
+            return mode === 'priorite_az' ? ap - bp : bp - ap;
+          });
+        } else if (mode === 'score_desc' || mode === 'score_asc'){
+          pairs.sort(function(a,b){
+            var as = parseInt(a[0].getAttribute('data-score') || '0', 10);
+            var bs = parseInt(b[0].getAttribute('data-score') || '0', 10);
+            return mode === 'score_asc' ? as - bs : bs - as;
+          });
+        } else if (mode === 'statut_az' || mode === 'statut_za'){
+          pairs.sort(function(a,b){
+            var as = (a[0].getAttribute('data-statut') || '').toLowerCase();
+            var bs = (b[0].getAttribute('data-statut') || '').toLowerCase();
+            var cmp = as.localeCompare(bs);
+            return mode === 'statut_az' ? cmp : -cmp;
+          });
+        }
+
+        tbody.innerHTML = '';
+        pairs.forEach(function(pair){
+          var main = pair[0];
+          var detail = pair[1];
+          var ref = main.getAttribute('data-ref');
+
+          var btn = main.querySelector('.js-toggle-detail');
+          if (btn){
+            var icon = btn.querySelector('i.fas');
+            if (icon){
+              var isOpen = !!openDetails[ref];
+              icon.classList.toggle('fa-chevron-down', !isOpen);
+              icon.classList.toggle('fa-chevron-up', isOpen);
+            }
+          }
+
+          tbody.appendChild(main);
+
+          if (detail){
+            if (openDetails[ref]) detail.classList.add('detail-row-open');
+            else detail.classList.remove('detail-row-open');
+            tbody.appendChild(detail);
+          }
+        });
+      }
+
+      if (sortSelect) sortSelect.addEventListener('change', renderTable);
+      if (searchInput) searchInput.addEventListener('input', renderTable);
+      renderTable();
+    });
+  })();
+</script>
+<script>
+document.addEventListener('click', async function(e){
+  const btn = e.target.closest('.js-open-proof');
+  if(!btn) return;
+
+  const previewUrl = btn.getAttribute('data-preview-url');
+  if(!previewUrl) return;
+
+  const loadingEl = document.getElementById('proofLoading');
+  const errorEl   = document.getElementById('proofError');
+  const contentEl = document.getElementById('proofContent');
+  const imgEl     = document.getElementById('proofImg');
+  const frameEl   = document.getElementById('proofFrame');
+  const openBtn   = document.getElementById('proofOpenNewTab');
+
+  // reset UI
+  if(errorEl){ errorEl.style.display = 'none'; errorEl.textContent = ''; }
+  if(contentEl) contentEl.style.display = 'none';
+  if(imgEl){ imgEl.style.display = 'none'; imgEl.src = ''; }
+  if(frameEl){ frameEl.style.display = 'none'; frameEl.src = ''; }
+  if(openBtn) openBtn.href = '#';
+  if(loadingEl) loadingEl.style.display = 'block';
+
+  // ✅ ouvrir modal (Bootstrap 4)
+  if (window.jQuery && jQuery('#proofModal').length) {
+    jQuery('#proofModal').modal('show');
+  } else {
+    alert("Bootstrap 4/jQuery non chargé : impossible d'ouvrir le modal.");
+    return;
+  }
+
+  try{
+    const res = await fetch(previewUrl, {
+      headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    });
+
+    const data = await res.json();
+    if(!data.ok || !data.url) throw new Error(data.message || 'Lien indisponible');
+
+    if(loadingEl) loadingEl.style.display = 'none';
+    if(contentEl) contentEl.style.display = 'block';
+    if(openBtn) openBtn.href = data.url;
+
+    const url = data.url;
+    const lower = url.toLowerCase();
+
+    const isImage = /\.(png|jpg|jpeg|gif|webp|bmp|svg)(\?|#|$)/i.test(lower);
+    const isPdf   = /\.(pdf)(\?|#|$)/i.test(lower);
+
+    if (isImage) {
+      imgEl.src = url;
+      imgEl.style.display = 'block';
+    } else {
+      // PDF / raw / autres -> iframe
+      frameEl.src = url;
+      frameEl.style.display = 'block';
+    }
+
+  }catch(err){
+    if(loadingEl) loadingEl.style.display = 'none';
+    if(errorEl){
+      errorEl.textContent = err.message || 'Erreur lors du chargement';
+      errorEl.style.display = 'block';
+    } else {
+      alert(err.message || 'Erreur lors du chargement');
+    }
+  }
+});
+
+// ✅ nettoyage quand on ferme (Bootstrap 4)
+if (window.jQuery) {
+  jQuery(document).on('hidden.bs.modal', '#proofModal', function(){
+    const imgEl = document.getElementById('proofImg');
+    const frameEl = document.getElementById('proofFrame');
+    if(imgEl) imgEl.src = '';
+    if(frameEl) frameEl.src = '';
+  });
+}
+</script>
 {% endblock %}

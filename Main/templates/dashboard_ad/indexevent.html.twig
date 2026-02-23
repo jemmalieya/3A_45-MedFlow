@@ -197,75 +197,356 @@
 
   {# ================= STATS EVENEMENTS ================= #}
   {% if section == 'stats_evenements' %}
-    <div class="row g-3">
-      <div class="col-md-3"><div class="card"><div class="card-body">
-        <div class="text-muted">Total demandes</div><div class="h3 mb-0">{{ demandes.total ?? 0 }}</div>
-      </div></div></div>
-      <div class="col-md-3"><div class="card"><div class="card-body">
-        <div class="text-muted">Accepted</div><div class="h3 mb-0">{{ demandes.accepted ?? 0 }}</div>
-      </div></div></div>
-      <div class="col-md-3"><div class="card"><div class="card-body">
-        <div class="text-muted">Pending</div><div class="h3 mb-0">{{ demandes.pending ?? 0 }}</div>
-      </div></div></div>
-      <div class="col-md-3"><div class="card"><div class="card-body">
-        <div class="text-muted">Refused</div><div class="h3 mb-0">{{ demandes.refused ?? 0 }}</div>
-      </div></div></div>
+
+  {# ===== KPI cards ===== #}
+  <div class="row g-3 mb-3">
+    <div class="col-12 col-md-6 col-xl-3">
+      <div class="card">
+        <div class="card-body">
+          <div class="text-muted">Total demandes</div>
+          <div class="h3 mb-0">{{ demandes.total ?? 0 }}</div>
+        </div>
+      </div>
     </div>
 
-    <div class="row g-3 mt-1">
-      <div class="col-md-4">
-        <div class="card"><div class="card-body">
-          <h6 class="mb-2">Par type</h6>
-          {% for k,v in byType %}<div class="d-flex justify-content-between"><span>{{ k }}</span><b>{{ v }}</b></div>{% else %}<div class="text-muted">—</div>{% endfor %}
-        </div></div>
-      </div>
-      <div class="col-md-4">
-        <div class="card"><div class="card-body">
-          <h6 class="mb-2">Par ville</h6>
-          {% for k,v in byVille %}<div class="d-flex justify-content-between"><span>{{ k }}</span><b>{{ v }}</b></div>{% else %}<div class="text-muted">—</div>{% endfor %}
-        </div></div>
-      </div>
-      <div class="col-md-4">
-        <div class="card"><div class="card-body">
-          <h6 class="mb-2">Par statut</h6>
-          {% for k,v in byStatut %}<div class="d-flex justify-content-between"><span>{{ k }}</span><b>{{ v }}</b></div>{% else %}<div class="text-muted">—</div>{% endfor %}
-        </div></div>
+    <div class="col-12 col-md-6 col-xl-3">
+      <div class="card">
+        <div class="card-body">
+          <div class="text-muted">Accepted</div>
+          <div class="h3 mb-0">{{ demandes.accepted ?? 0 }}</div>
+        </div>
       </div>
     </div>
-  {% endif %}
+
+    <div class="col-12 col-md-6 col-xl-3">
+      <div class="card">
+        <div class="card-body">
+          <div class="text-muted">Pending</div>
+          <div class="h3 mb-0">{{ demandes.pending ?? 0 }}</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-12 col-md-6 col-xl-3">
+      <div class="card">
+        <div class="card-body">
+          <div class="text-muted">Refused</div>
+          <div class="h3 mb-0">{{ demandes.refused ?? 0 }}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {# ===== Charts ===== #}
+  <div class="row g-3">
+
+    {# Donut demandes #}
+    <div class="col-12 col-lg-4">
+      <div class="card h-100">
+        <div class="card-header">
+          <div class="fw-bold">Demandes (Donut)</div>
+          <div class="fs-12 text-muted">Accepted / Pending / Refused</div>
+        </div>
+        <div class="card-body">
+          <div id="chartDemandesDonut" style="min-height: 320px;"></div>
+        </div>
+      </div>
+    </div>
+
+    {# Bar par type #}
+    <div class="col-12 col-lg-8">
+      <div class="card h-100">
+        <div class="card-header">
+          <div class="fw-bold">Événements par type</div>
+          <div class="fs-12 text-muted">Nombre d’événements</div>
+        </div>
+        <div class="card-body">
+          <div id="chartByTypeBar" style="min-height: 320px;"></div>
+        </div>
+      </div>
+    </div>
+
+    {# Bar horizontal par ville #}
+    <div class="col-12 col-lg-6">
+      <div class="card h-100">
+        <div class="card-header">
+          <div class="fw-bold">Événements par ville</div>
+        </div>
+        <div class="card-body">
+          <div id="chartByVilleBar" style="min-height: 320px;"></div>
+        </div>
+      </div>
+    </div>
+
+    {# Pie par statut #}
+    <div class="col-12 col-lg-6">
+      <div class="card h-100">
+        <div class="card-header">
+          <div class="fw-bold">Événements par statut</div>
+        </div>
+        <div class="card-body">
+          <div id="chartByStatutPie" style="min-height: 320px;"></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+{% endif %}
 
   {# ================= STATS RESSOURCES ================= #}
   {% if section == 'stats_ressources' %}
-    <div class="row g-3">
-      <div class="col-md-4">
-        <div class="card"><div class="card-body">
-          <h6 class="mb-2">KPI</h6>
-          {% for k,v in kpi %}<div class="d-flex justify-content-between"><span>{{ k }}</span><b>{{ v }}</b></div>{% else %}<div class="text-muted">—</div>{% endfor %}
-        </div></div>
-      </div>
 
-      <div class="col-md-4">
-        <div class="card"><div class="card-body">
-          <h6 class="mb-2">Par type</h6>
-          {% for row in byTypeR %}
-            <div class="d-flex justify-content-between"><span>{{ row.type ?? row['type'] ?? 'N/A' }}</span><b>{{ row.total ?? row['total'] ?? 0 }}</b></div>
-          {% else %}
-            <div class="text-muted">—</div>
-          {% endfor %}
-        </div></div>
-      </div>
+  {# ===== KPI cards ===== #}
+  <div class="row g-3 mb-3">
+    <div class="col-12 col-lg-4">
+      <div class="card h-100">
+        <div class="card-body">
+          <div class="d-flex align-items-start justify-content-between">
+            <div>
+              <div class="text-muted">Total ressources</div>
+              <div class="h3 mb-0">{{ kpi.total ?? 0 }}</div>
+              <div class="mt-3 small text-muted">
+                <div class="d-flex justify-content-between"><span>Files</span><b>{{ kpi.files ?? 0 }}</b></div>
+                <div class="d-flex justify-content-between"><span>Links</span><b>{{ kpi.links ?? 0 }}</b></div>
+                <div class="d-flex justify-content-between"><span>Stock</span><b>{{ kpi.stock ?? 0 }}</b></div>
+                <div class="d-flex justify-content-between"><span>Publiques</span><b>{{ kpi.publiques ?? 0 }}</b></div>
+                <div class="d-flex justify-content-between"><span>Privées</span><b>{{ kpi.privees ?? 0 }}</b></div>
+              </div>
+            </div>
 
-      <div class="col-md-4">
-        <div class="card"><div class="card-body">
-          <h6 class="mb-2">Top événements (ressources)</h6>
-          {% for row in topEventsR %}
-            <div class="d-flex justify-content-between"><span>{{ row.titre ?? row['titre'] ?? 'Event' }}</span><b>{{ row.total ?? row['total'] ?? 0 }}</b></div>
-          {% else %}
-            <div class="text-muted">—</div>
-          {% endfor %}
-        </div></div>
+            <div style="width:180px;">
+              <div id="chartRessourcesDonut" style="min-height: 200px;"></div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
-  {% endif %}
 
+    {# Bar par type #}
+    <div class="col-12 col-lg-8">
+      <div class="card h-100">
+        <div class="card-header">
+          <div class="fw-bold">Ressources par type</div>
+          <div class="fs-12 text-muted">Distribution globale</div>
+        </div>
+        <div class="card-body">
+          <div id="chartRessByType" style="min-height: 260px;"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-3">
+    {# Bar horizontal par catégorie #}
+    <div class="col-12 col-lg-6">
+      <div class="card h-100">
+        <div class="card-header">
+          <div class="fw-bold">Ressources par catégorie</div>
+        </div>
+        <div class="card-body">
+          <div id="chartRessByCategorie" style="min-height: 320px;"></div>
+        </div>
+      </div>
+    </div>
+
+    {# Top events #}
+    <div class="col-12 col-lg-6">
+      <div class="card h-100">
+        <div class="card-header">
+          <div class="fw-bold">Top événements (nombre de ressources)</div>
+          <div class="fs-12 text-muted">Top 5</div>
+        </div>
+        <div class="card-body">
+          <div id="chartTopEventsR" style="min-height: 320px;"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+{% endif %}
+
+  {% if section == 'stats_evenements' %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+
+  // DATA
+  const demandes = {
+    accepted: {{ demandes.accepted|default(0) }},
+    pending:  {{ demandes.pending|default(0) }},
+    refused:  {{ demandes.refused|default(0) }}
+  };
+
+  const byType   = {{ byType|default({})|json_encode|raw }};
+  const byVille  = {{ byVille|default({})|json_encode|raw }};
+  const byStatut = {{ byStatut|default({})|json_encode|raw }};
+
+  function mapToSeries(obj) {
+    const labels = Object.keys(obj || {});
+    const values = labels.map(k => Number(obj[k] || 0));
+    return { labels, values };
+  }
+
+  // 1) Donut demandes
+  if (document.querySelector('#chartDemandesDonut')) {
+    const donut = new ApexCharts(document.querySelector("#chartDemandesDonut"), {
+      chart: { type: 'donut', height: 320 },
+      series: [demandes.accepted, demandes.pending, demandes.refused],
+      labels: ['Accepted', 'Pending', 'Refused'],
+      legend: { position: 'bottom' },
+      dataLabels: { enabled: true },
+      stroke: { width: 2 },
+      plotOptions: { pie: { donut: { size: '65%' } } }
+    });
+    donut.render();
+  }
+
+  // 2) Bar par type
+  if (document.querySelector('#chartByTypeBar')) {
+    const s = mapToSeries(byType);
+    const bar = new ApexCharts(document.querySelector("#chartByTypeBar"), {
+      chart: { type: 'bar', height: 320, toolbar: { show: false } },
+      series: [{ name: 'Événements', data: s.values }],
+      xaxis: { categories: s.labels },
+      plotOptions: { bar: { borderRadius: 8, columnWidth: '45%' } },
+      dataLabels: { enabled: false }
+    });
+    bar.render();
+  }
+
+  // 3) Bar horizontal par ville
+  if (document.querySelector('#chartByVilleBar')) {
+    const s = mapToSeries(byVille);
+    const bar = new ApexCharts(document.querySelector("#chartByVilleBar"), {
+      chart: { type: 'bar', height: 320, toolbar: { show: false } },
+      series: [{ name: 'Événements', data: s.values }],
+      xaxis: { categories: s.labels },
+      plotOptions: { bar: { borderRadius: 8, horizontal: true } },
+      dataLabels: { enabled: false }
+    });
+    bar.render();
+  }
+
+  // 4) Pie par statut
+  if (document.querySelector('#chartByStatutPie')) {
+    const s = mapToSeries(byStatut);
+    const pie = new ApexCharts(document.querySelector("#chartByStatutPie"), {
+      chart: { type: 'pie', height: 320 },
+      series: s.values,
+      labels: s.labels,
+      legend: { position: 'bottom' },
+      dataLabels: { enabled: true }
+    });
+    pie.render();
+  }
+
+});
+</script>
+
+
+
+{% endif %}
+{% if section == 'stats_ressources' %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+
+  // KPI (déjà un objet associatif)
+  const kpi = {{ kpi|default({})|json_encode|raw }};
+
+  // byTypeR / byCategorieR / topEventsR peuvent être "array of rows"
+  const byTypeR = {{ byTypeR|default([])|json_encode|raw }};
+  const byCategorieR = {{ byCategorieR|default([])|json_encode|raw }};
+  const topEventsR = {{ topEventsR|default([])|json_encode|raw }};
+
+  // Helpers
+  function rowsToSeries(rows, labelKey, valueKey) {
+    const labels = [];
+    const values = [];
+    (rows || []).forEach(r => {
+      const l = (r[labelKey] ?? r[labelKey.replace('.', '')] ?? r['type'] ?? r['categorie'] ?? r['titre'] ?? 'N/A');
+      const v = Number(r[valueKey] ?? r['total'] ?? 0);
+      labels.push(String(l));
+      values.push(v);
+    });
+    return { labels, values };
+  }
+
+  // 1) Donut Files/Links/Stock
+  if (document.querySelector('#chartRessourcesDonut')) {
+    const files = Number(kpi.files ?? 0);
+    const links = Number(kpi.links ?? 0);
+    const stock = Number(kpi.stock ?? 0);
+
+    const donut = new ApexCharts(document.querySelector("#chartRessourcesDonut"), {
+      chart: { type: 'donut', height: 200 },
+      series: [files, links, stock],
+      labels: ['Files', 'Links', 'Stock'],
+      legend: { show: false },
+      dataLabels: { enabled: false },
+      stroke: { width: 2 },
+      plotOptions: { pie: { donut: { size: '70%' } } },
+      tooltip: { y: { formatter: (v) => v + " ressource(s)" } }
+    });
+    donut.render();
+  }
+
+  // 2) Bar par type
+  if (document.querySelector('#chartRessByType')) {
+    // tes rows renvoient souvent: [{type: 'PDF', total: 10}, ...]
+    const s = rowsToSeries(byTypeR, 'type', 'total');
+
+    const bar = new ApexCharts(document.querySelector("#chartRessByType"), {
+      chart: { type: 'bar', height: 260, toolbar: { show: false } },
+      series: [{ name: 'Ressources', data: s.values }],
+      xaxis: { categories: s.labels },
+      plotOptions: { bar: { borderRadius: 8, columnWidth: '45%' } },
+      dataLabels: { enabled: false }
+    });
+    bar.render();
+  }
+
+  // 3) Bar horizontal par catégorie
+  if (document.querySelector('#chartRessByCategorie')) {
+    // rows souvent: [{categorie:'Docs', total: 3}, ...]
+    const labels = [];
+    const values = [];
+    (byCategorieR || []).forEach(r => {
+      labels.push(String(r.categorie ?? r['categorie'] ?? r['cat'] ?? 'N/A'));
+      values.push(Number(r.total ?? r['total'] ?? 0));
+    });
+
+    const bar = new ApexCharts(document.querySelector("#chartRessByCategorie"), {
+      chart: { type: 'bar', height: 320, toolbar: { show: false } },
+      series: [{ name: 'Ressources', data: values }],
+      xaxis: { categories: labels },
+      plotOptions: { bar: { borderRadius: 8, horizontal: true } },
+      dataLabels: { enabled: false }
+    });
+    bar.render();
+  }
+
+  // 4) Top événements
+  if (document.querySelector('#chartTopEventsR')) {
+    // rows souvent: [{titre:'Event X', total: 5}, ...]
+    const labels = [];
+    const values = [];
+    (topEventsR || []).forEach(r => {
+      labels.push(String(r.titre ?? r['titre'] ?? r['title'] ?? 'Event'));
+      values.push(Number(r.total ?? r['total'] ?? 0));
+    });
+
+    const bar = new ApexCharts(document.querySelector("#chartTopEventsR"), {
+      chart: { type: 'bar', height: 320, toolbar: { show: false } },
+      series: [{ name: 'Ressources', data: values }],
+      xaxis: { categories: labels },
+      plotOptions: { bar: { borderRadius: 8, columnWidth: '45%' } },
+      dataLabels: { enabled: false }
+    });
+    bar.render();
+  }
+
+});
+</script>
+
+{% endif %}
 {% endblock %}

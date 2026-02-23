@@ -1,8 +1,15 @@
 {% extends 'base.html.twig' %}
 {% set patientId = app.session.get('patient_id') %}
+
 {% block body %}
-<style>
-    .appointment-page { min-height: 100vh; background: #fff; padding: 2rem 0 4rem; }
+  <style>
+    /* General Page Styles */
+    .appointment-page {
+      min-height: 100vh;
+      background: #fff;
+      padding: 2rem 0 4rem;
+    }
+    /* Hero Section */
     .appointment-hero {
       background: linear-gradient(135deg, #049ebb 0%, #38bdf8 50%, #049ebb 100%);
       color: #fff;
@@ -12,8 +19,19 @@
       box-shadow: 0 20px 50px rgba(37, 99, 235, 0.25);
       text-align: center;
     }
-    .appointment-hero h1 { font-size: 2.25rem; font-weight: 800; letter-spacing: -0.02em; margin: 0 0 0.5rem; }
-    .appointment-hero p { font-size: 1.1rem; opacity: 0.95; margin: 0; font-weight: 500; }
+    .appointment-hero h1 {
+      font-size: 2.25rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      margin: 0 0 0.5rem;
+    }
+    .appointment-hero p {
+      font-size: 1.1rem;
+      opacity: 0.95;
+      margin: 0;
+      font-weight: 500;
+    }
+    /* Card Styles */
     .appointment-card {
       background: #e0f2fe;
       border-radius: 20px;
@@ -22,7 +40,11 @@
       padding: 2rem 2.5rem;
       margin-bottom: 2rem;
     }
-    .appointment-card .form-label { font-weight: 600; color: #049ebb; margin-bottom: 0.5rem; }
+    .appointment-card .form-label {
+      font-weight: 600;
+      color: #049ebb;
+      margin-bottom: 0.5rem;
+    }
     .appointment-card .form-control, .appointment-card .form-select {
       border: 2px solid #049ebb;
       border-radius: 12px;
@@ -35,8 +57,13 @@
       box-shadow: 0 0 0 4px #049ebb33;
       outline: none;
     }
-    .appointment-card .form-control[readonly], .appointment-card .form-control:disabled,
-    .appointment-card .form-control.bg-muted { background: #dbeafe; color: #049ebb; }
+    .appointment-card .form-control[readonly],
+    .appointment-card .form-control:disabled,
+    .appointment-card .form-control.bg-muted {
+      background: #dbeafe;
+      color: #049ebb;
+    }
+    /* Button Styles */
     .btn-appointment {
       background: linear-gradient(135deg, #049ebb 0%, #38bdf8 100%);
       color: #fff !important;
@@ -48,209 +75,318 @@
       letter-spacing: 0.02em;
       transition: transform 0.2s, box-shadow 0.2s;
     }
-    .btn-appointment:hover { transform: translateY(-2px); box-shadow: 0 12px 28px rgba(4, 158, 187, 0.35); color: #fff !important; }
-    .alert-appointment { border: none; border-radius: 14px; padding: 1rem 1.25rem; font-weight: 500; }
-    .alert-appointment.alert-danger { background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%); color: #991b1b; }
-    .alert-appointment.alert-success { background: linear-gradient(135deg, #dbeafe 0%, #bae6fd 100%); color: #049ebb; }
-    #appointment-form { padding-top: 100px; }
-    @media (max-width: 768px) { #appointment-form { padding-top: 80px; } .appointment-hero h1 { font-size: 1.75rem; } }
-    .flatpickr-calendar { background: #fff !important; border: 2px solid #e2e8f0 !important; border-radius: 16px !important; box-shadow: 0 10px 40px rgba(0,0,0,0.08) !important; }
-    .flatpickr-day.today { border-color: #0d9488; }
-    .flatpickr-day.selected, .flatpickr-day.startRange, .flatpickr-day.endRange { background: #0d9488 !important; color: #fff !important; }
-    .flatpickr-weekday { color: #0f766e; }
-    .flatpickr-input { width: 100% !important; padding: 0.75rem 1rem !important; border-radius: 12px !important; }
-    #appointment-form .col-lg-8 .flatpickr-calendar.inline { max-width: 520px !important; margin: 0.5rem auto 0 !important; }
-</style>
+    .btn-appointment:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 12px 28px rgba(4, 158, 187, 0.35);
+      color: #fff !important;
+    }
+    /* Alert Styles */
+    .alert-appointment {
+      border: none;
+      border-radius: 14px;
+      padding: 1rem 1.25rem;
+      font-weight: 500;
+    }
 
-<main class="main appointment-page">
+    /* Form error messages */
+    .appointment-card .form-error,
+    .appointment-card .form-errors,
+    .appointment-card ul.form-errors,
+    .appointment-card .invalid-feedback,
+    .appointment-card .form-error-message,
+    .appointment-card .mb-4 ul,
+    .appointment-card .mb-4 .form-errors,
+    #motif-error ul {
+      color: #dc3545 !important;
+      font-size: 0.98em;
+      font-weight: 500;
+      margin-top: 0.25rem;
+      margin-bottom: 0.25rem;
+      list-style: disc inside;
+    }
+    .alert-appointment.alert-danger {
+      background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+      color: #991b1b;
+    }
+    .alert-appointment.alert-success {
+      background: linear-gradient(135deg, #dbeafe 0%, #bae6fd 100%);
+      color: #049ebb;
+    }
+    #appointment-form {
+      padding-top: 100px;
+    }
+    @media (max-width: 768px) {
+      #appointment-form {
+        padding-top: 80px;
+      }
+      .appointment-hero h1 {
+        font-size: 1.75rem;
+      }
+    }
+    /* Flatpickr Styles */
+    .flatpickr-calendar {
+      background: #fff !important;
+      border: 2px solid #e2e8f0 !important;
+      border-radius: 16px !important;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.08) !important;
+    }
+    .flatpickr-day.today {
+      border-color: #0d9488;
+    }
+    .flatpickr-day.selected, .flatpickr-day.startRange, .flatpickr-day.endRange {
+      background: #0d9488 !important;
+      color: #fff !important;
+    }
+    .flatpickr-weekday {
+      color: #0f766e;
+    }
+    .flatpickr-input {
+      width: 100% !important;
+      padding: 0.75rem 1rem !important;
+      border-radius: 12px !important;
+    }
+    #appointment-form .col-lg-8 .flatpickr-calendar.inline {
+      max-width: 520px !important;
+      margin: 0.5rem auto 0 !important;
+    }
+
+    /* Make FullCalendar time slot rows higher */
+    .fc .fc-timegrid-slot, .fc .fc-timegrid-axis, .fc .fc-timegrid-slot-label {
+      min-height: 1.98em !important;
+      height: 1.98em !important;
+      line-height: 1.98em !important;
+    }
+    /* FullCalendar Styles */
+    #fullcalendar {
+      background: #f8fafc;
+      border-radius: 22px;
+      box-shadow: 0 8px 32px rgba(4,158,187,0.13), 0 2px 8px rgba(4,158,187,0.08);
+      padding: 2rem 2rem 1.5rem 2rem;
+      margin-bottom: 2rem;
+      font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
+      border: 2px solid #bae6fd;
+    }
+    .fc-toolbar {
+      background: linear-gradient(90deg, #049ebb 0%, #38bdf8 100%);
+      border-radius: 16px 16px 0 0;
+      color: #fff;
+      padding: 1.1rem 1.5rem 1rem 1.5rem;
+      margin-bottom: 0.7rem;
+      box-shadow: 0 4px 16px rgba(4,158,187,0.10);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .fc-toolbar-title {
+      font-size: 1.5rem;
+      font-weight: 800;
+      color: #fff;
+      letter-spacing: 0.01em;
+      text-shadow: 0 2px 8px rgba(4,158,187,0.10);
+    }
+    .fc-button {
+      background: linear-gradient(135deg, #38bdf8 0%, #049ebb 100%);
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      font-weight: 700;
+      margin: 0 4px;
+      transition: background 0.2s, box-shadow 0.2s, transform 0.2s;
+      box-shadow: 0 2px 8px rgba(4,158,187,0.13);
+      padding: 0.5rem 1.1rem;
+      font-size: 1rem;
+      outline: none;
+    }
+    .fc-button:hover, .fc-button:focus {
+      background: linear-gradient(135deg, #049ebb 0%, #38bdf8 100%);
+      color: #fff;
+      box-shadow: 0 6px 18px rgba(4,158,187,0.18);
+      transform: translateY(-2px) scale(1.04);
+    }
+    .fc-button-active, .fc-button-primary:not(:disabled).fc-button-active {
+      background: #049ebb;
+      color: #fff;
+      border: none;
+      box-shadow: 0 2px 8px rgba(4,158,187,0.18);
+    }
+    .fc-daygrid-day, .fc-timegrid-slot {
+      background: #f1f5f9;
+      border-radius: 10px;
+      transition: background 0.2s;
+    }
+    .fc-day-today {
+      background: #bae6fd !important;
+      border-radius: 10px;
+      box-shadow: 0 0 0 3px #38bdf8;
+    }
+    .fc-timegrid-slot.fc-timegrid-slot-lane {
+      background: #f8fafc;
+    }
+    .fc-timegrid-slot.fc-timegrid-slot-label {
+      background: #e0e7ef;
+      color: #049ebb;
+      font-weight: 700;
+      font-size: 1.05rem;
+      border-radius: 8px;
+    }
+    .fc-event {
+      background: linear-gradient(90deg, #dc3545 0%, #f87171 100%) !important;
+      border: none !important;
+      border-radius: 12px !important;
+      color: #fff !important;
+      font-weight: 700;
+      box-shadow: 0 4px 16px rgba(220,53,69,0.13);
+      padding: 0.35rem 0.7rem;
+      font-size: 1.05rem;
+      letter-spacing: 0.01em;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .fc-slot-selected {
+      background: #38bdf8 !important;
+      border-radius: 10px !important;
+      box-shadow: 0 0 0 3px #049ebb;
+    }
+    .fc .fc-col-header-cell-cushion {
+      color: #049ebb;
+      font-weight: 800;
+      font-size: 1.08rem;
+      letter-spacing: 0.01em;
+      padding: 0.4rem 0;
+    }
+    .fc .fc-timegrid-axis-cushion {
+      color: #049ebb;
+      font-weight: 700;
+      font-size: 1.05rem;
+    }
+    .fc .fc-scrollgrid-section-header {
+      background: #e0f2fe;
+    }
+    .fc .fc-scrollgrid-section-body {
+      background: #f8fafc;
+    }
+    .fc .fc-daygrid-day-number {
+      color: #049ebb;
+      font-weight: 800;
+      font-size: 1.08rem;
+    }
+    .fc .fc-daygrid-day.fc-day-today .fc-daygrid-day-number {
+      color: #049ebb;
+      text-shadow: 0 2px 8px #bae6fd;
+    }
+    .fc .fc-timegrid-now-indicator-arrow {
+      border-top-color: #049ebb;
+    }
+    .fc .fc-timegrid-now-indicator-line {
+      background: #049ebb;
+    }
+    /* Fancy grid lines */
+    .fc .fc-scrollgrid, .fc .fc-scrollgrid-sync-table {
+      border-radius: 12px;
+      border: 1.5px solid #bae6fd;
+      box-shadow: 0 2px 8px rgba(4,158,187,0.08);
+    }
+    /* Responsive tweaks for FullCalendar */
+    @media (max-width: 768px) {
+      #fullcalendar {
+        padding: 0.7rem 0.2rem 0.7rem 0.2rem;
+      }
+      .fc-toolbar {
+        padding: 0.7rem 0.7rem;
+        font-size: 0.98rem;
+      }
+      .fc-toolbar-title {
+        font-size: 1.08rem;
+      }
+    }
+    /* Hide any default datetime widget that may be rendered by Symfony */
+    input[type="datetime-local"], .js-datepicker, .flatpickr-input {
+      display: none !important;
+    }
+  </style>
+
+  <main class="main appointment-page">
     <section id="appointment-form" class="section py-5">
-        <div class="container">
-            <div class="row justify-content-center">
-                <div class="col-lg-8">
-                    <div class="appointment-hero">
-                        <h1>📅 Prendre rendez-vous</h1>
-                        <p>Choisissez la date, l'heure et le motif — nous nous occupons du reste.</p>
-                    </div>
-
-                    {% for label, messages in app.flashes %}
-                      {% for message in messages %}
-                        <div class="alert alert-appointment alert-{{ label == 'error' ? 'danger' : 'success' }}">{{ message }}</div>
-                      {% endfor %}
-                    {% endfor %}
-
-                    <div class="appointment-card">
-                        {% if form.vars.errors|length > 0 %}
-                          <div style="color: #dc3545; font-size: 1em; font-weight: bold;">
-                            Erreurs du formulaire :
-                            <ul>
-                              {% for error in form.vars.errors %}<li>{{ error.message }}</li>{% endfor %}
-                            </ul>
-                          </div>
-                        {% endif %}
-                        {{ form_start(form, {'attr': {'novalidate': 'novalidate', 'id': 'appointment-form-main'}}) }}
-                        <div class="mb-4">
-                          <div id="fullcalendar"></div>
-                          <div id="selected-date-label" style="margin-top:1rem;font-weight:bold;color:#049ebb;"></div>
-                          <input type="hidden" id="calendar-datetime" name="{{ form.datetime.vars.full_name }}" value="{{ form.datetime.vars.value|default('') }}">
-                          {{ form_errors(form.datetime) }}
-                          {% if form.datetime.vars.errors|length > 0 and form.datetime.vars.value is empty %}
-                            <div style="color: #dc3545; font-size: 0.95em;">Ce champ est obligatoire. Veuillez choisir une date et une heure.</div>
-                          {% endif %}
-                        </div>
-                        <style>
-                          /* FullCalendar custom design improvements */
-                          #fullcalendar {
-                            background: #f8fafc;
-                            border-radius: 18px;
-                            box-shadow: 0 6px 32px rgba(4,158,187,0.10), 0 1.5px 6px rgba(4,158,187,0.06);
-                            padding: 1.5rem 1.5rem 1rem 1.5rem;
-                            margin-bottom: 1.5rem;
-                            font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
-                          }
-                          .fc-toolbar {
-                            background: linear-gradient(90deg, #049ebb 0%, #38bdf8 100%);
-                            border-radius: 12px 12px 0 0;
-                            color: #fff;
-                            padding: 0.75rem 1rem;
-                            margin-bottom: 0.5rem;
-                          }
-                          .fc-toolbar-title {
-                            font-size: 1.25rem;
-                            font-weight: 700;
-                            color: #fff;
-                            letter-spacing: 0.01em;
-                          }
-                          .fc-button {
-                            background: #049ebb;
-                            color: #fff;
-                            border: none;
-                            border-radius: 8px;
-                            font-weight: 600;
-                            margin: 0 2px;
-                            transition: background 0.2s, box-shadow 0.2s;
-                            box-shadow: 0 2px 8px rgba(4,158,187,0.10);
-                          }
-                          .fc-button:hover, .fc-button:focus {
-                            background: #049ebb;
-                            color: #fff;
-                            box-shadow: 0 4px 16px rgba(4,158,187,0.18);
-                          }
-                          .fc-button-active, .fc-button-primary:not(:disabled).fc-button-active {
-                            background: #049ebb;
-                            color: #fff;
-                            border: none;
-                          }
-                          .fc-daygrid-day, .fc-timegrid-slot {
-                            background: #f1f5f9;
-                            border-radius: 8px;
-                            transition: background 0.2s;
-                          }
-                          .fc-day-today {
-                            background: #bae6fd !important;
-                            border-radius: 8px;
-                            box-shadow: 0 0 0 2px #38bdf8;
-                          }
-                          .fc-timegrid-slot.fc-timegrid-slot-lane {
-                            background: #f8fafc;
-                          }
-                          .fc-timegrid-slot.fc-timegrid-slot-label {
-                            background: #e0e7ef;
-                            color: #049ebb;
-                            font-weight: 600;
-                          }
-                          .fc-event {
-                            background: linear-gradient(90deg, #dc3545 0%, #f87171 100%) !important;
-                            border: none !important;
-                            border-radius: 10px !important;
-                            color: #fff !important;
-                            font-weight: 600;
-                            box-shadow: 0 2px 8px rgba(220,53,69,0.10);
-                            padding: 0.25rem 0.5rem;
-                          }
-                          .fc-slot-selected {
-                            background: #049ebb !important;
-                            border-radius: 8px !important;
-                            box-shadow: 0 0 0 2px #049ebb;
-                          }
-                          .fc .fc-col-header-cell-cushion {
-                            color: #049ebb;
-                            font-weight: 700;
-                            font-size: 1rem;
-                          }
-                          .fc .fc-timegrid-axis-cushion {
-                            color: #049ebb;
-                            font-weight: 600;
-                          }
-                          .fc .fc-scrollgrid-section-header {
-                            background: #e0f2fe;
-                          }
-                          .fc .fc-scrollgrid-section-body {
-                            background: #f8fafc;
-                          }
-                          .fc .fc-daygrid-day-number {
-                            color: #049ebb;
-                            font-weight: 700;
-                          }
-                          .fc .fc-daygrid-day.fc-day-today .fc-daygrid-day-number {
-                            color: #049ebb;
-                          }
-                          .fc .fc-timegrid-now-indicator-arrow {
-                            border-top-color: #049ebb;
-                          }
-                          .fc .fc-timegrid-now-indicator-line {
-                            background: #049ebb;
-                          }
-                          /* Responsive tweaks */
-                          @media (max-width: 768px) {
-                            #fullcalendar { padding: 0.5rem 0.25rem 0.5rem 0.25rem; }
-                            .fc-toolbar { padding: 0.5rem 0.5rem; font-size: 0.95rem; }
-                            .fc-toolbar-title { font-size: 1rem; }
-                          }
-                        </style>
-                        {{ form_row(form.mode) }}
-                        {{ form_row(form.motif) }}
-                        {{ form_row(form._token) }}
-                        <div class="d-grid mt-4">
-                          <button type="submit" class="btn btn-appointment">Envoyer la demande</button>
-                        </div>
-                        {{ form_end(form, {'render_rest': false}) }}
-                            <style>
-                              /* Hide any default datetime widget that may be rendered by Symfony */
-                              input[type="datetime-local"], .js-datepicker, .flatpickr-input {
-                                display: none !important;
-                              }
-                            </style>
-                            <div class="row g-3 mb-4">
-                                <div class="col-md-6">
-                                    <label class="form-label">Patient</label>
-                                    <div class="form-control bg-muted" style="pointer-events: none;">
-                                      <strong>
-                                        {% if form.vars.data.patient and form.vars.data.patient.id == patientId %}
-                                          Moi ({{ form.vars.data.patient.nom ~ ' ' ~ form.vars.data.patient.prenom }})
-                                        {% else %}
-                                          {{ form.vars.data.patient ? form.vars.data.patient.nom ~ ' ' ~ form.vars.data.patient.prenom : 'Non défini' }}
-                                        {% endif %}
-                                      </strong>
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <label class="form-label">Personnel médical</label>
-                                    <div class="form-control bg-muted" style="pointer-events: none;">
-                                      <strong>{{ form.vars.data.staff ? form.vars.data.staff.nom ~ ' ' ~ form.vars.data.staff.prenom : 'Non défini' }}</strong>
-                                    </div>
-                                </div>
-                            </div>
-                            <!-- All form fields above -->
-                           
-                       
-                        {{ form_end(form, {'render_rest': false}) }}
-                    </div>
-
-                </div>
+      <div class="container">
+        <div class="row justify-content-center">
+          <div class="col-lg-8">
+            <div class="appointment-hero">
+              <h1>📅 Prendre rendez-vous</h1>
+              <p>Choisissez la date, l'heure et le motif — nous nous occupons du reste.</p>
             </div>
+
+            {# Flash Messages #}
+            {% for label, messages in app.flashes %}
+              {% for message in messages %}
+                <div class="alert alert-appointment alert-{{ label == 'error' ? 'danger' : 'success' }}">{{ message }}</div>
+              {% endfor %}
+            {% endfor %}
+
+            <div class="appointment-card">
+              {{ form_start(form, {'attr': {'novalidate': 'novalidate', 'id': 'appointment-form-main'}}) }}
+
+              {# Calendar and DateTime #}
+              <div class="mb-4">
+                <div id="fullcalendar"></div>
+                <div id="selected-date-label" style="margin-top:1rem;font-weight:bold;color:#049ebb;"></div>
+                <input type="hidden" id="calendar-datetime" name="{{ form.datetime.vars.full_name }}" value="{{ form.datetime.vars.value|default('') }}">
+                {{ form_errors(form.datetime) }}
+                {# The red error message for datetime is kept as it is already styled in red #}
+              </div>
+
+              {# Mode Field #}
+              {{ form_row(form.mode) }}
+
+              {# Motif Field with Error Below #}
+              <div class="mb-3">
+                {{ form_label(form.motif) }}
+                {{ form_widget(form.motif, {'attr': {'class': 'form-control', 'aria-describedby': 'motif-error'}}) }}
+                <div id="motif-error">{{ form_errors(form.motif) }}</div>
+              </div>
+
+              {# CSRF Token #}
+              {{ form_row(form._token) }}
+
+              <div class="d-grid mt-4">
+                <button type="submit" class="btn btn-appointment">Confirmer</button>
+              </div>
+              <div class="d-grid mt-4">
+                <button type="submit" class="btn btn-appointment">Annuler </button>
+              </div>
+
+              {{ form_end(form, {'render_rest': false}) }}
+
+              {# Patient and Staff Info #}
+              <div class="row g-3 mb-4">
+                <div class="col-md-6">
+                  <label class="form-label">Patient</label>
+                  <div class="form-control bg-muted" style="pointer-events: none;">
+                    <strong>
+                      {% if form.vars.data.patient and form.vars.data.patient.id == patientId %}
+                        Moi ({{ form.vars.data.patient.nom ~ ' ' ~ form.vars.data.patient.prenom }})
+                      {% else %}
+                        {{ form.vars.data.patient ? form.vars.data.patient.nom ~ ' ' ~ form.vars.data.patient.prenom : 'Non défini' }}
+                      {% endif %}
+                    </strong>
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Personnel médical</label>
+                  <div class="form-control bg-muted" style="pointer-events: none;">
+                    <strong>{{ form.vars.data.staff ? form.vars.data.staff.nom ~ ' ' ~ form.vars.data.staff.prenom : 'Non défini' }}</strong>
+                  </div>
+                </div>
+              </div>
+              <!-- All form fields above -->
+            </div>
+          </div>
         </div>
+      </div>
     </section>
-</main>
+  </main>
+{% endblock %}
+
 {% block javascripts %}
   {{ parent() }}
   <link href="https://cdn.jsdelivr.net/npm/@fullcalendar/core@6.1.11/main.min.css" rel="stylesheet">
@@ -261,116 +397,116 @@
   <script src="https://cdn.jsdelivr.net/npm/@fullcalendar/timegrid@6.1.11/index.global.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@fullcalendar/interaction@6.1.11/index.global.min.js"></script>
   <script>
-  document.addEventListener('DOMContentLoaded', function() {
-    // On form submit, set hidden input from label if label exists
-    var form = document.getElementById('appointment-form-main');
-    if (form) {
-      form.addEventListener('submit', function(e) {
-        var input = document.getElementById('calendar-datetime');
-        var dateLabel = document.getElementById('selected-date-label');
-        // If label is set, set input value in 'YYYY-MM-DDTHH:mm' format
-        if (dateLabel && input && dateLabel.textContent.trim() !== '') {
-          var labelVal = dateLabel.textContent.trim();
-          // Convert 'YYYY-MM-DD HH:mm:00' to 'YYYY-MM-DDTHH:mm'
-          var match = labelVal.match(/(\d{4}-\d{2}-\d{2}) (\d{2}):(\d{2}):\d{2}/);
-          if (match) {
-            input.value = match[1] + 'T' + match[2] + ':' + match[3];
+    document.addEventListener('DOMContentLoaded', function() {
+      // On form submit, set hidden input from label if label exists
+      var form = document.getElementById('appointment-form-main');
+      if (form) {
+        form.addEventListener('submit', function(e) {
+          var input = document.getElementById('calendar-datetime');
+          var dateLabel = document.getElementById('selected-date-label');
+          // If label is set, set input value in 'YYYY-MM-DDTHH:mm' format
+          if (dateLabel && input && dateLabel.textContent.trim() !== '') {
+            var labelVal = dateLabel.textContent.trim();
+            // Convert 'YYYY-MM-DD HH:mm:00' to 'YYYY-MM-DDTHH:mm'
+            var match = labelVal.match(/(\d{4}-\d{2}-\d{2}) (\d{2}):(\d{2}):\d{2}/);
+            if (match) {
+              input.value = match[1] + 'T' + match[2] + ':' + match[3];
+            }
           }
-        }
-        // DEBUG: Log to console
-        console.log('Form submit: hidden input value =', input ? input.value : 'null');
-      });
-    }
-    var calendarEl = document.getElementById('fullcalendar');
-    var input = document.getElementById('calendar-datetime');
-    var initialDate = input.value ? new Date(input.value) : new Date();
+          // DEBUG: Log to console
+          console.log('Form submit: hidden input value =', input ? input.value : 'null');
+        });
+      }
 
-    var doctorId = {{ form.vars.data.staff ? form.vars.data.staff.id : 'null' }};
-    var calendar = new FullCalendar.Calendar(calendarEl, {
-      initialView: 'timeGridWeek',
-      nowIndicator: true,
-      selectable: true,
-      allDaySlot: false,
-      weekends: false,
-      headerToolbar: {
-        left: 'prev,next today',
-        center: 'title',
-        right: 'dayGridMonth,timeGridWeek,timeGridDay'
-      },
-      height: 500,
-      slotMinTime: '08:00:00',
-      slotMaxTime: '17:00:00',
-      slotDuration: '01:00:00',
-      snapDuration: '01:00:00',
-      events: doctorId ? '/doctor/appointments/' + doctorId : [],
-      eventColor: '#dc3545', // Red
-      eventRender: function(info) {
-        info.el.style.backgroundColor = '#dc3545';
-        info.el.style.borderColor = '#dc3545';
-        info.el.style.color = '#fff';
-      },
-      eventContent: function(arg) {
-        return { html: '<div style="color:#fff;font-weight:bold">Occupé(e)</div>' };
-      },
-      businessHours: {
-        daysOfWeek: [1, 2, 3, 4, 5], // Monday to Friday
-        startTime: '08:00',
-        endTime: '17:00'
-      },
-      selectConstraint: 'businessHours',
-      eventOverlap: false,
-      selectAllow: function(selectInfo) {
-        // Prevent booking in occupied hours
-        var events = calendar.getEvents();
-        for (var i = 0; i < events.length; i++) {
-          if (
-            selectInfo.start < events[i].end &&
-            selectInfo.end > events[i].start
-          ) {
-            return false;
+      var calendarEl = document.getElementById('fullcalendar');
+      var input = document.getElementById('calendar-datetime');
+      var initialDate = input.value ? new Date(input.value) : new Date();
+
+      var doctorId = {{ form.vars.data.staff ? form.vars.data.staff.id : 'null' }};
+      var calendar = new FullCalendar.Calendar(calendarEl, {
+        initialView: 'timeGridWeek',
+        nowIndicator: true,
+        selectable: true,
+        allDaySlot: false,
+        weekends: false,
+        headerToolbar: {
+          left: 'prev,next today',
+          center: 'title',
+          right: 'dayGridMonth,timeGridWeek,timeGridDay'
+        },
+        height: 500,
+        slotMinTime: '08:00:00',
+        slotMaxTime: '17:00:00',
+        slotDuration: '01:00:00',
+        snapDuration: '01:00:00',
+        events: doctorId ? '/doctor/appointments/' + doctorId : [],
+        eventColor: '#dc3545', // Red
+        eventRender: function(info) {
+          info.el.style.backgroundColor = '#dc3545';
+          info.el.style.borderColor = '#dc3545';
+          info.el.style.color = '#fff';
+        },
+        eventContent: function(arg) {
+          return { html: '<div style="color:#fff;font-weight:bold">Occupé(e)</div>' };
+        },
+        businessHours: {
+          daysOfWeek: [1, 2, 3, 4, 5], // Monday to Friday
+          startTime: '08:00',
+          endTime: '17:00'
+        },
+        selectConstraint: 'businessHours',
+        eventOverlap: false,
+        selectAllow: function(selectInfo) {
+          // Prevent booking in occupied hours
+          var events = calendar.getEvents();
+          for (var i = 0; i < events.length; i++) {
+            if (
+              selectInfo.start < events[i].end &&
+              selectInfo.end > events[i].start
+            ) {
+              return false;
+            }
           }
-        }
-        // Only allow 1 hour slots
-        var diff = (selectInfo.end - selectInfo.start) / (1000 * 60 * 60);
-        return diff === 1;
-      },
-      select: function(info) {
-        // Set the hidden input value to the selected datetime in 'YYYY-MM-DDTHH:mm' format for Symfony
-        var input = document.getElementById('calendar-datetime');
-        if (input) {
-          var dt = new Date(info.startStr);
-          var year = dt.getFullYear();
-          var month = ('0' + (dt.getMonth() + 1)).slice(-2);
-          var day = ('0' + dt.getDate()).slice(-2);
-          var hour = ('0' + dt.getHours()).slice(-2);
-          var minute = ('0' + dt.getMinutes()).slice(-2);
-          input.value = year + '-' + month + '-' + day + 'T' + hour + ':' + minute;
-        }
-        // Show selected date/time below the calendar in 'YYYY-MM-DD HH:mm:00' format
-        var dateLabel = document.getElementById('selected-date-label');
-        if (dateLabel) {
-          var dt = new Date(info.startStr);
-          var year = dt.getFullYear();
-          var month = ('0' + (dt.getMonth() + 1)).slice(-2);
-          var day = ('0' + dt.getDate()).slice(-2);
-          var hour = ('0' + dt.getHours()).slice(-2);
-          var minute = ('0' + dt.getMinutes()).slice(-2);
-          dateLabel.textContent = year + '-' + month + '-' + day + ' ' + hour + ':' + minute + ':00';
-        }
-        // Remove previous selection highlight
-        var selectedEls = document.querySelectorAll('.fc-slot-selected');
-        selectedEls.forEach(function(el) { el.classList.remove('fc-slot-selected'); });
-        // Highlight the selected slot
-        var slotSelector = '[data-time="' + info.startStr.substring(11,16) + '"]';
-        var dayCol = document.querySelector('[data-date="' + info.startStr.substring(0,10) + '"]');
-        if(dayCol) {
-          var slot = dayCol.querySelector(slotSelector);
-          if(slot) slot.classList.add('fc-slot-selected');
-        }
-      },
+          // Only allow 1 hour slots
+          var diff = (selectInfo.end - selectInfo.start) / (1000 * 60 * 60);
+          return diff === 1;
+        },
+        select: function(info) {
+          // Set the hidden input value to the selected datetime in 'YYYY-MM-DDTHH:mm' format for Symfony
+          var input = document.getElementById('calendar-datetime');
+          if (input) {
+            var dt = new Date(info.startStr);
+            var year = dt.getFullYear();
+            var month = ('0' + (dt.getMonth() + 1)).slice(-2);
+            var day = ('0' + dt.getDate()).slice(-2);
+            var hour = ('0' + dt.getHours()).slice(-2);
+            var minute = ('0' + dt.getMinutes()).slice(-2);
+            input.value = year + '-' + month + '-' + day + 'T' + hour + ':' + minute;
+          }
+          // Show selected date/time below the calendar in 'YYYY-MM-DD HH:mm:00' format
+          var dateLabel = document.getElementById('selected-date-label');
+          if (dateLabel) {
+            var dt = new Date(info.startStr);
+            var year = dt.getFullYear();
+            var month = ('0' + (dt.getMonth() + 1)).slice(-2);
+            var day = ('0' + dt.getDate()).slice(-2);
+            var hour = ('0' + dt.getHours()).slice(-2);
+            var minute = ('0' + dt.getMinutes()).slice(-2);
+            dateLabel.textContent = year + '-' + month + '-' + day + ' ' + hour + ':' + minute + ':00';
+          }
+          // Remove previous selection highlight
+          var selectedEls = document.querySelectorAll('.fc-slot-selected');
+          selectedEls.forEach(function(el) { el.classList.remove('fc-slot-selected'); });
+          // Highlight the selected slot
+          var slotSelector = '[data-time="' + info.startStr.substring(11,16) + '"]';
+          var dayCol = document.querySelector('[data-date="' + info.startStr.substring(0,10) + '"]');
+          if(dayCol) {
+            var slot = dayCol.querySelector(slotSelector);
+            if(slot) slot.classList.add('fc-slot-selected');
+          }
+        },
+      });
+      calendar.render();
     });
-    calendar.render();
-  });
   </script>
-{% endblock %}
 {% endblock %}

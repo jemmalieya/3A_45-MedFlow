@@ -9,6 +9,12 @@
         margin-bottom: 30px;
         box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
     }
+    #video {
+        transform: scaleX(-1); /* Flip horizontally for video only */
+    }
+    #drawCanvas {
+        /* No mirroring for canvas, so drawing is saved as drawn */
+    }
     .page-header h1 {
         font-size: 2.5rem;
         font-weight: 700;
@@ -178,6 +184,168 @@
                                         <div class="text-danger" style="font-size:0.95em;">{{ err }}</div>
                                     {% endfor %}
                                 </div>
+
+                                <div class="form-group mt-4">
+                                    <label for="symptoms"><strong>AI Prescription Suggestion (Beta)</strong></label>
+                                    <textarea class="form-control" id="symptoms" name="symptoms" rows="3" placeholder="Type patient symptoms for AI suggestion..."></textarea>
+                                    <small class="form-text text-muted">
+                                        Enter symptoms in English or French. Wait for AI suggestion below.<br>
+                                        <span style="color:#4b5563;font-size:0.95em;">
+                                            <strong>Note:</strong> The AI will return medications in a structured format for easy prescription filling.<br>
+                                        </span>
+                                    </small>
+                                    <div id="ai-suggestions" class="mt-2 text-info" style="min-height:2em;"></div>
+                                    <button type="button" class="btn btn-outline-primary btn-sm mt-2" id="add-ai-to-prescription" style="display:none;">Add to Prescription</button>
+                                </div>
+
+                                <script>
+                                // AI Prescription Suggestion JS + Add to Prescription
+                                (function() {
+                                    let timer = null;
+                                    const textarea = document.getElementById('symptoms');
+                                    const suggestionsDiv = document.getElementById('ai-suggestions');
+                                    const addBtn = document.getElementById('add-ai-to-prescription');
+                                    if (!textarea || !suggestionsDiv || !addBtn) return;
+                                    textarea.addEventListener('input', function() {
+                                        clearTimeout(timer);
+                                        timer = setTimeout(function() {
+                                            const text = textarea.value.trim();
+                                            if (!text) {
+                                                suggestionsDiv.textContent = '';
+                                                addBtn.style.display = 'none';
+                                                return;
+                                            }
+                                            suggestionsDiv.textContent = '⏳ AI is thinking...';
+                                            addBtn.style.display = 'none';
+                                            // Add instruction to AI for JSON output
+                                            const prompt = text + "\n\nReturn the medication suggestions as a JSON array, where each item has: name, dose, frequence, duree (number of days), and instructions. Example: [{\"name\":\"Paracetamol\",\"dose\":\"500mg\",\"frequence\":\"3x/day\",\"duree\":\"5\",\"instructions\":\"after meals\"}]";
+                                            fetch('/api/suggest-prescription', {
+                                                method: 'POST',
+                                                headers: { 'Content-Type': 'application/json' },
+                                                body: JSON.stringify({ text: prompt })
+                                            })
+                                            .then(res => res.json())
+                                            .then(data => {
+                                                if (data.suggestion !== undefined) {
+                                                    suggestionsDiv.textContent = data.suggestion;
+                                                    addBtn.style.display = 'inline-block';
+                                                } else if (data.error) {
+                                                    suggestionsDiv.textContent = '⚠️ ' + data.error;
+                                                    addBtn.style.display = 'none';
+                                                } else {
+                                                    suggestionsDiv.textContent = 'No suggestion.';
+                                                    addBtn.style.display = 'none';
+                                                }
+                                            })
+                                            .catch(() => {
+                                                suggestionsDiv.textContent = '⚠️ AI service unavailable.';
+                                                addBtn.style.display = 'none';
+                                            });
+                                        }, 1000);
+                                    });
+
+                                    // Helper: parse AI suggestion text to array of prescription objects
+                                    function parseMedications(text) {
+                                        // Remove code block markers and extract JSON array
+                                        let jsonText = text.trim();
+                                        // Remove ```json or ``` and trailing ```
+                                        jsonText = jsonText.replace(/^```json|^```|```$/g, '').trim();
+                                        // Try to extract the first JSON array in the text
+                                        let arr = null;
+                                        const arrayMatch = jsonText.match(/\[.*\]/s);
+                                        if (arrayMatch) {
+                                            try {
+                                                arr = JSON.parse(arrayMatch[0]);
+                                            } catch (e) {}
+                                        } else {
+                                            // Try to parse as is
+                                            try {
+                                                arr = JSON.parse(jsonText);
+                                            } catch (e) {}
+                                        }
+                                        if (Array.isArray(arr)) {
+                                            // Only add if name is present and not empty
+                                            return arr.filter(item => item && item.name && item.name.trim() !== '').map(item => ({
+                                                nomMedicament: item.name || '',
+                                                dose: item.dose || '',
+                                                frequence: item.frequence || '',
+                                                duree: item.duree || '',
+                                                instructions: item.instructions || ''
+                                            }));
+                                        }
+                                        // Fallback: old parsing
+                                        const lines = text.split(/\n|\r|;|\./).map(l => l.trim()).filter(Boolean);
+                                        const meds = [];
+                                        lines.forEach(line => {
+                                            let name = '', dose = '', frequence = '', duree = '', instructions = '';
+                                            let durationMatch = line.match(/for ([0-9]+) ?(days?|jours?)/i);
+                                            if (durationMatch) {
+                                                duree = durationMatch[1];
+                                                line = line.replace(durationMatch[0], '').trim();
+                                            }
+                                            let freqMatch = line.match(/([0-9]+ ?(x|times|fois|per) ?(\/|par|per)? ?(day|jour|j))/i);
+                                            if (freqMatch) {
+                                                frequence = freqMatch[0].replace(/\s+/g, ' ').trim();
+                                                line = line.replace(freqMatch[0], '').trim();
+                                            } else {
+                                                let freq2 = line.match(/every ?([0-9]+ ?h)/i);
+                                                if (freq2) {
+                                                    frequence = freq2[0].trim();
+                                                    line = line.replace(freq2[0], '').trim();
+                                                }
+                                            }
+                                            let doseMatch = line.match(/([0-9]+ ?(mg|ml|g|mcg|IU|tab|caps?|suppositories?|drops?|puffs?))/i);
+                                            if (doseMatch) {
+                                                dose = doseMatch[0].trim();
+                                                line = line.replace(doseMatch[0], '').trim();
+                                            }
+                                            let nameMatch = line.match(/^([A-Za-zÀ-ÿ0-9\- ]+)/);
+                                            if (nameMatch) {
+                                                name = nameMatch[1].trim();
+                                                line = line.replace(nameMatch[1], '').trim();
+                                            }
+                                            instructions = line.replace(/^,|^-/,'').trim();
+                                            if (name) {
+                                                meds.push({
+                                                    nomMedicament: name,
+                                                    dose: dose,
+                                                    frequence: frequence,
+                                                    duree: duree,
+                                                    instructions: instructions
+                                                });
+                                            }
+                                        });
+                                        return meds;
+                                    }
+
+                                    addBtn.addEventListener('click', function() {
+                                        const suggestion = suggestionsDiv.textContent;
+                                        if (!suggestion) return;
+                                        const meds = parseMedications(suggestion);
+                                        if (!Array.isArray(meds) || meds.length === 0) return;
+                                        // Remove all existing rows if the only row is empty (default row)
+                                        const container = document.getElementById('prescriptionRows');
+                                        if (container && container.children.length === 1) {
+                                            const onlyRow = container.children[0];
+                                            const inputs = onlyRow.querySelectorAll('input');
+                                            const allEmpty = Array.from(inputs).every(inp => !inp.value);
+                                            if (allEmpty) {
+                                                clearPrescriptionRows();
+                                            }
+                                        }
+                                        // Add each medication as a prescription card (skip empty objects)
+                                        meds.forEach(function(med) {
+                                            if (Object.values(med).some(v => v && v.toString().trim() !== '')) {
+                                                addPrescriptionRow(med);
+                                            }
+                                        });
+                                        // Optionally scroll to prescription section
+                                        const presRows = document.getElementById('prescriptionRows');
+                                        if (presRows) presRows.scrollIntoView({behavior:'smooth'});
+                                    });
+                                })();
+                                </script>
+                                </div>
                                 <div class="form-group">
                                     <label for="resultatsExamens"><strong>Exam Results</strong></label>
                                     <textarea class="form-control" id="resultatsExamens" name="resultatsExamens" rows="4" placeholder="Enter exam results...">{{ app.request.get('resultatsExamens')|default('') }}</textarea>
@@ -185,6 +353,26 @@
                                     {% for err in fieldErrors.resultatsExamens %}
                                         <div class="text-danger" style="font-size:0.95em;">{{ err }}</div>
                                     {% endfor %}
+                                </div>
+                               <div class="form-group">
+                                    <label><strong>Signature (Air Gesture)</strong></label>
+
+                                    <div style="position:relative; width:640px; height:480px; border-radius:10px; overflow:hidden; border:2px solid #667eea;">
+                                        <video id="video" width="640" height="480" autoplay playsinline style="position:absolute;"></video>
+                                        <canvas id="drawCanvas" width="640" height="480" style="position:absolute;"></canvas>
+                                    </div>
+
+                                    <div class="mt-2">
+                                        <button type="button" class="btn btn-danger btn-sm" id="clearSignature">Clear</button>
+                                        <button type="button" class="btn btn-success btn-sm" id="confirmSignature">Confirm Signature</button>
+                                    </div>
+
+                                    <div class="mt-3">
+                                        <label><strong>Captured Signature:</strong></label><br>
+                                        <img id="signaturePreview" style="max-width:300px; border:1px solid #ccc; display:none;">
+                                    </div>
+
+                                    <input type="hidden" name="signature" id="signatureInput">
                                 </div>
                                 {# Prescription errors #}
                                 {% for err in fieldErrors.prescriptions %}
@@ -241,6 +429,10 @@
                                 <p class="text-muted small mb-3">You can add none, one or several prescriptions linked to this consultation. Leave a row empty to skip it.</p>
                                 <div id="prescriptionRows"></div>
                                 <script>
+                                // Patch: Add a hidden input for each prescription row to force array serialization
+                                // No longer needed: correct input naming ensures array serialization
+                                </script>
+                                <script>
                                 // Render prescription errors under each field if present
                                 document.addEventListener('DOMContentLoaded', function() {
                                     if (typeof fieldErrors !== 'undefined' && Array.isArray(fieldErrors.prescriptions)) {
@@ -266,6 +458,7 @@
                                             });
                                         });
                                     }
+                                    // No dummy prescription row: only real rows will be submitted
                                 });
                                 </script>
                             </div>
@@ -284,62 +477,238 @@
                 </div>
                 <!-- /.container-fluid -->
                 <!-- Bootstrap core JavaScript-->
-    <script src="{{ asset('vendor/jquery/jquery.min.js') }}"></script>
-    <script src="{{ asset('vendor/bootstrap/js/bootstrap.bundle.min.js') }}"></script>
 
-    <!-- Core plugin JavaScript-->
-    <script src="{{ asset('vendor/jquery-easing/jquery.easing.min.js') }}"></script>
+    <!-- jQuery (CDN) -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <!-- Bootstrap Bundle (includes Popper) (CDN) -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- jQuery Easing (CDN) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-easing/1.4.1/jquery.easing.min.js"></script>
+    <!-- Chart.js (CDN, needed for chart-area-demo.js/chart-pie-demo.js) -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-    <!-- Custom scripts for all pages-->
-    <script src="{{ asset('js/sb-admin-2.min.js') }}"></script>
+    <!-- sb-admin-2.min.js is missing, so reference removed. If needed, add via CDN or local file. -->
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4/hands.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils@0.3/camera_utils.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils@0.3/drawing_utils.js"></script>
+<!-- MediaPipe Hands and dependencies (CDN, only once) -->
 
-    <!-- JS for dynamic prescription rows (no validation) -->
-    <script>
-    // Prescription row template
-    function createPrescriptionRow(idx, data = {}) {
-        return `
-        <div class="prescription-row card mb-2 p-3" data-index="${idx}">
-            <div class="form-row">
-                <div class="form-group col-md-3">
-                    <input type="text" class="form-control" name="prescription_rows[${idx}][nomMedicament]" placeholder="Medication name" value="${data.nomMedicament || ''}">
-                </div>
-                <div class="form-group col-md-2">
-                    <input type="text" class="form-control" name="prescription_rows[${idx}][dose]" placeholder="Dose" value="${data.dose || ''}">
-                </div>
-                <div class="form-group col-md-2">
-                    <input type="text" class="form-control" name="prescription_rows[${idx}][frequence]" placeholder="Frequency" value="${data.frequence || ''}">
-                </div>
-                <div class="form-group col-md-2">
-                    <input type="number" min="1" class="form-control" name="prescription_rows[${idx}][duree]" placeholder="Duration (days)" value="${data.duree || ''}">
-                </div>
-                <div class="form-group col-md-2">
-                    <input type="text" class="form-control" name="prescription_rows[${idx}][instructions]" placeholder="Instructions" value="${data.instructions || ''}">
-                </div>
-                <div class="form-group col-md-1 d-flex align-items-center">
-                    <button type="button" class="btn btn-danger btn-sm remove-prescription" title="Remove"><span aria-hidden="true">&times;</span></button>
-                </div>
+
+<script>
+// Confirm which hands.js is loaded
+console.log('MediaPipe Hands version:', typeof Hands !== 'undefined' ? Hands.VERSION || 'Loaded' : 'NOT LOADED');
+
+// Unified prescription row logic
+let prescriptionIdx = 0;
+function createPrescriptionRow(idx, data = {}) {
+    // ...existing code...
+    return `
+    <div class="prescription-row card mb-2 p-3" data-index="${idx}">
+        <div class="form-row">
+            <div class="form-group col-md-3">
+                <input type="text" class="form-control" name="prescription_rows[${idx}][nomMedicament]" placeholder="Medication name" value="${data.nomMedicament || ''}" required>
             </div>
-        </div>`;
-    }
-
-    let prescriptionIdx = 0;
-    function addPrescriptionRow(data) {
-        const container = document.getElementById('prescriptionRows');
-        container.insertAdjacentHTML('beforeend', createPrescriptionRow(prescriptionIdx++, data));
-    }
-
-    document.addEventListener('DOMContentLoaded', function() {
-        document.getElementById('addPrescriptionBtn').addEventListener('click', function() {
-            addPrescriptionRow();
-        });
-        document.getElementById('prescriptionRows').addEventListener('click', function(e) {
-            if (e.target.closest('.remove-prescription')) {
-                e.target.closest('.prescription-row').remove();
-            }
-        });
-
-        // Optionally, add one empty row by default
-        if (prescriptionIdx === 0) addPrescriptionRow();
+            <div class="form-group col-md-2">
+                <input type="text" class="form-control" name="prescription_rows[${idx}][dose]" placeholder="Dose" value="${data.dose || ''}" required>
+            </div>
+            <div class="form-group col-md-2">
+                <input type="text" class="form-control" name="prescription_rows[${idx}][frequence]" placeholder="Frequency" value="${data.frequence || ''}" required>
+            </div>
+            <div class="form-group col-md-2">
+                <input type="number" min="1" class="form-control" name="prescription_rows[${idx}][duree]" placeholder="Duration (days)" value="${data.duree || ''}" required>
+            </div>
+            <div class="form-group col-md-2">
+                <input type="text" class="form-control" name="prescription_rows[${idx}][instructions]" placeholder="Instructions" value="${data.instructions || ''}">
+            </div>
+            <div class="form-group col-md-1 d-flex align-items-center">
+                <button type="button" class="btn btn-danger btn-sm remove-prescription" title="Remove"><span aria-hidden="true">&times;</span></button>
+            </div>
+        </div>
+    </div>`;
+}
+function addPrescriptionRow(data) {
+    const container = document.getElementById('prescriptionRows');
+    container.insertAdjacentHTML('beforeend', createPrescriptionRow(prescriptionIdx++, data));
+}
+function clearPrescriptionRows() {
+    const container = document.getElementById('prescriptionRows');
+    container.innerHTML = '';
+    prescriptionIdx = 0;
+}
+document.addEventListener('DOMContentLoaded', function() {
+    document.getElementById('addPrescriptionBtn').addEventListener('click', function() {
+        addPrescriptionRow();
     });
-    </script>
+    document.getElementById('prescriptionRows').addEventListener('click', function(e) {
+        if (e.target.closest('.remove-prescription')) {
+            e.target.closest('.prescription-row').remove();
+        }
+    });
+    // Always add one required row by default
+    if (prescriptionIdx === 0) addPrescriptionRow();
+});
+
+// Gesture signature logic (MediaPipe Hands with locateFile)
+let drawingCanvas;  // separate canvas to store permanent drawing
+let drawCtx;
+let lastX = null, lastY = null;
+
+document.addEventListener("DOMContentLoaded", () => {
+    const video = document.getElementById("video");
+    const canvas = document.getElementById("drawCanvas");
+    const signatureInput = document.getElementById("signatureInput");
+    const preview = document.getElementById("signaturePreview");
+
+    // Permanent drawing layer
+    drawingCanvas = document.createElement("canvas");
+    drawingCanvas.width = canvas.width;
+    drawingCanvas.height = canvas.height;
+    drawCtx = drawingCanvas.getContext("2d");
+
+    const ctx = canvas.getContext("2d");
+
+    // Resize
+    function resizeCanvas() {
+        canvas.width = video.clientWidth;
+        canvas.height = video.clientHeight;
+        drawingCanvas.width = video.clientWidth;
+        drawingCanvas.height = video.clientHeight;
+    }
+    video.addEventListener("loadedmetadata", resizeCanvas);
+    window.addEventListener("resize", resizeCanvas);
+
+    const hands = new Hands({
+        locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4/${file}`
+    });
+
+    hands.setOptions({
+        maxNumHands: 1,
+        modelComplexity: 0,
+        minDetectionConfidence: 0.7,
+        minTrackingConfidence: 0.7
+    });
+
+    hands.onResults(results => {
+        // Clear temporary canvas for drawing landmarks
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
+            const landmarks = results.multiHandLandmarks[0];
+
+            // Draw black dots for all landmarks (mirrored, so dots match video)
+            landmarks.forEach(lm => {
+                const x = canvas.width - (lm.x * canvas.width);
+                const y = lm.y * canvas.height;
+                ctx.beginPath();
+                ctx.arc(x, y, 5, 0, 2 * Math.PI);
+                ctx.fillStyle = "black";
+                ctx.fill();
+            });
+
+            // Pinch detection for drawing (mirrored, matches dots)
+            const indexTip = landmarks[8];
+            const thumbTip = landmarks[4];
+            const pinchX = canvas.width - (((indexTip.x + thumbTip.x) / 2) * canvas.width);
+            const pinchY = ((indexTip.y + thumbTip.y) / 2) * canvas.height;
+            const distance = Math.hypot(indexTip.x - thumbTip.x, indexTip.y - thumbTip.y);
+            const pinchThreshold = 0.05;
+
+            // Fingertips for eraser detection
+            const fingertipIndices = [4, 8, 12, 16, 20]; // thumb, index, middle, ring, pinky
+            let maxDistance = 0;
+            for (let i = 0; i < fingertipIndices.length; i++) {
+                for (let j = i+1; j < fingertipIndices.length; j++) {
+                    const lm1 = landmarks[fingertipIndices[i]];
+                    const lm2 = landmarks[fingertipIndices[j]];
+                    const d = Math.hypot(lm1.x - lm2.x, lm1.y - lm2.y);
+                    if (d > maxDistance) maxDistance = d;
+                }
+            }
+            const eraserThreshold = 0.08; // adjust to sensitivity
+            const allFingersTogether = maxDistance < eraserThreshold;
+
+            if (allFingersTogether) {
+                // Eraser point = average of all fingertips (mirrored)
+                let ex = 0, ey = 0;
+                fingertipIndices.forEach(i => {
+                    ex += landmarks[i].x;
+                    ey += landmarks[i].y;
+                });
+                ex = canvas.width - (ex / fingertipIndices.length * canvas.width);
+                ey = (ey / fingertipIndices.length) * canvas.height;
+
+                const eraserRadius = 30;
+                drawCtx.save();
+                drawCtx.globalCompositeOperation = 'destination-out';
+                drawCtx.beginPath();
+                drawCtx.arc(ex, ey, eraserRadius, 0, Math.PI * 2);
+                drawCtx.fill();
+                drawCtx.restore();
+
+                lastX = null;
+                lastY = null;
+            } else if (distance < pinchThreshold) {
+                // Pinch detected → draw red line (mirrored, matches dots)
+                if (lastX !== null && lastY !== null) {
+                    drawCtx.beginPath();
+                    drawCtx.moveTo(lastX, lastY);
+                    drawCtx.lineTo(pinchX, pinchY);
+                    drawCtx.strokeStyle = "red";
+                    drawCtx.lineWidth = 4;
+                    drawCtx.stroke();
+                }
+                lastX = pinchX;
+                lastY = pinchY;
+            } else {
+                lastX = null;
+                lastY = null;
+            }
+        } else {
+            lastX = null;
+            lastY = null;
+        }
+
+        // Draw permanent lines underneath black dots
+        ctx.drawImage(drawingCanvas, 0, 0);
+    });
+
+    const camera = new Camera(video, {
+        onFrame: async () => await hands.send({image: video}),
+        width: 640,
+        height: 480
+    });
+    camera.start();
+
+    // Clear button
+    document.getElementById("clearSignature").addEventListener("click", () => {
+        drawCtx.clearRect(0,0,drawingCanvas.width,drawingCanvas.height);
+        ctx.clearRect(0,0,canvas.width,canvas.height);
+        preview.style.display = "none";
+        signatureInput.value = "";
+    });
+
+    // Confirm button
+    document.getElementById("confirmSignature").addEventListener("click", () => {
+        // Resize to smaller canvas before saving (e.g., 320x80)
+        const targetWidth = 320;
+        const targetHeight = 80;
+        const tmpCanvas = document.createElement('canvas');
+        tmpCanvas.width = targetWidth;
+        tmpCanvas.height = targetHeight;
+        const tmpCtx = tmpCanvas.getContext('2d');
+        // Fill white background for better PDF compatibility
+        tmpCtx.fillStyle = '#fff';
+        tmpCtx.fillRect(0, 0, targetWidth, targetHeight);
+        // Draw scaled signature (no mirroring, as drawn)
+        tmpCtx.drawImage(drawingCanvas, 0, 0, drawingCanvas.width, drawingCanvas.height, 0, 0, targetWidth, targetHeight);
+        const dataURL = tmpCanvas.toDataURL("image/png");
+        // Store only the base64 part (after the comma)
+        const base64 = dataURL.split(',')[1];
+        signatureInput.value = base64;
+        preview.src = dataURL;
+        preview.style.display = "block";
+    });
+});
+</script>
+    
 {% endblock %} 

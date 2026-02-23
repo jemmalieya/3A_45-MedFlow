@@ -76,6 +76,16 @@ private ?string $googleId = null;
     #[ORM\Column(type: Types::DATETIME_MUTABLE, nullable: true)]
     private ?\DateTimeInterface $derniereConnexion = null;
 
+    // ===== Last login geo (used by LoginSuccessHandler) =====
+    #[ORM\Column(length: 64, nullable: true)]
+    private ?string $lastLoginIp = null;
+
+    #[ORM\Column(length: 2, nullable: true)]
+    private ?string $lastLoginCountry = null;
+
+    #[ORM\Column(type: Types::DATETIME_MUTABLE, nullable: true)]
+    private ?\DateTimeInterface $lastLoginAt = null;
+
     #[ORM\Column]
     private bool $isVerified = false;
 
@@ -88,6 +98,31 @@ private ?string $googleId = null;
     #[ORM\Column(type: Types::DATETIME_MUTABLE, nullable: true)]
     private ?\DateTimeInterface $bannedAt = null;
         // ===== Sécurité / rôles système =====
+    
+    #[ORM\Column(length: 64, nullable: true)]
+    private ?string $totpSecret = null;
+
+    #[ORM\Column(options: ['default' => false])]
+    private bool $totpEnabled = false;
+
+    // ===== Face login (MediaPipe Face Landmarker embedding) =====
+    #[ORM\Column(options: ['default' => false])]
+    private bool $faceLoginEnabled = false;
+
+    #[ORM\Column(type: Types::JSON, nullable: true)]
+    private ?array $faceReferenceEmbedding = null;
+
+    #[ORM\Column(type: Types::DATETIME_MUTABLE, nullable: true)]
+    private ?\DateTimeInterface $faceEnrolledAt = null;
+
+    #[ORM\Column(type: Types::DATETIME_MUTABLE, nullable: true)]
+    private ?\DateTimeInterface $faceLastVerifiedAt = null;
+
+    #[ORM\Column(options: ['default' => 0])]
+    private int $faceFailedAttempts = 0;
+
+    #[ORM\Column(type: Types::DATETIME_MUTABLE, nullable: true)]
+    private ?\DateTimeInterface $faceLockedUntil = null;
 
     #[ORM\Column(length: 20)]
     private string $roleSysteme = 'PATIENT'; // PATIENT | STAFF_MEDICAL | ADMIN
@@ -318,6 +353,39 @@ private Collection $posts;
     public function setDerniereConnexion(?\DateTimeInterface $derniereConnexion): self
     {
         $this->derniereConnexion = $derniereConnexion;
+        return $this;
+    }
+
+    public function getLastLoginIp(): ?string
+    {
+        return $this->lastLoginIp;
+    }
+
+    public function setLastLoginIp(?string $lastLoginIp): self
+    {
+        $this->lastLoginIp = $lastLoginIp;
+        return $this;
+    }
+
+    public function getLastLoginCountry(): ?string
+    {
+        return $this->lastLoginCountry;
+    }
+
+    public function setLastLoginCountry(?string $lastLoginCountry): self
+    {
+        $this->lastLoginCountry = $lastLoginCountry;
+        return $this;
+    }
+
+    public function getLastLoginAt(): ?\DateTimeInterface
+    {
+        return $this->lastLoginAt;
+    }
+
+    public function setLastLoginAt(?\DateTimeInterface $lastLoginAt): self
+    {
+        $this->lastLoginAt = $lastLoginAt;
         return $this;
     }
 
@@ -617,13 +685,115 @@ private Collection $posts;
         return $this;
     }
 
-    // In your User entity, add the method
-public function setGoogleId(?string $googleId): self
-{
-    $this->googleId = $googleId;
-    return $this;
-}
+    public function getGoogleId(): ?string
+    {
+        return $this->googleId;
+    }
 
+    public function setGoogleId(?string $googleId): self
+    {
+        $this->googleId = $googleId;
+        return $this;
+    }
+
+    public function getTotpSecret(): ?string
+    {
+        return $this->totpSecret;
+    }
+
+    public function setTotpSecret(?string $totpSecret): self
+    {
+        $this->totpSecret = $totpSecret;
+        return $this;
+    }
+
+    public function isTotpEnabled(): bool
+    {
+        return $this->totpEnabled;
+    }
+
+    public function setTotpEnabled(bool $totpEnabled): self
+    {
+        $this->totpEnabled = $totpEnabled;
+        return $this;
+    }
+
+    public function isFaceLoginEnabled(): bool
+    {
+        return $this->faceLoginEnabled;
+    }
+
+    public function setFaceLoginEnabled(bool $enabled): self
+    {
+        $this->faceLoginEnabled = $enabled;
+        return $this;
+    }
+
+    public function getFaceReferenceEmbedding(): ?array
+    {
+        return $this->faceReferenceEmbedding;
+    }
+
+    public function setFaceReferenceEmbedding(?array $embedding): self
+    {
+        $this->faceReferenceEmbedding = $embedding;
+        return $this;
+    }
+
+    public function getFaceEnrolledAt(): ?\DateTimeInterface
+    {
+        return $this->faceEnrolledAt;
+    }
+
+    public function setFaceEnrolledAt(?\DateTimeInterface $at): self
+    {
+        $this->faceEnrolledAt = $at;
+        return $this;
+    }
+
+    public function getFaceLastVerifiedAt(): ?\DateTimeInterface
+    {
+        return $this->faceLastVerifiedAt;
+    }
+
+    public function setFaceLastVerifiedAt(?\DateTimeInterface $at): self
+    {
+        $this->faceLastVerifiedAt = $at;
+        return $this;
+    }
+
+    public function getFaceFailedAttempts(): int
+    {
+        return $this->faceFailedAttempts;
+    }
+
+    public function setFaceFailedAttempts(int $count): self
+    {
+        $this->faceFailedAttempts = max(0, $count);
+        return $this;
+    }
+
+    public function incrementFaceFailedAttempts(): self
+    {
+        $this->faceFailedAttempts++;
+        return $this;
+    }
+
+    public function getFaceLockedUntil(): ?\DateTimeInterface
+    {
+        return $this->faceLockedUntil;
+    }
+
+    public function setFaceLockedUntil(?\DateTimeInterface $until): self
+    {
+        $this->faceLockedUntil = $until;
+        return $this;
+    }
+
+    public function isFaceLocked(): bool
+    {
+        return $this->faceLockedUntil !== null && $this->faceLockedUntil > new \DateTime();
+    }
 
 
     

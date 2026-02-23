@@ -11,6 +11,7 @@
         </div>
         <div class="d-flex gap-2">
             <a href="{{ path('app_ad') }}" class="btn btn-outline-secondary btn-sm">← Dashboard</a>
+            <a href="{{ path('admin_patients_index') }}" class="btn btn-outline-primary btn-sm">Liste patients</a>
             <a href="{{ path('admin_patients_report_pdf') }}" class="btn btn-primary btn-sm">Exporter PDF</a>
         </div>
     </div>
@@ -59,18 +60,33 @@
             <div class="card shadow-sm border-0"><div class="card-body">
                 <h5 class="mb-3">Répartition des priorités</h5>
                 <canvas id="prioritiesDonut" height="140"></canvas>
+                <div class="small text-muted mt-2">
+                    Critique: <strong>{{ stats.priorities.CRITIQUE ?? 0 }}</strong> ·
+                    Haute: <strong>{{ stats.priorities.HAUTE ?? 0 }}</strong> ·
+                    Moyenne: <strong>{{ stats.priorities.MOYENNE ?? 0 }}</strong> ·
+                    OK: <strong>{{ stats.priorities.OK ?? 0 }}</strong>
+                </div>
             </div></div>
         </div>
         <div class="col-lg-6">
             <div class="card shadow-sm border-0"><div class="card-body">
                 <h5 class="mb-3">Vérification comptes</h5>
                 <canvas id="verificationPie" height="140"></canvas>
+                <div class="small text-muted mt-2">
+                    Vérifiés: <strong>{{ stats.verified ?? 0 }}</strong> ·
+                    Non vérifiés: <strong>{{ stats.unverified ?? 0 }}</strong>
+                </div>
             </div></div>
         </div>
         <div class="col-lg-12">
             <div class="card shadow-sm border-0"><div class="card-body">
                 <h5 class="mb-3">Qualité des données</h5>
                 <canvas id="dataQualityBar" height="120"></canvas>
+                <div class="small text-muted mt-2">
+                    Téléphones invalides: <strong>{{ stats.phone_invalid ?? 0 }}</strong> ·
+                    Bloqués: <strong>{{ stats.blocked ?? 0 }}</strong> ·
+                    Liens expirés: <strong>{{ stats.expired_links ?? 0 }}</strong>
+                </div>
             </div></div>
         </div>
     </div>

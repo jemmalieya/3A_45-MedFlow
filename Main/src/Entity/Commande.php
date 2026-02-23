@@ -16,7 +16,7 @@ class Commande
     private ?int $id_commande = null;
 
     // Relation avec l'entité User (clé étrangère)
-    #[ORM\ManyToOne(targetEntity: User::class)]
+    #[ORM\ManyToOne(targetEntity: User::class, inversedBy: 'commandes')]
     #[ORM\JoinColumn(name: "id_user", referencedColumnName: "id", nullable: false)]
     private ?User $user;
 

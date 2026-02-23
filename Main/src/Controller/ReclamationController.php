@@ -18,16 +18,53 @@ use App\Form\ReponseReclamationType;
 use App\Repository\ReclamationRepository;
 use App\Repository\ReponseReclamationRepository;
 use App\Entity\ReponseReclamation;
-use Symfony\Component\HttpFoundation\File\Exception\FileException;
+
 use Symfony\Component\HttpFoundation\File\UploadedFile;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 use Dompdf\Dompdf;
 use Dompdf\Options;
 use App\Service\TextReformulationService;
 use Symfony\Component\HttpFoundation\JsonResponse;
+use App\Service\CloudinaryReclamationService;
 
+use Cloudinary\Cloudinary;
+
+use App\Service\MyMemoryTranslateService;
+use App\Service\ReclamationMlPriorityService;
 class ReclamationController extends AbstractController
 {
+
+
+
+
+#[Route('/reclamation/translate-to-fr', name: 'reclamation_translate_to_fr', methods: ['POST'])]
+public function translateToFr(Request $request, MyMemoryTranslateService $translator): JsonResponse
+{
+    $data = json_decode($request->getContent(), true) ?? [];
+
+    $sourceLang  = $data['sourceLang'] ?? 'auto';
+    $contenu     = $data['contenu'] ?? '';
+    $description = $data['description'] ?? '';
+
+    $contenuFr = $contenu ? $translator->toFrench($contenu, $sourceLang) : null;
+    $descFr    = $description ? $translator->toFrench($description, $sourceLang) : null;
+
+    if ($contenu && !$contenuFr) {
+        return $this->json([
+            'ok' => false,
+            'error' => "Traduction indisponible. Veuillez saisir la version française avant de publier.",
+            'contenu_fr' => '',
+            'description_fr' => $descFr ?? '',
+        ]);
+    }
+
+    return $this->json([
+        'ok' => true,
+        'contenu_fr' => $contenuFr ?? '',
+        'description_fr' => $descFr ?? '',
+    ]);
+}
+
      #[Route('/test-email', name: 'test_email')]
     public function sendTestEmail(MailerInterface $mailer): Response
     {
@@ -49,70 +86,145 @@ class ReclamationController extends AbstractController
 
 
    #[Route('/reclamation', name: 'reclamation_index')]
-    public function index(Request $request, EntityManagerInterface $em, MailerInterface $mailer, LoggerInterface $logger): Response
-    {
-        $reclamation = new Reclamation();
+public function index(
+    Request $request,
+    EntityManagerInterface $em,
+    CloudinaryReclamationService $cloud,
+    LoggerInterface $logger,
+    ReclamationMlPriorityService $ml 
+): Response {
+    $reclamation = new Reclamation();
 
-        $reclamation->setDateCreationR(new \DateTimeImmutable());
-        $reclamation->setStatutReclamation('En attente');
+    $reclamation->setDateCreationR(new \DateTimeImmutable());
+    $reclamation->setStatutReclamation('En attente');
 
-        /** @var User|null $user */
-        $user = $this->getUser();
-        if (!$user) {
-            $this->addFlash('warning', 'Vous devez être connecté pour créer une réclamation.');
-            return $this->redirectToRoute('app_login');
+    /** @var User|null $user */
+    $user = $this->getUser();
+    if (!$user) {
+        $this->addFlash('warning', 'Vous devez être connecté pour créer une réclamation.');
+        return $this->redirectToRoute('app_login');
+    }
+    $reclamation->setUser($user);
+
+    if (!$reclamation->getReferenceReclamation()) {
+        $reclamation->setReferenceReclamation('REC-' . date('Ymd') . '-' . rand(1000, 9999));
+    }
+
+    $form = $this->createForm(ReclamationType::class, $reclamation);
+    $form->handleRequest($request);
+
+    if ($form->isSubmitted() && $form->isValid()) {
+
+        /**
+         * ✅ AJOUT PRO (SANS CHANGER TON CODE) :
+         * On récupère ce que le front (JS) a calculé : langue + original + sentiment + score
+         * puis on calcule priorite automatiquement via ta méthode existante.
+         */
+        $langOrig  = $request->request->get('langueOriginale');      // ex: "en" / "ar" / "fr"
+        $contOrig  = $request->request->get('contenuOriginal');      // texte original avant traduction
+        $descOrig  = $request->request->get('descriptionOriginal');  // texte original avant traduction
+        $sentiment = $request->request->get('sentiment');            // NEGATIVE/NEUTRAL/POSITIVE
+        $urgence   = $request->request->get('urgenceScore');         // 0..100
+
+        // On applique seulement si les champs existent (sinon ton code continue normal)
+        if ($langOrig !== null) {
+            $reclamation->setLangueOriginale($langOrig);
         }
-        $reclamation->setUser($user);
-
-        if (!$reclamation->getReferenceReclamation()) {
-            $reclamation->setReferenceReclamation('REC-' . date('Ymd') . '-' . rand(1000, 9999));
+        if ($contOrig !== null) {
+            $reclamation->setContenuOriginal($contOrig);
+        }
+        if ($descOrig !== null) {
+            $reclamation->setDescriptionOriginal($descOrig);
+        }
+        if ($sentiment !== null) {
+            $reclamation->setSentiment($sentiment);
+        }
+        if ($urgence !== null && $urgence !== '') {
+            $reclamation->setUrgenceScore((int) $urgence);
         }
 
-        $form = $this->createForm(ReclamationType::class, $reclamation);
-        $form->handleRequest($request);
+        // timestamps IA (optionnel mais pro)
+        if ($langOrig !== null || $sentiment !== null || $urgence !== null) {
+            $reclamation->setTranslatedAt(new \DateTimeImmutable());
+            $reclamation->setAnalysisAt(new \DateTimeImmutable());
+        }
 
-        if ($form->isSubmitted() && $form->isValid()) {
+        // ✅ priorité auto (tu la gardes dans l'entité)
+        // (si sentiment/urgence pas fournis => ça garde ta priorite par défaut NORMALE)
+        $reclamation->updatePrioriteFromSentiment();
+
+        // =========================
+// ✅ FORCER ENREGISTREMENT EN FR (SANS CHANGER DB)
+// =========================
+$contenuFr = trim((string) $request->request->get('contenu_fr', ''));
+$descFr    = trim((string) $request->request->get('description_fr', ''));
+
+// FR obligatoire pour publier
+if ($contenuFr === '') {
+    $this->addFlash('error', "La version française est obligatoire pour publier la réclamation.");
+    return $this->redirectToRoute('reclamation_index');
+}
+
+// On stocke en base la version FR (remplace l'original)
+$reclamation->setContenu($contenuFr);
+$reclamation->setDescription($descFr);
+
+        // =========================
+        // ✅ TON CODE (PIECE JOINTE)
+        // =========================
+        /** @var UploadedFile|null $file */
+        $file = $form->get('pieceJointePath')->getData();
+
+        if ($file) {
+            $validExtensions = ['jpg', 'jpeg', 'png', 'pdf'];
+            $extension = $file->guessExtension();
+
+            if (!in_array($extension, $validExtensions)) {
+                $this->addFlash('error', 'Le fichier n\'est pas valide. Formats autorisés: JPG, PNG, PDF.');
+                return $this->redirectToRoute('reclamation_index');
+            }
 
             /** @var UploadedFile|null $file */
             $file = $form->get('pieceJointePath')->getData();
 
-            if ($file) {
-                $validExtensions = ['jpg', 'jpeg', 'png', 'pdf'];
-                $extension = $file->guessExtension();
+            if ($file instanceof UploadedFile) {
+                $result = $cloud->uploadProof($file);
 
-                if (!in_array($extension, $validExtensions)) {
-                    $this->addFlash('error', 'Le fichier n\'est pas valide. Formats autorisés: JPG, PNG, PDF.');
-                    return $this->redirectToRoute('reclamation_index');
-                }
-
-                $newFilename = uniqid() . '.' . $file->guessExtension();
-                try {
-                    $file->move(
-                        $this->getParameter('pieces_jointes_directory'),
-                        $newFilename
-                    );
-                    $reclamation->setPieceJointePath('uploads/pieces_jointes/' . $newFilename);
-                } catch (FileException $e) {
-                    $this->addFlash('error', 'Erreur lors du téléchargement du fichier.');
-                    return $this->redirectToRoute('reclamation_index');
-                }
+                // ✅ PRO : on stocke public_id (pas URL)
+                $reclamation->setPieceJointePath($result['public_id']);
+                $reclamation->setPieceJointeResourceType($result['resource_type'] ?? null);
+                $reclamation->setPieceJointeFormat($result['format'] ?? null);
+                $reclamation->setPieceJointeBytes($result['bytes'] ?? null);
+                $reclamation->setPieceJointeOriginalName($file->getClientOriginalName());
             }
-
-            // Sauvegarder la réclamation
-            $em->persist($reclamation);
-            $em->flush();
-
-            $this->sendReclamationCreatedEmail($reclamation, $user, $logger);
-$this->addFlash('success', 'Réclamation ajoutée avec succès! Un email de confirmation a été envoyé.');
-
-
-            return $this->redirectToRoute('reclamation_index');
         }
+// ✅ Métier avancé ML : priorité + score + langue
+$analysis = $ml->analyze(
+    (string) $reclamation->getContenu(),
+    (string) $reclamation->getDescription(),
+    $reclamation->getType()
+);
 
-        return $this->render('reclamation/index.html.twig', [
-            'form' => $form->createView(),
-        ]);
+$reclamation->setLangueOriginale($analysis["lang"]);
+$reclamation->setUrgenceScore($analysis["urgenceScore"]);
+$reclamation->setPriorite($analysis["priority"]);
+$reclamation->setAnalysisAt(new \DateTimeImmutable());
+        // =========================
+        // ✅ TON CODE (SAVE + EMAIL)
+        // =========================
+        $em->persist($reclamation);
+        $em->flush();
+
+        $this->sendReclamationCreatedEmail($reclamation, $user, $logger);
+        $this->addFlash('success', 'Réclamation ajoutée avec succès! Un email de confirmation a été envoyé.');
+
+        return $this->redirectToRoute('reclamation_index');
     }
+
+    return $this->render('reclamation/index.html.twig', [
+        'form' => $form->createView(),
+    ]);
+}
 
 #[Route('/mes-reclamations', name: 'my_reclamations', methods: ['GET'])]
 public function myReclamations(ReclamationRepository $repo, EntityManagerInterface $em): Response
@@ -239,7 +351,8 @@ foreach ($rows as $row) {
 public function edit(
     Request $request,
     Reclamation $reclamation,
-    EntityManagerInterface $em
+    EntityManagerInterface $em,
+    CloudinaryReclamationService $cloud
 ): Response {
     // ✅ Vérifier que l'utilisateur est le propriétaire de la réclamation
     /** @var User|null $user */
@@ -259,17 +372,28 @@ public function edit(
 $file = $form->get('pieceJointePath')->getData();
 
 if ($file) {
-    $newFilename = uniqid() . '.' . $file->guessExtension();
+   /** @var UploadedFile|null $file */
+$file = $form->get('pieceJointePath')->getData();
 
-    try {
-        $file->move(
-            $this->getParameter('pieces_jointes_directory'),
-            $newFilename
+if ($file instanceof UploadedFile) {
+
+    // ✅ Supprimer ancien fichier cloud si on remplace
+    if ($reclamation->getPieceJointePath()) {
+        $cloud->delete(
+            $reclamation->getPieceJointePath(),
+            $reclamation->getPieceJointeResourceType() ?? 'image'
         );
-        $reclamation->setPieceJointePath('uploads/pieces_jointes/' . $newFilename);
-    } catch (FileException $e) {
-        $this->addFlash('danger', 'Erreur lors de l’upload du fichier.');
     }
+
+    $result = $cloud->uploadProof($file);
+
+    $reclamation->setPieceJointePath($result['public_id']);
+    $reclamation->setPieceJointeResourceType($result['resource_type'] ?? null);
+    $reclamation->setPieceJointeFormat($result['format'] ?? null);
+    $reclamation->setPieceJointeBytes($result['bytes'] ?? null);
+    $reclamation->setPieceJointeOriginalName($result['original_filename'] ?? $file->getClientOriginalName());
+}
+
 }
 
 
@@ -306,26 +430,37 @@ $em->flush();
 public function delete(
     Request $request,
     Reclamation $reclamation,
-    EntityManagerInterface $em
+    EntityManagerInterface $em,
+    CloudinaryReclamationService $cloud
 ): Response {
-    // ✅ Vérifier que l'utilisateur est le propriétaire de la réclamation
     /** @var User|null $user */
     $user = $this->getUser();
     if (!$user || $reclamation->getUser() !== $user) {
-        $this->addFlash('error', 'Vous n\'avez pas le droit de supprimer cette réclamation.');
+        $this->addFlash('error', "Vous n'avez pas le droit de supprimer cette réclamation.");
         return $this->redirectToRoute('my_reclamations');
     }
 
-    if ($this->isCsrfTokenValid('delete'.$reclamation->getIdReclamation(), $request->request->get('_token'))) {
+    if ($this->isCsrfTokenValid('delete' . $reclamation->getIdReclamation(), $request->request->get('_token'))) {
+
+        // 1) Supprimer la pièce jointe Cloudinary si existe
+        if ($reclamation->getPieceJointePath()) {
+            $cloud->delete(
+                $reclamation->getPieceJointePath(),
+                $reclamation->getPieceJointeResourceType() ?? 'image'
+            );
+        }
+
+        // 2) ✅ Supprimer la réclamation de la BD
         $em->remove($reclamation);
         $em->flush();
 
         $this->addFlash('success', 'Réclamation supprimée avec succès');
+    } else {
+        $this->addFlash('danger', 'Token CSRF invalide.');
     }
 
     return $this->redirectToRoute('my_reclamations');
 }
-
 
 #[Route('/reclamation/{id}/reponses', name: 'reclamation_reponses', methods: ['GET'])]
 public function reponsesFront(
@@ -607,6 +742,85 @@ private function sendReclamationCreatedEmail(Reclamation $reclamation, User $use
 }
 
 
+private function canSeePiece(?User $user, Reclamation $reclamation): bool
+{
+    if (!$user) return false;
+
+    // Owner par ID (évite doctrine proxy)
+    $ownerId = $reclamation->getUser()?->getId();
+    $userId  = $user->getId();
+    $isOwner = ($ownerId !== null && (int)$ownerId === (int)$userId);
+
+    // ✅ Tes colonnes BD
+    $roleSysteme = method_exists($user, 'getRoleSysteme') ? $user->getRoleSysteme() : null;
+    $typeStaff   = method_exists($user, 'getTypeStaff') ? $user->getTypeStaff() : null;
+
+    $isRespBlog = ($roleSysteme === 'STAFF' && $typeStaff === 'RESP_BLOG');
+    $isAdmin    = ($roleSysteme === 'ADMIN');
+
+    return $isOwner || $isRespBlog || $isAdmin;
+}
+
+
+#[Route('/reclamation/{id}/piece', name: 'reclamation_piece_download', methods: ['GET'])]
+public function downloadPiece(Reclamation $reclamation, Cloudinary $cloudinary): Response
+{
+    /** @var User|null $user */
+    $user = $this->getUser();
+
+    if (!$user) {
+        throw new AccessDeniedHttpException("Accès refusé (non connecté).");
+    }
+
+    // ✅ Compare par ID (évite proxy Doctrine)
+    $ownerId = $reclamation->getUser()?->getId();
+    $userId  = method_exists($user, 'getId') ? $user->getId() : null;
+
+    $isOwner    = ($ownerId !== null && $userId !== null && (int)$ownerId === (int)$userId);
+    $isRespBlog = $this->isGranted('STAFF');
+    
+
+    if (!$isOwner && !$isRespBlog ) {
+        throw new AccessDeniedHttpException("Accès refusé.");
+    }
+
+    if (!$reclamation->getPieceJointePath()) {
+        throw $this->createNotFoundException("Aucune pièce jointe.");
+    }
+
+    $publicId = $reclamation->getPieceJointePath();
+    $type = $reclamation->getPieceJointeResourceType() ?? 'image';
+
+    $url = ($type === 'image')
+        ? $cloudinary->image($publicId)->toUrl()
+        : $cloudinary->raw($publicId)->toUrl();
+
+    return $this->redirect($url);
+}
+
+#[Route('/reclamation/{id}/piece/preview', name: 'reclamation_piece_preview', methods: ['GET'])]
+public function previewPiece(Reclamation $reclamation, Cloudinary $cloudinary): JsonResponse
+{
+    /** @var User|null $user */
+    $user = $this->getUser();
+
+    if (!$this->canSeePiece($user, $reclamation)) {
+        return new JsonResponse(['ok' => false, 'message' => 'Accès refusé'], 403);
+    }
+
+    if (!$reclamation->getPieceJointePath()) {
+        return new JsonResponse(['ok' => false, 'message' => 'Aucune pièce jointe'], 404);
+    }
+
+    $publicId = $reclamation->getPieceJointePath();
+    $type     = $reclamation->getPieceJointeResourceType() ?? 'image';
+
+    $url = ($type === 'image')
+        ? $cloudinary->image($publicId)->toUrl()
+        : $cloudinary->raw($publicId)->toUrl();
+
+    return new JsonResponse(['ok' => true, 'url' => $url, 'type' => $type]);
+}
 
 
 
