@@ -68,7 +68,7 @@ class RendezVousController extends AbstractController
         ]);
     }
     #[Route('/appointment/{idStaff}', name: 'appointment', requirements: ['idStaff' => '\d+'])]
-    public function appointment(Request $request, EntityManagerInterface $em, ?int $idStaff = null): Response
+    public function appointment(Request $request, EntityManagerInterface $em, \App\Service\UrgencyDetectionService $urgencyService, ?int $idStaff = null): Response
     {
         $rendezVous = new RendezVous();
         $session = $request->getSession();
@@ -91,6 +91,14 @@ class RendezVousController extends AbstractController
             if ($form->isValid()) {
                 try {
                     $rendezVous->setCreatedAt(new \DateTime());
+                    // AI urgency detection
+                    $urgency = 'Normal';
+                    try {
+                        $urgency = $urgencyService->detectUrgency($rendezVous->getMotif());
+                    } catch (\Exception $e) {
+                        $urgency = 'Normal';
+                    }
+                    $rendezVous->setUrgencyLevel($urgency);
                     $em->persist($rendezVous);
                     $em->flush();
                     $this->addFlash('success', 'Rendez-vous créé avec succès.');

@@ -43,7 +43,7 @@ class FicheMedicale
     #[ORM\Column]
     private ?\DateTime $createdAt = null;
 
-    #[ORM\OneToMany(mappedBy: 'ficheMedicale', targetEntity: Prescription::class, cascade: ['persist', 'remove'], orphanRemoval: true)]
+   #[ORM\OneToMany(mappedBy: 'ficheMedicale', targetEntity: Prescription::class, orphanRemoval: true)]
     private Collection $prescriptions;
 
     public function __construct()

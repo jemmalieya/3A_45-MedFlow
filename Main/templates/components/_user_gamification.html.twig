@@ -4,34 +4,148 @@
 #}
 
 {% set compact = compact|default(false) %}
-{% set g = user_gamification(user) %}
+{% if user is not null %}
+  {% set g = user_gamification(user) %}
+  {% set score = g.score|default(0) %}
+  {% set barClass = score >= 80 ? 'bg-success' : (score >= 50 ? 'bg-warning' : 'bg-danger') %}
+  {% set gradientStyle = 'background: linear-gradient(90deg, #38b000 0%, #ffd600 50%, #ff0000 100%);' %}
 
-{% set score = g.score|default(0) %}
-{% set barClass = score >= 80 ? 'bg-success' : (score >= 50 ? 'bg-warning' : 'bg-danger') %}
-
-<div class="{% if compact %}mt-2{% else %}mt-3{% endif %}">
-  <div class="d-flex align-items-center justify-content-between gap-2 flex-wrap">
-    <div class="fw-semibold{% if compact %} small{% endif %}">Sécurité du compte</div>
-    <span class="badge text-bg-secondary{% if compact %} small{% endif %}">{{ score }}%</span>
+  <div class="card shadow-sm border-0 mb-3" style="max-width: 480px;">
+    <div class="card-body p-3">
+      <div class="d-flex align-items-center justify-content-between gap-2 flex-wrap mb-2">
+        <div class="fw-semibold{% if compact %} small{% endif %}">Sécurité du compte
+          <span class="ms-2" data-bs-toggle="tooltip" title="Votre niveau de sécurité dépend de la vérification, 2FA, photo, etc.">
+            <i class="bi bi-shield-lock text-success"></i>
+          </span>
+        </div>
+        <span class="badge text-bg-secondary{% if compact %} small{% endif %}" data-bs-toggle="tooltip" title="Score sécurité" id="score-badge">{{ score }}%</span>
+      </div>
+      <div class="progress-bar-container mb-4" style="position: relative; height: {% if compact %}18px{% else %}24px{% endif %};">
+        <div class="progress" style="height: 100%; {{ gradientStyle }}; border-radius: 8px; border: 2px solid #38b000;">
+          <div class="progress-bar animate-bar" id="progress-bar" role="progressbar" style="width: {{ score }}%; background: transparent; border-radius: 8px;" aria-valuenow="{{ score }}" aria-valuemin="0" aria-valuemax="100"></div>
+        </div>
+        <span class="progress-marker" id="progress-marker" style="position: absolute; top: 50%; left: calc({{ score }}% - 9px); transform: translate(-50%, -50%);"></span>
+      </div>
+      <div class="d-flex flex-wrap gap-2 mb-3">
+        {% for b in g.badges|default([]) %}
+          {% set variant = b.variant is defined and b.variant in ['primary','secondary','success','info','warning','danger','light','dark'] ? b.variant : 'secondary' %}
+          {% set chipBase = 'badge-chip btn btn-sm rounded-pill px-3 py-1 fw-semibold user-select-none position-relative' %}
+          {% set chipTone = b.locked is defined and b.locked ? ('btn-outline-' ~ variant) : ('btn-' ~ variant) %}
+          {% set icon = {
+            'verified': 'bi bi-check-circle-fill',
+            '2fa': 'bi bi-shield-lock-fill',
+            'face': 'bi bi-person-bounding-box',
+            'profile_picture': 'bi bi-image',
+            'google': 'bi bi-google',
+            'role': 'bi bi-person-badge-fill',
+            'staff_request': 'bi bi-envelope-fill',
+            'status': 'bi bi-check-lg'
+          }[b.key]|default('bi bi-award-fill') %}
+          <span class="{{ chipBase }} {{ chipTone }}{% if compact %} small{% endif %}{% if b.locked is defined and b.locked %} opacity-75{% endif %}" tabindex="0">
+            <i class="{{ icon }}"></i>
+            <span class="badge-unfold">
+              <span class="badge-desc">{{ b.tooltip is defined ? b.tooltip : (b.label is defined ? b.label : 'Badge') }}</span>
+            </span>
+          </span>
+        {% endfor %}
+      </div>
+      <div class="mt-2">
+        <button class="btn btn-outline-secondary btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#securityChecklist" aria-expanded="false" aria-controls="securityChecklist">
+          Checklist sécurité
+        </button>
+        <div class="collapse mt-2" id="securityChecklist">
+          <ul class="list-group list-group-flush">
+            <li class="list-group-item">✔️ Compte vérifié</li>
+            <li class="list-group-item">✔️ 2FA activé</li>
+            <li class="list-group-item">✔️ Visage activé</li>
+            <li class="list-group-item">❌ Google non connecté</li>
+            <li class="list-group-item">❌ Pas de photo</li>
+          </ul>
+        </div>
+      </div>
+    </div>
   </div>
-  <div class="progress" style="height: {% if compact %}6px{% else %}10px{% endif %};">
-    <div class="progress-bar {{ barClass }}" role="progressbar" style="width: {{ score }}%;" aria-valuenow="{{ score }}" aria-valuemin="0" aria-valuemax="100"></div>
-  </div>
+{% else %}
+  <div class="alert alert-warning mt-2">Utilisateur non connecté ou non trouvé.</div>
+{% endif %}
 
-  <div class="d-flex flex-wrap gap-2{% if compact %} mt-2{% else %} mt-3{% endif %}">
-    {% for b in g.badges|default([]) %}
-      {% if b.variant in ['primary','secondary','success','info','warning','danger','light','dark'] %}
-        {% set variant = b.variant %}
-      {% else %}
-        {% set variant = 'secondary' %}
-      {% endif %}
+<style>
+.animate-bar {
+  transition: width 1.2s cubic-bezier(.4,0,.2,1);
+  min-height: 18px;
+  font-weight: bold;
+}
+.progress-bar-container {
+  position: relative;
+}
+.progress-marker {
+  width: 18px;
+  height: 18px;
+  background: #fff;
+  border: 2px solid #38b000;
+  border-radius: 50%;
+  box-shadow: 0 2px 8px rgba(56,176,0,0.12);
+  display: block;
+  transition: left 1.2s cubic-bezier(.4,0,.2,1);
+  z-index: 2;
+}
+.badge-chip {
+  overflow: visible;
+  transition: box-shadow 0.3s;
+  padding: 0.2em 0.4em;
+}
+.badge-chip i {
+  font-size: 1.4em;
+  vertical-align: middle;
+}
+  .badge-unfold {
+    display: none;
+    position: absolute;
+    left: 100%;
+    top: 50%;
+    transform: translateY(-50%);
+    min-width: 180px;
+    background: #fff;
+    color: #222;
+    border-radius: 8px;
+    box-shadow: 0 2px 12px rgba(56,176,0,0.12);
+    padding: 0.5em 1em;
+    font-size: 1em;
+    font-weight: 500;
+    white-space: pre-line;
+    border: 1px solid #38b000;
+    z-index: 10;
+  }
+  .badge-chip:hover .badge-unfold, .badge-chip:focus .badge-unfold {
+    display: block;
+    animation: unfoldBadge 0.3s;
+  }
+@keyframes unfoldBadge {
+  from { opacity: 0; transform: translateY(-50%) scaleX(0.8);}
+  to { opacity: 1; transform: translateY(-50%) scaleX(1);}
+}
+.card {
+  border-radius: 1.2em;
+}
+</style>
 
-      {# Button-like chip (span, not interactive) #}
-      {% set chipBase = 'btn btn-sm rounded-pill px-3 py-1 fw-semibold user-select-none pe-none' %}
-      {% set chipTone = b.locked ? ('btn-outline-' ~ variant) : ('btn-' ~ variant) %}
-      <span class="{{ chipBase }} {{ chipTone }}{% if compact %} small{% endif %}{% if b.locked %} opacity-75{% endif %}">
-        {{ b.label }}
-      </span>
-    {% endfor %}
-  </div>
-</div>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Animate progress bar
+  var bar = document.getElementById('progress-bar');
+  var score = parseInt(bar.getAttribute('aria-valuenow'), 10);
+  bar.style.width = '0%';
+  setTimeout(function() {
+    bar.style.width = score + '%';
+    // Move marker
+    var marker = document.getElementById('progress-marker');
+    marker.style.left = 'calc(' + score + '% - 9px)';
+  }, 300);
+
+  // Bootstrap tooltips
+  var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle=\"tooltip\"]'));
+  tooltipTriggerList.forEach(function (el) {
+    new bootstrap.Tooltip(el);
+  });
+});
+</script>

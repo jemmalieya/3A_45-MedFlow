@@ -1,196 +1,391 @@
 {# templates/dashboard_ad/list_rec.html.twig #}
 {% extends 'base_admin.html.twig' %}
 
-{% block title %}Réclamations & Réponses{% endblock %}
-{% block page_title %}Réclamations & Réponses{% endblock %}
+{% block title %}Réclamations{% endblock %}
+{% block page_title %}Réclamations{% endblock %}
 
 {% block body %}
 <link rel="stylesheet" href="{{ asset('assets_ad/css/medflow-admin.css') }}">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 
-<div class="container-fluid py-3">
+<style>
+  :root{
+    --mf-blue:#003399;
+    --mf-main:#0097B2;
+    --mf-turq:#00BFA6;
+    --mf-bg:#f6f8fb;
+    --mf-text:#0f172a;
+    --mf-muted: rgba(16,24,40,.65);
+    --mf-border: rgba(15,23,42,.10);
+    --mf-shadow: 0 14px 42px rgba(16,24,40,.10);
+    --mf-radius: 18px;
+  }
 
-  <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
-    <div>
-      <h4 class="mb-1">Tableau des réclamations</h4>
-      <div class="text-muted">Total : <strong>{{ total }}</strong></div>
-    </div>
+  .rec-wrap{padding:14px}
+  .rec-hero{
+    background: linear-gradient(135deg, rgba(0,151,178,.16) 0%, rgba(103,151,255,.18) 55%, rgba(0,191,166,.14) 100%);
+    border: 1px solid rgba(0,151,178,.18);
+    border-radius: 22px;
+    box-shadow: 0 10px 28px rgba(16,24,40,.06);
+    padding: 18px 18px;
+  }
+  .rec-hero h3{margin:0;color:var(--mf-blue);font-weight:900;letter-spacing:.2px}
+  .rec-hero .sub{color:var(--mf-muted);margin-top:4px}
 
-  </div>
+  .rec-kpis{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
+  .kpi-pill{
+    display:inline-flex;align-items:center;gap:10px;
+    padding:10px 12px;border-radius:999px;
+    background:#fff;border:1px solid var(--mf-border);
+    box-shadow: 0 10px 26px rgba(16,24,40,.05);
+    color:var(--mf-text);font-weight:700;
+  }
+  .kpi-pill i{color:var(--mf-main)}
+  .kpi-pill small{color:var(--mf-muted);font-weight:600}
 
-  <div class="card shadow-sm border-0">
-    <div class="card-body">
+  .rec-card{
+    background:#fff;border:1px solid var(--mf-border);
+    border-radius: var(--mf-radius);
+    box-shadow: var(--mf-shadow);
+    overflow:hidden;
+  }
+  .rec-card-head{
+    padding:14px 16px;border-bottom:1px solid var(--mf-border);
+    display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;
+    background: linear-gradient(180deg, rgba(0,151,178,.05), rgba(255,255,255,0));
+  }
 
-      <div class="table-responsive">
-        <table class="table align-middle table-hover">
-          <thead class="table-light">
-            <tr>
-              <th style="width:90px;">ID</th>
-              <th>Réclamation</th>
-              <th style="width:240px;">Patient</th>
-              <th style="width:140px;">Statut</th>
-              <th style="width:140px;">Priorité</th>
-              <th style="width:170px;">Créée le</th>
-              <th style="width:190px;">Actions</th>
-            </tr>
-          </thead>
+  .searchbar{
+    display:flex;align-items:center;gap:10px;
+    padding:10px 12px;border:1px solid var(--mf-border);
+    border-radius: 14px;background:#fff;min-width:280px;
+  }
+  .searchbar i{color:var(--mf-muted)}
+  .searchbar input{border:0;outline:0;width:100%;background:transparent}
 
-          <tbody>
-          {% for row in rows %}
-            {% set rec = row.rec %}
-            {% set rep = row.rep %}
+  .table thead th{
+    font-size:12px;letter-spacing:.08em;text-transform:uppercase;
+    color:rgba(16,24,40,.70);background:#f7fafc;border-bottom:1px solid var(--mf-border);
+  }
+  .table tbody td{border-color:rgba(15,23,42,.08)}
+  .row-title{font-weight:800;color:var(--mf-text)}
+  .row-sub{color:var(--mf-muted);font-size:12.5px}
+  .chip{
+    display:inline-flex;align-items:center;gap:6px;
+    padding:6px 10px;border-radius:999px;border:1px solid var(--mf-border);
+    background:#fff;font-weight:700;font-size:12px;color:var(--mf-text)
+  }
+  .chip i{color:var(--mf-main)}
+  .badge-soft{
+    background: rgba(0,151,178,.10);
+    border:1px solid rgba(0,151,178,.18);
+    color: #055f70;
+    font-weight:800;
+  }
+  .btn-mf{
+    border-radius: 12px;
+    border:1px solid rgba(0,151,178,.28);
+    background: linear-gradient(90deg, rgba(0,151,178,.10), rgba(0,191,166,.10));
+    color:#035a69;
+    font-weight:900;
+  }
+  .btn-mf:hover{background: linear-gradient(90deg, rgba(0,151,178,.16), rgba(0,191,166,.14))}
+  .btn-outline-mf{
+    border-radius: 12px;
+    border:1px solid rgba(0,151,178,.35);
+    color:#055f70;font-weight:900;
+  }
 
-            <tr>
-              <td class="fw-bold">#{{ rec.idReclamation }}</td>
+  /* ✅ Empêche certains thèmes de flouter le fond au modal */
+  body.modal-open, body.modal-open *{
+    filter:none !important;
+    backdrop-filter:none !important;
+  }
 
-              <td>
-                <div class="fw-semibold">
-                  <i class="bi bi-hash me-1 text-muted"></i>{{ rec.referenceReclamation }}
-                </div>
-                <div class="small text-muted mt-1">
-                  <span class="me-2"><i class="bi bi-tag me-1"></i>{{ rec.type }}</span>
-                  {% if rec.pieceJointePath %}
-                    <span class="badge bg-light text-dark border">
-                      <i class="bi bi-paperclip me-1"></i> PJ
-                    </span>
-                  {% endif %}
-                  {% if rec.urgente %}
-                    <span class="badge bg-danger ms-2">
-                      <i class="bi bi-exclamation-triangle me-1"></i> Urgente
-                    </span>
-                  {% endif %}
-                </div>
+  /* Modal details */
+  .rec-dl dt{color:var(--mf-muted);font-weight:800;font-size:12px;text-transform:uppercase;letter-spacing:.06em}
+  .rec-dl dd{margin-bottom:10px;font-weight:700;color:var(--mf-text)}
+  .rec-box{
+    border:1px solid var(--mf-border);
+    border-radius: 14px;
+    background: #fbfdff;
+    padding: 12px 12px;
+  }
+  .rec-box .label{color:var(--mf-muted);font-weight:900;font-size:12px;letter-spacing:.06em;text-transform:uppercase}
+  .rec-box .value{margin-top:6px;color:var(--mf-text);font-weight:650;white-space:pre-wrap}
+</style>
 
-                <div class="mt-2">
-                  <div class="fw-semibold">Contenu</div>
-                  <div class="text-muted small">{{ rec.contenu }}</div>
-                </div>
+<div class="container-fluid rec-wrap">
 
-                <div class="mt-2">
-                  <div class="fw-semibold">Description</div>
-                  <div class="text-muted small">
-                    {{ rec.description|slice(0, 120) }}{% if rec.description|length > 120 %}...{% endif %}
-                  </div>
-                </div>
-              </td>
-
-              <td>
-                {% if rec.user %}
-                  <div class="fw-semibold">
-                    <i class="bi bi-person-circle me-1 text-muted"></i>
-                    {{ rec.user.nom }} {{ rec.user.prenom }}
-                  </div>
-                  <div class="text-muted small">
-                    <i class="bi bi-envelope me-1"></i>{{ rec.user.emailUser }}
-                  </div>
-                {% else %}
-                  —
-                {% endif %}
-              </td>
-
-              <td>
-                {% set st = rec.statutReclamation|upper %}
-                {% if st == 'TRAITEE' %}
-                  <span class="badge bg-success"><i class="bi bi-check2-circle me-1"></i> TRAITÉE</span>
-                {% elseif st == 'EN_ATTENTE' %}
-                  <span class="badge bg-warning text-dark"><i class="bi bi-hourglass-split me-1"></i> EN ATTENTE</span>
-                {% else %}
-                  <span class="badge bg-secondary">{{ rec.statutReclamation }}</span>
-                {% endif %}
-              </td>
-
-              <td>
-                {% set pr = rec.priorite|upper %}
-                {% if pr == 'HAUTE' %}
-                  <span class="badge bg-danger"><i class="bi bi-arrow-up-circle me-1"></i> HAUTE</span>
-                {% elseif pr == 'NORMALE' %}
-                  <span class="badge bg-info text-dark"><i class="bi bi-dash-circle me-1"></i> NORMALE</span>
-                {% else %}
-                  <span class="badge bg-secondary">{{ rec.priorite }}</span>
-                {% endif %}
-              </td>
-
-              <td>
-                <div class="small">
-                  <div>
-                    <i class="bi bi-calendar-event me-1 text-muted"></i>
-                    {{ rec.dateCreationR ? rec.dateCreationR|date('d/m/Y') : '—' }}
-                  </div>
-                  <div class="text-muted">
-                    <i class="bi bi-clock me-1"></i>
-                    {{ rec.dateCreationR ? rec.dateCreationR|date('H:i') : '' }}
-                  </div>
-                  {% if rec.dateLimite %}
-                    <div class="mt-1">
-                      <span class="badge bg-light text-dark border">
-                        <i class="bi bi-alarm me-1"></i>
-                        Limite: {{ rec.dateLimite|date('d/m/Y H:i') }}
-                      </span>
-                    </div>
-                  {% endif %}
-                </div>
-              </td>
-
-              <td>
-                <button
-                  type="button"
-                  class="btn btn-sm btn-outline-primary btn-view-replies mb-2"
-                  data-id="{{ rec.idReclamation }}"
-                  data-ref="{{ rec.referenceReclamation }}"
-                >
-                  <i class="bi bi-chat-left-text me-1"></i> Voir réponses
-                </button>
-
-                {% if rep %}
-                  <div class="small text-muted">
-                    <span class="badge bg-success me-1"><i class="bi bi-check2 me-1"></i>Dernière réponse</span>
-                    {{ rep.message|slice(0, 40) }}{% if rep.message|length > 40 %}...{% endif %}
-                  </div>
-                {% else %}
-                  <div class="small text-muted">
-                    <span class="badge bg-secondary"><i class="bi bi-clock-history me-1"></i>Aucune réponse</span>
-                  </div>
-                {% endif %}
-              </td>
-            </tr>
-
-          {% else %}
-            <tr>
-              <td colspan="7" class="text-center text-muted py-4">
-                Aucune réclamation trouvée.
-              </td>
-            </tr>
-          {% endfor %}
-          </tbody>
-        </table>
+  {# ====== HERO / HEADER ====== #}
+  <div class="rec-hero mb-3">
+    <div class="d-flex align-items-start justify-content-between gap-3 flex-wrap">
+      <div>
+        <h3>Tableau des réclamations</h3>
+        <div class="sub">
+          Suivi rapide des tickets patients (sans afficher tous les détails dans le tableau).
+        </div>
+        <div class="rec-kpis">
+          <div class="kpi-pill">
+            <i class="bi bi-inboxes"></i>
+            <div>
+              <div>{{ total }}</div>
+              <small>Total</small>
+            </div>
+          </div>
+          {# Si tu veux, tu peux ajouter d'autres compteurs depuis ton controller #}
+          {# <div class="kpi-pill"><i class="bi bi-hourglass-split"></i><div><div>{{ enAttente }}</div><small>En attente</small></div></div> #}
+        </div>
       </div>
 
+      <div class="searchbar">
+        <i class="bi bi-search"></i>
+        <input id="recSearch" type="text" placeholder="Rechercher (réf, patient, type, statut, priorité)…">
+      </div>
+    </div>
+  </div>
+
+  {# ====== TABLE CARD ====== #}
+  <div class="rec-card">
+    <div class="rec-card-head">
+      <div class="d-flex align-items-center gap-2 flex-wrap">
+        <span class="chip"><i class="bi bi-shield-check"></i> Admin</span>
+        <span class="chip"><i class="bi bi-info-circle"></i> Clique sur <b>Détails</b> pour voir toute la réclamation</span>
+      </div>
+      <div class="text-muted small">
+        <i class="bi bi-lightning-charge"></i> Les infos complètes s’ouvrent dans un modal.
+      </div>
+    </div>
+
+    <div class="table-responsive">
+      <table class="table align-middle table-hover mb-0" id="recTable">
+        <thead>
+          <tr>
+            <th style="width:90px;">ID</th>
+            <th>Référence</th>
+            <th style="width:220px;">Type</th>
+            <th style="width:260px;">Patient</th>
+            <th style="width:140px;">Statut</th>
+            <th style="width:140px;">Priorité</th>
+            <th style="width:170px;">Créée le</th>
+            <th style="width:140px;" class="text-end">Action</th>
+          </tr>
+        </thead>
+
+        <tbody>
+        {% for row in rows %}
+          {% set rec = row.rec %}
+          {% set rep = row.rep %}
+
+          {% set st = rec.statutReclamation|upper %}
+          {% set pr = rec.priorite|upper %}
+
+          <tr class="rec-row"
+              data-search="{{ (rec.referenceReclamation ~ ' ' ~ rec.type ~ ' ' ~ (rec.user ? (rec.user.nom ~ ' ' ~ rec.user.prenom ~ ' ' ~ rec.user.emailUser) : '') ~ ' ' ~ rec.statutReclamation ~ ' ' ~ rec.priorite)|lower|e('html_attr') }}"
+          >
+            <td class="fw-bold">#{{ rec.idReclamation }}</td>
+
+            <td>
+              <div class="row-title">
+                <i class="bi bi-hash me-1 text-muted"></i>{{ rec.referenceReclamation }}
+              </div>
+              <div class="row-sub d-flex flex-wrap gap-2 mt-1">
+                {% if rec.urgente %}
+                  <span class="badge bg-danger"><i class="bi bi-exclamation-triangle me-1"></i>Urgente</span>
+                {% endif %}
+                {% if rec.pieceJointePath %}
+                  <span class="badge badge-soft"><i class="bi bi-paperclip me-1"></i>PJ</span>
+                {% endif %}
+                {% if rep %}
+                  <span class="badge bg-success"><i class="bi bi-reply-fill me-1"></i>Répondu</span>
+                {% else %}
+                  <span class="badge bg-secondary"><i class="bi bi-clock-history me-1"></i>Sans réponse</span>
+                {% endif %}
+              </div>
+            </td>
+
+            <td>
+              <span class="chip"><i class="bi bi-tag"></i>{{ rec.type }}</span>
+            </td>
+
+            <td>
+              {% if rec.user %}
+                <div class="row-title">
+                  <i class="bi bi-person-circle me-1 text-muted"></i>{{ rec.user.nom }} {{ rec.user.prenom }}
+                </div>
+                <div class="row-sub"><i class="bi bi-envelope me-1"></i>{{ rec.user.emailUser }}</div>
+              {% else %}
+                <span class="text-muted">—</span>
+              {% endif %}
+            </td>
+
+            <td>
+              {% if st == 'TRAITEE' %}
+                <span class="badge bg-success"><i class="bi bi-check2-circle me-1"></i>TRAITÉE</span>
+              {% elseif st == 'EN_ATTENTE' %}
+                <span class="badge bg-warning text-dark"><i class="bi bi-hourglass-split me-1"></i>EN ATTENTE</span>
+              {% else %}
+                <span class="badge bg-secondary">{{ rec.statutReclamation }}</span>
+              {% endif %}
+            </td>
+
+            <td>
+              {% if pr == 'HAUTE' %}
+                <span class="badge bg-danger"><i class="bi bi-arrow-up-circle me-1"></i>HAUTE</span>
+              {% elseif pr == 'NORMALE' %}
+                <span class="badge bg-info text-dark"><i class="bi bi-dash-circle me-1"></i>NORMALE</span>
+              {% elseif pr == 'CRITIQUE' %}
+                <span class="badge bg-dark"><i class="bi bi-exclamation-octagon me-1"></i>CRITIQUE</span>
+              {% else %}
+                <span class="badge bg-secondary">{{ rec.priorite }}</span>
+              {% endif %}
+            </td>
+
+            <td class="small">
+              <div><i class="bi bi-calendar-event me-1 text-muted"></i>{{ rec.dateCreationR ? rec.dateCreationR|date('d/m/Y') : '—' }}</div>
+              <div class="text-muted"><i class="bi bi-clock me-1"></i>{{ rec.dateCreationR ? rec.dateCreationR|date('H:i') : '' }}</div>
+            </td>
+
+            <td class="text-end">
+              {# ✅ Bouton Détails => ouvre modal complet #}
+              <button type="button"
+                      class="btn btn-sm btn-mf btn-open-details"
+                      data-bs-toggle="modal"
+                      data-bs-target="#recDetailsModal"
+
+                      data-id="{{ rec.idReclamation }}"
+                      data-ref="{{ rec.referenceReclamation|e('html_attr') }}"
+                      data-type="{{ rec.type|e('html_attr') }}"
+                      data-urgent="{{ rec.urgente ? '1' : '0' }}"
+                      data-pj="{{ rec.pieceJointePath ? '1' : '0' }}"
+                      data-pjpath="{{ rec.pieceJointePath ? rec.pieceJointePath|e('html_attr') : '' }}"
+                      data-status="{{ rec.statutReclamation|e('html_attr') }}"
+                      data-priority="{{ rec.priorite|e('html_attr') }}"
+                      data-created="{{ rec.dateCreationR ? rec.dateCreationR|date('d/m/Y H:i') : '—' }}"
+                      data-limit="{{ rec.dateLimite ? rec.dateLimite|date('d/m/Y H:i') : '' }}"
+                      data-contenu="{{ rec.contenu|default('')|e('html_attr') }}"
+                      data-description="{{ rec.description|default('')|e('html_attr') }}"
+                      data-patient="{{ rec.user ? (rec.user.nom ~ ' ' ~ rec.user.prenom)|e('html_attr') : '—' }}"
+                      data-email="{{ rec.user ? rec.user.emailUser|e('html_attr') : '' }}"
+              >
+                <i class="bi bi-eye me-1"></i> Détails
+              </button>
+            </td>
+          </tr>
+
+        {% else %}
+          <tr>
+            <td colspan="8" class="text-center text-muted py-4">
+              Aucune réclamation trouvée.
+            </td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
     </div>
   </div>
 </div>
 
-{# ✅ MODAL POPUP #}
-<div class="modal fade" id="repliesModal" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+{# =========================
+   ✅ MODAL : DÉTAILS RÉCLAMATION + RÉPONSES
+   ========================= #}
+<div class="modal fade" id="recDetailsModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-xl modal-dialog-scrollable">
     <div class="modal-content">
       <div class="modal-header">
         <div>
-          <h5 class="modal-title mb-0">Réponses</h5>
-          <div class="text-muted small" id="modalSubTitle">—</div>
+          <h5 class="modal-title mb-0">
+            <i class="bi bi-ticket-detailed me-1 text-primary"></i>
+            Détails de la réclamation
+          </h5>
+          <div class="text-muted small" id="recModalSub">—</div>
         </div>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
       </div>
 
       <div class="modal-body">
-        <div id="repliesLoading" class="text-center py-4 d-none">
-          <div class="spinner-border" role="status"></div>
-          <div class="text-muted mt-2">Chargement...</div>
-        </div>
+        <div class="row g-3">
 
-        <div id="repliesEmpty" class="alert alert-secondary d-none">
-          Aucune réponse pour cette réclamation.
-        </div>
+          <div class="col-lg-4">
+            <div class="rec-box">
+              <div class="label">Résumé</div>
 
-        <div id="repliesList" class="d-grid gap-2"></div>
+              <dl class="rec-dl mt-3 mb-0">
+                <dt>ID</dt>
+                <dd id="mId">—</dd>
+
+                <dt>Référence</dt>
+                <dd id="mRef">—</dd>
+
+                <dt>Type</dt>
+                <dd id="mType">—</dd>
+
+                <dt>Patient</dt>
+                <dd id="mPatient">—</dd>
+
+                <dt>Email</dt>
+                <dd id="mEmail">—</dd>
+
+                <dt>Statut</dt>
+                <dd id="mStatus">—</dd>
+
+                <dt>Priorité</dt>
+                <dd id="mPriority">—</dd>
+
+                <dt>Créée le</dt>
+                <dd id="mCreated">—</dd>
+
+                <dt>Date limite</dt>
+                <dd id="mLimit">—</dd>
+              </dl>
+
+              <div class="d-flex flex-wrap gap-2 mt-2">
+                <span class="badge bg-danger d-none" id="mUrgent"><i class="bi bi-exclamation-triangle me-1"></i>Urgente</span>
+                <span class="badge badge-soft d-none" id="mPj"><i class="bi bi-paperclip me-1"></i>Pièce jointe</span>
+              </div>
+
+              <div class="mt-3 d-grid gap-2">
+                <button class="btn btn-outline-mf" id="btnLoadReplies" type="button">
+                  <i class="bi bi-chat-left-text me-1"></i> Charger les réponses
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-lg-8">
+            <div class="rec-box mb-3">
+              <div class="label">Contenu</div>
+              <div class="value" id="mContenu">—</div>
+            </div>
+
+            <div class="rec-box">
+              <div class="label">Description complète</div>
+              <div class="value" id="mDescription">—</div>
+            </div>
+
+            <div class="mt-3">
+              <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                <div class="fw-bold">
+                  <i class="bi bi-reply-fill text-primary me-1"></i> Réponses
+                </div>
+                <div class="text-muted small" id="mRepliesHint">Clique sur “Charger les réponses”.</div>
+              </div>
+
+              <div id="repliesLoading" class="text-center py-4 d-none">
+                <div class="spinner-border" role="status"></div>
+                <div class="text-muted mt-2">Chargement...</div>
+              </div>
+
+              <div id="repliesEmpty" class="alert alert-secondary d-none mt-2">
+                Aucune réponse pour cette réclamation.
+              </div>
+
+              <div id="repliesList" class="d-grid gap-2 mt-2"></div>
+            </div>
+
+          </div>
+
+        </div>
       </div>
 
       <div class="modal-footer">
@@ -199,29 +394,33 @@
     </div>
   </div>
 </div>
+
+{# Bootstrap bundle (si ton base_admin l'inclut déjà, tu peux supprimer cette ligne) #}
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
 <script>
 (function () {
-  const modalEl = document.getElementById('repliesModal');
-
-  // ⚠️ si bootstrap JS n'est pas chargé => rien ne s'affiche
   if (typeof bootstrap === 'undefined') {
-    console.error('Bootstrap JS n’est pas chargé. Ajoute bootstrap.bundle.min.js dans base_admin.html.twig');
+    console.error('Bootstrap JS non chargé (bootstrap.bundle.min.js).');
     return;
   }
 
-  const modal = new bootstrap.Modal(modalEl);
+  // ===== Recherche simple dans le tableau
+  const searchInput = document.getElementById('recSearch');
+  const rows = Array.from(document.querySelectorAll('#recTable tbody .rec-row'));
 
-  const subTitle = document.getElementById('modalSubTitle');
-  const loading = document.getElementById('repliesLoading');
-  const empty = document.getElementById('repliesEmpty');
-  const list = document.getElementById('repliesList');
+  function doFilter(){
+    const q = (searchInput.value || '').trim().toLowerCase();
+    rows.forEach(tr => {
+      const hay = (tr.dataset.search || '');
+      tr.style.display = (!q || hay.includes(q)) ? '' : 'none';
+    });
+  }
+  if (searchInput){
+    searchInput.addEventListener('input', doFilter);
+  }
 
-  function setLoading(v){ loading.classList.toggle('d-none', !v); }
-  function setEmpty(v){ empty.classList.toggle('d-none', !v); }
-  function clearList(){ list.innerHTML = ''; }
-
+  // ===== Helpers
   function escapeHtml(str){
     return (str || '').toString()
       .replaceAll('&', '&amp;')
@@ -229,101 +428,154 @@
       .replaceAll('>', '&gt;');
   }
 
-  document.querySelectorAll('.btn-view-replies').forEach(btn => {
-    btn.addEventListener('click', async () => {
-      const id = btn.dataset.id;
-      const ref = btn.dataset.ref;
+  // ===== Modal elements
+  const modalEl = document.getElementById('recDetailsModal');
+  const modal = new bootstrap.Modal(modalEl);
 
-      subTitle.textContent = `Réclamation ${ref} (#${id})`;
+  const mId = document.getElementById('mId');
+  const mRef = document.getElementById('mRef');
+  const mType = document.getElementById('mType');
+  const mPatient = document.getElementById('mPatient');
+  const mEmail = document.getElementById('mEmail');
+  const mStatus = document.getElementById('mStatus');
+  const mPriority = document.getElementById('mPriority');
+  const mCreated = document.getElementById('mCreated');
+  const mLimit = document.getElementById('mLimit');
 
-      clearList();
-      setEmpty(false);
-      setLoading(true);
-      modal.show();
+  const mUrgent = document.getElementById('mUrgent');
+  const mPj = document.getElementById('mPj');
 
-      try {
-        const url = "{{ path('ad_reclamation_reponses', {id: 0}) }}".replace('0', id);
-        const res = await fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' }});
+  const mContenu = document.getElementById('mContenu');
+  const mDescription = document.getElementById('mDescription');
+  const recModalSub = document.getElementById('recModalSub');
 
-        // si 404/500 => affiche erreur console
-        if (!res.ok) {
-          console.error('HTTP error', res.status, await res.text());
-          setLoading(false);
-          setEmpty(true);
-          return;
-        }
+  const btnLoadReplies = document.getElementById('btnLoadReplies');
+  const repliesHint = document.getElementById('mRepliesHint');
+  const loading = document.getElementById('repliesLoading');
+  const empty = document.getElementById('repliesEmpty');
+  const list = document.getElementById('repliesList');
 
-        const data = await res.json();
+  let currentRecId = null;
+  let currentRecRef = null;
 
-        setLoading(false);
+  function setLoading(v){ loading.classList.toggle('d-none', !v); }
+  function setEmpty(v){ empty.classList.toggle('d-none', !v); }
+  function clearList(){ list.innerHTML = ''; }
 
-        if (!data.ok || !data.reponses || data.reponses.length === 0) {
-          setEmpty(true);
-          return;
-        }
+  // Reset replies state each time modal opens
+  modalEl.addEventListener('show.bs.modal', () => {
+    setLoading(false);
+    setEmpty(false);
+    clearList();
+    repliesHint.textContent = 'Clique sur “Charger les réponses”.';
+  });
 
-        data.reponses.forEach((r, idx) => {
-          const card = document.createElement('div');
-          card.className = 'border rounded p-3 bg-light';
+  // ===== Open details
+  document.querySelectorAll('.btn-open-details').forEach(btn => {
+    btn.addEventListener('click', () => {
+      currentRecId = btn.dataset.id;
+      currentRecRef = btn.dataset.ref;
 
-          const typeBadge = r.type
-            ? `<span class="badge bg-dark me-2">${escapeHtml(r.type)}</span>`
-            : '';
+      recModalSub.textContent = Réclamation ${btn.dataset.ref} (#${btn.dataset.id});
 
-          const readBadge = (r.isRead === true)
-            ? `<span class="badge bg-success"><i class="bi bi-check2 me-1"></i>Lu</span>`
-            : (r.isRead === false)
-              ? `<span class="badge bg-warning text-dark"><i class="bi bi-dot me-1"></i>Non lu</span>`
-              : '';
+      mId.textContent = '#' + (btn.dataset.id || '—');
+      mRef.textContent = btn.dataset.ref || '—';
+      mType.textContent = btn.dataset.type || '—';
+      mPatient.textContent = btn.dataset.patient || '—';
+      mEmail.textContent = btn.dataset.email || '—';
+      mStatus.textContent = btn.dataset.status || '—';
+      mPriority.textContent = btn.dataset.priority || '—';
+      mCreated.textContent = btn.dataset.created || '—';
+      mLimit.textContent = btn.dataset.limit || '—';
 
-          const dateLine = r.createdAt
-            ? `<div class="text-muted small"><i class="bi bi-clock me-1"></i>${escapeHtml(r.createdAt)}</div>`
-            : '';
+      // Badges
+      mUrgent.classList.toggle('d-none', btn.dataset.urgent !== '1');
+      mPj.classList.toggle('d-none', btn.dataset.pj !== '1');
 
-          card.innerHTML = `
-            <div class="d-flex justify-content-between align-items-start gap-2">
-              <div class="fw-semibold">
-                <i class="bi bi-reply-fill me-1 text-primary"></i> Réponse ${idx + 1}
-              </div>
-              <div class="text-end">${dateLine}</div>
-            </div>
-
-            <div class="mt-2 d-flex flex-wrap gap-2 align-items-center">
-              ${typeBadge}
-              ${readBadge}
-            </div>
-
-            <div class="mt-2">${escapeHtml(r.message)}</div>
-          `;
-
-          list.appendChild(card);
-        });
-
-      } catch (e) {
-        console.error(e);
-        setLoading(false);
-        setEmpty(true);
-      }
+      // Full content
+      mContenu.textContent = btn.dataset.contenu || '—';
+      mDescription.textContent = btn.dataset.description || '—';
     });
   });
+
+  // ===== Load replies inside the same modal
+  btnLoadReplies.addEventListener('click', async () => {
+    if (!currentRecId) return;
+
+    clearList();
+    setEmpty(false);
+    setLoading(true);
+    repliesHint.textContent = 'Chargement des réponses…';
+
+    try {
+      const url = "{{ path('ad_reclamation_reponses', {id: 0}) }}".replace('0', currentRecId);
+      const res = await fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' }});
+
+      if (!res.ok) {
+        console.error('HTTP error', res.status, await res.text());
+        setLoading(false);
+        setEmpty(true);
+        repliesHint.textContent = 'Erreur lors du chargement.';
+        return;
+      }
+
+      const data = await res.json();
+      setLoading(false);
+
+      if (!data.ok || !data.reponses || data.reponses.length === 0) {
+        setEmpty(true);
+        repliesHint.textContent = 'Aucune réponse.';
+        return;
+      }
+
+      repliesHint.textContent = ${data.reponses.length} réponse(s) trouvée(s).;
+
+      data.reponses.forEach((r, idx) => {
+        const card = document.createElement('div');
+        card.className = 'border rounded-4 p-3 bg-white';
+
+        const typeBadge = r.type
+          ? <span class="badge bg-dark me-2">${escapeHtml(r.type)}</span>
+          : '';
+
+        const readBadge = (r.isRead === true)
+          ? <span class="badge bg-success"><i class="bi bi-check2 me-1"></i>Lu</span>
+          : (r.isRead === false)
+            ? <span class="badge bg-warning text-dark"><i class="bi bi-dot me-1"></i>Non lu</span>
+            : '';
+
+        const dateLine = r.createdAt
+          ? <div class="text-muted small"><i class="bi bi-clock me-1"></i>${escapeHtml(r.createdAt)}</div>
+          : '';
+
+        card.innerHTML = `
+          <div class="d-flex justify-content-between align-items-start gap-2">
+            <div class="fw-bold">
+              <i class="bi bi-reply-fill me-1 text-primary"></i> Réponse ${idx + 1}
+            </div>
+            <div class="text-end">${dateLine}</div>
+          </div>
+
+          <div class="mt-2 d-flex flex-wrap gap-2 align-items-center">
+            ${typeBadge}
+            ${readBadge}
+          </div>
+
+          <div class="mt-2">${escapeHtml(r.message)}</div>
+        `;
+
+        list.appendChild(card);
+      });
+
+    } catch (e) {
+      console.error(e);
+      setLoading(false);
+      setEmpty(true);
+      repliesHint.textContent = 'Erreur lors du chargement.';
+    }
+  });
+
 })();
 </script>
-<style>
-/* ❌ Empêche l'effet flou quand un modal Bootstrap est ouvert */
-body.modal-open .content,
-body.modal-open .page-content,
-body.modal-open .container-fluid,
-body.modal-open main {
-  filter: none !important;
-  backdrop-filter: none !important;
-}
-
-/* ❌ Certains thèmes floutent tout le body */
-body.modal-open {
-  filter: none !important;
-  backdrop-filter: none !important;
-}
-</style>
-
 
 {% endblock %}

@@ -357,7 +357,7 @@
 
         if (!ai0 && userId && docIndex) {
           try {
-            const tpl = '{{ path('admin_staff_request_analyze', {id: 0, i: 0}) }}';
+            const tpl = '{{ path("admin_staff_request_analyze", {"id": 0, "i": 0}) }}';
             const analyzeUrl = tpl.replace('/0/analyze/0', `/${userId}/analyze/${docIndex}`);
             const res = await fetch(analyzeUrl, {
               method: 'POST',

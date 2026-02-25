@@ -1,73 +1,92 @@
+
 {% extends 'base.html.twig' %}
 {% set patientId = app.session.get('patient_id') %}
 
 {% block body %}
   <style>
-    /* General Page Styles */
+    :root {
+      --mf-vivid-blue:#003399;
+      --mf-dark-turquoise:#0097B2;
+      --mf-vivid-turquoise:#00BFA6;
+      --mf-pastel-blue:#6797FF;
+      --mf-pastel-azure:#8FD5FF;
+      --mf-light-blue:#B3D5FF;
+      --mf-white:#FFFFFF;
+      --mf-black:#000000;
+      --mf-vivid-red:#BC0B09;
+      --mf-text:#101828;
+      --mf-muted:#6c757d;
+      --shadow-sm:0 10px 26px rgba(16,24,40,.06);
+      --shadow-md:0 16px 40px rgba(16,24,40,.08);
+      --shadow-lg:0 24px 56px rgba(16,24,40,.12);
+    }
     .appointment-page {
       min-height: 100vh;
-      background: #fff;
+      background: var(--mf-white);
       padding: 2rem 0 4rem;
+      font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
     }
-    /* Hero Section */
-    .appointment-hero {
-      background: linear-gradient(135deg, #049ebb 0%, #38bdf8 50%, #049ebb 100%);
-      color: #fff;
-      padding: 3rem 2rem;
+    .mf-rect-hero {
       border-radius: 24px;
-      margin-bottom: 2.5rem;
-      box-shadow: 0 20px 50px rgba(37, 99, 235, 0.25);
+      background: var(--mf-dark-turquoise);
+      box-shadow: var(--shadow-md);
+      border: 1px solid rgba(0,0,0,.08);
+      padding: 40px 24px;
       text-align: center;
+      margin-bottom: 2.5rem;
     }
-    .appointment-hero h1 {
+    .mf-rect-title {
       font-size: 2.25rem;
-      font-weight: 800;
-      letter-spacing: -0.02em;
-      margin: 0 0 0.5rem;
+      font-weight: 900;
+      color: var(--mf-white);
+      margin-bottom: 0.5rem;
+      letter-spacing: -.02em;
     }
-    .appointment-hero p {
+    .mf-rect-sub {
+      color: var(--mf-pastel-azure);
       font-size: 1.1rem;
-      opacity: 0.95;
-      margin: 0;
       font-weight: 500;
+      opacity: 0.95;
     }
-    /* Card Styles */
-    .appointment-card {
-      background: #e0f2fe;
-      border-radius: 20px;
-      box-shadow: 0 4px 24px rgba(4,158,187,0.08), 0 1px 3px rgba(4,158,187,0.04);
-      border: 1px solid #049ebb33;
-      padding: 2rem 2.5rem;
-      margin-bottom: 2rem;
+    .mf-card {
+      background: var(--mf-light-blue);
+      border-radius: 24px;
+      box-shadow: var(--shadow-md);
+      border: 1.5px solid var(--mf-dark-turquoise);
+      padding: 3rem 3.5rem 2.5rem 3.5rem;
+      margin-bottom: 2.5rem;
+      width: 100%;
+      max-width: 100%;
+      /* Remove any width restriction so it matches .mf-rect-inner */
+      box-sizing: border-box;
     }
-    .appointment-card .form-label {
+    .mf-card .form-label {
       font-weight: 600;
-      color: #049ebb;
+      color: var(--mf-dark-turquoise);
       margin-bottom: 0.5rem;
     }
-    .appointment-card .form-control, .appointment-card .form-select {
-      border: 2px solid #049ebb;
+    .mf-card .form-control, .mf-card .form-select {
+      border: 2px solid var(--mf-dark-turquoise);
       border-radius: 12px;
       padding: 0.75rem 1rem;
       font-size: 1rem;
       transition: border-color 0.2s, box-shadow 0.2s;
     }
-    .appointment-card .form-control:focus, .appointment-card .form-select:focus {
-      border-color: #049ebb;
-      box-shadow: 0 0 0 4px #049ebb33;
+    .mf-card .form-control:focus, .mf-card .form-select:focus {
+      border-color: var(--mf-dark-turquoise);
+      box-shadow: 0 0 0 4px #0097b233;
       outline: none;
     }
-    .appointment-card .form-control[readonly],
-    .appointment-card .form-control:disabled,
-    .appointment-card .form-control.bg-muted {
-      background: #dbeafe;
-      color: #049ebb;
+    .mf-card .form-control[readonly],
+    .mf-card .form-control:disabled,
+    .mf-card .form-control.bg-muted {
+      background: var(--mf-pastel-azure);
+      color: var(--mf-dark-turquoise);
     }
-    /* Button Styles */
-    .btn-appointment {
-      background: linear-gradient(135deg, #049ebb 0%, #38bdf8 100%);
-      color: #fff !important;
-      border: none;
+    .btn-mf {
+      background: var(--mf-dark-turquoise);
+      border-color: var(--mf-dark-turquoise);
+      color: #fff;
       border-radius: 14px;
       padding: 1rem 2rem;
       font-weight: 700;
@@ -75,27 +94,34 @@
       letter-spacing: 0.02em;
       transition: transform 0.2s, box-shadow 0.2s;
     }
-    .btn-appointment:hover {
+    .btn-mf:hover {
+      background: #007E94;
+      border-color: #007E94;
+      color: #fff;
       transform: translateY(-2px);
-      box-shadow: 0 12px 28px rgba(4, 158, 187, 0.35);
-      color: #fff !important;
+      box-shadow: 0 12px 28px rgba(0,151,178,0.25);
     }
-    /* Alert Styles */
-    .alert-appointment {
+    .alert-mf {
       border: none;
       border-radius: 14px;
       padding: 1rem 1.25rem;
       font-weight: 500;
     }
-
-    /* Form error messages */
-    .appointment-card .form-error,
-    .appointment-card .form-errors,
-    .appointment-card ul.form-errors,
-    .appointment-card .invalid-feedback,
-    .appointment-card .form-error-message,
-    .appointment-card .mb-4 ul,
-    .appointment-card .mb-4 .form-errors,
+    .alert-mf.alert-danger {
+      background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+      color: #991b1b;
+    }
+    .alert-mf.alert-success {
+      background: linear-gradient(135deg, #dbeafe 0%, #bae6fd 100%);
+      color: #0097B2;
+    }
+    .mf-card .form-error,
+    .mf-card .form-errors,
+    .mf-card ul.form-errors,
+    .mf-card .invalid-feedback,
+    .mf-card .form-error-message,
+    .mf-card .mb-4 ul,
+    .mf-card .mb-4 .form-errors,
     #motif-error ul {
       color: #dc3545 !important;
       font-size: 0.98em;
@@ -104,14 +130,6 @@
       margin-bottom: 0.25rem;
       list-style: disc inside;
     }
-    .alert-appointment.alert-danger {
-      background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
-      color: #991b1b;
-    }
-    .alert-appointment.alert-success {
-      background: linear-gradient(135deg, #dbeafe 0%, #bae6fd 100%);
-      color: #049ebb;
-    }
     #appointment-form {
       padding-top: 100px;
     }
@@ -119,186 +137,17 @@
       #appointment-form {
         padding-top: 80px;
       }
-      .appointment-hero h1 {
+      .mf-rect-title {
         font-size: 1.75rem;
       }
     }
-    /* Flatpickr Styles */
-    .flatpickr-calendar {
-      background: #fff !important;
-      border: 2px solid #e2e8f0 !important;
-      border-radius: 16px !important;
-      box-shadow: 0 10px 40px rgba(0,0,0,0.08) !important;
-    }
-    .flatpickr-day.today {
-      border-color: #0d9488;
-    }
-    .flatpickr-day.selected, .flatpickr-day.startRange, .flatpickr-day.endRange {
-      background: #0d9488 !important;
-      color: #fff !important;
-    }
-    .flatpickr-weekday {
-      color: #0f766e;
-    }
-    .flatpickr-input {
-      width: 100% !important;
-      padding: 0.75rem 1rem !important;
-      border-radius: 12px !important;
-    }
-    #appointment-form .col-lg-8 .flatpickr-calendar.inline {
-      max-width: 520px !important;
-      margin: 0.5rem auto 0 !important;
-    }
-
-    /* Make FullCalendar time slot rows higher */
-    .fc .fc-timegrid-slot, .fc .fc-timegrid-axis, .fc .fc-timegrid-slot-label {
-      min-height: 1.98em !important;
-      height: 1.98em !important;
-      line-height: 1.98em !important;
-    }
-    /* FullCalendar Styles */
     #fullcalendar {
       background: #f8fafc;
       border-radius: 22px;
-      box-shadow: 0 8px 32px rgba(4,158,187,0.13), 0 2px 8px rgba(4,158,187,0.08);
+      box-shadow: 0 8px 32px rgba(0,151,178,0.13), 0 2px 8px rgba(0,151,178,0.08);
       padding: 2rem 2rem 1.5rem 2rem;
       margin-bottom: 2rem;
-      font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
       border: 2px solid #bae6fd;
-    }
-    .fc-toolbar {
-      background: linear-gradient(90deg, #049ebb 0%, #38bdf8 100%);
-      border-radius: 16px 16px 0 0;
-      color: #fff;
-      padding: 1.1rem 1.5rem 1rem 1.5rem;
-      margin-bottom: 0.7rem;
-      box-shadow: 0 4px 16px rgba(4,158,187,0.10);
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
-    .fc-toolbar-title {
-      font-size: 1.5rem;
-      font-weight: 800;
-      color: #fff;
-      letter-spacing: 0.01em;
-      text-shadow: 0 2px 8px rgba(4,158,187,0.10);
-    }
-    .fc-button {
-      background: linear-gradient(135deg, #38bdf8 0%, #049ebb 100%);
-      color: #fff;
-      border: none;
-      border-radius: 10px;
-      font-weight: 700;
-      margin: 0 4px;
-      transition: background 0.2s, box-shadow 0.2s, transform 0.2s;
-      box-shadow: 0 2px 8px rgba(4,158,187,0.13);
-      padding: 0.5rem 1.1rem;
-      font-size: 1rem;
-      outline: none;
-    }
-    .fc-button:hover, .fc-button:focus {
-      background: linear-gradient(135deg, #049ebb 0%, #38bdf8 100%);
-      color: #fff;
-      box-shadow: 0 6px 18px rgba(4,158,187,0.18);
-      transform: translateY(-2px) scale(1.04);
-    }
-    .fc-button-active, .fc-button-primary:not(:disabled).fc-button-active {
-      background: #049ebb;
-      color: #fff;
-      border: none;
-      box-shadow: 0 2px 8px rgba(4,158,187,0.18);
-    }
-    .fc-daygrid-day, .fc-timegrid-slot {
-      background: #f1f5f9;
-      border-radius: 10px;
-      transition: background 0.2s;
-    }
-    .fc-day-today {
-      background: #bae6fd !important;
-      border-radius: 10px;
-      box-shadow: 0 0 0 3px #38bdf8;
-    }
-    .fc-timegrid-slot.fc-timegrid-slot-lane {
-      background: #f8fafc;
-    }
-    .fc-timegrid-slot.fc-timegrid-slot-label {
-      background: #e0e7ef;
-      color: #049ebb;
-      font-weight: 700;
-      font-size: 1.05rem;
-      border-radius: 8px;
-    }
-    .fc-event {
-      background: linear-gradient(90deg, #dc3545 0%, #f87171 100%) !important;
-      border: none !important;
-      border-radius: 12px !important;
-      color: #fff !important;
-      font-weight: 700;
-      box-shadow: 0 4px 16px rgba(220,53,69,0.13);
-      padding: 0.35rem 0.7rem;
-      font-size: 1.05rem;
-      letter-spacing: 0.01em;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-    .fc-slot-selected {
-      background: #38bdf8 !important;
-      border-radius: 10px !important;
-      box-shadow: 0 0 0 3px #049ebb;
-    }
-    .fc .fc-col-header-cell-cushion {
-      color: #049ebb;
-      font-weight: 800;
-      font-size: 1.08rem;
-      letter-spacing: 0.01em;
-      padding: 0.4rem 0;
-    }
-    .fc .fc-timegrid-axis-cushion {
-      color: #049ebb;
-      font-weight: 700;
-      font-size: 1.05rem;
-    }
-    .fc .fc-scrollgrid-section-header {
-      background: #e0f2fe;
-    }
-    .fc .fc-scrollgrid-section-body {
-      background: #f8fafc;
-    }
-    .fc .fc-daygrid-day-number {
-      color: #049ebb;
-      font-weight: 800;
-      font-size: 1.08rem;
-    }
-    .fc .fc-daygrid-day.fc-day-today .fc-daygrid-day-number {
-      color: #049ebb;
-      text-shadow: 0 2px 8px #bae6fd;
-    }
-    .fc .fc-timegrid-now-indicator-arrow {
-      border-top-color: #049ebb;
-    }
-    .fc .fc-timegrid-now-indicator-line {
-      background: #049ebb;
-    }
-    /* Fancy grid lines */
-    .fc .fc-scrollgrid, .fc .fc-scrollgrid-sync-table {
-      border-radius: 12px;
-      border: 1.5px solid #bae6fd;
-      box-shadow: 0 2px 8px rgba(4,158,187,0.08);
-    }
-    /* Responsive tweaks for FullCalendar */
-    @media (max-width: 768px) {
-      #fullcalendar {
-        padding: 0.7rem 0.2rem 0.7rem 0.2rem;
-      }
-      .fc-toolbar {
-        padding: 0.7rem 0.7rem;
-        font-size: 0.98rem;
-      }
-      .fc-toolbar-title {
-        font-size: 1.08rem;
-      }
     }
     /* Hide any default datetime widget that may be rendered by Symfony */
     input[type="datetime-local"], .js-datepicker, .flatpickr-input {
@@ -308,56 +157,41 @@
 
   <main class="main appointment-page">
     <section id="appointment-form" class="section py-5">
-      <div class="container">
+      <div class="container-lg py-4">
+        <div class="mf-rect-hero mb-4">
+          <div class="mf-rect-inner">
+            <h1 class="mf-rect-title">📅 Prendre rendez-vous</h1>
+            <p class="mf-rect-sub">Choisissez la date, l'heure et le motif — nous nous occupons du reste.</p>
+          </div>
+        </div>
+        {# Remove col-lg-8 so both .mf-rect-hero and .mf-card are full width #}
         <div class="row justify-content-center">
-          <div class="col-lg-8">
-            <div class="appointment-hero">
-              <h1>📅 Prendre rendez-vous</h1>
-              <p>Choisissez la date, l'heure et le motif — nous nous occupons du reste.</p>
-            </div>
-
+          <div class="col-12">
             {# Flash Messages #}
             {% for label, messages in app.flashes %}
               {% for message in messages %}
-                <div class="alert alert-appointment alert-{{ label == 'error' ? 'danger' : 'success' }}">{{ message }}</div>
+                <div class="alert alert-mf alert-{{ label == 'error' ? 'danger' : 'success' }}">{{ message }}</div>
               {% endfor %}
             {% endfor %}
-
-            <div class="appointment-card">
+            <div class="mf-card" style="width:100%;max-width:100%;">
               {{ form_start(form, {'attr': {'novalidate': 'novalidate', 'id': 'appointment-form-main'}}) }}
-
-              {# Calendar and DateTime #}
               <div class="mb-4">
                 <div id="fullcalendar"></div>
-                <div id="selected-date-label" style="margin-top:1rem;font-weight:bold;color:#049ebb;"></div>
+                <div id="selected-date-label" style="margin-top:1rem;font-weight:bold;color:var(--mf-dark-turquoise);"></div>
                 <input type="hidden" id="calendar-datetime" name="{{ form.datetime.vars.full_name }}" value="{{ form.datetime.vars.value|default('') }}">
                 {{ form_errors(form.datetime) }}
-                {# The red error message for datetime is kept as it is already styled in red #}
               </div>
-
-              {# Mode Field #}
               {{ form_row(form.mode) }}
-
-              {# Motif Field with Error Below #}
               <div class="mb-3">
                 {{ form_label(form.motif) }}
                 {{ form_widget(form.motif, {'attr': {'class': 'form-control', 'aria-describedby': 'motif-error'}}) }}
                 <div id="motif-error">{{ form_errors(form.motif) }}</div>
               </div>
-
-              {# CSRF Token #}
               {{ form_row(form._token) }}
-
               <div class="d-grid mt-4">
-                <button type="submit" class="btn btn-appointment">Confirmer</button>
+                <button type="submit" class="btn btn-mf">Envoyer la demande</button>
               </div>
-              <div class="d-grid mt-4">
-                <button type="submit" class="btn btn-appointment">Annuler </button>
-              </div>
-
               {{ form_end(form, {'render_rest': false}) }}
-
-              {# Patient and Staff Info #}
               <div class="row g-3 mb-4">
                 <div class="col-md-6">
                   <label class="form-label">Patient</label>
@@ -378,7 +212,6 @@
                   </div>
                 </div>
               </div>
-              <!-- All form fields above -->
             </div>
           </div>
         </div>

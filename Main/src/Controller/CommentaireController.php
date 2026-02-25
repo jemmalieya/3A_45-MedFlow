@@ -199,33 +199,47 @@ public function delete(Request $request, Commentaire $commentaire, EntityManager
 
 
 
-    #[Route('/add-inline/{id}', name: 'commentaire_add_inline', methods: ['POST'])]
-public function addInline(Post $post, Request $request, EntityManagerInterface $em, AiCommentModerationService $moderation): Response
-
+  #[Route('/add-inline/{id}', name: 'commentaire_add_inline', methods: ['POST'])]
+public function addInline(
+    Post $post,
+    Request $request,
+    EntityManagerInterface $em,
+    AiCommentModerationService $moderation
+): Response
 {
-    // CSRF
-    
+    // CSRF (tu peux ajouter le check ici si tu veux, je ne touche pas)
 
     $contenu = trim((string) $request->request->get('contenu'));
     $postId  = (string) $post->getId();
 
+    // ✅ NEW: récupérer la redirection voulue (index ou show)
+    $redirect = (string) $request->request->get('redirect', '');
+
+    // ✅ helper: fallback si redirect vide / invalide
+    $fallback = $this->generateUrl('post_index');
+
+    // ✅ sécurité simple : on autorise uniquement un chemin interne "/..."
+    if ($redirect === '' || !str_starts_with($redirect, '/')) {
+        $redirect = $fallback;
+    }
+
     // ✅ 1) pas vide
     if ($contenu === '') {
         $this->addFlash('comment_error', $postId.'|Le commentaire ne peut pas être vide.');
-        return $this->redirectToRoute('post_index');
+        return $this->redirect($redirect);
     }
 
     // ✅ 2) doit commencer par une lettre (unicode)
     if (!preg_match('/^\p{L}/u', $contenu)) {
         $this->addFlash('comment_error', $postId.'|Le commentaire doit commencer par une lettre.');
-        return $this->redirectToRoute('post_index');
+        return $this->redirect($redirect);
     }
 
     // ✅ 3) doit contenir au moins 2 lettres
     preg_match_all('/\p{L}/u', $contenu, $matches);
     if (count($matches[0]) < 2) {
         $this->addFlash('comment_error', $postId.'|Le commentaire doit contenir au moins 2 lettres.');
-        return $this->redirectToRoute('post_index');
+        return $this->redirect($redirect);
     }
 
     // ✅ OK -> enregistrer
@@ -241,35 +255,38 @@ public function addInline(Post $post, Request $request, EntityManagerInterface $
         return $this->redirectToRoute('app_login');
     }
     $commentaire->setUser($user);
-$decision = $moderation->moderate($contenu);
 
-$commentaire->setModerationScore($decision['score']);
-$commentaire->setModerationLabel($decision['label']);
-$commentaire->setModeratedAt(new \DateTimeImmutable());
+    $decision = $moderation->moderate($contenu);
 
-if (!$decision['allow']) {
-    $commentaire->setStatus('blocked');
-    $this->addFlash('comment_error', $postId.'|Commentaire bloqué automatiquement (IA: '.$decision['label'].' / score '.$decision['score'].').');
-    // On enregistre quand même le commentaire en "blocked" :
-} else {
-    $commentaire->setStatus('published');
-}
+    $commentaire->setModerationScore($decision['score']);
+    $commentaire->setModerationLabel($decision['label']);
+    $commentaire->setModeratedAt(new \DateTimeImmutable());
+
+    if (!$decision['allow']) {
+        $commentaire->setStatus('blocked');
+        $this->addFlash('comment_error', $postId.'|Commentaire bloqué automatiquement (IA: '.$decision['label'].' / score '.$decision['score'].').');
+        // On enregistre quand même le commentaire en "blocked" :
+    } else {
+        $commentaire->setStatus('published');
+    }
+
     $em->persist($commentaire);
 
     if ($commentaire->getStatus() === 'published') {
-    $post->setNbrCommentaires(($post->getNbrCommentaires() ?? 0) + 1);
+        $post->setNbrCommentaires(($post->getNbrCommentaires() ?? 0) + 1);
+    }
+
+   $em->flush();
+
+if ($request->headers->has('Turbo-Frame')) {
+    // important: renvoyer le frame complet
+    return $this->render('commentaire/_frame.html.twig', [
+        'p' => $post,
+        'commentErrors' => [],
+    ]);
 }
 
-    $em->flush();
-
-   // ... après $em->flush();
-
-if ($commentaire->getStatus() === 'blocked') {
-  $this->addFlash('error', 'Votre commentaire a été bloqué par la modération automatique.');
-} else {
-    $this->addFlash('success', 'Commentaire ajouté ✅');
-}
-    return $this->redirectToRoute('post_index');
+return $this->redirectToRoute('post_index');
 }
 
 #[Route('/inline-edit/{id}', name: 'commentaire_inline_edit', methods: ['POST'])]

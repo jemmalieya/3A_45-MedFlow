@@ -4,8 +4,98 @@
 {% block page_title %}Gestion des Consultations{% endblock %}
 
 
-
 {% block body %}
+<style>
+    .card {
+        border: none;
+        border-radius: 12px;
+        box-shadow: 0 5px 20px rgba(0, 0, 0, 0.08);
+        transition: all 0.3s ease;
+        overflow: hidden;
+    }
+    .card-header {
+        background: linear-gradient(135deg, #058096 0%, #058096 100%);
+        color: white;
+        border: none;
+        padding: 20px 24px;
+        font-weight: 600;
+    }
+    .card-body {
+        padding: 25px;
+    }
+    .badge {
+        padding: 8px 12px;
+        border-radius: 20px;
+        font-weight: 600;
+        font-size: 0.85rem;
+        letter-spacing: 0.3px;
+    }
+    .badge-info {
+        background: linear-gradient(135deg, #058096 0%, #058096 100%);
+        color: white;
+    }
+    .badge-secondary {
+        background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);
+        color: white;
+    }
+    .btn-primary, .btn-success {
+        background: linear-gradient(135deg, #058096 0%, #058096 100%);
+        border: none;
+        border-radius: 8px;
+        padding: 8px 16px;
+        font-weight: 600;
+        color: white;
+        transition: all 0.3s ease;
+    }
+    .btn-primary:hover, .btn-success:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 20px rgba(5, 128, 150, 0.4);
+        color: white;
+    }
+    .btn-light {
+        background: #f5f7fa;
+        color: #058096;
+        border-radius: 8px;
+        border: none;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+    .btn-light:hover {
+        background: #e0f2f1;
+        color: #058096;
+    }
+    .table-primary, .table-info, .table-success {
+        background: linear-gradient(135deg, #e0f2f1 0%, #f5f7fa 100%);
+        color: #058096;
+    }
+    .table-bordered th, .table-bordered td {
+        border-color: #e2e8f0;
+    }
+    .table thead th {
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.4px;
+        font-size: 0.9rem;
+    }
+    .table tbody tr:hover {
+        background-color: #e0f2f1;
+    }
+    .alert-info {
+        background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
+        border-left-color: #058096;
+        color: #058096;
+        border-radius: 10px;
+        border-left: 4px solid #058096;
+        font-weight: 600;
+    }
+    .bg-light {
+        background: #e0f2f1 !important;
+    }
+    .text-primary {
+        color: #058096 !important;
+    }
+</style>
+
 
 {# ========== STATISTIQUES RENDEZ-VOUS ========== #}
 <div class="row g-4 mb-4">
@@ -55,7 +145,7 @@
     </div>
 </div>
 
-<main class="container py-4">
+<main class="container-fluid py-4">
         <h1 class="mb-4 text-primary">Supervision des Médecins & Activités</h1>
         <div class="mb-5">
             <div class="row">

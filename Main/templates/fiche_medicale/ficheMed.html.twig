@@ -2,27 +2,24 @@
 {% block body %}
 <style>
     .page-header {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background: linear-gradient(135deg, #058096 0%, #058096 100%);
         color: white;
         padding: 40px 30px;
         border-radius: 10px;
         margin-bottom: 30px;
-        box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+        box-shadow: 0 10px 30px rgba(5, 128, 150, 0.3);
     }
-    
     .page-header h1 {
         font-size: 2.5rem;
         font-weight: 700;
         margin-bottom: 10px;
         letter-spacing: -0.5px;
     }
-    
     .page-header p {
         font-size: 1.1rem;
         opacity: 0.95;
         margin: 0;
     }
-    
     .card {
         border: none;
         border-radius: 12px;
@@ -30,36 +27,30 @@
         transition: all 0.3s ease;
         overflow: hidden;
     }
-    
     .card:hover {
         box-shadow: 0 10px 35px rgba(0, 0, 0, 0.15);
         transform: translateY(-2px);
     }
-    
     .card-header {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background: linear-gradient(135deg, #058096 0%, #058096 100%);
         color: white;
         border: none;
         padding: 20px 24px;
     }
-    
     .card-header h6 {
         font-size: 1.1rem;
         font-weight: 600;
         letter-spacing: 0.3px;
     }
-    
     .card-body {
         padding: 25px;
     }
-    
     .table {
         margin-bottom: 0;
     }
-    
     .table thead th {
-        background: linear-gradient(135deg, #f5f7fa 0%, #f9fafb 100%);
-        color: #2d3748;
+        background: linear-gradient(135deg, #f5f7fa 0%, #e0f2f1 100%);
+        color: #058096;
         font-weight: 600;
         border-bottom: 2px solid #e2e8f0;
         padding: 15px;
@@ -67,22 +58,18 @@
         text-transform: uppercase;
         letter-spacing: 0.4px;
     }
-    
     .table tbody td {
         padding: 15px;
         vertical-align: middle;
         border-color: #e2e8f0;
     }
-    
     .table tbody tr {
         transition: all 0.3s ease;
     }
-    
     .table tbody tr:not(.detail-row):hover {
-        background-color: #f8f9fc;
+        background-color: #e0f2f1;
         box-shadow: inset 0 0 0 1px #e2e8f0;
     }
-    
     .badge {
         padding: 8px 12px;
         border-radius: 20px;
@@ -90,37 +77,58 @@
         font-size: 0.85rem;
         letter-spacing: 0.3px;
     }
-    
     .badge-success {
-        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        background: linear-gradient(135deg, #058096 0%, #058096 100%);
         color: white;
     }
-    
     .badge-danger {
         background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
         color: white;
     }
-    
     .badge-warning {
         background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
         color: white;
     }
-    
     .btn-primary {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background: linear-gradient(135deg, #058096 0%, #058096 100%);
         border: none;
         border-radius: 8px;
         padding: 8px 16px;
         font-weight: 600;
         transition: all 0.3s ease;
-    }
-    
-    .btn-primary:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
         color: white;
     }
-    
+    .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 20px rgba(5, 128, 150, 0.4);
+        color: white;
+    }
+    .btn-success {
+        background: linear-gradient(135deg, #058096 0%, #058096 100%);
+        border: none;
+        color: white;
+        border-radius: 8px;
+        font-weight: 600;
+        box-shadow: 0 4px 12px rgba(5, 128, 150, 0.15);
+        transition: all 0.3s ease;
+    }
+    .btn-success:hover:not(:disabled) {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 20px rgba(5, 128, 150, 0.25);
+        color: white;
+    }
+    .btn-sm {
+        padding: 6px 12px;
+        font-size: 0.85rem;
+        border-radius: 8px;
+        font-weight: 600;
+        box-shadow: 0 2px 8px rgba(5, 128, 150, 0.08);
+        transition: all 0.3s ease;
+    }
+    .btn-sm:hover:not(:disabled) {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(5, 128, 150, 0.15);
+    }
     .btn-info {
         background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
         border: none;
@@ -128,12 +136,10 @@
         border-radius: 6px;
         transition: all 0.3s ease;
     }
-    
     .btn-info:hover {
         transform: translateY(-2px);
         box-shadow: 0 6px 15px rgba(59, 130, 246, 0.4);
     }
-    
     .btn-secondary {
         background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);
         border: none;
@@ -141,26 +147,21 @@
         border-radius: 8px;
         transition: all 0.3s ease;
     }
-    
     .btn-secondary:hover:not(:disabled) {
         transform: translateY(-2px);
         box-shadow: 0 6px 15px rgba(107, 114, 128, 0.3);
     }
-    
     .btn-link {
         font-size: 1.2rem;
         transition: all 0.3s ease;
     }
-    
     .btn-link:hover {
         transform: scale(1.2);
     }
-    
     .btn-sm {
         padding: 6px 12px;
         font-size: 0.85rem;
     }
-    
     .alert {
         border: none;
         border-radius: 10px;
@@ -168,19 +169,16 @@
         margin-bottom: 20px;
         animation: slideIn 0.4s ease;
     }
-    
     .alert-danger {
         background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
         border-left-color: #dc2626;
         color: #7f1d1d;
     }
-    
     .alert-success {
         background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
-        border-left-color: #16a34a;
-        color: #15803d;
+        border-left-color: #058096;
+        color: #058096;
     }
-    
     @keyframes slideIn {
         from {
             opacity: 0;
@@ -191,8 +189,6 @@
             transform: translateY(0);
         }
     }
-    
-    /* Custom detail row: hidden by default, shown when .detail-row-open */
     .detail-row {
         display: none;
     }
@@ -202,8 +198,6 @@
     .detail-row td {
         vertical-align: top;
     }
-
-    /* Fiche prescriptions detail row */
     .fiche-detail-row {
         display: none;
     }
@@ -213,29 +207,24 @@
     .fiche-detail-row td {
         vertical-align: top;
     }
-    
     .modal-content {
         border: none;
         border-radius: 12px;
-        box-shadow: 0 25px 50px rgba(0, 0, 0, 0.2);
+        box-shadow: 0 25px 50px rgba(5, 128, 150, 0.2);
     }
-    
     .modal-header {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background: linear-gradient(135deg, #058096 0%, #058096 100%);
         color: white;
         border: none;
         padding: 20px 24px;
     }
-    
     .modal-header .close {
         color: white;
         opacity: 0.8;
     }
-    
     .modal-header .close:hover {
         opacity: 1;
     }
-    
     .form-control {
         border: 2px solid #e2e8f0;
         border-radius: 8px;
@@ -243,49 +232,41 @@
         font-size: 0.95rem;
         transition: all 0.3s ease;
     }
-    
     .form-control:focus {
-        border-color: #667eea;
-        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        border-color: #058096;
+        box-shadow: 0 0 0 3px rgba(5, 128, 150, 0.1);
     }
-    
     .form-group label {
         font-weight: 600;
-        color: #2d3748;
+        color: #058096;
         margin-bottom: 8px;
     }
-    
     .text-danger {
         color: #dc2626 !important;
     }
-    
     .bg-light {
-        background: #f8f9fc !important;
+        background: #e0f2f1 !important;
     }
-    
     .collapse-details {
         padding: 20px;
-        background: linear-gradient(135deg, #f8f9fc 0%, #f5f6fa 100%);
+        background: linear-gradient(135deg, #e0f2f1 0%, #f5f6fa 100%);
         border-radius: 8px;
         margin: 10px 0;
     }
-    
     .collapse-details .table-sm {
         background: white;
         border-radius: 6px;
         overflow: hidden;
     }
-    
     .collapse-details .table-sm thead th {
-        background: #f5f7fa;
+        background: #e0f2f1;
         font-size: 0.8rem;
+        color: #058096;
     }
-    
     .collapse-details .table-sm tbody td {
         padding: 10px;
         font-size: 0.9rem;
     }
-    
     .collapse-details .table-sm tbody tr:hover {
         background-color: #fafbfc;
     }

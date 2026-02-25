@@ -23,6 +23,16 @@ class DoctorDashboardController extends AbstractController
         $tomorrow = (new \DateTimeImmutable('today'))->modify('+1 day');
 
         $appointments = $rendezVousRepository->findTodayAppointmentsForDoctor($doctor, $today, $tomorrow);
+        $urgentAppointments = $rendezVousRepository->createQueryBuilder('r')
+            ->where('r.staff = :staff')
+            ->andWhere('r.urgencyLevel IN (:levels)')
+            ->andWhere('r.datetime >= :today')
+            ->setParameter('staff', $doctor)
+            ->setParameter('levels', ['High','Critical'])
+            ->setParameter('today', $today)
+            ->orderBy('r.datetime', 'ASC')
+            ->getQuery()
+            ->getResult();
         $pendingAppointments = $rendezVousRepository->createQueryBuilder('r')
             ->andWhere('r.statut = :statut')
             ->andWhere('r.staff = :staff')
@@ -51,6 +61,7 @@ class DoctorDashboardController extends AbstractController
             'doctor' => $doctor,
             'appointments' => $appointments,
             'pendingAppointments' => $pendingAppointments,
+            'urgentAppointments' => $urgentAppointments,
             'today' => $today,
             'news' => $news,
             'chart' => $chart,

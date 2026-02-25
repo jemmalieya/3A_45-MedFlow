@@ -3,6 +3,7 @@
 {% block title %}Blog{% endblock %}
 
 {% block body %}
+{% import _self as mf %}
 {% set swal_success = app.flashes('success') %}
 {% set swal_error   = app.flashes('error') %}
 {% set swal_warning = app.flashes('warning') %}
@@ -41,7 +42,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       headers: {'X-Requested-With': 'XMLHttpRequest'}
     });
 
-    location.reload();
+    
     return;
   }
 });
@@ -528,6 +529,87 @@ document.addEventListener('DOMContentLoaded', async () => {
         10% { opacity: 1; }
         100% { opacity: 0; transform: translate(calc(-50% + var(--dx, 0px)), -120px) scale(1.25); }
       }
+      /* =========================================
+   ✅ COMMENTS MODAL — FIX AFFICHAGE
+   cible tous les modals id="commentsModal-xx"
+   ========================================= */
+
+/* modal taille + centrage propre */
+[id^="commentsModal-"] .modal-dialog{
+  width: min(920px, 94vw) !important;
+  max-width: 920px !important;
+  margin: 1.25rem auto !important;
+}
+
+[id^="commentsModal-"] .modal-content{
+  border: 0 !important;
+  border-radius: 22px !important;
+  overflow: hidden !important;
+  box-shadow: 0 24px 60px rgba(16,24,40,.18) !important;
+}
+
+/* body du modal */
+[id^="commentsModal-"] .modal-body{
+  background: #f7fafc !important;
+  padding: 16px !important;
+}
+
+/* ✅ liste verticale propre */
+[id^="commentsModal-"] .list-group{
+  display: flex !important;
+  flex-direction: column !important; /* ✅ clé */
+  gap: 12px !important;
+}
+
+/* ✅ chaque item prend toute la largeur */
+[id^="commentsModal-"] .list-group-item{
+  width: 100% !important;
+}
+
+/* ✅ IMPORTANT: force le style des items (thème override) */
+[id^="commentsModal-"] .list-group-item{
+  background: #fff !important;
+  border: 1px solid rgba(16,24,40,.10) !important;
+  border-radius: 16px !important;
+  padding: 14px 16px !important;
+  box-shadow: 0 10px 22px rgba(16,24,40,.08) !important;
+
+  /* évite que le texte “sorte” */
+  overflow: hidden !important;
+}
+
+/* le bloc header (avatar/date/badges) */
+[id^="commentsModal-"] [data-comment-id] > .d-flex{
+  align-items: flex-start !important;
+  gap: 12px !important;
+}
+
+/* ✅ le texte du commentaire */
+[id^="commentsModal-"] .js-comment-text{
+  display: block !important;
+  margin-top: 10px !important;
+  color: #111827 !important;
+  white-space: pre-wrap !important;
+  word-break: break-word !important;
+  line-height: 1.45 !important;
+  font-size: .98rem !important;
+}
+
+/* avatar cercle bien propre */
+[id^="commentsModal-"] .ig-c-ava{
+  width: 40px !important;
+  height: 40px !important;
+  flex: 0 0 40px !important;
+  border-radius: 999px !important;
+  overflow: hidden !important;
+}
+
+/* backdrop plus soft (moins “flou/dim”) */
+.modal-backdrop.show{
+  opacity: .18 !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
     </style>
 
     {# ======================
@@ -676,140 +758,18 @@ document.addEventListener('DOMContentLoaded', async () => {
                     </div>
 
                     {# ===== comments preview ===== #}
-                    <div class="ig-comments">
-                      <div class="d-flex justify-content-between align-items-center">
-                        <div class="text-muted small">
-                          <i class="bi bi-chat-dots"></i>
-                          {{ publishedComments|length }} commentaire(s)
-                          {% if publishedComments|length > 2 %}
-                            ·
-                            <button type="button" class="btn btn-link p-0 text-decoration-none" data-bs-toggle="modal" data-bs-target="#commentsModal-{{ p.id }}">
-                              Voir tous
-                            </button>
-                          {% endif %}
-                        </div>
-                      </div>
+        {# ===== comments preview (Turbo Frame) ===== #}
+<turbo-frame id="comments-{{ p.id }}">
+  {% include 'commentaire/_block.html.twig' with { p: p, commentErrors: commentErrors } %}
+</turbo-frame>
+  </div> {# ✅ ferme col-md-8 #}
+                </div>   {# ✅ ferme row #}
 
-                      {% set lastTwo = publishedComments|sort((a,b) => b.dateCreation <=> a.dateCreation)|slice(0,2) %}
-                      {% if lastTwo is empty %}
-                        <div class="text-muted small mt-2">Aucun commentaire pour le moment.</div>
-                      {% else %}
-                        {% for c in lastTwo %}
-                          <div class="ig-c-row mt-2" data-comment-id="{{ c.id }}">
-                          <div class="ig-c-ava">
-  {% if c.estAnonyme %}
-    <i class="bi bi-incognito"></i>
-  {% else %}
-    {% set avatar = attribute(c.user, 'profile_picture') ?? null %}
-
-    {% if avatar %}
-      <img
-        src="{{ avatar starts with 'http' ? avatar : asset(avatar) }}"
-        alt="Photo de profil"
-        class="ig-ava-img"
-        loading="lazy"
-      >
-    {% else %}
-      {{ (c.user.prenom is defined and c.user.prenom) ? (c.user.prenom|slice(0,1)|upper) : (c.user.emailUser|slice(0,1)|upper) }}
-    {% endif %}
-  {% endif %}
-</div>
-
-                            <div class="w-100">
-                              <div class="d-flex justify-content-between align-items-center gap-2 flex-wrap" style="font-size:.86rem;color:#6c757d;">
-                                <strong style="color:#101828;">
-                                  {% if c.estAnonyme %}
-                                    Anonyme
-                                  {% else %}
-                                    {{ (c.user.prenom is defined and c.user.prenom) ? (c.user.prenom ~ ' ' ~ (c.user.nom is defined ? c.user.nom : '')) : c.user.emailUser }}
-                                  {% endif %}
-                                </strong>
-
-                                <span>
-                                  {{ c.dateCreation|date('d/m/Y H:i') }}
-                                  {% set badge = c.parametresConfidentialite == 'PRIVE' ? 'danger' : (c.parametresConfidentialite == 'AMIS' ? 'info' : 'success') %}
-                                  <span class="badge bg-{{ badge }} ms-2" style="font-size:.7rem;border-radius:999px;">
-                                    {{ c.parametresConfidentialite }}
-                                  </span>
-                                </span>
-                              </div>
-
-                              <div class="mt-1">{{ c.contenu }}</div>
-
-                              {% if app.user and c.user and (c.user.id == app.user.id or is_granted('ROLE_ADMIN')) %}
-                                <div class="mt-2 d-flex gap-2 justify-content-end">
-                                  <button type="button"
-                                          class="btn btn-sm btn-light js-edit-comment"
-                                          title="Modifier"
-                                          data-id="{{ c.id }}"
-                                          data-url="{{ path('commentaire_inline_edit', {id: c.id}) }}"
-                                          data-token="{{ csrf_token('edit_commentaire_' ~ c.id) }}">
-                                    <i class="bi bi-pencil"></i>
-                                  </button>
-
-                                  <form class="delete-comment-form" method="post" action="{{ path('commentaire_delete', {id: c.id}) }}">
-                                    <input type="hidden" name="_token" value="{{ csrf_token('del_commentaire_' ~ c.id) }}">
-                                    <button class="btn btn-sm btn-light" type="submit" title="Supprimer">
-                                      <i class="bi bi-trash"></i>
-                                    </button>
-                                  </form>
-                                </div>
-                              {% endif %}
-
-                              <div class="js-inline-edit-area mt-2 d-none"></div>
-                            </div>
-                          </div>
-                        {% endfor %}
-                      {% endif %}
-
-                      {% set postKey = p.id ~ '' %}
-                      {% set errMsg = commentErrors[postKey] is defined ? commentErrors[postKey] : null %}
-
-                      <div class="ig-addbar">
-                        <div class="ig-c-ava" style="width:32px;height:32px;flex:0 0 32px;">
-  {% if app.user %}
-    {% set meAvatar = attribute(app.user, 'profile_picture') ?? null %}
-
-    {% if meAvatar %}
-      <img
-        src="{{ meAvatar starts with 'http' ? meAvatar : asset(meAvatar) }}"
-        alt="Moi"
-        class="ig-ava-img"
-        loading="lazy"
-      >
-    {% else %}
-      U
-    {% endif %}
-  {% else %}
-    U
-  {% endif %}
-</div>
-                        <form id="comment-form-{{ p.id }}" class="comment-inline-form w-100 d-flex gap-2" method="post" action="{{ path('commentaire_add_inline', {id: p.id}) }}">
-                          <input type="hidden" name="_token" value="{{ csrf_token('add_comment_' ~ p.id) }}">
-                          <div class="w-100">
-                            <input class="form-control form-control-sm {{ errMsg ? 'is-invalid' : '' }}" name="contenu" placeholder="Ajouter un commentaire…">
-                            {% if errMsg %}
-                              <div class="invalid-feedback d-block">
-                                {{ errMsg }}
-                              </div>
-                            {% endif %}
-                          </div>
-                          <button class="btn btn-sm btn-mf btn-pill" type="submit">
-                            Publier
-                          </button>
-                        </form>
-                      </div>
-
-                    </div>
-
-                  </div>
-                </div>
-
-              </div>
-            </div>
+              </div>     {# ✅ ferme card-body #}
+            </div>       {# ✅ ferme post-card #}
           {% endfor %}
         {% endif %}
-      </div>
+      </div> {# ✅ ferme LEFT : POSTS #}
 
       {# ===== RIGHT : SIDEBAR ===== #}
       <aside class="blog-side">
@@ -1312,32 +1272,17 @@ document.addEventListener("click", async function (e) {
                 <div class="list-group-item mb-2 rounded-3 shadow-sm" data-comment-id="{{ c.id }}">
                   <div class="d-flex justify-content-between align-items-start">
                     <div class="d-flex gap-2 align-items-center">
-                     <div class="ig-c-ava">
+                  <div class="ig-c-ava">
   {% if c.estAnonyme %}
     <i class="bi bi-incognito"></i>
   {% else %}
-    {% set avatar = attribute(c.user, 'profile_picture') ?? null %}
-
-    {% if avatar %}
-      <img
-        src="{{ avatar starts with 'http' ? avatar : asset(avatar) }}"
-        alt="Photo de profil"
-        class="ig-ava-img"
-        loading="lazy"
-      >
+    {% if c.user %}
+      {{ (c.user.prenom ?? c.user.emailUser ?? 'U')|slice(0,1)|upper }}
     {% else %}
-      {{ (c.user.prenom is defined and c.user.prenom) ? (c.user.prenom|slice(0,1)|upper) : (c.user.emailUser|slice(0,1)|upper) }}
+      U
     {% endif %}
   {% endif %}
 </div>
-                      <div>
-                        <div class="fw-bold">
-                          {% if c.estAnonyme %}
-                            Anonyme
-                          {% else %}
-                            {{ (c.user.prenom is defined and c.user.prenom) ? (c.user.prenom ~ ' ' ~ (c.user.nom is defined ? c.user.nom : '')) : c.user.emailUser }}
-                          {% endif %}
-                        </div>
                         <small class="text-muted">{{ c.dateCreation|date('d/m/Y H:i') }}</small>
                       </div>
                     </div>
@@ -1445,5 +1390,17 @@ document.addEventListener("click", async function (e) {
   }
 })();
 </script>
-
+<div class="modal fade" id="commentsModalGlobal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
+    <div class="modal-content" style="border-radius:18px;overflow:hidden;border:0;">
+      <div class="modal-header text-white" style="background:linear-gradient(135deg,#00BFA6,#0097B2);">
+        <h5 class="modal-title mb-0">Tous les commentaires</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body" id="modal-comments-body">
+        Chargement...
+      </div>
+    </div>
+  </div>
+</div>
 {% endblock %}

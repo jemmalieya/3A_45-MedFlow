@@ -1,90 +1,173 @@
 {% extends 'base.html.twig' %}
 {% set patientId = app.session.get('patient_id') %}
 {% block body %}
-</style>
 <style>
+    :root {
+        --mf-vivid-blue:#003399;
+        --mf-dark-turquoise:#0097B2;
+        --mf-vivid-turquoise:#00BFA6;
+        --mf-pastel-blue:#6797FF;
+        --mf-pastel-azure:#8FD5FF;
+        --mf-light-blue:#B3D5FF;
+        --mf-white:#FFFFFF;
+        --mf-black:#000000;
+        --mf-vivid-red:#BC0B09;
+        --mf-text:#101828;
+        --mf-muted:#6c757d;
+        --shadow-sm:0 10px 26px rgba(16,24,40,.06);
+        --shadow-md:0 16px 40px rgba(16,24,40,.08);
+        --shadow-lg:0 24px 56px rgba(16,24,40,.12);
+    }
     .rv-list-page {
         min-height: 100vh;
-        background: #fff;
+        background: var(--mf-white);
         padding: 2rem 0 4rem;
+        font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
     }
-    .rv-list-hero {
-        background: linear-gradient(135deg, #049ebb 0%, #38bdf8 50%, #049ebb 100%);
-        color: #fff;
-        padding: 2.5rem 2rem;
+    .mf-rect-hero {
         border-radius: 24px;
-        margin-bottom: 2rem;
-        box-shadow: 0 20px 50px rgba(4, 158, 187, 0.25);
+        background: var(--mf-dark-turquoise);
+        box-shadow: var(--shadow-md);
+        border: 1px solid rgba(0,0,0,.08);
+        padding: 40px 24px;
+        text-align: center;
+        margin-bottom: 2.5rem;
     }
-    .rv-list-card {
-        background: #e0f2fe;
-        border-radius: 20px;
-        box-shadow: 0 4px 24px rgba(4,158,187,0.08), 0 1px 3px rgba(4,158,187,0.04);
-        border: 1px solid #049ebb33;
+    .mf-rect-title {
+        font-size: 2.25rem;
+        font-weight: 900;
+        color: var(--mf-white);
+        margin-bottom: 0.5rem;
+        letter-spacing: -.02em;
+    }
+    .mf-rect-sub {
+        color: var(--mf-pastel-azure);
+        font-size: 1.1rem;
+        font-weight: 500;
+        opacity: 0.95;
+    }
+    .mf-card {
+        background: var(--mf-light-blue);
+        border-radius: 24px;
+        box-shadow: var(--shadow-md);
+        border: 1.5px solid var(--mf-dark-turquoise);
+        padding: 2.5rem 2.5rem 2rem 2.5rem;
+        margin-bottom: 2.5rem;
+        width: 100%;
+        max-width: 100%;
+        box-sizing: border-box;
+    }
+    .mf-table {
+        margin: 0;
+        width: 100%;
+        background: var(--mf-light-blue);
+        border-radius: 18px;
         overflow: hidden;
+        font-size: 1.01rem;
     }
-    .rv-table { margin: 0; }
-    .rv-table thead th {
-        background: linear-gradient(135deg, #049ebb 0%, #38bdf8 100%);
+    .mf-table thead th {
+        background: linear-gradient(135deg, #0097B2 0%, #38bdf8 100%);
         color: #fff;
-        font-weight: 600;
-        font-size: 0.8rem;
+        font-weight: 700;
+        font-size: 0.93rem;
         text-transform: uppercase;
         letter-spacing: 0.05em;
         padding: 1rem 0.85rem;
         border: none;
     }
-    .rv-table tbody td {
+    .mf-table tbody td {
         padding: 0.9rem 0.85rem;
         vertical-align: middle;
-        border-color: #049ebb33;
+        border-color: #0097B233;
         background: #f0f9ff;
-        color: #049ebb;
+        color: #0097B2;
     }
-    .rv-table tbody tr { transition: background 0.2s; }
-    .rv-table tbody tr:nth-child(even) { background: #e0f2fe; }
-    .rv-table tbody tr:hover { background: #bae6fd !important; }
-    .rv-table .edit-row td { background: #dbeafe !important; padding: 1.25rem; border-top: 2px solid #049ebb; }
-    .rv-table .edit-row .form-control, .rv-table .edit-row .form-select {
-        border: 2px solid #049ebb; border-radius: 10px; padding: 0.5rem 0.75rem;
+    .mf-table tbody tr { transition: background 0.2s; }
+    .mf-table tbody tr:nth-child(even) { background: #e0f2fe; }
+    .mf-table tbody tr:hover { background: #bae6fd !important; }
+    .mf-table .edit-row td { background: #dbeafe !important; padding: 1.25rem; border-top: 2px solid #0097B2; }
+    .mf-table .edit-row .form-control, .mf-table .edit-row .form-select {
+        border: 2px solid #0097B2; border-radius: 10px; padding: 0.5rem 0.75rem;
     }
-    .rv-table .edit-row .form-control:focus, .rv-table .edit-row .form-select:focus {
-        border-color: #049ebb; box-shadow: 0 0 0 3px #049ebb33; outline: none;
+    .mf-table .edit-row .form-control:focus, .mf-table .edit-row .form-select:focus {
+        border-color: #0097B2; box-shadow: 0 0 0 3px #0097B233; outline: none;
     }
-    .btn-rv-edit { background: #049ebb; color: #fff !important; border: none; border-radius: 10px; padding: 0.4rem 0.75rem; transition: background 0.2s, transform 0.2s; }
-    .btn-rv-edit:hover { background: #049ebb; color: #fff !important; transform: scale(1.05); }
-    .btn-rv-delete { background: transparent; color: #dc2626; border: 2px solid #049ebb; border-radius: 10px; padding: 0.4rem 0.75rem; transition: all 0.2s; }
-    .btn-rv-delete:hover { background: #dbeafe; border-color: #dc2626; }
-    .btn-rv-save { background: #049ebb; color: #fff !important; border: none; border-radius: 10px; padding: 0.4rem 0.75rem; }
-    .btn-rv-cancel { background: #64748b; color: #fff !important; border: none; border-radius: 10px; padding: 0.4rem 0.75rem; }
-    .alert-rv { border: none; border-radius: 14px; padding: 1rem 1.25rem; font-weight: 500; }
-    .alert-rv.alert-danger { background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%); color: #991b1b; }
-    .alert-rv.alert-success { background: linear-gradient(135deg, #dbeafe 0%, #bae6fd 100%); color: #049ebb; }
-    .alert-rv.alert-info { background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%); color: #049ebb; }
-    .badge-rv { padding: 0.35rem 0.65rem; border-radius: 9999px; font-size: 0.8rem; font-weight: 600; }
-    .badge-rv-success { background: #dbeafe; color: #049ebb; }
-    .badge-rv-warning { background: #fef3c7; color: #049ebb; }
-    .badge-rv-danger { background: #fee2e2; color: #991b1b; }
+    .btn-mf {
+        background: var(--mf-dark-turquoise);
+        border-color: var(--mf-dark-turquoise);
+        color: #fff !important;
+        border-radius: 999px !important;
+        padding: 0.5rem 1.3rem;
+        font-weight: 700;
+        font-size: 1.05rem;
+        letter-spacing: 0.02em;
+        transition: transform 0.2s, box-shadow 0.2s;
+        box-shadow: 0 2px 8px #0097B222;
+    }
+    .btn-mf:hover {
+        background: #007E94;
+        border-color: #007E94;
+        color: #fff !important;
+        transform: translateY(-2px);
+        box-shadow: 0 12px 28px rgba(0,151,178,0.25);
+    }
+    .btn-mf-outline {
+        background: #fff;
+        border: 2px solid var(--mf-dark-turquoise);
+        color: var(--mf-dark-turquoise);
+        border-radius: 999px !important;
+        padding: 0.5rem 1.3rem;
+        font-weight: 700;
+        font-size: 1.05rem;
+        letter-spacing: 0.02em;
+        transition: background 0.2s, color 0.2s, box-shadow 0.2s;
+        box-shadow: 0 2px 8px #0097B222;
+    }
+    .btn-mf-outline:hover {
+        background: rgba(0,151,178,.08);
+        border-color: var(--mf-dark-turquoise);
+        color: var(--mf-dark-turquoise);
+    }
+    .btn-pill {
+        border-radius: 999px !important;
+        padding-left: 14px !important;
+        padding-right: 14px !important;
+    }
+    .alert-mf {
+        border: none;
+        border-radius: 14px;
+        padding: 1rem 1.25rem;
+        font-weight: 500;
+    }
+    .alert-mf.alert-danger { background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%); color: #991b1b; }
+    .alert-mf.alert-success { background: linear-gradient(135deg, #dbeafe 0%, #bae6fd 100%); color: #0097B2; }
+    .alert-mf.alert-info { background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%); color: #0097B2; }
+    .badge-mf { padding: 0.35rem 0.65rem; border-radius: 9999px; font-size: 0.8rem; font-weight: 600; }
+    .badge-mf-success { background: #dbeafe; color: #0097B2; }
+    .badge-mf-warning { background: #fef3c7; color: #0097B2; }
+    .badge-mf-danger { background: #fee2e2; color: #991b1b; }
 </style>
 </style>
 
 <main class="main rv-list-page">
     <div class="container py-4">
-        <div class="rv-list-hero">
-            <h1>📋 Liste des rendez-vous</h1>
-            <p>Consultez, modifiez ou supprimez vos rendez-vous.</p>
-        </div>
+                <div class="mf-rect-hero mb-4">
+                    <div class="mf-rect-inner">
+                        <h1 class="mf-rect-title">📋 Liste des rendez-vous</h1>
+                        <p class="mf-rect-sub">Consultez, modifiez ou supprimez vos rendez-vous.</p>
+                    </div>
+                </div>
 
         {% for label, messages in app.flashes %}
             {% for message in messages %}
-                <div class="alert alert-rv alert-{{ label == 'error' ? 'danger' : 'success' }}">{{ message }}</div>
+                <div class="alert alert-mf alert-{{ label == 'error' ? 'danger' : 'success' }}">{{ message }}</div>
             {% endfor %}
         {% endfor %}
 
         {% if rendezvous is empty %}
-            <div class="alert alert-rv alert-info">Aucun rendez-vous trouvé.</div>
+            <div class="alert alert-mf alert-info">Aucun rendez-vous trouvé.</div>
         {% else %}
-            <div class="rv-list-card">
+            <div class="mf-card">
                 <div class="table-responsive">
                     <div class="mb-3 d-flex justify-content-end align-items-center">
                         <div class="search-sort-group">
@@ -94,7 +177,7 @@
                             </button>
                         </div>
                     </div>
-                    <table class="table rv-table mb-0" id="rendezvousTable">
+                    <table class="table mf-table mb-0" id="rendezvousTable">
                         <thead>
                             <tr>
                                 <th>ID</th>
@@ -115,7 +198,7 @@
                                     <td><strong>{{ r.id }}</strong></td>
                                     <td>{{ r.datetime ? r.datetime|date('Y-m-d H:i') : '—' }}</td>
                                     <td>
-                                        <span class="badge-rv badge-rv-{% if r.statut == 'approuvé' or r.statut == 'Confirmé' %}success{% elseif r.statut == 'rejeté' %}danger{% else %}warning{% endif %}">{{ r.statut }}</span>
+                                        <span class="badge-mf badge-mf-{% if r.statut == 'approuvé' or r.statut == 'Confirmé' %}success{% elseif r.statut == 'rejeté' %}danger{% else %}warning{% endif %}">{{ r.statut }}</span>
                                     </td>
                                     <td>{{ r.mode }}</td>
                                     <td>{{ r.motif }}</td>
@@ -140,14 +223,14 @@
                                     <td>{{ r.createdAt ? r.createdAt|date('Y-m-d H:i') : '—' }}</td>
                                     <!-- Edit button removed -->
                                     <td>
-                                        <a href="{{ path('modify_rendezvous', {'id': r.id}) }}" class="btn btn-rv-modify" title="Modifier ce rendez-vous">
+                                        <a href="{{ path('modify_rendezvous', {'id': r.id}) }}" class="btn btn-mf-outline btn-pill" title="Modifier ce rendez-vous">
                                             📝
                                         </a>
                                     </td>
                                     <td>
                                         <form method="post" action="{{ path('rendezvous_delete', {'id': r.id}) }}" onsubmit="return confirm('Supprimer ce rendez-vous ?');" style="display:inline;">
                                             <input type="hidden" name="_token" value="{{ csrf_token('delete' ~ r.id) }}">
-                                            <button class="btn btn-rv-delete" type="submit">🗑️</button>
+                                            <button class="btn btn-mf-outline btn-pill" style="color:#dc2626; border-color:#dc2626;" type="submit">🗑️</button>
                                         </form>
                                     </td>
                                 </tr>
@@ -164,12 +247,14 @@
     {# Fiche Médicale Table Section #}
     {# ============================= #}
     <div class="container py-4">
-        <div class="rv-list-hero" style="background: linear-gradient(135deg, #049ebb 0%, #38bdf8 100%);">
-            <h1>🩺 Ma fiche médicale</h1>
-            <p>Consultez vos informations médicales enregistrées.</p>
-        </div>
+                <div class="mf-rect-hero mb-4" style="background: var(--mf-dark-turquoise);">
+                    <div class="mf-rect-inner">
+                        <h1 class="mf-rect-title">🩺 Ma fiche médicale</h1>
+                        <p class="mf-rect-sub">Consultez vos informations médicales enregistrées.</p>
+                    </div>
+                </div>
         {% if fiches_medicales is defined and fiches_medicales|length > 0 %}
-            <div class="rv-list-card mb-4">
+            <div class="mf-card mb-4">
                 <div class="table-responsive">
                     <div class="mb-3 d-flex justify-content-end align-items-center">
                         <div class="search-sort-group">
@@ -179,7 +264,7 @@
                             </button>
                         </div>
                     </div>
-                    <table class="table rv-table mb-0" id="ficheTable">
+                    <table class="table mf-table mb-0" id="ficheTable">
                         <thead>
                             <tr>
                                 <th>ID</th>
@@ -210,7 +295,7 @@
                                         <td>{{ fiche.dureeMinutes is defined and fiche.dureeMinutes is not null ? fiche.dureeMinutes : (fiche.duree_minutes is defined and fiche.duree_minutes is not null ? fiche.duree_minutes : '—') }}</td>
                                         <td>{{ fiche.createdAt ? fiche.createdAt|date('Y-m-d H:i') : (fiche.created_at is defined and fiche.created_at ? fiche.created_at|date('Y-m-d H:i') : '—') }}</td>
                                         <td>
-                                            <a href="{{ path('fiche_medicale_export_pdf', {'id': fiche.id}) }}" class="btn btn-sm btn-outline-primary" title="Exporter en PDF" download>PDF</a>
+                                            <a href="{{ path('fiche_medicale_export_pdf', {'id': fiche.id}) }}" class="btn btn-mf-outline btn-pill btn-sm" title="Exporter en PDF" download>PDF</a>
                                         </td>
                                     </tr>
                                 {% endif %}
@@ -223,7 +308,7 @@
                 </div>
             </div>
         {% else %}
-            <div class="alert alert-rv alert-info">Aucune fiche médicale trouvée.</div>
+            <div class="alert alert-mf alert-info">Aucune fiche médicale trouvée.</div>
         {% endif %}
     </div>
 
@@ -231,12 +316,14 @@
     {# Prescriptions Table Section  #}
     {# ============================= #}
     <div class="container py-4">
-        <div class="rv-list-hero" style="background: linear-gradient(135deg, #049ebb 0%, #38bdf8 100%);">
-            <h1>💊 Mes prescriptions</h1>
-            <p>Consultez vos prescriptions médicales.</p>
-        </div>
+                <div class="mf-rect-hero mb-4" style="background: var(--mf-dark-turquoise);">
+                    <div class="mf-rect-inner">
+                        <h1 class="mf-rect-title">💊 Mes prescriptions</h1>
+                        <p class="mf-rect-sub">Consultez vos prescriptions médicales.</p>
+                    </div>
+                </div>
         {% if prescriptions is defined and prescriptions|length > 0 %}
-            <div class="rv-list-card mb-4" style="background: #e0f2fe; border: 1px solid #2563eb33;">
+            <div class="mf-card mb-4" style="background: var(--mf-light-blue); border: 1.5px solid var(--mf-dark-turquoise);">
                 <div class="table-responsive">
                     <div class="mb-3 d-flex justify-content-end align-items-center">
                         <div class="search-sort-group">
@@ -246,7 +333,7 @@
                             </button>
                         </div>
                     </div>
-                    <table class="table rv-table mb-0" id="prescriptionTable" style="background: #e0f2fe;">
+                    <table class="table mf-table mb-0" id="prescriptionTable" style="background: var(--mf-light-blue);">
                         <thead>
                             <tr>
                                 <th>ID</th>
@@ -276,7 +363,7 @@
                                         <td>{{ prescription.instructions|default('—') }}</td>
                                         <td>{{ fiche.id }}</td>
                                         <td>
-                                            <a href="{{ path('prescription_export_pdf', {'id': prescription.id}) }}" class="btn btn-sm btn-outline-primary" title="Exporter en PDF" download>PDF</a>
+                                            <a href="{{ path('prescription_export_pdf', {'id': prescription.id}) }}" class="btn btn-mf-outline btn-pill btn-sm" title="Exporter en PDF" download>PDF</a>
                                         </td>
                                     </tr>
                                 {% endif %}
@@ -289,7 +376,7 @@
                 </div>
             </div>
         {% else %}
-            <div class="alert alert-rv alert-info">Aucune prescription trouvée.</div>
+            <div class="alert alert-mf alert-info">Aucune prescription trouvée.</div>
         {% endif %}
     </div>
 

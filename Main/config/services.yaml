@@ -1,3 +1,4 @@
+
 # config/services.yaml
 
 parameters:
@@ -8,6 +9,7 @@ parameters:
     pieces_jointes_directory: '%kernel.project_dir%/public/uploads/pieces_jointes'
     profile_pictures_directory: '%kernel.project_dir%/public/uploads/profile'
     produits_images_dir: '%kernel.project_dir%/public/uploads/produits'
+    uploads_directory: '%kernel.project_dir%/public/uploads/pieces_jointes'
 
     # ===============================
     # 🌍 APIs externes

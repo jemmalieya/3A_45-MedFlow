@@ -1,0 +1,174 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Connexion par visage{% endblock %}
+
+{% block body %}
+<div class="modal fade" id="faceLoginModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Connexion par visage</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+          <h5 class="modal-title fw-bold text-primary"><i class="bi bi-camera me-2"></i>Connexion par visage</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
+            <label for="faceLoginEmail" class="form-label">Adresse email</label>
+            <input type="email" class="form-control" id="faceLoginEmail" name="email" required autocomplete="email">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Vérification du visage</label>
+            <div id="faceLoginCamera" style="width:320px;height:240px;background:#f8f9fa;border-radius:8px;overflow:hidden;position:relative;"></div>
+            <div id="faceLoginStatus" class="mt-2 text-muted small"></div>
+          </div>
+          <div class="mb-3">
+              <div id="faceLoginCamera" class="border rounded-3 bg-light d-flex align-items-center justify-content-center" style="width:320px;height:240px;overflow:hidden;position:relative;"></div>
+              <div id="faceLoginStatus" class="mt-2 text-muted small"></div>
+              <div id="faceLoginWarning" class="alert alert-warning mt-2 d-none"></div>
+          <div class="mb-3">
+            <button type="submit" class="btn btn-success w-100" id="faceLoginSubmitBtn" disabled>Se connecter</button>
+          </div>
+        </form>
+        <div id="faceLoginError" class="alert alert-danger mt-2 d-none"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// Bootstrap tooltip init
+if (window.bootstrap) {
+  document.addEventListener('DOMContentLoaded', function() {
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    tooltipTriggerList.forEach(function (el) {
+      new bootstrap.Tooltip(el);
+    });
+  });
+}
+
+// Face login modal logic
+(function() {
+  let cameraStream = null;
+  let faceVerified = false;
+  let embedding = null;
+  const modal = document.getElementById('faceLoginModal');
+  const form = document.getElementById('faceLoginForm');
+  const emailInput = document.getElementById('faceLoginEmail');
+  const cameraDiv = document.getElementById('faceLoginCamera');
+  const statusDiv = document.getElementById('faceLoginStatus');
+  const startBtn = document.getElementById('faceLoginStartBtn');
+  const submitBtn = document.getElementById('faceLoginSubmitBtn');
+  const errorDiv = document.getElementById('faceLoginError');
+
+  function showError(msg) {
+    errorDiv.textContent = msg;
+    errorDiv.classList.remove('d-none');
+  }
+  function hideError() {
+    errorDiv.textContent = '';
+    errorDiv.classList.add('d-none');
+  }
+
+    function showWarning(msg) {
+      const warnDiv = document.getElementById('faceLoginWarning');
+      if (warnDiv) {
+        warnDiv.textContent = msg;
+        warnDiv.classList.remove('d-none');
+      }
+    }
+    function hideWarning() {
+      const warnDiv = document.getElementById('faceLoginWarning');
+      if (warnDiv) {
+        warnDiv.textContent = '';
+        warnDiv.classList.add('d-none');
+      }
+    }
+
+  function resetModal() {
+    hideError();
+      hideWarning();
+    statusDiv.textContent = '';
+    submitBtn.disabled = true;
+    faceVerified = false;
+    embedding = null;
+    // Stop camera
+    if (cameraStream) {
+      cameraStream.getTracks().forEach(t => t.stop());
+      cameraStream = null;
+    }
+    cameraDiv.innerHTML = '';
+  }
+
+  // Show modal
+  window.showFaceLoginModal = function() {
+    resetModal();
+    if (window.bootstrap) {
+      const bsModal = bootstrap.Modal.getOrCreateInstance(modal);
+      bsModal.show();
+    } else {
+      modal.style.display = 'block';
+    }
+  };
+
+  // Start camera and face verification
+  startBtn.addEventListener('click', async function() {
+    hideError();
+      hideWarning();
+    statusDiv.textContent = 'Activation de la caméra...';
+    cameraDiv.innerHTML = '';
+    try {
+      cameraStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false });
+      const video = document.createElement('video');
+      video.autoplay = true;
+      video.playsInline = true;
+      video.width = 320;
+      video.height = 240;
+      video.style.width = '100%';
+      video.style.height = '100%';
+      cameraDiv.appendChild(video);
+      video.srcObject = cameraStream;
+      await video.play();
+      statusDiv.textContent = 'Veuillez cadrer votre visage et rester immobile.';
+        showWarning('Assurez-vous que votre visage est bien éclairé et centré dans la caméra.');
+      // Simulate face verification (replace with real logic)
+      setTimeout(function() {
+        faceVerified = true;
+        statusDiv.textContent = 'Visage reconnu. Vous pouvez vous connecter.';
+          hideWarning();
+        submitBtn.disabled = false;
+      }, 2500);
+    } catch (e) {
+      showError('Impossible d’activer la caméra.');
+      statusDiv.textContent = '';
+    }
+  });
+
+  // Submit form
+  form.addEventListener('submit', function(e) {
+    e.preventDefault();
+    hideError();
+      hideWarning();
+    if (!faceVerified) {
+      showError('Veuillez vérifier votre visage avant de vous connecter.');
+        showWarning('Cliquez sur "Démarrer la vérification" pour activer la caméra et vérifier votre visage.');
+      return;
+    }
+    // Simulate login (replace with real AJAX logic)
+    statusDiv.textContent = 'Connexion...';
+    setTimeout(function() {
+      statusDiv.textContent = 'Connexion réussie!';
+      if (window.bootstrap) {
+        const bsModal = bootstrap.Modal.getOrCreateInstance(modal);
+        bsModal.hide();
+      } else {
+        modal.style.display = 'none';
+      }
+      // Redirect or update UI as needed
+    }, 1200);
+  });
+
+  // Reset modal on close
+  modal.addEventListener('hidden.bs.modal', resetModal);
+})();
+</script>
+{% endblock %}

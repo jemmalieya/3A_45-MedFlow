@@ -132,4 +132,17 @@ class RendezVous
         $this->staff = $staff;
         return $this;
     }
+    #[ORM\Column(type: 'string', length: 20, nullable: true)]
+    private ?string $urgencyLevel = null;
+
+    public function getUrgencyLevel(): ?string
+    {
+        return $this->urgencyLevel;
+    }
+
+    public function setUrgencyLevel(?string $urgencyLevel): static
+    {
+        $this->urgencyLevel = $urgencyLevel;
+        return $this;
+    }
 }

@@ -4,11 +4,55 @@
 {% block title %}Patient Radar{% endblock %}
 
 {% block body %}
+<style>
+/* ====== PRODUITS PAGE CSS (copied for staff dashboard) ====== */
+:root{
+  --primary: #00BFA6;
+  --primary-dark: #0097B2;
+  --danger: #BC0B09;
+  --success: #10b981;
+  --warning: #f59e0b;
+  --gray-50:#f9fafb;
+  --gray-100:#f3f4f6;
+  --gray-200:#e5e7eb;
+  --gray-700:#374151;
+  --gray-800:#1f2937;
+  --shadow-sm:0 2px 10px rgba(0,0,0,.06);
+  --shadow-md:0 10px 26px rgba(0,0,0,.10);
+  --shadow-lg:0 18px 42px rgba(0,0,0,.14);
+  --ring: 0 0 0 .22rem rgba(0,151,178,.18);
+}
+body{ background: #f6fbfb !important; }
+.mw-1120{ max-width:1120px; }
+.page-header{ background: var(--primary-dark); color:#fff; padding: 42px 0; margin: 26px auto 18px auto; border-radius: 20px; box-shadow: 0 18px 40px rgba(0,151,178,.22); overflow:hidden; position:relative; }
+.page-header h1{ font-size: 2.6rem; font-weight: 900; margin:0 0 8px 0; }
+.quick-actions{ background:#fff; border-radius: 18px; box-shadow: var(--shadow-sm); border: 1px solid rgba(0,151,178,.10); padding: 14px 16px; }
+.btn-orders{ display:inline-flex; align-items:center; gap:10px; padding: 12px 16px; border-radius: 14px; border: none; background: var(--primary-dark); color:#fff; font-weight: 900; text-decoration:none; box-shadow: 0 12px 26px rgba(0,151,178,.18); transition:.2s ease; }
+.btn-orders:hover{ transform: translateY(-1px); color:#fff; box-shadow: 0 16px 34px rgba(0,151,178,.26); }
+.btn-contact{ display:inline-flex; align-items:center; gap:10px; padding: 12px 16px; border-radius: 14px; border: 2px solid rgba(0,151,178,.25); background: #fff; color: var(--primary-dark); font-weight: 900; transition:.2s ease; }
+.btn-contact:hover{ background: #0097B2; color:#fff; }
+.stat-box{ box-shadow: 0 2px 10px rgba(0,0,0,.06); border-radius: 12px; }
+/* ====== END PRODUITS PAGE CSS ====== */
+</style>
+
+<div class="container mw-1120">
+  <div class="page-header text-center mb-4">
+    <h1><i class="bi bi-person-lines-fill me-3"></i>Patient Radar</h1>
+    <p>Bienvenue sur votre espace staff. Retrouvez ici vos actions rapides, statistiques et gestion des patients.</p>
+  </div>
+  <div class="quick-actions mb-4 d-flex gap-3 justify-content-between align-items-center flex-wrap">
+    <div class="text-muted"><i class="bi bi-info-circle me-1"></i> Actions rapides staff.</div>
+    <div class="d-flex gap-2">
+      <a href="{{ path('staff_patients_list') }}" class="btn-orders"><i class="bi bi-list-task"></i> Liste des patients</a>
+      <a href="{{ path('staff_patients_export_csv') }}" class="btn-contact"><i class="bi bi-download"></i> Export CSV</a>
+    </div>
+  </div>
+</div>
 <div class="container-fluid">
-  <h1 class="h3 mb-4 text-gray-800">Patient Radar</h1>
+  <!-- ...existing code... -->
 
   <!-- Work Queue -->
-  <div class="row">
+  <div class="row mw-1120 mx-auto">
     <div class="col-md-3 mb-3">
       <div class="card border-left-primary shadow h-100 py-2">
         <div class="card-body">
@@ -48,7 +92,7 @@
   </div>
 
   <!-- Radar KPI Cards -->
-  <div class="row mt-4">
+  <div class="row mt-4 mw-1120 mx-auto">
     <div class="col-md-3 mb-3">
       <div class="card bg-success text-white shadow">
         <div class="card-body">OK ✅<div class="h4">{{ counts.OK }}</div></div>
@@ -72,7 +116,7 @@
   </div>
 
   <!-- Top anomalies -->
-  <div class="row mt-4">
+  <div class="row mt-4 mw-1120 mx-auto">
     <div class="col-12">
       <div class="card shadow">
         <div class="card-header">Top anomalies (10)</div>
@@ -98,7 +142,7 @@
   </div>
 
   <!-- Stats -->
-  <div class="row mt-4">
+  <div class="row mt-4 mw-1120 mx-auto">
     <div class="col-md-6">
       <div class="card shadow">
         <div class="card-header">Statistiques (qualité)</div>
@@ -119,6 +163,6 @@
     <div class="col-md-6">
       <div class="alert alert-info">Objectif: améliorer la complétude et la joignabilité des patients. Pas d'actions admin ici.</div>
     </div>
-  </div>
+  <!-- ...existing code... -->
 </div>
 {% endblock %}

@@ -299,6 +299,51 @@
     padding: 10px;
     font-size: .9rem;
   }
+
+  /* ==========================================================
+     ✅ FIX COLONNE ACTION (sans rien supprimer)
+     ========================================================== */
+  .td-actions{
+    padding: 10px 12px !important;
+    vertical-align: middle !important;
+  }
+  .actions-wrap{
+    display:flex;
+    justify-content:flex-end;
+    align-items:center;
+    gap:10px;
+    flex-wrap:wrap;
+  }
+  .btn-icon{
+    width:42px;
+    height:42px;
+    border-radius:14px;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    padding:0 !important;
+    flex: 0 0 42px;
+  }
+  .btn-action{
+    height:42px;
+    border-radius:14px;
+    padding: 0 14px !important;
+    display:inline-flex;
+    align-items:center;
+    gap:8px;
+    font-weight:800;
+    white-space:nowrap;
+  }
+  .btn-replies{
+    height:42px;
+    border-radius:14px;
+    padding: 0 12px !important;
+    display:inline-flex;
+    align-items:center;
+    gap:8px;
+    white-space:nowrap;
+  }
+  .table td, .table th { overflow: hidden; }
 </style>
 
 <section class="section py-4">
@@ -455,14 +500,7 @@
                         </span>
                       </div>
 
-                      <div class="small text-muted mt-1">
-                        Sentiment:
-                        {% if r.sentiment %}
-                          <span class="fw-semibold text-dark">{{ r.sentiment }}</span>
-                        {% else %}
-                          <span class="text-muted">—</span>
-                        {% endif %}
-                      </div>
+                      
                     </td>
 
                     <td class="fw-semibold text-dark">
@@ -484,17 +522,18 @@
                     <td class="small text-dark">
                       {{ r.dateLimite ? r.dateLimite|date('d/m/Y H:i') : '-' }}
                     </td>
-<td class="small text-dark">
-  {% if r.pieceJointePath %}
-    <button type="button"
-            class="btn btn-sm btn-secondary js-open-proof"
-            data-preview-url="{{ path('reclamation_piece_preview', { id: r.idReclamation }) }}">
-      <i class="bi bi-paperclip me-1"></i>Voir
-    </button>
-  {% else %}
-    <span class="text-muted">-</span>
-  {% endif %}
-</td>
+
+                    <td class="small text-dark">
+                      {% if r.pieceJointePath %}
+                        <button type="button"
+                                class="btn btn-sm btn-secondary js-open-proof"
+                                data-preview-url="{{ path('reclamation_piece_preview', { id: r.idReclamation }) }}">
+                          <i class="bi bi-paperclip me-1"></i>Voir
+                        </button>
+                      {% else %}
+                        <span class="text-muted">-</span>
+                      {% endif %}
+                    </td>
 
                     <td class="small text-dark">
                       {{ r.dateModificationR ? r.dateModificationR|date('d/m/Y H:i') : '-' }}
@@ -504,27 +543,29 @@
                       {{ r.dateClotureR ? r.dateClotureR|date('d/m/Y H:i') : '-' }}
                     </td>
 
-                    <td class="text-end text-nowrap">
-                      <div class="d-inline-flex align-items-center" style="gap:8px;">
+                    {# ==========================================================
+                       ✅ ACTION (corrigé) — même boutons, même liens
+                       ========================================================== #}
+                    <td class="td-actions">
+                      <div class="actions-wrap">
                         <button type="button"
-                                class="btn btn-sm btn-info js-toggle-detail"
+                                class="btn btn-sm btn-info btn-icon js-toggle-detail"
                                 data-reclamation-ref="{{ r.referenceReclamation }}"
-                                title="Voir détails"
-                                style="padding: 8px 12px;">
+                                title="Voir détails">
                           <i class="fas fa-chevron-down"></i>
                         </button>
 
                         <a href="{{ path('admin_reponse_new', { id: r.idReclamation }) }}"
-                           class="btn btn-sm btn-primary">
-                          <i class="bi bi-reply-fill me-1"></i>Répondre
+                           class="btn btn-sm btn-primary btn-action">
+                          <i class="bi bi-reply-fill"></i> Répondre
                         </a>
 
                         <a href="{{ path('admin_reponses_by_reclamation', { id: r.idReclamation }) }}"
-                           class="btn btn-sm btn-secondary {% if r.reponses|length == 0 %}disabled{% endif %}"
+                           class="btn btn-sm btn-secondary btn-replies {% if r.reponses|length == 0 %}disabled{% endif %}"
                            {% if r.reponses|length == 0 %}aria-disabled="true"{% endif %}>
-                          <i class="bi bi-eye me-1"></i>
+                          <i class="bi bi-eye"></i>
                           Réponses
-                          <span class="badge bg-dark text-white badge-count ms-1">{{ r.reponses|length }}</span>
+                          <span class="badge bg-dark text-white badge-count">{{ r.reponses|length }}</span>
                         </a>
                       </div>
                     </td>
@@ -599,6 +640,7 @@
 
   </div>
 </section>
+
 {# ================= MODAL PREVIEW PIECE JOINTE ================= #}
 <div class="modal fade" id="proofModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-xl modal-dialog-centered">
@@ -608,8 +650,8 @@
           <i class="bi bi-paperclip me-2"></i>Pièce jointe — aperçu
         </h5>
         <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close" style="opacity:1;">
-  <span aria-hidden="true">&times;</span>
-</button>
+          <span aria-hidden="true">&times;</span>
+        </button>
       </div>
 
       <div class="modal-body" style="background:#fff;">
@@ -640,6 +682,7 @@
     </div>
   </div>
 </div>
+
 <script>
   (function(){
     'use strict';
@@ -756,6 +799,7 @@
     });
   })();
 </script>
+
 <script>
 document.addEventListener('click', async function(e){
   const btn = e.target.closest('.js-open-proof');
@@ -835,4 +879,5 @@ if (window.jQuery) {
   });
 }
 </script>
+
 {% endblock %}

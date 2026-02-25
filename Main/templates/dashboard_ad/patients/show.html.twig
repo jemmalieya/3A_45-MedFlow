@@ -46,11 +46,11 @@
 
             {% for label, value in items %}
               <div class="col-md-6">
-                <div class="border rounded-3 p-3 h-100 bg-white">
+                <div class="border rounded-3 p-3 h-100 bg-white shadow-sm">
                   <div class="small text-muted">{{ label }}</div>
                   <div class="fw-semibold text-dark">
                     {% if label == 'Email' %}
-                      <a href="mailto:{{ value }}">{{ value }}</a>
+                      <a href="mailto:{{ value }}" class="text-decoration-underline">{{ value }}</a>
                     {% else %}
                       {{ value }}
                     {% endif %}

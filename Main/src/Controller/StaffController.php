@@ -1,5 +1,4 @@
 <?php
-
 namespace App\Controller;
 
 use App\Entity\User;
@@ -18,8 +17,11 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\Security\Csrf\CsrfTokenManagerInterface;
 use Symfony\Component\Security\Csrf\CsrfToken;
+use Symfony\UX\Chartjs\Builder\ChartBuilderInterface;
+use Symfony\UX\Chartjs\Model\Chart;
 
-
+use Symfony\Component\Mailer\MailerInterface;
+use Symfony\Component\Mime\Email;
 
 //#[Route('/staff')]
 //#[IsGranted('ROLE_STAFF')]
@@ -146,15 +148,65 @@ class StaffController extends AbstractController
         ]);
     }
 
-    #[Route('/admin/staff/patients/stats', name: 'staff_patients_stats', methods: ['GET'])]
-    public function patientsStats(UserRepository $repo): Response
-    {
-        $patients = $repo->findPatientsWithFilters(['q' => null, 'verified' => null]);
-        $stats = $this->buildStats($patients);
-        return $this->render('staff/patients/stats.html.twig', [
-            'stats' => $stats,
-        ]);
-    }
+
+
+
+#[Route('/admin/staff/patients/stats', name: 'staff_patients_stats', methods: ['GET'])]
+public function patientsStats(UserRepository $repo, ChartBuilderInterface $chartBuilder): Response
+{
+    $patients = $repo->findPatientsWithFilters(['q' => null, 'verified' => null]);
+    $stats = $this->buildStats($patients);
+
+    // Pie chart for data quality
+    $pieChart = $chartBuilder->createChart(Chart::TYPE_PIE);
+    $pieChart->setData([
+        'labels' => ['Complet', 'Vérifié', 'Manquant'],
+        'datasets' => [[
+            'label' => 'Qualité',
+            'backgroundColor' => ['#10b981', '#0097B2', '#BC0B09'],
+            'data' => [
+                $stats['completePct'],
+                $stats['verifiedPct'],
+                $stats['missing']['telephone'] + $stats['missing']['adresse'] + $stats['missing']['cin'] + $stats['missing']['email']
+            ],
+        ]],
+    ]);
+
+    // Bar chart for missing data
+    $barChart = $chartBuilder->createChart(Chart::TYPE_BAR);
+    $barChart->setData([
+        'labels' => ['Téléphone', 'Adresse', 'CIN', 'Email'],
+        'datasets' => [[
+            'label' => 'Manquants',
+            'backgroundColor' => ['#f59e0b', '#0097B2', '#BC0B09', '#10b981'],
+            'data' => [
+                $stats['missing']['telephone'],
+                $stats['missing']['adresse'],
+                $stats['missing']['cin'],
+                $stats['missing']['email'],
+            ],
+        ]],
+    ]);
+
+    // Line chart for activity (example data)
+    $lineChart = $chartBuilder->createChart(Chart::TYPE_LINE);
+    $lineChart->setData([
+        'labels' => ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'],
+        'datasets' => [[
+            'label' => 'Activité',
+            'backgroundColor' => '#0097B2',
+            'borderColor' => '#0097B2',
+            'data' => [12, 19, 3, 5, 2, 3, 7], // Replace with real data
+        ]],
+    ]);
+
+    return $this->render('staff/patients/stats.html.twig', [
+        'stats' => $stats,
+        'pieChart' => $pieChart,
+        'barChart' => $barChart,
+        'lineChart' => $lineChart,
+    ]);
+}
 
     private function triageBucket(User $p): string
     {
@@ -216,6 +268,42 @@ class StaffController extends AbstractController
             'missing' => $missing,
         ];
     }
-
+    #[Route('/admin/staff/patients/{id}/remind', name: 'staff_patients_remind', requirements: ['id' => '\\d+'], methods: ['POST'])]
+    public function patientRemind(User $user): Response
+    {
+        $apiKey = $_ENV['BREVO_API_KEY'];
+        $sender = $_ENV['BREVO_SENDER_EMAIL'];
+        $appUrl = $_ENV['APP_URL'];
+        $payload = [
+            'sender' => [
+                'email' => $sender,
+                'name' => 'MedFlow',
+            ],
+            'to' => [[
+                'email' => $user->getEmailUser(),
+            ]],
+            'subject' => 'Mise à jour de votre dossier',
+            'htmlContent' => "<p>Bonjour, veuillez mettre à jour vos informations administratives sur MedFlow.</p>",
+        ];
+        $ch = curl_init('https://api.brevo.com/v3/smtp/email');
+        curl_setopt_array($ch, [
+            CURLOPT_HTTPHEADER => [
+                'api-key: ' . $apiKey,
+                'Content-Type: application/json',
+            ],
+            CURLOPT_POST => true,
+            CURLOPT_POSTFIELDS => json_encode($payload),
+            CURLOPT_RETURNTRANSFER => true,
+        ]);
+        $response = curl_exec($ch);
+        $error = curl_error($ch);
+        curl_close($ch);
+        if ($error) {
+            $this->addFlash('danger', 'Erreur lors de l\'envoi de l\'email: ' . $error);
+        } else {
+            $this->addFlash('success', 'Demande de mise à jour envoyée au patient.');
+        }
+        return $this->redirectToRoute('staff_patients_show', ['id' => $user->getId()]);
+    }
 
 }

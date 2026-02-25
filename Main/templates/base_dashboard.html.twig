@@ -276,7 +276,7 @@
                 <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapsePatients"
                    aria-expanded="true" aria-controls="collapsePatients">
                     <i class="fas fa-fw fa-user-injured"></i>
-                    <span>Patients (Radar)</span>
+                    <span>Patients</span>
                 </a>
                 <div id="collapsePatients" class="collapse" aria-labelledby="headingPatients" data-parent="#accordionSidebar">
                     <div class="bg-white py-2 collapse-inner rounded">
@@ -285,8 +285,6 @@
                            href="{{ path('staff_patients_radar') }}">🧭 Patient Radar</a>
                         <a class="collapse-item {{ app.request.attributes.get('_route') == 'staff_patients_list' ? 'active' : '' }}"
                            href="{{ path('staff_patients_list') }}">📋 Liste des patients</a>
-                        <a class="collapse-item {{ app.request.attributes.get('_route') == 'staff_patients_stats' ? 'active' : '' }}"
-                           href="{{ path('staff_patients_stats') }}">📊 Statistiques</a>
                         <a class="collapse-item" href="{{ path('staff_patients_export_csv') }}">⬇️ Export CSV</a>
                     </div>
                 </div>

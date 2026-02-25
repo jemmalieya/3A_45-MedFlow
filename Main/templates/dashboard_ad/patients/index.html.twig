@@ -254,7 +254,7 @@
 <script>
   let banModal, banTargetForm;
   function openBanModal(btn) {
-    banTargetForm = btn.closest('form');
+        <table class="table table-hover table-striped table-bordered align-middle shadow-sm">
     const name = btn.dataset.name || '';
     const cin = btn.dataset.cin || '';
     document.getElementById('banPatientInfo').textContent = `${name}${cin ? ' — CIN ' + cin : ''}`;

@@ -1,0 +1,189 @@
+{# templates/commentaire/_block.html.twig #}
+
+{% set publishedComments = p.commentaires|filter(c => (c.status ?? 'published') == 'published') %}
+{% set lastTwo = publishedComments|sort((a,b) => b.dateCreation <=> a.dateCreation)|slice(0,2) %}
+
+{% set postKey = p.id ~ '' %}
+{% set errMsg = commentErrors[postKey] is defined ? commentErrors[postKey] : null %}
+
+{# ==========================================================
+   HELPERS (avatar + nom)
+   👉 Change فقط اسم الحقل profilePicture إذا عندك اسم آخر
+   ========================================================== #}
+{% macro userAvatar(user, size) %}
+  {% set size = size|default(36) %}
+  {% set photo = attribute(user, 'profilePicture') ?? attribute(user, 'photo') ?? attribute(user, 'imageName') ?? null %}
+
+  {% if photo %}
+    <img
+      src="{{ asset('uploads/profile/' ~ photo) }}"
+      alt="Photo"
+      width="{{ size }}" height="{{ size }}"
+      style="width:{{ size }}px;height:{{ size }}px;object-fit:cover;border-radius:999px;display:block;"
+      loading="lazy"
+    >
+  {% else %}
+    <div
+      style="width:{{ size }}px;height:{{ size }}px;border-radius:999px;
+             background:#eef2ff;color:#1f2a37;display:flex;align-items:center;justify-content:center;
+             font-weight:800;font-size:{{ (size*0.42)|round }}px;">
+      {{ (attribute(user,'prenom') ?? attribute(user,'emailUser') ?? 'U')|slice(0,1)|upper }}
+    </div>
+  {% endif %}
+{% endmacro %}
+
+{% macro userFullName(user) %}
+  {% set prenom = attribute(user,'prenom') ?? '' %}
+  {% set nom = attribute(user,'nom') ?? '' %}
+  {% if prenom or nom %}
+    {{ (prenom ~ ' ' ~ nom)|trim }}
+  {% else %}
+    {{ attribute(user,'emailUser') ?? 'Utilisateur' }}
+  {% endif %}
+{% endmacro %}
+
+{% import _self as ui %}
+
+{# ==========================================================
+   STYLE MINIMAL (comme ton design ig)
+   ========================================================== #}
+<style>
+  .ig-comments{margin-top:10px}
+  .ig-c-row{display:flex;gap:10px}
+  .ig-c-ava{width:36px;height:36px;flex:0 0 36px;border-radius:999px;overflow:hidden;display:flex;align-items:center;justify-content:center;background:#f1f5f9;color:#0f172a}
+  .ig-c-ava i{font-size:18px}
+  .ig-addbar{margin-top:12px;display:flex;gap:10px;align-items:flex-start}
+  .btn-mf{background:#0ea5a8;color:#fff;border:0}
+  .btn-mf:hover{filter:brightness(.95);color:#fff}
+  .btn-pill{border-radius:999px;padding:.32rem .9rem}
+  .comment-inline-form input.form-control{border-radius:999px}
+  .comments-modal-body{max-height:62vh;overflow:auto}
+</style>
+
+{# ==========================================================
+   TURBO FRAME: يمنع الرجوع لفوق في ال inline add
+   ========================================================== #}
+
+  <div class="ig-comments">
+    <div class="d-flex justify-content-between align-items-center">
+      <div class="text-muted small">
+        <i class="bi bi-chat-dots"></i>
+        {{ publishedComments|length }} commentaire(s)
+
+        {% if publishedComments|length > 2 %}
+          ·
+          <button type="button"
+                  class="btn btn-link p-0 text-decoration-none"
+                  data-bs-toggle="modal"
+                  data-bs-target="#commentsModal-{{ p.id }}">
+            Voir tous
+          </button>
+        {% endif %}
+      </div>
+    </div>
+
+    {% if lastTwo is empty %}
+      <div class="text-muted small mt-2">Aucun commentaire pour le moment.</div>
+    {% else %}
+      {% for c in lastTwo %}
+        <div class="ig-c-row mt-2" data-comment-id="{{ c.id }}">
+          <div class="ig-c-ava">
+            {% if c.estAnonyme %}
+              <i class="bi bi-incognito"></i>
+            {% else %}
+              {% if c.user %}
+                {{ ui.userAvatar(c.user, 36) }}
+              {% else %}
+                <div style="font-weight:800">U</div>
+              {% endif %}
+            {% endif %}
+          </div>
+
+          <div class="w-100">
+            <div class="d-flex justify-content-between align-items-center gap-2 flex-wrap"
+                 style="font-size:.86rem;color:#6c757d;">
+              <strong style="color:#101828;">
+                {% if c.estAnonyme %}
+                  Anonyme
+                {% else %}
+                  {% if c.user %}
+                    {{ ui.userFullName(c.user) }}
+                  {% else %}
+                    Utilisateur
+                  {% endif %}
+                {% endif %}
+              </strong>
+
+              <span>
+                {{ c.dateCreation|date('d/m/Y H:i') }}
+                {% set badge = c.parametresConfidentialite == 'PRIVE'
+                  ? 'danger'
+                  : (c.parametresConfidentialite == 'AMIS' ? 'info' : 'success') %}
+                <span class="badge bg-{{ badge }} ms-2" style="font-size:.7rem;border-radius:999px;">
+                  {{ c.parametresConfidentialite }}
+                </span>
+              </span>
+            </div>
+
+            <div class="mt-1 js-comment-text">{{ c.contenu }}</div>
+
+            {% if app.user and c.user and (c.user.id == app.user.id or is_granted('ROLE_ADMIN')) %}
+              <div class="mt-2 d-flex gap-2 justify-content-end">
+                <button type="button"
+                        class="btn btn-sm btn-light js-edit-comment"
+                        title="Modifier"
+                        data-id="{{ c.id }}"
+                        data-url="{{ path('commentaire_inline_edit', {id: c.id}) }}"
+                        data-token="{{ csrf_token('edit_commentaire_' ~ c.id) }}">
+                  <i class="bi bi-pencil"></i>
+                </button>
+
+                <form class="delete-comment-form" method="post" action="{{ path('commentaire_delete', {id: c.id}) }}">
+                  <input type="hidden" name="token" value="{{ csrf_token('del_commentaire' ~ c.id) }}">
+                  <button class="btn btn-sm btn-light" type="submit" title="Supprimer">
+                    <i class="bi bi-trash"></i>
+                  </button>
+                </form>
+              </div>
+            {% endif %}
+
+            <div class="js-inline-edit-area mt-2 d-none"></div>
+          </div>
+        </div>
+      {% endfor %}
+    {% endif %}
+
+    {# ==========================================================
+       ADD COMMENT BAR (avatar = photo user connecté)
+       ========================================================== #}
+    <div class="ig-addbar">
+      <div class="ig-c-ava" style="width:32px;height:32px;flex:0 0 32px;">
+        {% if app.user %}
+          {{ ui.userAvatar(app.user, 32) }}
+        {% else %}
+          <div style="font-weight:800">U</div>
+        {% endif %}
+      </div>
+
+      <form id="comment-form-{{ p.id }}"
+            class="comment-inline-form w-100 d-flex gap-2"
+            method="post"
+            action="{{ path('commentaire_add_inline', {id: p.id}) }}"
+            data-turbo-frame="comments-{{ p.id }}">
+        <input type="hidden" name="token" value="{{ csrf_token('add_comment' ~ p.id) }}">
+        <input type="hidden" name="redirect" value="{{ app.request.uri ~ '#post-' ~ p.id }}">
+
+        <div class="w-100">
+          <input class="form-control form-control-sm {{ errMsg ? 'is-invalid' : '' }}"
+                 name="contenu"
+                 placeholder="Ajouter un commentaire…">
+          {% if errMsg %}
+            <div class="invalid-feedback d-block">{{ errMsg }}</div>
+          {% endif %}
+        </div>
+
+        <button class="btn btn-sm btn-mf btn-pill" type="submit">Publier</button>
+      </form>
+    </div>
+  </div>
+

@@ -1,84 +1,267 @@
 {% extends 'base.html.twig' %}
 {% set patientId = app.session.get('patient_id') %}
 {% block body %}
-<!-- Find A Doctor Section -->
-    <section id="find-a-doctor" class="find-a-doctor section">
+<style>
+  :root {
+    --mf-vivid-blue:#003399;
+    --mf-dark-turquoise:#0097B2;
+    --mf-vivid-turquoise:#00BFA6;
+    --mf-pastel-blue:#6797FF;
+    --mf-pastel-azure:#8FD5FF;
+    --mf-light-blue:#B3D5FF;
+    --mf-white:#FFFFFF;
+    --mf-black:#000000;
+    --mf-vivid-red:#BC0B09;
+    --mf-text:#101828;
+    --mf-muted:#6c757d;
+    --shadow-sm:0 10px 26px rgba(16,24,40,.06);
+    --shadow-md:0 16px 40px rgba(16,24,40,.08);
+    --shadow-lg:0 24px 56px rgba(16,24,40,.12);
+  }
+  .mf-rect-hero {
+    border-radius: 24px;
+    background: var(--mf-dark-turquoise);
+    box-shadow: var(--shadow-md);
+    border: 1px solid rgba(0,0,0,.08);
+    padding: 40px 24px;
+    text-align: center;
+    margin-bottom: 2.5rem;
+  }
+  .mf-rect-title {
+    font-size: 2.25rem;
+    font-weight: 900;
+    color: var(--mf-white);
+    margin-bottom: 0.5rem;
+    letter-spacing: -.02em;
+  }
+  .mf-rect-sub {
+    color: var(--mf-pastel-azure);
+    font-size: 1.1rem;
+    font-weight: 500;
+    opacity: 0.95;
+  }
+  .mf-card {
+    background: var(--mf-light-blue);
+    border-radius: 24px;
+    box-shadow: var(--shadow-md);
+    border: 1.5px solid var(--mf-dark-turquoise);
+    padding: 2.5rem 2.5rem 2rem 2.5rem;
+    margin-bottom: 2.5rem;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+  .doctor-card {
+    background: var(--mf-white);
+    border-radius: 18px;
+    box-shadow: 0 4px 24px rgba(0,151,178,0.08), 0 1px 3px rgba(0,151,178,0.04);
+    border: 1.5px solid var(--mf-dark-turquoise);
+    padding: 2rem 1.5rem 1.5rem 1.5rem;
+    margin-bottom: 2rem;
+    transition: box-shadow 0.2s, transform 0.2s;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-height: 420px;
+  }
+  .doctor-card:hover {
+    box-shadow: 0 8px 32px rgba(0,151,178,0.18);
+    transform: translateY(-4px) scale(1.02);
+  }
+  .doctor-image {
+    width: 110px;
+    height: 110px;
+    border-radius: 50%;
+    overflow: hidden;
+    margin-bottom: 1.1rem;
+    border: 3px solid var(--mf-dark-turquoise);
+    box-shadow: 0 2px 8px #0097B222;
+    position: relative;
+  }
+  .doctor-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+  .availability-badge {
+    position: absolute;
+    bottom: 8px;
+    right: 8px;
+    background: #22c55e;
+    color: #fff;
+    font-size: 0.85rem;
+    font-weight: 700;
+    border-radius: 999px;
+    padding: 0.25rem 0.8rem;
+    box-shadow: 0 2px 8px #22c55e33;
+  }
+  .doctor-info h5 {
+    font-size: 1.25rem;
+    font-weight: 800;
+    color: var(--mf-dark-turquoise);
+    margin-bottom: 0.2rem;
+  }
+  .doctor-info .specialty {
+    color: var(--mf-muted);
+    font-size: 1.01rem;
+    margin-bottom: 0.2rem;
+  }
+  .doctor-info .experience {
+    color: var(--mf-pastel-blue);
+    font-size: 0.98rem;
+    margin-bottom: 0.2rem;
+  }
+  .doctor-info .rating {
+    color: #fbbf24;
+    font-size: 1.1rem;
+    margin-bottom: 0.5rem;
+  }
+  .doctor-info .rating-text {
+    color: var(--mf-muted);
+    font-size: 0.98rem;
+    margin-left: 0.3rem;
+  }
+  .appointment-actions {
+    display: flex;
+    gap: 0.7rem;
+    margin-top: 0.7rem;
+    justify-content: center;
+  }
+  .btn-mf {
+    background: var(--mf-dark-turquoise);
+    border-color: var(--mf-dark-turquoise);
+    color: #fff !important;
+    border-radius: 999px !important;
+    padding: 0.5rem 1.3rem;
+    font-weight: 700;
+    font-size: 1.05rem;
+    letter-spacing: 0.02em;
+    transition: transform 0.2s, box-shadow 0.2s;
+    box-shadow: 0 2px 8px #0097B222;
+  }
+  .btn-mf:hover {
+    background: #007E94;
+    border-color: #007E94;
+    color: #fff !important;
+    transform: translateY(-2px);
+    box-shadow: 0 12px 28px rgba(0,151,178,0.25);
+  }
+  .btn-mf-outline {
+    background: #fff;
+    border: 2px solid var(--mf-dark-turquoise);
+    color: var(--mf-dark-turquoise);
+    border-radius: 999px !important;
+    padding: 0.5rem 1.3rem;
+    font-weight: 700;
+    font-size: 1.05rem;
+    letter-spacing: 0.02em;
+    transition: background 0.2s, color 0.2s, box-shadow 0.2s;
+    box-shadow: 0 2px 8px #0097B222;
+  }
+  .btn-mf-outline:hover {
+    background: rgba(0,151,178,.08);
+    border-color: var(--mf-dark-turquoise);
+    color: var(--mf-dark-turquoise);
+  }
+  .btn-pill {
+    border-radius: 999px !important;
+    padding-left: 14px !important;
+    padding-right: 14px !important;
+  }
+  .search-container {
+    background: var(--mf-light-blue);
+    border-radius: 18px;
+    box-shadow: 0 2px 12px #38bdf822, 0 1.5px 4px #2563eb11;
+    border: 1.5px solid var(--mf-dark-turquoise);
+    padding: 1.5rem 2rem 1.2rem 2rem;
+    margin-bottom: 2.5rem;
+  }
+  .search-form .form-control, .search-form .form-select {
+    border-radius: 999px !important;
+    border: 2px solid var(--mf-dark-turquoise);
+    font-size: 1.08em;
+    padding: 0.5em 1.2em 0.5em 2.2em;
+    background: #fff;
+    color: var(--mf-dark-turquoise);
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  .search-form .form-control:focus, .search-form .form-select:focus {
+    border-color: var(--mf-dark-turquoise);
+    box-shadow: 0 0 0 3px #0097B233;
+  }
+  .btn-mf.btn-sm, .btn-mf-outline.btn-sm {
+    font-size: 0.98rem;
+    padding: 0.35rem 1.1rem;
+  }
+</style>
 
-      <!-- Section Title -->
-      <div class="container section-title" data-aos="fade-up">
-        <h2>Trouver un médecin</h2>
-        <p>Trouvez le médecin qui correspond à vos besoins</p>
-
-      </div><!-- End Section Title -->
-
-      <div class="container" data-aos="fade-up" data-aos-delay="100">
-
-        <div class="row justify-content-center" data-aos="fade-up" data-aos-delay="200">
-          <div class="col-lg-12">
-            <div class="search-container">
-              <form class="search-form" action="forms1/doctor-search.php" method="get">
-                <div class="d-flex align-items-center gap-2" style="gap: 8px;">
-                  <input type="text" class="form-control form-control-sm" name="doctor_name" placeholder="Nom du médecin ou mot-clé" style="flex:1;">
-                  <select class="form-select form-select-sm" name="specialty" id="specialty-select" style="flex:1;">
-                    <option value="">Sélectionner une spécialité</option>
-                    <option value="cardiology">Cardiologie</option>
-                    <option value="neurology">Neurologie</option>
-                    <option value="orthopedics">Orthopédie</option>
-                    <option value="pediatrics">Pédiatrie</option>
-                    <option value="dermatology">Dermatologie</option>
-                    <option value="oncology">Oncologie</option>
-                    <option value="surgery">Chirurgie</option>
-                    <option value="emergency">Médecine d'urgence</option>
-                  </select>
-                  <button type="submit" class="btn btn-primary btn-sm" style="flex:1;height:100%;">
-                    <i class="bi bi-search me-2"></i>Rechercher
-                  </button>
-                </div>
-              </form>
-              <div class="d-flex align-items-center gap-2 mt-2" style="gap: 8px;">
-                <button type="button" class="btn btn-primary btn-sm w-100" onclick="window.location.href='{{ path('app_ia_assistante') }}'">
-                  <i class="bi bi-robot me-2"></i>Assistante IA
-                </button>
+<main class="main">
+  <div class="container py-4">
+    <div class="mf-rect-hero mb-4">
+      <div class="mf-rect-inner">
+        <h1 class="mf-rect-title">Trouver un médecin</h1>
+        <p class="mf-rect-sub">Trouvez le médecin qui correspond à vos besoins</p>
+      </div>
+    </div>
+    <div class="search-container mb-4">
+      <form class="search-form" action="forms1/doctor-search.php" method="get">
+        <div class="d-flex align-items-center gap-2 flex-wrap">
+          <input type="text" class="form-control form-control-sm" name="doctor_name" placeholder="Nom du médecin ou mot-clé" style="flex:1;min-width:180px;">
+          <select class="form-select form-select-sm" name="specialty" id="specialty-select" style="flex:1;min-width:180px;">
+            <option value="">Sélectionner une spécialité</option>
+            <option value="cardiology">Cardiologie</option>
+            <option value="neurology">Neurologie</option>
+            <option value="orthopedics">Orthopédie</option>
+            <option value="pediatrics">Pédiatrie</option>
+            <option value="dermatology">Dermatologie</option>
+            <option value="oncology">Oncologie</option>
+            <option value="surgery">Chirurgie</option>
+            <option value="emergency">Médecine d'urgence</option>
+          </select>
+          <button type="submit" class="btn btn-mf btn-pill btn-sm" style="flex:1;height:100%;min-width:150px;">
+            <i class="bi bi-search me-2"></i>Rechercher
+          </button>
+        </div>
+      </form>
+      <div class="d-flex align-items-center gap-2 mt-2">
+        <button type="button" class="btn btn-mf btn-pill btn-sm w-100" onclick="window.location.href='{{ path('app_ia_assistante') }}'">
+          <i class="bi bi-robot me-2"></i>Assistante IA
+        </button>
+      </div>
+    </div>
+    <div class="row" data-aos="fade-up" data-aos-delay="400">
+      {% for staff in staffList %}
+        {% if staff.roleSysteme == 'STAFF' and staff.typeStaff == 'RESP_PATIENTS' %}
+        <div class="col-lg-4 col-md-6 mb-4">
+          <div class="doctor-card">
+            <div class="doctor-image">
+              <img src="{{ staff.profilePicture ? asset(staff.profilePicture) }}" alt="Dr. {{ staff.nom }} {{ staff.prenom }}" class="img-fluid">
+              <div class="availability-badge online">Disponible</div>
+            </div>
+            <div class="doctor-info text-center">
+              <h5>Dr. {{ staff.nom }} {{ staff.prenom }}</h5>
+              <p class="specialty">{{ staff.typeStaff ? staff.typeStaff : 'General' }}</p>
+              <p class="experience">Experience info here</p>
+              <div class="rating">
+                <i class="bi bi-star-fill"></i>
+                <i class="bi bi-star-fill"></i>
+                <i class="bi bi-star-fill"></i>
+                <i class="bi bi-star-fill"></i>
+                <i class="bi bi-star-fill"></i>
+                <span class="rating-text">(4.9)</span>
               </div>
-              </form>
+              <div class="appointment-actions">
+                <a href="{{ path('appointment', {'idStaff': staff.id}) }}" class="btn btn-mf-outline btn-pill btn-sm">Voir le profil</a>
+                <a href="{{ path('appointment', {'idStaff': staff.id}) }}" class="btn btn-mf btn-pill btn-sm">Prendre rendez-vous</a>
+              </div>
             </div>
           </div>
         </div>
-
-<!-- Doctor Card 2 -->
-        <div class="row" data-aos="fade-up" data-aos-delay="400">
-        {% for staff in staffList %}
-          {% if staff.roleSysteme == 'STAFF' and staff.typeStaff == 'RESP_PATIENTS' %}
-          <div class="col-lg-4 col-md-6 mb-4">
-            <div class="doctor-card">
-              <div class="doctor-image">
-                <img src="{{ staff.profilePicture ? asset(staff.profilePicture) }}" alt="Dr. {{ staff.nom }} {{ staff.prenom }}" class="img-fluid">
-                <div class="availability-badge online">Disponible</div>
-              </div>
-              <div class="doctor-info">
-                <h5>Dr. {{ staff.nom }} {{ staff.prenom }}</h5>
-                <p class="specialty">{{ staff.typeStaff ? staff.typeStaff : 'General' }}</p>
-                <p class="experience">Experience info here</p>
-                <div class="rating">
-                  <i class="bi bi-star-fill"></i>
-                  <i class="bi bi-star-fill"></i>
-                  <i class="bi bi-star-fill"></i>
-                  <i class="bi bi-star-fill"></i>
-                  <i class="bi bi-star-fill"></i>
-                  <span class="rating-text">(4.9)</span>
-                </div>
-                <div class="appointment-actions">
-                  <a href="{{ path('appointment', {'idStaff': staff.id}) }}" class="btn btn-outline-primary btn-sm">Voir le profil</a>
-                  <a href="{{ path('appointment', {'idStaff': staff.id}) }}" class="btn btn-primary btn-sm">Prendre rendez-vous</a>
-                </div>
-              </div>
-            </div>
-          </div><!-- End Doctor Card -->
-          {% endif %}
-        {% endfor %}
-        </div>
-
-      </div>
-
-    </section><!-- /Find A Doctor Section -->
+        {% endif %}
+      {% endfor %}
+    </div>
+  </div>
+</main>
 {% endblock %}

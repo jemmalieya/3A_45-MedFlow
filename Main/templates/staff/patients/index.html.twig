@@ -1,55 +1,81 @@
 {% extends 'base_dashboard.html.twig' %}
 
-{% block title %}Liste des patients{% endblock %}
+{% block title %}Liste des Patients{% endblock %}
 
 {% block body %}
-<div class="container-fluid">
-    <h1 class="h3 mb-4">Patients — {{ queue ?: 'Tous' }}</h1>
-    <form method="get" class="form-inline mb-3">
-        <input type="text" class="form-control mr-2" name="q" value="{{ q }}" placeholder="Rechercher">
-        <select class="form-control mr-2" name="verified">
-            <option value="">Vérification (tous)</option>
-            <option value="1" {% if verified == '1' %}selected{% endif %}>Vérifiés</option>
-            <option value="0" {% if verified == '0' %}selected{% endif %}>Non vérifiés</option>
-        </select>
-        <button class="btn btn-primary">Filtrer</button>
-    </form>
-
-    <div class="table-responsive">
-        <table class="table table-hover">
-            <thead>
-                <tr>
-                    <th>Nom</th>
-                    <th>Email</th>
-                    <th>Téléphone</th>
-                    <th>Score</th>
-                    <th>Details</th>
-                    <th></th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for row in rows %}
-                    {% set p = row.p %}
-                    {% set q = row.quality %}
-                    <tr>
-                        <td>{{ p.getPrenom() }} {{ p.getNom() }}</td>
-                        <td>{{ p.getEmailUser() }}</td>
-                        <td>{{ p.getTelephoneUser() }}</td>
-                        <td><span class="badge badge-info">{{ q.score }}/100</span></td>
-                        <td>
-                            {% for d in q.details %}
-                                <span class="badge badge-light mr-1">{{ d }}</span>
-                            {% endfor %}
-                        </td>
-                        <td>
-                            <a href="{{ path('staff_patients_show', {id: p.getId()}) }}" class="btn btn-sm btn-outline-primary">Voir</a>
-                        </td>
-                    </tr>
-                {% else %}
-                    <tr><td colspan="6" class="text-center text-muted">Aucun résultat</td></tr>
-                {% endfor %}
-            </tbody>
-        </table>
+<div class="container mw-1120">
+  <div class="page-header text-center mb-4">
+    <h1><i class="bi bi-list-task me-3"></i>Liste des Patients</h1>
+    <p>Gestion et tri des patients selon la qualité des données.</p>
+  </div>
+  <div class="quick-actions mb-4 d-flex gap-3 justify-content-between align-items-center flex-wrap">
+    <div class="text-muted"><i class="bi bi-info-circle me-1"></i> Actions rapides staff.</div>
+    <div class="d-flex gap-2">
+      <a href="{{ path('staff_dashboard') }}" class="btn-orders"><i class="bi bi-person-lines-fill"></i> Dashboard</a>
+      <a href="{{ path('staff_patients_stats') }}" class="btn-contact"><i class="bi bi-bar-chart"></i> Statistiques</a>
+      <a href="{{ path('staff_patients_export_csv') }}" class="btn-contact"><i class="bi bi-download"></i> Export CSV</a>
     </div>
+  </div>
 </div>
+
+<div class="container mw-1120">
+  {% for row in rows %}
+    <div class="card mb-3 shadow-sm">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <strong>{{ row.p.getPrenom() }} {{ row.p.getNom() }}</strong>
+            <span class="text-muted ms-2">{{ row.p.getEmailUser() }}</span>
+          </div>
+          <div>
+            <a href="{{ path('staff_patients_show', {id: row.p.getId()}) }}" class="btn btn-contact">Voir fiche</a>
+          </div>
+        </div>
+        <div class="mt-2">
+          <span class="badge bg-success me-2">Score: {{ row.quality.score }}</span>
+          {% for detail in row.quality.details %}
+            <span class="badge bg-warning text-dark me-1">{{ detail }}</span>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  {% else %}
+    <div class="empty-state text-center py-5">
+      <i class="bi bi-inbox" style="font-size:3rem;color:#d1d5db;"></i>
+      <h3>Aucun patient trouvé</h3>
+    </div>
+  {% endfor %}
+</div>
+<style>
+:root{
+  --primary: #00BFA6;
+  --primary-dark: #0097B2;
+  --danger: #BC0B09;
+  --success: #10b981;
+  --warning: #f59e0b;
+  --gray-50:#f9fafb;
+  --gray-100:#f3f4f6;
+  --gray-200:#e5e7eb;
+  --gray-700:#374151;
+  --gray-800:#1f2937;
+  --shadow-sm:0 2px 10px rgba(0,0,0,.06);
+  --shadow-md:0 10px 26px rgba(0,0,0,.10);
+  --shadow-lg:0 18px 42px rgba(0,0,0,.14);
+  --ring: 0 0 0 .22rem rgba(0,151,178,.18);
+}
+body{ background: #f6fbfb !important; }
+.mw-1120{ max-width:1120px; }
+.page-header{ background: var(--primary-dark); color:#fff; padding: 42px 0; margin: 26px auto 18px auto; border-radius: 20px; box-shadow: 0 18px 40px rgba(0,151,178,.22); overflow:hidden; position:relative; }
+.page-header h1{ font-size: 2.6rem; font-weight: 900; margin:0 0 8px 0; }
+.quick-actions{ background:#fff; border-radius: 18px; box-shadow: var(--shadow-sm); border: 1px solid rgba(0,151,178,.10); padding: 14px 16px; }
+.btn-orders{ display:inline-flex; align-items:center; gap:10px; padding: 12px 16px; border-radius: 14px; border: none; background: var(--primary-dark); color:#fff; font-weight: 900; text-decoration:none; box-shadow: 0 12px 26px rgba(0,151,178,.18); transition:.2s ease; }
+.btn-orders:hover{ transform: translateY(-1px); color:#fff; box-shadow: 0 16px 34px rgba(0,151,178,.26); }
+.btn-contact{ display:inline-flex; align-items:center; gap:10px; padding: 12px 16px; border-radius: 14px; border: 2px solid rgba(0,151,178,.25); background: #fff; color: var(--primary-dark); font-weight: 900; transition:.2s ease; }
+.btn-contact:hover{ background: #0097B2; color:#fff; }
+.stat-box{ box-shadow: 0 2px 10px rgba(0,0,0,.06); border-radius: 12px; }
+</style>
+
+
+
+
 {% endblock %}

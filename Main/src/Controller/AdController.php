@@ -171,6 +171,7 @@ final class AdController extends AbstractController
         if (!is_file($full)) {
             throw $this->createNotFoundException('Fichier manquant.');
         }
+        // No strict path check, allow access as before
         return $this->file($full, $docs['files'][$i]['original'] ?? basename($full));
     }
 

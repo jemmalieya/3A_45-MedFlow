@@ -14,6 +14,8 @@ use Psr\Log\LoggerInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
+use Dompdf\Dompdf;
+use Dompdf\Options;
 
 final class FicheMedicaleController extends AbstractController
 {
@@ -109,17 +111,7 @@ final class FicheMedicaleController extends AbstractController
 
         // If POST, handle save/cancel
         if ($request->isMethod('POST')) {
-            // Temporary debug log to inspect incoming POST payload when validation fails
-            try {
-                $postAll = $request->request->all();
-                $raw = $request->getContent();
-                $this->addFlash('error', '[DEBUG] POST all: ' . json_encode($postAll));
-                $this->addFlash('error', '[DEBUG] POST raw: ' . $raw);
-                $prescRows = $postAll['prescription_rows'] ?? null;
-                $this->addFlash('error', '[DEBUG] prescription_rows: ' . json_encode($prescRows));
-            } catch (\Throwable $e) {
-                // swallow logging errors to avoid interfering with flow
-            }
+            // Remove debug error flashes; only add error flashes when validation fails
             // Cancel -> go back to main fiche page without persisting anything
             if ($request->request->has('cancel')) {
                 return $this->redirectToRoute('app_fiche_medicale');
@@ -131,7 +123,7 @@ final class FicheMedicaleController extends AbstractController
                 $observations = trim($request->request->get('observations') ?? '');
                 $resultats = trim($request->request->get('resultatsExamens') ?? '');
                 $signature = $request->request->get('signature') ?? null;
-
+   
                 // PHP Server-side validation (controle de saisie)
                 $validationErrors = [];
                 $fieldErrors = [
@@ -220,108 +212,6 @@ final class FicheMedicaleController extends AbstractController
                     }
                 }
 
-                // Normalize prescription rows before validating/saving.
-                // Some server configs or client payloads may present this key in unexpected shapes;
-                // try to read from the parsed POST array first, then fall back to parsing the raw body.
-                $prescriptionsData = [];
-                try {
-                    $postAll = $request->request->all();
-                    if (array_key_exists('prescription_rows', $postAll)) {
-                        $prescriptionsData = $postAll['prescription_rows'];
-                    } else {
-                        $raw = $request->getContent();
-                        if (!empty($raw)) {
-                            parse_str($raw, $parsed);
-                            if (isset($parsed['prescription_rows'])) {
-                                $prescriptionsData = $parsed['prescription_rows'];
-                            }
-                        }
-                    }
-                } catch (\Throwable $e) {
-                    // As a last resort try parsing raw body
-                    $raw = $request->getContent();
-                    $parsed = [];
-                    if (!empty($raw)) parse_str($raw, $parsed);
-                    $prescriptionsData = $parsed['prescription_rows'] ?? [];
-                }
-
-                if (!is_array($prescriptionsData)) {
-                    $prescriptionsData = [];
-                }
-                $validPrescriptions = [];
-                foreach ($prescriptionsData as $index => $row) {
-                    $nomMedicament = isset($row['nomMedicament']) ? trim((string) $row['nomMedicament']) : '';
-                    $dose = isset($row['dose']) ? trim((string) $row['dose']) : '';
-                    $frequence = isset($row['frequence']) ? trim((string) $row['frequence']) : '';
-                    $dureeRaw = isset($row['duree']) ? trim((string) $row['duree']) : '';
-                    $instructions = isset($row['instructions']) ? trim((string) $row['instructions']) : '';
-
-                    // Only validate if at least one field is filled (non-empty row)
-                    if ($nomMedicament === '' && $dose === '' && $frequence === '' && $dureeRaw === '' && $instructions === '') {
-                        continue;
-                    }
-
-                    $prescErrors = [];
-                    if (strlen($nomMedicament) === 0) {
-                        $prescErrors[] = "Prescription #" . ((int)$index + 1) . ": Medication name is required.";
-                    } elseif (strlen($nomMedicament) > 255) {
-                        $prescErrors[] = "Prescription #" . ((int)$index + 1) . ": Medication name cannot exceed 255 characters.";
-                    }
-                    if (strlen($dose) === 0) {
-                        $prescErrors[] = "Prescription #" . ((int)$index + 1) . ": Dose is required.";
-                    } elseif (strlen($dose) > 255) {
-                        $prescErrors[] = "Prescription #" . ((int)$index + 1) . ": Dose cannot exceed 255 characters.";
-                    }
-                    if (strlen($frequence) === 0) {
-                        $prescErrors[] = "Prescription #" . ((int)$index + 1) . ": Frequency is required.";
-                    } elseif (strlen($frequence) > 255) {
-                        $prescErrors[] = "Prescription #" . ((int)$index + 1) . ": Frequency cannot exceed 255 characters.";
-                    }
-                    if ($dureeRaw === '') {
-                        $prescErrors[] = "Prescription #" . ((int)$index + 1) . ": Duration is required.";
-                    } else {
-                        $dureeVal = filter_var($dureeRaw, FILTER_VALIDATE_INT);
-                        if ($dureeVal === false || $dureeVal < 1) {
-                            $prescErrors[] = "Prescription #" . ((int)$index + 1) . ": Duration must be a positive integer (e.g. days).";
-                        }
-                    }
-
-                    if (!empty($prescErrors)) {
-                        foreach ($prescErrors as $err) {
-                            $this->addFlash('error', $err);
-                        }
-                        if ($fiche && $fiche->getRendezVous()) {
-                            return $this->redirectToRoute('app_fiche_by_staff', ['idStaff' => $fiche->getRendezVous()->getStaff()->getId()]);
-                        }
-                        return $this->redirectToRoute('consultation_view', [
-                            'rendezvous' => $request->request->get('rendezvous_id'),
-                            'start' => $request->request->get('startTime'),
-                            'type' => $type,
-                        ]);
-                    }
-
-                    $validPrescriptions[] = [
-                        'nomMedicament' => $nomMedicament,
-                        'dose' => $dose,
-                        'frequence' => $frequence,
-                        'duree' => (int) $dureeRaw,
-                        'instructions' => $instructions === '' ? null : $instructions,
-                    ];
-                }
-                // Enforce at least one valid prescription
-                if (count($validPrescriptions) === 0) {
-                    $this->addFlash('error', 'At least one prescription is required.');
-                    if ($fiche && $fiche->getRendezVous()) {
-                        return $this->redirectToRoute('app_fiche_by_staff', ['idStaff' => $fiche->getRendezVous()->getStaff()->getId()]);
-                    }
-                    return $this->redirectToRoute('consultation_view', [
-                        'rendezvous' => $request->request->get('rendezvous_id'),
-                        'start' => $request->request->get('startTime'),
-                        'type' => $type,
-                    ]);
-                }
-
-                // Set validated fields into fiche object
                 $fiche->setDiagnostic($diagnostic);
                 $fiche->setObservations($observations);
                 $fiche->setResultatsExamens($resultats);
@@ -345,24 +235,39 @@ final class FicheMedicaleController extends AbstractController
                 }
 
                 $em->persist($fiche);
-                // Persist fiche and prescriptions together before flush
-                foreach ($validPrescriptions as $p) {
-                    $prescription = new Prescription();
-                    $prescription->setNomMedicament($p['nomMedicament']);
-                    $prescription->setDose($p['dose']);
-                    $prescription->setFrequence($p['frequence']);
-                    $prescription->setDuree($p['duree']);
-                    $prescription->setInstructions($p['instructions']);
-                    $prescription->setCreatedAt(new \DateTimeImmutable());
-                    $prescription->setFicheMedicale($fiche);
-                    $fiche->addPrescription($prescription);
-                    $em->persist($prescription);
-                }
-                $em->persist($fiche);
-                $em->flush();
+                    // Handle prescriptions (zero or more)
+                    $all = $request->request->all();
+                    $prescriptionRows = $all['prescription_rows'] ?? [];
+                    if (is_array($prescriptionRows)) {
+                        foreach ($prescriptionRows as $row) {
+                            // Skip empty rows (all fields empty)
+                            if (
+                                empty($row['medicament']) &&
+                                empty($row['dosage']) &&
+                                empty($row['frequence']) &&
+                                empty($row['duree'])
+                            ) {
+                                continue;
+                            }
+                            $prescription = new Prescription();
+                            $prescription->setFicheMedicale($fiche);
+                            $prescription->setNomMedicament($row['medicament'] ?? '');
+                            $prescription->setDose($row['dosage'] ?? '');
+                            $prescription->setFrequence($row['frequence'] ?? '');
+                            // Duree is int, handle empty/null
+                            $dureeVal = isset($row['duree']) && $row['duree'] !== '' ? (int)$row['duree'] : null;
+                            if ($dureeVal !== null) {
+                                $prescription->setDuree($dureeVal);
+                            }
+                            $prescription->setCreatedAt(new \DateTimeImmutable());
+                            $em->persist($prescription);
+                        }
+                    }
 
-                $staffId = $fiche->getRendezVous()?->getStaff()?->getId();
-                return $this->redirectToRoute('app_fiche_by_staff', ['idStaff' => $staffId]);
+                    $em->flush();
+
+                    $staffId = $fiche->getRendezVous()?->getStaff()?->getId();
+                    return $this->redirectToRoute('app_fiche_by_staff', ['idStaff' => $staffId]);
             }
         }
 
@@ -409,6 +314,35 @@ final class FicheMedicaleController extends AbstractController
         $staffId = $fiche->getRendezVous()?->getStaff()?->getId();
         return $this->redirectToRoute('app_fiche_by_staff', ['idStaff' => $staffId]);
     }
-    
+    #[Route('/fiche/{id}/pdf', name: 'fiche_pdf', methods: ['GET'])]
+public function fichePdf(int $id, FicheMedicaleRepository $ficheRepo): Response
+{
+    $fiche = $ficheRepo->find($id);
+    if (!$fiche) {
+        throw $this->createNotFoundException('Fiche médicale non trouvée');
+    }
+
+    $options = new Options();
+    $options->set('isRemoteEnabled', true);
+    $options->set('isHtml5ParserEnabled', true);
+    $options->set('defaultFont', 'DejaVu Sans');
+    $options->set('isPhpEnabled', true);
+
+    $dompdf = new Dompdf($options);
+
+    $html = $this->renderView('pdf/fiche_medicale.html.twig', [
+        'fiche' => $fiche,
+    ]);
+
+    $dompdf->loadHtml($html);
+    $dompdf->setPaper('A4', 'portrait');
+    $dompdf->render();
+
+    $pdfOutput = $dompdf->output();
+
+    return new Response($pdfOutput, 200, [
+        'Content-Type' => 'application/pdf',
+        'Content-Disposition' => 'attachment; filename="fiche_medicale_' . $fiche->getId() . '.pdf"',
+    ]);
 }
-        
+}

@@ -2,46 +2,76 @@
 {% block title %}{{ post.titre }}{% endblock %}
 
 {% block body %}
-<section class="section" style="padding-top:120px;">
+<section class="section post-show-page" style="padding-top:120px;">
   <div class="container">
 
-    <div class="d-flex justify-content-between align-items-center mb-4">
-      <a href="{{ path('post_index') }}" class="btn btn-outline-secondary">← Retour</a>
-      <a href="{{ path('post_edit', {id: post.id}) }}" class="btn btn-outline-primary">Edit</a>
+    {# =========================
+       ✅ TOP BAR
+       ========================= #}
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-4">
+      <a href="{{ path('post_index') }}" class="btn btn-outline-secondary btn-pill">
+        <i class="bi bi-arrow-left me-1"></i> Retour
+      </a>
+
+      <div class="d-flex gap-2">
+        <a href="{{ path('post_edit', {id: post.id}) }}" class="btn btn-outline-primary btn-pill">
+          <i class="bi bi-pencil-square me-1"></i> Modifier
+        </a>
+      </div>
     </div>
 
-    <div class="card border-0 shadow-sm">
+    {# =========================
+       ✅ HERO POST (pro)
+       ========================= #}
+    <div class="card post-hero border-0 shadow-sm mb-4">
       <div class="card-body p-4 p-lg-5">
 
-        <div class="d-flex gap-2 mb-3">
-          <span class="badge bg-primary">{{ post.categorie }}</span>
+        <div class="d-flex flex-wrap gap-2 mb-3 align-items-center">
+          <span class="badge badge-soft">
+            <i class="bi bi-tag me-1"></i>{{ post.categorie }}
+          </span>
+
           {% if post.visibilite != 'PUBLIC' %}
-            <span class="badge bg-secondary">{{ post.visibilite }}</span>
+            <span class="badge badge-soft-muted">
+              <i class="bi bi-shield-lock me-1"></i>{{ post.visibilite }}
+            </span>
+          {% else %}
+            <span class="badge badge-soft-green">
+              <i class="bi bi-globe2 me-1"></i>PUBLIC
+            </span>
           {% endif %}
         </div>
 
-        <h2 class="mb-2">{{ post.titre }}</h2>
+        <h1 class="post-title mb-2">{{ post.titre }}</h1>
 
-        <div class="text-muted mb-4">
-          {{ post.dateCreation ? post.dateCreation|date('d/m/Y H:i') : '' }}
-          {% if post.localisation %} · {{ post.localisation }}{% endif %}
-          {% if post.user %} · <strong>{{ post.user.prenom }} {{ post.user.nom }}</strong>{% endif %}
+        <div class="post-meta d-flex flex-wrap gap-2 align-items-center mb-4">
+          <span><i class="bi bi-calendar3 me-1"></i>{{ post.dateCreation ? post.dateCreation|date('d/m/Y H:i') : '' }}</span>
+          {% if post.localisation %}
+            <span class="meta-dot"></span>
+            <span><i class="bi bi-geo-alt me-1"></i>{{ post.localisation }}</span>
+          {% endif %}
+          {% if post.user %}
+            <span class="meta-dot"></span>
+            <span><i class="bi bi-person-circle me-1"></i><strong>{{ post.user.prenom }} {{ post.user.nom }}</strong></span>
+          {% endif %}
         </div>
 
         {% if post.imgPost %}
-          <img src="{{ asset(post.imgPost) }}" class="img-fluid rounded mb-4" alt="image post">
+          <div class="post-media mb-4">
+            <img src="{{ asset(post.imgPost) }}" class="post-img" alt="image post">
+          </div>
         {% endif %}
 
-        <div class="fs-6">
+        <div class="post-content">
           {{ post.contenu|nl2br }}
         </div>
 
         {% if post.hashtags %}
-          <hr class="my-4">
+          <hr class="my-4" style="opacity:.12;">
           <div class="d-flex flex-wrap gap-2">
             {% for t in post.hashtags|split(' ') %}
               {% if t %}
-                <span class="badge bg-light text-dark border">{{ t }}</span>
+                <span class="badge badge-hash">{{ t }}</span>
               {% endif %}
             {% endfor %}
           </div>
@@ -50,150 +80,322 @@
       </div>
     </div>
 
+    {# =========================
+       ✅ COMMENTS
+       ========================= #}
+    {% set published = post.commentaires|filter(c => (c.status ?? 'published') == 'published') %}
+    {% set sorted = published|sort((a,b) => b.dateCreation <=> a.dateCreation) %}
+
+    <div class="card comments-card border-0 shadow-sm">
+      <div class="card-body p-0">
+
+        {# Header commentaires #}
+        <div class="comments-head px-4 py-3">
+          <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <div class="d-flex align-items-center gap-2">
+              <div class="comments-icon">
+                <i class="bi bi-chat-dots"></i>
+              </div>
+              <div>
+                <div class="fw-bold">Commentaires</div>
+                <div class="text-muted small">Gérez vos interactions sur ce post</div>
+              </div>
+              <span class="ms-2 badge badge-count">{{ published|length }}</span>
+            </div>
+
+      
+          </div>
+        </div>
+
+        <div class="divider"></div>
+
+        {# Liste commentaires #}
+        <div class="px-4 py-3">
+
+          {% for c in sorted %}
+            {# --- Avatar URL (photo si dispo) --- #}
+            {% set pic = (not c.estAnonyme) ? (attribute(c.user, 'profilePicture') ?? attribute(c.user, 'profile_picture') ?? null) : null %}
+            {% set avatarUrl = null %}
+            {% if pic %}
+              {% if pic starts with 'http' %}
+                {% set avatarUrl = pic %}
+              {% else %}
+                {% set avatarUrl = asset('uploads/profile/' ~ pic) %}
+              {% endif %}
+            {% endif %}
+
+            <div class="comment-item {% if not loop.last %}mb-3{% endif %}" data-comment-id="{{ c.id }}">
+              <div class="d-flex gap-3">
+
+                <div class="avatar">
+                  {% if c.estAnonyme %}
+                    <i class="bi bi-incognito"></i>
+                  {% else %}
+                    {% if avatarUrl %}
+                      <img src="{{ avatarUrl }}" alt="avatar" class="avatar-img" loading="lazy">
+                    {% else %}
+                      {{ (c.user.prenom is defined and c.user.prenom) ? (c.user.prenom|slice(0,1)|upper) : (c.user.emailUser|slice(0,1)|upper) }}
+                    {% endif %}
+                  {% endif %}
+                </div>
+
+                <div class="flex-grow-1">
+
+                  <div class="d-flex justify-content-between align-items-start gap-2 flex-wrap">
+                    <div>
+                      <div class="comment-name">
+                        {% if c.estAnonyme %}
+                          Anonyme
+                        {% else %}
+                          {{ (c.user.prenom is defined and c.user.prenom) ? (c.user.prenom ~ ' ' ~ (c.user.nom is defined ? c.user.nom : '')) : c.user.emailUser }}
+                        {% endif %}
+                      </div>
+                      <div class="comment-time">
+                        <i class="bi bi-clock me-1"></i>{{ c.dateCreation|date('d/m/Y H:i') }}
+                      </div>
+                    </div>
+
+                    <div class="d-flex align-items-center gap-2">
+                      {% set badge =
+                        c.parametresConfidentialite == 'PRIVE' ? 'danger' :
+                        (c.parametresConfidentialite == 'AMIS' ? 'info' : 'success')
+                      %}
+                      <span class="badge bg-{{ badge }} badge-privacy">
+                        {{ c.parametresConfidentialite }}
+                      </span>
+
+                      <a class="btn btn-sm btn-light btn-icon"
+                         href="{{ path('commentaire_edit', {id: c.id}) }}"
+                         title="Modifier">
+                        <i class="bi bi-pencil"></i>
+                      </a>
+
+                      <form method="post"
+                            action="{{ path('commentaire_delete', {id: c.id}) }}"
+                            onsubmit="return confirm('Supprimer ce commentaire ?');">
+                        <input type="hidden" name="token" value="{{ csrf_token('del_commentaire' ~ c.id) }}">
+                        <button class="btn btn-sm btn-light btn-icon" title="Supprimer" type="submit">
+                          <i class="bi bi-trash"></i>
+                        </button>
+                      </form>
+                    </div>
+                  </div>
+
+                  <div class="comment-bubble mt-2">
+                    {{ c.contenu }}
+                  </div>
+
+                  <div class="comment-actions mt-2">
+                    <button type="button" class="btn btn-link p-0 text-decoration-none">
+                      <i class="bi bi-heart me-1"></i> J’aime
+                    </button>
+                    <span class="sep">•</span>
+                    <button type="button" class="btn btn-link p-0 text-decoration-none">
+                      <i class="bi bi-reply me-1"></i> Répondre
+                    </button>
+                  </div>
+
+                </div>
+              </div>
+            </div>
+
+          {% else %}
+            <div class="text-muted py-3">
+              Aucun commentaire pour le moment.
+            </div>
+          {% endfor %}
+        </div>
+
+        
+        </div>
+
+      </div>
+    </div>
+
   </div>
 </section>
 
 <style>
-  .ig-card { border-radius: 18px; overflow: hidden; }
-  .ig-divider { border-top: 1px solid rgba(0,0,0,.06); }
-  .ig-avatar {
-    width: 42px; height: 42px; border-radius: 50%;
-    display: inline-flex; align-items: center; justify-content: center;
-    background: linear-gradient(135deg, rgba(13,110,253,.15), rgba(32,201,151,.15));
-    border: 1px solid rgba(0,0,0,.06);
-    font-weight: 700;
+  :root{
+    --mf:#0097B2;
+    --mf2:#00BFA6;
+    --text:#101828;
+    --muted:#6c757d;
+    --shadow: 0 16px 40px rgba(16,24,40,.08);
   }
-  .ig-name { font-weight: 700; font-size: .95rem; }
-  .ig-time { font-size: .78rem; color: #6c757d; }
-  .ig-bubble {
-    background: #f8f9fa;
-    border: 1px solid rgba(0,0,0,.06);
+
+  .post-show-page{
+    background:
+      radial-gradient(1100px 340px at 10% -10%, rgba(0,151,178,.12), transparent 60%),
+      radial-gradient(900px 320px at 95% 0%, rgba(0,191,166,.10), transparent 55%);
+  }
+
+  .btn-pill{ border-radius: 999px !important; }
+  .btn-mf{
+    background: linear-gradient(90deg, var(--mf), #48cae4);
+    border: none;
+    color:#fff;
+    box-shadow: 0 10px 24px rgba(0,151,178,.22);
+  }
+  .btn-mf:hover{ transform: translateY(-1px); }
+
+  /* Hero post */
+  .post-hero{
+    border-radius: 22px;
+    background: rgba(255,255,255,.94);
+    backdrop-filter: blur(10px);
+    box-shadow: var(--shadow);
+  }
+  .post-title{
+    font-weight: 950;
+    letter-spacing: -.4px;
+    line-height: 1.12;
+    color: var(--text);
+    font-size: clamp(1.6rem, 2.4vw, 2.2rem);
+  }
+  .post-meta{ color: var(--muted); font-size: .95rem; }
+  .meta-dot{ width:5px; height:5px; border-radius:999px; background: rgba(108,117,125,.55); display:inline-block; }
+
+  .post-media{
+    border-radius: 18px;
+    overflow: hidden;
+    border: 1px solid rgba(16,24,40,.08);
+    box-shadow: 0 14px 34px rgba(16,24,40,.10);
+    background:#fff;
+  }
+  .post-img{ width:100%; height: 360px; object-fit: cover; display:block; }
+  @media (max-width: 768px){ .post-img{ height: 240px; } }
+
+  .post-content{
+    color:#344054;
+    font-size: 1.02rem;
+    line-height: 1.65;
+  }
+
+  /* Badges */
+  .badge-soft{
+    border-radius:999px;
+    background: rgba(0,151,178,.10);
+    border:1px solid rgba(0,151,178,.18);
+    color: var(--mf);
+    font-weight:800;
+    padding:.42rem .7rem;
+  }
+  .badge-soft-muted{
+    border-radius:999px;
+    background: rgba(108,117,125,.10);
+    border:1px solid rgba(108,117,125,.18);
+    color:#6c757d;
+    font-weight:800;
+    padding:.42rem .7rem;
+  }
+  .badge-soft-green{
+    border-radius:999px;
+    background: rgba(0,191,166,.12);
+    border:1px solid rgba(0,191,166,.20);
+    color:#0f8d67;
+    font-weight:800;
+    padding:.42rem .7rem;
+  }
+  .badge-hash{
+    border-radius:999px;
+    background:#fff;
+    border:1px dashed rgba(16,24,40,.18);
+    color:#344054;
+    font-weight:800;
+    padding:.38rem .65rem;
+  }
+
+  /* Comments */
+  .comments-card{
+    border-radius: 22px;
+    overflow: hidden;
+    background: rgba(255,255,255,.94);
+    backdrop-filter: blur(10px);
+    box-shadow: var(--shadow);
+  }
+  .comments-head{
+    background: linear-gradient(135deg, rgba(0,151,178,.08), rgba(0,191,166,.06));
+  }
+  .comments-icon{
+    width:40px;height:40px;border-radius:14px;
+    display:flex;align-items:center;justify-content:center;
+    background: rgba(0,151,178,.14);
+    border: 1px solid rgba(16,24,40,.08);
+  }
+  .badge-count{
+    border-radius:999px;
+    background: rgba(0,151,178,.12);
+    border:1px solid rgba(0,151,178,.18);
+    color: var(--mf);
+    font-weight:900;
+  }
+  .divider{ border-top:1px solid rgba(16,24,40,.08); }
+
+  .comment-item{
+    border: 1px solid rgba(16,24,40,.08);
+    border-radius: 18px;
+    padding: 14px 14px;
+    background:#fff;
+    box-shadow: 0 10px 22px rgba(16,24,40,.06);
+    transition: transform .12s ease, box-shadow .12s ease;
+  }
+  .comment-item:hover{
+    transform: translateY(-1px);
+    box-shadow: 0 18px 36px rgba(16,24,40,.08);
+  }
+  .comment-name{ font-weight:900; color: var(--text); }
+  .comment-time{ font-size:.8rem; color: var(--muted); }
+
+  .badge-privacy{ border-radius:999px; font-size:.72rem; }
+
+  .btn-icon{
+    width: 36px;
+    height: 32px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    border-radius: 12px;
+    border:1px solid rgba(16,24,40,.08);
+  }
+
+  .comment-bubble{
+    background: rgba(0,151,178,.04);
+    border: 1px solid rgba(0,151,178,.10);
     border-radius: 14px;
-    padding: .6rem .75rem;
+    padding: .65rem .8rem;
+    color:#344054;
     white-space: pre-wrap;
   }
-  .ig-badge { font-size: .72rem; border-radius: 999px; }
-  .ig-input {
+  .comment-actions{
+    font-size:.88rem;
+    color: var(--muted);
+    display:flex;
+    align-items:center;
+    gap: 10px;
+  }
+  .comment-actions .sep{ opacity:.6; }
+
+  /* Avatar */
+  .avatar{
+    width: 44px; height: 44px; border-radius: 50%;
+    display:flex; align-items:center; justify-content:center;
+    background: linear-gradient(135deg, rgba(0,151,178,.18), rgba(0,191,166,.18));
+    border: 1px solid rgba(16,24,40,.10);
+    box-shadow: 0 10px 22px rgba(16,24,40,.10);
+    font-weight: 900;
+    color: var(--text);
+    overflow:hidden;
+    flex: 0 0 44px;
+  }
+  .avatar-sm{ width:38px; height:38px; flex:0 0 38px; }
+  .avatar-img{ width:100%; height:100%; object-fit: cover; display:block; }
+
+  .comment-input{
     border-radius: 999px !important;
-    padding-left: 1rem !important;
+    padding-left: 14px !important;
+    border: 1px solid rgba(16,24,40,.12);
+    background:#fff;
   }
 </style>
-
-{# ✅ فقط التعليقات المنشورة #}
-{% set published = post.commentaires|filter(c => (c.status ?? 'published') == 'published') %}
-
-<div class="card shadow-sm border-0 ig-card mt-4">
-  <div class="card-body p-0">
-
-    {# Header commentaires #}
-    <div class="d-flex justify-content-between align-items-center px-4 py-3">
-      <div class="d-flex align-items-center gap-2">
-        <i class="bi bi-chat-dots"></i>
-        <span class="fw-bold">Commentaires</span>
-        {# ✅ عدد التعليقات بدون blocked #}
-        <span class="text-muted">({{ published|length }})</span>
-      </div>
-
-      <a class="btn btn-sm btn-outline-primary"
-         href="{{ path('commentaire_add', {id: post.id}) }}">
-        <i class="bi bi-plus-circle"></i> Ajouter
-      </a>
-    </div>
-
-    <div class="ig-divider"></div>
-
-    {# Liste commentaires #}
-    <div class="px-4 py-3">
-      {% set sorted = published|sort((a,b) => b.dateCreation <=> a.dateCreation) %}
-
-      {% for c in sorted %}
-        <div class="d-flex gap-3 py-3 {% if not loop.last %}ig-divider{% endif %}">
-          {# Avatar simple #}
-          <div class="ig-avatar">
-            {% if c.estAnonyme %}
-              <i class="bi bi-incognito"></i>
-            {% else %}
-              {{ (c.user.prenom is defined and c.user.prenom) ? (c.user.prenom|slice(0,1)|upper) : (c.user.emailUser|slice(0,1)|upper) }}
-            {% endif %}
-          </div>
-
-          <div class="flex-grow-1">
-            <div class="d-flex justify-content-between align-items-start">
-              <div>
-                <div class="ig-name">
-                  {% if c.estAnonyme %}
-                    Anonyme
-                  {% else %}
-                    {{ (c.user.prenom is defined and c.user.prenom) ? (c.user.prenom ~ ' ' ~ (c.user.nom is defined ? c.user.nom : '')) : c.user.emailUser }}
-                  {% endif %}
-                </div>
-                <div class="ig-time">
-                  {{ c.dateCreation|date('d/m/Y H:i') }}
-                </div>
-              </div>
-
-              <div class="d-flex align-items-center gap-2">
-                {# Badge confidentialité #}
-                {% set badge =
-                  c.parametresConfidentialite == 'PRIVE' ? 'danger' :
-                  (c.parametresConfidentialite == 'AMIS' ? 'info' : 'success')
-                %}
-                <span class="badge bg-{{ badge }} ig-badge">
-                  {{ c.parametresConfidentialite }}
-                </span>
-
-                {# Edit #}
-                <a class="btn btn-sm btn-light"
-                   href="{{ path('commentaire_edit', {id: c.id}) }}"
-                   title="Modifier">
-                  <i class="bi bi-pencil"></i>
-                </a>
-
-                {# Delete #}
-                <form method="post"
-                      action="{{ path('commentaire_delete', {id: c.id}) }}"
-                      onsubmit="return confirm('Supprimer ce commentaire ?');">
-                  {# ✅ IMPORTANT: le controller lit '_token' #}
-                  <input type="hidden" name="_token" value="{{ csrf_token('del_commentaire_' ~ c.id) }}">
-                  <button class="btn btn-sm btn-light" title="Supprimer">
-                    <i class="bi bi-trash"></i>
-                  </button>
-                </form>
-              </div>
-            </div>
-
-            <div class="mt-2 ig-bubble">
-              {{ c.contenu }}
-            </div>
-
-            <div class="d-flex gap-3 mt-2 text-muted" style="font-size:.85rem;">
-              <span><i class="bi bi-heart"></i> J’aime</span>
-              <span><i class="bi bi-reply"></i> Répondre</span>
-            </div>
-          </div>
-        </div>
-
-      {% else %}
-        <div class="text-muted py-3">
-          Aucun commentaire pour le moment.
-        </div>
-      {% endfor %}
-    </div>
-
-    <div class="ig-divider"></div>
-    <div class="px-4 py-3 d-flex gap-2 align-items-center">
-      <div class="ig-avatar" style="width:38px;height:38px;">U</div>
-      <input class="form-control ig-input"
-             placeholder="Ajouter un commentaire..."
-             readonly
-             onclick="window.location='{{ path('commentaire_add', {id: post.id}) }}'">
-      <a class="btn btn-primary rounded-pill"
-         href="{{ path('commentaire_add', {id: post.id}) }}">
-        Publier
-      </a>
-    </div>
-
-  </div>
-</div>
-
 {% endblock %}

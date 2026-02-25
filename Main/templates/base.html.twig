@@ -38,7 +38,7 @@
 
   {% block stylesheets %}{% endblock %}
 </head>
-
+{{ importmap() }}
 {# Sticky footer layout #}
 <body class="index-page d-flex flex-column min-vh-100">
 
@@ -260,8 +260,75 @@
   </div>
 
 {% else %}
-  <a class="btn-getstarted ms-3" href="{{ path('app_register') }}"><i class="bi bi-person-plus me-1"></i> Inscription</a>
+  <li class="nav-item d-inline-flex align-items-center ms-3">
+    <a class="btn-getstarted icon-only me-2" href="{{ path('app_register') }}" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Inscription">
+      <i class="bi bi-person-plus fs-4"></i>
+    </a>
+    <a class="btn-getstarted icon-only btn-outline-primary" href="{{ path('app_login') }}" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Connexion">
+      <i class="bi bi-box-arrow-in-right fs-4"></i>
+    </a>
+  </li>
 {% endif %}
+  <style>
+    .btn-getstarted.icon-only {
+      padding: 0.5rem 0.7rem;
+      border-radius: 50%;
+      min-width: 44px;
+      min-height: 44px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+      background: #0097B2;
+      color: #fff;
+      box-shadow: 0 2px 8px rgba(0,151,178,0.12);
+      margin-right: 0.5rem;
+      margin-left: 0.2rem;
+      transition: background 0.2s, color 0.2s, box-shadow 0.2s, transform 0.18s;
+      cursor: pointer;
+      position: relative;
+      outline: none;
+    }
+    .btn-getstarted.icon-only.btn-outline-primary {
+      background: #fff;
+      color: #0097B2;
+      border: 2px solid #0097B2;
+      box-shadow: 0 2px 8px rgba(0,151,178,0.08);
+    }
+    .btn-getstarted.icon-only:hover, .btn-getstarted.icon-only:focus {
+      background: #003399;
+      color: #fff;
+      box-shadow: 0 6px 18px rgba(0,51,153,0.18);
+      transform: scale(1.08);
+      z-index: 2;
+    }
+    .btn-getstarted.icon-only.btn-outline-primary:hover, .btn-getstarted.icon-only.btn-outline-primary:focus {
+      background: #0097B2;
+      color: #fff;
+      box-shadow: 0 6px 18px rgba(0,151,178,0.18);
+      transform: scale(1.08);
+      z-index: 2;
+    }
+    .btn-getstarted.icon-only:active {
+      transform: scale(0.98);
+      box-shadow: 0 1px 4px rgba(0,51,153,0.12);
+    }
+    .btn-getstarted.icon-only i {
+      pointer-events: none;
+    }
+    .nav-item .btn-getstarted.icon-only {
+      margin-right: 0.2rem;
+      margin-left: 0.2rem;
+    }
+  </style>
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+      tooltipTriggerList.forEach(function (el) {
+        new bootstrap.Tooltip(el);
+      });
+    });
+  </script>
 {# ====== /PROFILE DROPDOWN ====== #}
 
 
@@ -1274,6 +1341,7 @@ if (fileInput && previewImg) {
 
   {% block javascripts %}{% endblock %}
   {% block importmap %}{{ importmap('app') }}{% endblock %}
+
 
 </body>
 </html>

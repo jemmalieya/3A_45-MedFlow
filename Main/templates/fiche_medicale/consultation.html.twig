@@ -1,714 +1,487 @@
 {% extends 'base_dashboard.html.twig' %}
+
 {% block body %}
 <style>
-    .page-header {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        padding: 40px 30px;
-        border-radius: 10px;
-        margin-bottom: 30px;
-        box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
-    }
-    #video {
-        transform: scaleX(-1); /* Flip horizontally for video only */
-    }
-    #drawCanvas {
-        /* No mirroring for canvas, so drawing is saved as drawn */
-    }
-    .page-header h1 {
-        font-size: 2.5rem;
-        font-weight: 700;
-        margin-bottom: 10px;
-        letter-spacing: -0.5px;
-    }
-    .page-header p {
-        font-size: 1.1rem;
-        opacity: 0.95;
-        margin: 0;
-    }
-    .card {
-        border: none;
-        border-radius: 12px;
-        box-shadow: 0 5px 20px rgba(0, 0, 0, 0.08);
-        transition: all 0.3s ease;
-        overflow: hidden;
-    }
-    .card:hover {
-        box-shadow: 0 10px 35px rgba(0, 0, 0, 0.15);
-        transform: translateY(-2px);
-    }
-    .card-header {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        border: none;
-        padding: 20px 24px;
-    }
-    .card-header h6 {
-        font-size: 1.1rem;
-        font-weight: 600;
-        letter-spacing: 0.3px;
-    }
-    .card-body {
-        padding: 25px;
-    }
-    .btn-primary {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        border: none;
-        border-radius: 8px;
-        padding: 8px 16px;
-        font-weight: 600;
-        transition: all 0.3s ease;
-    }
-    .btn-primary:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
-        color: white;
-    }
-    .btn-secondary {
-        background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);
-        border: none;
-        color: white;
-        border-radius: 8px;
-        transition: all 0.3s ease;
-    }
-    .btn-secondary:hover:not(:disabled) {
-        transform: translateY(-2px);
-        box-shadow: 0 6px 15px rgba(107, 114, 128, 0.3);
-    }
-    .alert {
-        border: none;
-        border-radius: 10px;
-        border-left: 4px solid;
-        margin-bottom: 20px;
-        animation: slideIn 0.4s ease;
-    }
-    .alert-danger {
-        background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
-        border-left-color: #dc2626;
-        color: #7f1d1d;
-    }
-    .alert-success {
-        background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
-        border-left-color: #16a34a;
-        color: #15803d;
-    }
-    @keyframes slideIn {
-        from { opacity: 0; transform: translateY(-10px); }
-        to { opacity: 1; transform: translateY(0); }
-    }
-    .form-control {
-        border: 2px solid #e2e8f0;
-        border-radius: 8px;
-        padding: 10px 14px;
-        font-size: 0.95rem;
-        transition: all 0.3s ease;
-    }
-    .form-control:focus {
-        border-color: #667eea;
-        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-    }
-    .form-group label {
-        font-weight: 600;
-        color: #2d3748;
-        margin-bottom: 8px;
-    }
-    .text-danger { color: #dc2626 !important; }
+/* Modern Teal Admin Design */
+:root{
+    --teal-50:#ecfeff;
+    --teal-100:#cffafe;
+    --teal-200:#a5f3fc;
+    --teal-300:#67e8f9;
+    --teal-400:#22d3ee;
+    --teal-500:#06b6d4;
+    --teal-600:#0891b2;
+    --teal-700:#0e7490;
+    --teal-800:#155e75;
+    --teal-900:#164e63;
+    --gray-50:#f9fafb;
+    --gray-100:#f3f4f6;
+    --gray-200:#e5e7eb;
+    --gray-600:#4b5563;
+    --gray-700:#374151;
+    --gray-800:#1f2937;
+    --gray-900:#111827;
+}
+body{
+    background: linear-gradient(135deg, var(--gray-50) 0%, var(--teal-50) 100%);
+    min-height: 100vh;
+    color: var(--gray-900);
+}
+.card{
+    border:none;
+    border-radius:18px;
+    background:#fff;
+    box-shadow: 0 10px 26px rgba(8,145,178,.12);
+    overflow:hidden;
+    transition: transform .25s ease, box-shadow .25s ease;
+}
+.card:hover{
+    transform: translateY(-4px);
+    box-shadow: 0 18px 44px rgba(8,145,178,.18);
+}
+.btn{
+    border-radius:12px;
+    padding:.75rem 1.35rem;
+    font-weight:900;
+    border:none;
+    transition: transform .2s ease, box-shadow .2s ease;
+}
+.btn-primary{
+    background: linear-gradient(135deg, var(--teal-600) 0%, var(--teal-800) 100%);
+    color:#fff !important;
+    box-shadow: 0 10px 20px rgba(8,145,178,.25);
+}
+.btn-outline-primary{
+    background:#fff;
+    border:2px solid var(--teal-600) !important;
+    color: var(--teal-700) !important;
+}
+.form-control {
+    border: 2px solid var(--gray-200);
+    border-radius: 12px;
+    padding: 10px 14px;
+    font-size: 0.95rem;
+    transition: all 0.3s ease;
+}
+.form-control:focus {
+    border-color: var(--teal-600);
+    box-shadow: 0 0 0 3px rgba(6,182,212,.14);
+}
+.page-header{
+    background: linear-gradient(135deg, var(--teal-600) 0%, var(--teal-800) 100%);
+    color: white;
+    padding: 40px 30px;
+    border-radius: 18px;
+    margin-bottom: 30px;
+    box-shadow: 0 10px 30px rgba(8,145,178,0.15);
+}
+.page-header h1 { font-size: 2.5rem; font-weight: 800; margin-bottom: 10px; }
+.page-header p { font-size: 1.1rem; opacity: 0.95; margin: 0; }
+.text-danger { color: #dc2626 !important; }
 </style>
 
 <div class="container-fluid">
 
-                    <!-- Page Heading -->
-                    <div class="page-header">
-                        <h1>🩺 Consultation présentiel</h1>
-                        <p>Fiche médicale – consultation en cabinet</p>
-                    </div>
+  <div class="page-header">
+    <h1>🩺 Consultation présentiel</h1>
+    <p>Fiche médicale – consultation en cabinet</p>
+  </div>
 
-                    {# Parse server-side errors for each field #}
-                    {# Use flashed fieldErrors if present, else default #}
-                    {% set flashedFieldErrors = app.flashes('fieldErrors') %}
-                    {% if flashedFieldErrors and flashedFieldErrors[0] is defined %}
-                        {% set fieldErrors = flashedFieldErrors[0] %}
-                        {% if fieldErrors.prescriptions is not defined %}
-                            {% set fieldErrors = fieldErrors|merge({'prescriptions': []}) %}
-                        {% endif %}
-                    {% else %}
-                        {% set fieldErrors = {'diagnostic': [], 'observations': [], 'resultatsExamens': [], 'prescriptions': []} %}
-                    {% endif %}
-                    {% set globalErrors = globalErrors|default([]) %}
-                    {% for message in app.flashes('error') %}
-                        {% set globalErrors = globalErrors|merge([message]) %}
-                    {% endfor %}
-                    {% if globalErrors %}
-                        <div class="alert alert-danger alert-dismissible fade show m-3" role="alert">
-                            <strong>❌ Validation Error:</strong>
-                            {% for message in globalErrors %}
-                                <div>{{ message }}</div>
-                            {% endfor %}
-                            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                                <span aria-hidden="true">&times;</span>
-                            </button>
-                        </div>
-                    {% endif %}
-                    {% if app.flashes('success') %}
-                        <div class="alert alert-success alert-dismissible fade show m-3" role="alert">
-                            <strong>✅ Success:</strong>
-                            {% for message in app.flashes('success') %}
-                                <div>{{ message }}</div>
-                            {% endfor %}
-                            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                                <span aria-hidden="true">&times;</span>
-                            </button>
-                        </div>
-                    {% endif %}
+  {# Errors #}
+  {% set flashedFieldErrors = app.flashes('fieldErrors') %}
+  {% if flashedFieldErrors and flashedFieldErrors[0] is defined %}
+    {% set fieldErrors = flashedFieldErrors[0] %}
+    {% if fieldErrors.prescriptions is not defined %}
+      {% set fieldErrors = fieldErrors|merge({'prescriptions': []}) %}
+    {% endif %}
+  {% else %}
+    {% set fieldErrors = {'diagnostic': [], 'observations': [], 'resultatsExamens': [], 'prescriptions': []} %}
+  {% endif %}
 
-                    <form method="POST" action="{{ path('consultation_view') }}" id="consultationForm">
-                        <!-- Section 1: Fiche médicale -->
-                        <div class="card shadow mb-4">
-                            <div class="card-header py-3">
-                                <h6 class="m-0 font-weight-bold text-white">Fiche médicale</h6>
-                            </div>
-                            <div class="card-body">
-                                <div class="form-group">
-                                    <label for="diagnostic"><strong>Diagnostic</strong></label>
-                                    <textarea class="form-control" id="diagnostic" name="diagnostic" rows="4" placeholder="Enter the patient's diagnostic...">{{ app.request.get('diagnostic')|default('') }}</textarea>
-                                    <small id="diagnostic-feedback" class="d-block mt-2" style="font-size: 0.85rem;"></small>
-                                    {% for err in fieldErrors.diagnostic %}
-                                        <div class="text-danger" style="font-size:0.95em;">{{ err }}</div>
-                                    {% endfor %}
-                                </div>
-                                <div class="form-group">
-                                    <label for="observations"><strong>Observations</strong></label>
-                                    <textarea class="form-control" id="observations" name="observations" rows="4" placeholder="Enter any observations...">{{ app.request.get('observations')|default('') }}</textarea>
-                                    <small id="observations-feedback" class="d-block mt-2" style="font-size: 0.85rem;"></small>
-                                    {% for err in fieldErrors.observations %}
-                                        <div class="text-danger" style="font-size:0.95em;">{{ err }}</div>
-                                    {% endfor %}
-                                </div>
+  {% set globalErrors = [] %}
+  {% for message in app.flashes('error') %}
+    {% set globalErrors = globalErrors|merge([message]) %}
+  {% endfor %}
+  {% if globalErrors %}
+    <div class="alert alert-danger alert-dismissible fade show m-3" role="alert">
+      <strong>❌ Validation Error:</strong>
+      {% for message in globalErrors %}<div>{{ message }}</div>{% endfor %}
+      <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+        <span aria-hidden="true">&times;</span>
+      </button>
+    </div>
+  {% endif %}
 
-                                <div class="form-group mt-4">
-                                    <label for="symptoms"><strong>AI Prescription Suggestion (Beta)</strong></label>
-                                    <textarea class="form-control" id="symptoms" name="symptoms" rows="3" placeholder="Type patient symptoms for AI suggestion..."></textarea>
-                                    <small class="form-text text-muted">
-                                        Enter symptoms in English or French. Wait for AI suggestion below.<br>
-                                        <span style="color:#4b5563;font-size:0.95em;">
-                                            <strong>Note:</strong> The AI will return medications in a structured format for easy prescription filling.<br>
-                                        </span>
-                                    </small>
-                                    <div id="ai-suggestions" class="mt-2 text-info" style="min-height:2em;"></div>
-                                    <button type="button" class="btn btn-outline-primary btn-sm mt-2" id="add-ai-to-prescription" style="display:none;">Add to Prescription</button>
-                                </div>
+  {% set successMsgs = app.flashes('success') %}
+  {% if successMsgs %}
+    <div class="alert alert-success alert-dismissible fade show m-3" role="alert">
+      <strong>✅ Success:</strong>
+      {% for message in successMsgs %}<div>{{ message }}</div>{% endfor %}
+      <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+        <span aria-hidden="true">&times;</span>
+      </button>
+    </div>
+  {% endif %}
 
-                                <script>
-                                // AI Prescription Suggestion JS + Add to Prescription
-                                (function() {
-                                    let timer = null;
-                                    const textarea = document.getElementById('symptoms');
-                                    const suggestionsDiv = document.getElementById('ai-suggestions');
-                                    const addBtn = document.getElementById('add-ai-to-prescription');
-                                    if (!textarea || !suggestionsDiv || !addBtn) return;
-                                    textarea.addEventListener('input', function() {
-                                        clearTimeout(timer);
-                                        timer = setTimeout(function() {
-                                            const text = textarea.value.trim();
-                                            if (!text) {
-                                                suggestionsDiv.textContent = '';
-                                                addBtn.style.display = 'none';
-                                                return;
-                                            }
-                                            suggestionsDiv.textContent = '⏳ AI is thinking...';
-                                            addBtn.style.display = 'none';
-                                            // Add instruction to AI for JSON output
-                                            const prompt = text + "\n\nReturn the medication suggestions as a JSON array, where each item has: name, dose, frequence, duree (number of days), and instructions. Example: [{\"name\":\"Paracetamol\",\"dose\":\"500mg\",\"frequence\":\"3x/day\",\"duree\":\"5\",\"instructions\":\"after meals\"}]";
-                                            fetch('/api/suggest-prescription', {
-                                                method: 'POST',
-                                                headers: { 'Content-Type': 'application/json' },
-                                                body: JSON.stringify({ text: prompt })
-                                            })
-                                            .then(res => res.json())
-                                            .then(data => {
-                                                if (data.suggestion !== undefined) {
-                                                    suggestionsDiv.textContent = data.suggestion;
-                                                    addBtn.style.display = 'inline-block';
-                                                } else if (data.error) {
-                                                    suggestionsDiv.textContent = '⚠️ ' + data.error;
-                                                    addBtn.style.display = 'none';
-                                                } else {
-                                                    suggestionsDiv.textContent = 'No suggestion.';
-                                                    addBtn.style.display = 'none';
-                                                }
-                                            })
-                                            .catch(() => {
-                                                suggestionsDiv.textContent = '⚠️ AI service unavailable.';
-                                                addBtn.style.display = 'none';
-                                            });
-                                        }, 1000);
-                                    });
+  <form method="POST" action="{{ path('consultation_view') }}" id="consultationForm">
 
-                                    // Helper: parse AI suggestion text to array of prescription objects
-                                    function parseMedications(text) {
-                                        // Remove code block markers and extract JSON array
-                                        let jsonText = text.trim();
-                                        // Remove ```json or ``` and trailing ```
-                                        jsonText = jsonText.replace(/^```json|^```|```$/g, '').trim();
-                                        // Try to extract the first JSON array in the text
-                                        let arr = null;
-                                        const arrayMatch = jsonText.match(/\[.*\]/s);
-                                        if (arrayMatch) {
-                                            try {
-                                                arr = JSON.parse(arrayMatch[0]);
-                                            } catch (e) {}
-                                        } else {
-                                            // Try to parse as is
-                                            try {
-                                                arr = JSON.parse(jsonText);
-                                            } catch (e) {}
-                                        }
-                                        if (Array.isArray(arr)) {
-                                            // Only add if name is present and not empty
-                                            return arr.filter(item => item && item.name && item.name.trim() !== '').map(item => ({
-                                                nomMedicament: item.name || '',
-                                                dose: item.dose || '',
-                                                frequence: item.frequence || '',
-                                                duree: item.duree || '',
-                                                instructions: item.instructions || ''
-                                            }));
-                                        }
-                                        // Fallback: old parsing
-                                        const lines = text.split(/\n|\r|;|\./).map(l => l.trim()).filter(Boolean);
-                                        const meds = [];
-                                        lines.forEach(line => {
-                                            let name = '', dose = '', frequence = '', duree = '', instructions = '';
-                                            let durationMatch = line.match(/for ([0-9]+) ?(days?|jours?)/i);
-                                            if (durationMatch) {
-                                                duree = durationMatch[1];
-                                                line = line.replace(durationMatch[0], '').trim();
-                                            }
-                                            let freqMatch = line.match(/([0-9]+ ?(x|times|fois|per) ?(\/|par|per)? ?(day|jour|j))/i);
-                                            if (freqMatch) {
-                                                frequence = freqMatch[0].replace(/\s+/g, ' ').trim();
-                                                line = line.replace(freqMatch[0], '').trim();
-                                            } else {
-                                                let freq2 = line.match(/every ?([0-9]+ ?h)/i);
-                                                if (freq2) {
-                                                    frequence = freq2[0].trim();
-                                                    line = line.replace(freq2[0], '').trim();
-                                                }
-                                            }
-                                            let doseMatch = line.match(/([0-9]+ ?(mg|ml|g|mcg|IU|tab|caps?|suppositories?|drops?|puffs?))/i);
-                                            if (doseMatch) {
-                                                dose = doseMatch[0].trim();
-                                                line = line.replace(doseMatch[0], '').trim();
-                                            }
-                                            let nameMatch = line.match(/^([A-Za-zÀ-ÿ0-9\- ]+)/);
-                                            if (nameMatch) {
-                                                name = nameMatch[1].trim();
-                                                line = line.replace(nameMatch[1], '').trim();
-                                            }
-                                            instructions = line.replace(/^,|^-/,'').trim();
-                                            if (name) {
-                                                meds.push({
-                                                    nomMedicament: name,
-                                                    dose: dose,
-                                                    frequence: frequence,
-                                                    duree: duree,
-                                                    instructions: instructions
-                                                });
-                                            }
-                                        });
-                                        return meds;
-                                    }
+    {# ---- SECTION 1 ---- #}
+    <div class="card shadow mb-4">
+      <div class="card-header py-3">
+        <h6 class="m-0 font-weight-bold text-black">Fiche médicale</h6>
+      </div>
 
-                                    addBtn.addEventListener('click', function() {
-                                        const suggestion = suggestionsDiv.textContent;
-                                        if (!suggestion) return;
-                                        const meds = parseMedications(suggestion);
-                                        if (!Array.isArray(meds) || meds.length === 0) return;
-                                        // Remove all existing rows if the only row is empty (default row)
-                                        const container = document.getElementById('prescriptionRows');
-                                        if (container && container.children.length === 1) {
-                                            const onlyRow = container.children[0];
-                                            const inputs = onlyRow.querySelectorAll('input');
-                                            const allEmpty = Array.from(inputs).every(inp => !inp.value);
-                                            if (allEmpty) {
-                                                clearPrescriptionRows();
-                                            }
-                                        }
-                                        // Add each medication as a prescription card (skip empty objects)
-                                        meds.forEach(function(med) {
-                                            if (Object.values(med).some(v => v && v.toString().trim() !== '')) {
-                                                addPrescriptionRow(med);
-                                            }
-                                        });
-                                        // Optionally scroll to prescription section
-                                        const presRows = document.getElementById('prescriptionRows');
-                                        if (presRows) presRows.scrollIntoView({behavior:'smooth'});
-                                    });
-                                })();
-                                </script>
-                                </div>
-                                <div class="form-group">
-                                    <label for="resultatsExamens"><strong>Exam Results</strong></label>
-                                    <textarea class="form-control" id="resultatsExamens" name="resultatsExamens" rows="4" placeholder="Enter exam results...">{{ app.request.get('resultatsExamens')|default('') }}</textarea>
-                                    <small id="resultatsExamens-feedback" class="d-block mt-2" style="font-size: 0.85rem;"></small>
-                                    {% for err in fieldErrors.resultatsExamens %}
-                                        <div class="text-danger" style="font-size:0.95em;">{{ err }}</div>
-                                    {% endfor %}
-                                </div>
-                               <div class="form-group">
-                                    <label><strong>Signature (Air Gesture)</strong></label>
+      <div class="card-body">
 
-                                    <div style="position:relative; width:640px; height:480px; border-radius:10px; overflow:hidden; border:2px solid #667eea;">
-                                        <video id="video" width="640" height="480" autoplay playsinline style="position:absolute;"></video>
-                                        <canvas id="drawCanvas" width="640" height="480" style="position:absolute;"></canvas>
-                                    </div>
+        <div class="form-group">
+          <label for="diagnostic"><strong>Diagnostic</strong></label>
+          <textarea class="form-control" id="diagnostic" name="diagnostic" rows="4">{{ app.request.get('diagnostic')|default('') }}</textarea>
+          {% for err in fieldErrors.diagnostic %}
+            <div class="text-danger">{{ err }}</div>
+          {% endfor %}
+        </div>
 
-                                    <div class="mt-2">
-                                        <button type="button" class="btn btn-danger btn-sm" id="clearSignature">Clear</button>
-                                        <button type="button" class="btn btn-success btn-sm" id="confirmSignature">Confirm Signature</button>
-                                    </div>
+        <div class="form-group">
+          <label for="observations"><strong>Observations</strong></label>
+          <textarea class="form-control" id="observations" name="observations" rows="4">{{ app.request.get('observations')|default('') }}</textarea>
+          {% for err in fieldErrors.observations %}
+            <div class="text-danger">{{ err }}</div>
+          {% endfor %}
+        </div>
 
-                                    <div class="mt-3">
-                                        <label><strong>Captured Signature:</strong></label><br>
-                                        <img id="signaturePreview" style="max-width:300px; border:1px solid #ccc; display:none;">
-                                    </div>
+        <div class="form-group mt-4">
+          <label for="symptoms"><strong>AI Prescription Suggestion (Beta)</strong></label>
+          <textarea class="form-control" id="symptoms" name="symptoms" rows="3"></textarea>
+          <div id="ai-suggestions" class="mt-2 text-info" style="min-height:2em;"></div>
+          <button type="button" class="btn btn-outline-primary btn-sm mt-2" id="add-ai-to-prescription" style="display:none;">
+            Add to Prescription
+          </button>
+        </div>
 
-                                    <input type="hidden" name="signature" id="signatureInput">
-                                </div>
-                                {# Prescription errors #}
-                                {% for err in fieldErrors.prescriptions %}
-                                    <div class="text-danger" style="font-size:0.95em;">{{ err }}</div>
-                                {% endfor %}
-                                {% if fiche is defined and fiche %}
-                                    <input type="hidden" name="fiche_id" value="{{ fiche.id }}">
-                                    <input type="hidden" id="startTime" name="startTime" value="{{ fiche.startTime ? fiche.startTime|date('Y-m-d H:i:s') : '' }}">
-                                {% else %}
-                                    <input type="hidden" name="rendezvous_id" value="{{ rendezvousId }}">
-                                    <input type="hidden" id="startTime" name="startTime" value="{{ startParam }}">
-                                {% endif %}
-                                <input type="hidden" name="type" value="Présentiel">
-                                <div class="form-group">
-                                    <label for="dureeMinutes"><strong>Duration</strong></label>
-                                    <input type="text" class="form-control" id="dureeMinutes" name="dureeMinutes" placeholder="HH:MM:SS" readonly>
-                                    <script>
-                                    // Visual timer for duration field
-                                    (function() {
-                                        let startTime = Date.now();
-                                        // If startTime is present in hidden input, use it
-                                        const startInput = document.getElementById('startTime');
-                                        if (startInput && startInput.value) {
-                                            const parsed = Date.parse(startInput.value.replace(/-/g, '/'));
-                                            if (!isNaN(parsed)) {
-                                                startTime = parsed;
-                                            }
-                                        }
-                                        function pad(n) { return n < 10 ? '0' + n : n; }
-                                        function updateTimer() {
-                                            const now = Date.now();
-                                            let diff = Math.floor((now - startTime) / 1000);
-                                            if (diff < 0) diff = 0;
-                                            const h = Math.floor(diff / 3600);
-                                            const m = Math.floor((diff % 3600) / 60);
-                                            const s = diff % 60;
-                                            document.getElementById('dureeMinutes').value = pad(h) + ':' + pad(m) + ':' + pad(s);
-                                        }
-                                        setInterval(updateTimer, 1000);
-                                        updateTimer();
-                                    })();
-                                    </script>
-                                </div>
-                            </div>
-                        </div>
+        <div class="form-group">
+          <label for="resultatsExamens"><strong>Exam Results</strong></label>
+          <textarea class="form-control" id="resultatsExamens" name="resultatsExamens" rows="4">{{ app.request.get('resultatsExamens')|default('') }}</textarea>
+          {% for err in fieldErrors.resultatsExamens %}
+            <div class="text-danger">{{ err }}</div>
+          {% endfor %}
+        </div>
 
-                        <!-- Section 2: Prescription(s) -->
-                        <div class="card shadow mb-4">
-                            <div class="card-header py-3 d-flex justify-content-between align-items-center">
-                                <h6 class="m-0 font-weight-bold text-white">Prescription(s)</h6>
-                                <button type="button" class="btn btn-sm btn-light" id="addPrescriptionBtn">+ Add prescription</button>
-                            </div>
-                            <div class="card-body">
-                                <p class="text-muted small mb-3">You can add none, one or several prescriptions linked to this consultation. Leave a row empty to skip it.</p>
-                                <div id="prescriptionRows"></div>
-                                <script>
-                                // Patch: Add a hidden input for each prescription row to force array serialization
-                                // No longer needed: correct input naming ensures array serialization
-                                </script>
-                                <script>
-                                // Render prescription errors under each field if present
-                                document.addEventListener('DOMContentLoaded', function() {
-                                    if (typeof fieldErrors !== 'undefined' && Array.isArray(fieldErrors.prescriptions)) {
-                                        const rows = document.querySelectorAll('.prescription-row');
-                                        fieldErrors.prescriptions.forEach(function(rowErrors, idx) {
-                                            if (!rowErrors) return;
-                                            const row = rows[idx];
-                                            if (!row) return;
-                                            // For each field in the row, show errors if present
-                                            ['nomMedicament','dose','frequence','duree','instructions'].forEach(function(field) {
-                                                if (rowErrors[field] && rowErrors[field].length) {
-                                                    const input = row.querySelector(`[name^="prescription_rows[${idx}][${field}]"]`);
-                                                    if (input) {
-                                                        rowErrors[field].forEach(function(msg) {
-                                                            const errDiv = document.createElement('div');
-                                                            errDiv.className = 'text-danger';
-                                                            errDiv.style.fontSize = '0.95em';
-                                                            errDiv.textContent = msg;
-                                                            input.parentNode.appendChild(errDiv);
-                                                        });
-                                                    }
-                                                }
-                                            });
-                                        });
-                                    }
-                                    // No dummy prescription row: only real rows will be submitted
-                                });
-                                </script>
-                            </div>
-                        </div>
+        <div class="form-group">
+          <label><strong>Signature (Air Gesture)</strong></label>
 
-                        <div class="form-group">
-                            <button type="submit" name="save" class="btn btn-primary">Save consultation (fiche + prescriptions)</button>
-                            {% if idStaff %}
-                                <button type="button" class="btn btn-secondary" onclick="window.location.href='{{ path('app_fiche_by_staff', {'idStaff': idStaff}) }}'">Cancel</button>
-                            {% else %}
-                                <button type="button" class="btn btn-secondary" onclick="window.location.href='{{ path('app_fiche_medicale') }}'">Cancel</button>
-                            {% endif %}
-                        </div>
-                    </form>
+          <div style="position:relative; width:640px; height:480px; border-radius:10px; overflow:hidden; border:2px solid #667eea;">
+            <video id="video" width="640" height="480" autoplay playsinline style="position:absolute; transform: scaleX(-1);"></video>
+            <canvas id="drawCanvas" width="640" height="480" style="position:absolute;"></canvas>
+          </div>
 
-                </div>
-                <!-- /.container-fluid -->
-                <!-- Bootstrap core JavaScript-->
+          <div class="mt-2">
+            <button type="button" class="btn btn-danger btn-sm" id="clearSignature">Clear</button>
+            <button type="button" class="btn btn-success btn-sm" id="confirmSignature">Confirm Signature</button>
+          </div>
 
-    <!-- jQuery (CDN) -->
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <!-- Bootstrap Bundle (includes Popper) (CDN) -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.bundle.min.js"></script>
-    <!-- jQuery Easing (CDN) -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-easing/1.4.1/jquery.easing.min.js"></script>
-    <!-- Chart.js (CDN, needed for chart-area-demo.js/chart-pie-demo.js) -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+          <div class="mt-3">
+            <label><strong>Captured Signature:</strong></label><br>
+            <img id="signaturePreview" style="max-width:300px; border:1px solid #ccc; display:none;">
+          </div>
 
-    <!-- sb-admin-2.min.js is missing, so reference removed. If needed, add via CDN or local file. -->
+          <input type="hidden" name="signature" id="signatureInput">
+        </div>
+
+        {# hidden inputs #}
+        {% if fiche is defined and fiche %}
+          <input type="hidden" name="fiche_id" value="{{ fiche.id }}">
+          <input type="hidden" id="startTime" name="startTime" value="{{ fiche.startTime ? fiche.startTime|date('Y-m-d H:i:s') : '' }}">
+        {% else %}
+          <input type="hidden" name="rendezvous_id" value="{{ rendezvousId }}">
+          <input type="hidden" id="startTime" name="startTime" value="{{ startParam }}">
+        {% endif %}
+        <input type="hidden" name="type" value="Présentiel">
+
+        <div class="form-group">
+          <label for="dureeMinutes"><strong>Duration</strong></label>
+          <input type="text" class="form-control" id="dureeMinutes" name="dureeMinutes" placeholder="HH:MM:SS" readonly>
+        </div>
+
+      </div>
+    </div>
+
+    {# ---- SECTION 2 ---- #}
+    <div class="card shadow mb-4">
+      <div class="card-header py-3 d-flex justify-content-between align-items-center">
+        <h6 class="m-0 font-weight-bold text-black">Prescription(s)</h6>
+        <button type="button" class="btn btn-sm btn-outline-primary" id="addPrescriptionBtn">+ Add prescription</button>
+      </div>
+
+      <div class="card-body">
+        <p class="text-muted small mb-3">Add zero or more prescriptions for this consultation.</p>
+
+        <div id="prescriptionRows"></div>
+
+        {% for err in fieldErrors.prescriptions %}
+          <div class="text-danger">{{ err }}</div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="form-group">
+      <button type="submit" name="save" class="btn btn-primary">Save consultation (fiche + prescriptions)</button>
+
+      {% if idStaff %}
+        <button type="button" class="btn btn-outline-secondary" onclick="window.location.href='{{ path('app_fiche_by_staff', {'idStaff': idStaff}) }}'">Cancel</button>
+      {% else %}
+        <button type="button" class="btn btn-outline-secondary" onclick="window.location.href='{{ path('app_fiche_medicale') }}'">Cancel</button>
+      {% endif %}
+    </div>
+
+  </form>
+</div>
+
+{# JS loaded AFTER form to avoid DOM parse issues #}
+<script>
+  // Duration timer
+  (function() {
+    const input = document.getElementById('dureeMinutes');
+    if (!input) return;
+
+    let startTime = Date.now();
+    const startInput = document.getElementById('startTime');
+    if (startInput && startInput.value) {
+      const parsed = Date.parse(startInput.value.replace(/-/g, '/'));
+      if (!isNaN(parsed)) startTime = parsed;
+    }
+
+    function pad(n){ return n < 10 ? '0'+n : ''+n; }
+    function update(){
+      const diff = Math.max(0, Math.floor((Date.now() - startTime)/1000));
+      const h = Math.floor(diff/3600);
+      const m = Math.floor((diff%3600)/60);
+      const s = diff%60;
+      input.value = `${pad(h)}:${pad(m)}:${pad(s)}`;
+    }
+    setInterval(update, 1000);
+    update();
+  })();
+
+  // Prescription rows (SAFE HTML)
+  let prescriptionIdx = 0;
+
+  function createPrescriptionRow(idx, data = {}) {
+    return `
+      <div class="border rounded-3 p-3 mb-2 prescription-row" data-index="${idx}">
+        <div class="form-row">
+          <div class="col-md-3 mb-2">
+            <input type="text" class="form-control" name="prescription_rows[${idx}][medicament]" placeholder="Medicament" value="${data.medicament || ''}">
+          </div>
+          <div class="col-md-2 mb-2">
+            <input type="text" class="form-control" name="prescription_rows[${idx}][dosage]" placeholder="Dosage" value="${data.dosage || ''}">
+          </div>
+          <div class="col-md-2 mb-2">
+            <input type="text" class="form-control" name="prescription_rows[${idx}][frequence]" placeholder="Frequence" value="${data.frequence || ''}">
+          </div>
+          <div class="col-md-2 mb-2">
+            <input type="number" class="form-control" name="prescription_rows[${idx}][duree]" placeholder="Duree (days)" value="${data.duree || ''}">
+          </div>
+          <div class="col-md-3 mb-2 text-right">
+            <button type="button" class="btn btn-danger btn-sm remove-prescription-row">Delete</button>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  function addPrescriptionRow(data) {
+    const container = document.getElementById('prescriptionRows');
+    if (!container) return;
+    container.insertAdjacentHTML('beforeend', createPrescriptionRow(prescriptionIdx++, data));
+  }
+
+  document.addEventListener('DOMContentLoaded', function () {
+    const addBtn = document.getElementById('addPrescriptionBtn');
+    const rows = document.getElementById('prescriptionRows');
+    if (addBtn) addBtn.addEventListener('click', () => addPrescriptionRow());
+    if (rows) rows.addEventListener('click', (e) => {
+      if (e.target.classList.contains('remove-prescription-row')) {
+        e.target.closest('.prescription-row')?.remove();
+      }
+    });
+
+    // add one row by default
+    addPrescriptionRow();
+
+    // DEBUG: verify prescriptions are inside form
+    setTimeout(() => {
+      const first = document.querySelector('input[name="prescription_rows[0][medicament]"]');
+      console.log('Prescription input form id:', first?.form?.id);
+    }, 200);
+  });
+
+  // AI Suggestion (kept as-is, but now it will add rows correctly)
+  (function() {
+    let timer = null;
+    const textarea = document.getElementById('symptoms');
+    const suggestionsDiv = document.getElementById('ai-suggestions');
+    const addBtn = document.getElementById('add-ai-to-prescription');
+    if (!textarea || !suggestionsDiv || !addBtn) return;
+
+    textarea.addEventListener('input', function() {
+      clearTimeout(timer);
+      timer = setTimeout(function() {
+        const text = textarea.value.trim();
+        if (!text) { suggestionsDiv.textContent = ''; addBtn.style.display = 'none'; return; }
+
+        suggestionsDiv.textContent = '⏳ AI is thinking...';
+        addBtn.style.display = 'none';
+
+        const prompt = text + "\n\nReturn the medication suggestions as a JSON array, where each item has: name, dose, frequence, duree (number of days), and instructions.";
+        fetch('/api/suggest-prescription', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text: prompt })
+        })
+        .then(res => res.json())
+        .then(data => {
+          if (data.suggestion !== undefined) {
+            suggestionsDiv.textContent = data.suggestion;
+            addBtn.style.display = 'inline-block';
+          } else if (data.error) {
+            suggestionsDiv.textContent = '⚠️ ' + data.error;
+          } else {
+            suggestionsDiv.textContent = 'No suggestion.';
+          }
+        })
+        .catch(() => suggestionsDiv.textContent = '⚠️ AI service unavailable.');
+      }, 1000);
+    });
+
+    function parseMedications(text) {
+      let jsonText = text.trim().replace(/^```json|^```|```$/g, '').trim();
+      const arrayMatch = jsonText.match(/\[.*\]/s);
+      if (arrayMatch) {
+        try { return JSON.parse(arrayMatch[0]); } catch(e) {}
+      }
+      try { return JSON.parse(jsonText); } catch(e) {}
+      return [];
+    }
+
+    addBtn.addEventListener('click', function() {
+      const meds = parseMedications(suggestionsDiv.textContent || '');
+      if (!Array.isArray(meds) || meds.length === 0) return;
+
+      meds.forEach(m => addPrescriptionRow({
+        medicament: m.name || '',
+        dosage: m.dose || '',
+        frequence: m.frequence || '',
+        duree: m.duree || ''
+      }));
+    });
+  })();
+</script>
+
+{# MediaPipe scripts (keep) #}
 <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4/hands.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils@0.3/camera_utils.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils@0.3/drawing_utils.js"></script>
-<!-- MediaPipe Hands and dependencies (CDN, only once) -->
-
 
 <script>
-// Confirm which hands.js is loaded
-console.log('MediaPipe Hands version:', typeof Hands !== 'undefined' ? Hands.VERSION || 'Loaded' : 'NOT LOADED');
+console.log('MediaPipe Hands loaded:', typeof Hands !== 'undefined');
 
-// Unified prescription row logic
-let prescriptionIdx = 0;
-function createPrescriptionRow(idx, data = {}) {
-    // ...existing code...
-    return `
-    <div class="prescription-row card mb-2 p-3" data-index="${idx}">
-        <div class="form-row">
-            <div class="form-group col-md-3">
-                <input type="text" class="form-control" name="prescription_rows[${idx}][nomMedicament]" placeholder="Medication name" value="${data.nomMedicament || ''}" required>
-            </div>
-            <div class="form-group col-md-2">
-                <input type="text" class="form-control" name="prescription_rows[${idx}][dose]" placeholder="Dose" value="${data.dose || ''}" required>
-            </div>
-            <div class="form-group col-md-2">
-                <input type="text" class="form-control" name="prescription_rows[${idx}][frequence]" placeholder="Frequency" value="${data.frequence || ''}" required>
-            </div>
-            <div class="form-group col-md-2">
-                <input type="number" min="1" class="form-control" name="prescription_rows[${idx}][duree]" placeholder="Duration (days)" value="${data.duree || ''}" required>
-            </div>
-            <div class="form-group col-md-2">
-                <input type="text" class="form-control" name="prescription_rows[${idx}][instructions]" placeholder="Instructions" value="${data.instructions || ''}">
-            </div>
-            <div class="form-group col-md-1 d-flex align-items-center">
-                <button type="button" class="btn btn-danger btn-sm remove-prescription" title="Remove"><span aria-hidden="true">&times;</span></button>
-            </div>
-        </div>
-    </div>`;
-}
-function addPrescriptionRow(data) {
-    const container = document.getElementById('prescriptionRows');
-    container.insertAdjacentHTML('beforeend', createPrescriptionRow(prescriptionIdx++, data));
-}
-function clearPrescriptionRows() {
-    const container = document.getElementById('prescriptionRows');
-    container.innerHTML = '';
-    prescriptionIdx = 0;
-}
-document.addEventListener('DOMContentLoaded', function() {
-    document.getElementById('addPrescriptionBtn').addEventListener('click', function() {
-        addPrescriptionRow();
-    });
-    document.getElementById('prescriptionRows').addEventListener('click', function(e) {
-        if (e.target.closest('.remove-prescription')) {
-            e.target.closest('.prescription-row').remove();
-        }
-    });
-    // Always add one required row by default
-    if (prescriptionIdx === 0) addPrescriptionRow();
-});
-
-// Gesture signature logic (MediaPipe Hands with locateFile)
-let drawingCanvas;  // separate canvas to store permanent drawing
+let drawingCanvas;
 let drawCtx;
 let lastX = null, lastY = null;
 
 document.addEventListener("DOMContentLoaded", () => {
-    const video = document.getElementById("video");
-    const canvas = document.getElementById("drawCanvas");
-    const signatureInput = document.getElementById("signatureInput");
-    const preview = document.getElementById("signaturePreview");
+  const video = document.getElementById("video");
+  const canvas = document.getElementById("drawCanvas");
+  const signatureInput = document.getElementById("signatureInput");
+  const preview = document.getElementById("signaturePreview");
+  if (!video || !canvas) return;
 
-    // Permanent drawing layer
-    drawingCanvas = document.createElement("canvas");
-    drawingCanvas.width = canvas.width;
-    drawingCanvas.height = canvas.height;
-    drawCtx = drawingCanvas.getContext("2d");
+  drawingCanvas = document.createElement("canvas");
+  drawingCanvas.width = canvas.width;
+  drawingCanvas.height = canvas.height;
+  drawCtx = drawingCanvas.getContext("2d");
 
-    const ctx = canvas.getContext("2d");
+  const ctx = canvas.getContext("2d");
 
-    // Resize
-    function resizeCanvas() {
-        canvas.width = video.clientWidth;
-        canvas.height = video.clientHeight;
-        drawingCanvas.width = video.clientWidth;
-        drawingCanvas.height = video.clientHeight;
-    }
-    video.addEventListener("loadedmetadata", resizeCanvas);
-    window.addEventListener("resize", resizeCanvas);
+  const hands = new Hands({
+    locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4/${file}`
+  });
 
-    const hands = new Hands({
-        locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4/${file}`
-    });
+  hands.setOptions({
+    maxNumHands: 1,
+    modelComplexity: 0,
+    minDetectionConfidence: 0.7,
+    minTrackingConfidence: 0.7
+  });
 
-    hands.setOptions({
-        maxNumHands: 1,
-        modelComplexity: 0,
-        minDetectionConfidence: 0.7,
-        minTrackingConfidence: 0.7
-    });
+  hands.onResults(results => {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    hands.onResults(results => {
-        // Clear temporary canvas for drawing landmarks
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
+    if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
+      const landmarks = results.multiHandLandmarks[0];
 
-        if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
-            const landmarks = results.multiHandLandmarks[0];
+      landmarks.forEach(lm => {
+        const x = canvas.width - (lm.x * canvas.width);
+        const y = lm.y * canvas.height;
+        ctx.beginPath(); ctx.arc(x, y, 5, 0, 2 * Math.PI);
+        ctx.fillStyle = "black"; ctx.fill();
+      });
 
-            // Draw black dots for all landmarks (mirrored, so dots match video)
-            landmarks.forEach(lm => {
-                const x = canvas.width - (lm.x * canvas.width);
-                const y = lm.y * canvas.height;
-                ctx.beginPath();
-                ctx.arc(x, y, 5, 0, 2 * Math.PI);
-                ctx.fillStyle = "black";
-                ctx.fill();
-            });
+      const indexTip = landmarks[8];
+      const thumbTip = landmarks[4];
+      const pinchX = canvas.width - (((indexTip.x + thumbTip.x) / 2) * canvas.width);
+      const pinchY = ((indexTip.y + thumbTip.y) / 2) * canvas.height;
+      const distance = Math.hypot(indexTip.x - thumbTip.x, indexTip.y - thumbTip.y);
+      const pinchThreshold = 0.05;
 
-            // Pinch detection for drawing (mirrored, matches dots)
-            const indexTip = landmarks[8];
-            const thumbTip = landmarks[4];
-            const pinchX = canvas.width - (((indexTip.x + thumbTip.x) / 2) * canvas.width);
-            const pinchY = ((indexTip.y + thumbTip.y) / 2) * canvas.height;
-            const distance = Math.hypot(indexTip.x - thumbTip.x, indexTip.y - thumbTip.y);
-            const pinchThreshold = 0.05;
-
-            // Fingertips for eraser detection
-            const fingertipIndices = [4, 8, 12, 16, 20]; // thumb, index, middle, ring, pinky
-            let maxDistance = 0;
-            for (let i = 0; i < fingertipIndices.length; i++) {
-                for (let j = i+1; j < fingertipIndices.length; j++) {
-                    const lm1 = landmarks[fingertipIndices[i]];
-                    const lm2 = landmarks[fingertipIndices[j]];
-                    const d = Math.hypot(lm1.x - lm2.x, lm1.y - lm2.y);
-                    if (d > maxDistance) maxDistance = d;
-                }
-            }
-            const eraserThreshold = 0.08; // adjust to sensitivity
-            const allFingersTogether = maxDistance < eraserThreshold;
-
-            if (allFingersTogether) {
-                // Eraser point = average of all fingertips (mirrored)
-                let ex = 0, ey = 0;
-                fingertipIndices.forEach(i => {
-                    ex += landmarks[i].x;
-                    ey += landmarks[i].y;
-                });
-                ex = canvas.width - (ex / fingertipIndices.length * canvas.width);
-                ey = (ey / fingertipIndices.length) * canvas.height;
-
-                const eraserRadius = 30;
-                drawCtx.save();
-                drawCtx.globalCompositeOperation = 'destination-out';
-                drawCtx.beginPath();
-                drawCtx.arc(ex, ey, eraserRadius, 0, Math.PI * 2);
-                drawCtx.fill();
-                drawCtx.restore();
-
-                lastX = null;
-                lastY = null;
-            } else if (distance < pinchThreshold) {
-                // Pinch detected → draw red line (mirrored, matches dots)
-                if (lastX !== null && lastY !== null) {
-                    drawCtx.beginPath();
-                    drawCtx.moveTo(lastX, lastY);
-                    drawCtx.lineTo(pinchX, pinchY);
-                    drawCtx.strokeStyle = "red";
-                    drawCtx.lineWidth = 4;
-                    drawCtx.stroke();
-                }
-                lastX = pinchX;
-                lastY = pinchY;
-            } else {
-                lastX = null;
-                lastY = null;
-            }
-        } else {
-            lastX = null;
-            lastY = null;
+      if (distance < pinchThreshold) {
+        if (lastX !== null && lastY !== null) {
+          drawCtx.beginPath();
+          drawCtx.moveTo(lastX, lastY);
+          drawCtx.lineTo(pinchX, pinchY);
+          drawCtx.strokeStyle = "red";
+          drawCtx.lineWidth = 4;
+          drawCtx.stroke();
         }
+        lastX = pinchX; lastY = pinchY;
+      } else {
+        lastX = null; lastY = null;
+      }
+    } else {
+      lastX = null; lastY = null;
+    }
 
-        // Draw permanent lines underneath black dots
-        ctx.drawImage(drawingCanvas, 0, 0);
-    });
+    ctx.drawImage(drawingCanvas, 0, 0);
+  });
 
-    const camera = new Camera(video, {
-        onFrame: async () => await hands.send({image: video}),
-        width: 640,
-        height: 480
-    });
-    camera.start();
+  const camera = new Camera(video, {
+    onFrame: async () => await hands.send({image: video}),
+    width: 640,
+    height: 480
+  });
+  camera.start();
 
-    // Clear button
-    document.getElementById("clearSignature").addEventListener("click", () => {
-        drawCtx.clearRect(0,0,drawingCanvas.width,drawingCanvas.height);
-        ctx.clearRect(0,0,canvas.width,canvas.height);
-        preview.style.display = "none";
-        signatureInput.value = "";
-    });
+  document.getElementById("clearSignature")?.addEventListener("click", () => {
+    drawCtx.clearRect(0,0,drawingCanvas.width,drawingCanvas.height);
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    preview.style.display = "none";
+    signatureInput.value = "";
+  });
 
-    // Confirm button
-    document.getElementById("confirmSignature").addEventListener("click", () => {
-        // Resize to smaller canvas before saving (e.g., 320x80)
-        const targetWidth = 320;
-        const targetHeight = 80;
-        const tmpCanvas = document.createElement('canvas');
-        tmpCanvas.width = targetWidth;
-        tmpCanvas.height = targetHeight;
-        const tmpCtx = tmpCanvas.getContext('2d');
-        // Fill white background for better PDF compatibility
-        tmpCtx.fillStyle = '#fff';
-        tmpCtx.fillRect(0, 0, targetWidth, targetHeight);
-        // Draw scaled signature (no mirroring, as drawn)
-        tmpCtx.drawImage(drawingCanvas, 0, 0, drawingCanvas.width, drawingCanvas.height, 0, 0, targetWidth, targetHeight);
-        const dataURL = tmpCanvas.toDataURL("image/png");
-        // Store only the base64 part (after the comma)
-        const base64 = dataURL.split(',')[1];
-        signatureInput.value = base64;
-        preview.src = dataURL;
-        preview.style.display = "block";
-    });
+  document.getElementById("confirmSignature")?.addEventListener("click", () => {
+    const targetWidth = 320, targetHeight = 80;
+    const tmpCanvas = document.createElement('canvas');
+    tmpCanvas.width = targetWidth; tmpCanvas.height = targetHeight;
+    const tmpCtx = tmpCanvas.getContext('2d');
+    tmpCtx.fillStyle = '#fff';
+    tmpCtx.fillRect(0, 0, targetWidth, targetHeight);
+    tmpCtx.drawImage(drawingCanvas, 0, 0, drawingCanvas.width, drawingCanvas.height, 0, 0, targetWidth, targetHeight);
+
+    const dataURL = tmpCanvas.toDataURL("image/png");
+    signatureInput.value = dataURL.split(',')[1];
+    preview.src = dataURL;
+    preview.style.display = "block";
+  });
 });
 </script>
-    
-{% endblock %} 
+{% endblock %}

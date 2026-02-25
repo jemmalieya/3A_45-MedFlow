@@ -1,0 +1,3 @@
+<turbo-frame id="comments-{{ p.id }}">
+  {% include 'commentaire/_block.html.twig' with { p: p, commentErrors: commentErrors|default({}) } %}
+</turbo-frame>
