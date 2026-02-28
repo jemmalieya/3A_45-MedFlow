@@ -237,7 +237,12 @@
         <div class="col-lg-4 col-md-6 mb-4">
           <div class="doctor-card">
             <div class="doctor-image">
-              <img src="{{ staff.profilePicture ? asset(staff.profilePicture) }}" alt="Dr. {{ staff.nom }} {{ staff.prenom }}" class="img-fluid">
+              {% set pic = staff.profilePicture ?? null %}
+              {% set picUrl = (pic and (pic starts with 'http'))
+                ? pic
+                : (pic ? asset('uploads/profile/' ~ pic) : asset('assets_dash/img/undraw_profile.svg'))
+              %}
+              <img src="{{ picUrl }}" alt="Dr. {{ staff.nom }} {{ staff.prenom }}" class="img-fluid">
               <div class="availability-badge online">Disponible</div>
             </div>
             <div class="doctor-info text-center">

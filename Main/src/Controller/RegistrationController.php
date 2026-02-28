@@ -7,7 +7,7 @@ use App\Form\RegisterUserType;
 use App\Repository\UserRepository;
 use App\Service\UserService;  // Importation du service UserService
 use App\Service\GeminiService;
-use App\Service\OcrService;
+use App\Service\TesseractOcrService;
 use App\Service\RecaptchaService;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
@@ -344,7 +344,7 @@ class RegistrationController extends AbstractController
         UserPasswordHasherInterface $hasher,
         LoggerInterface $logger,
         UserRepository $userRepo,
-        OcrService $ocr,
+        TesseractOcrService $ocr,
         GeminiService $gemini,
         RecaptchaService $recaptcha,
     ): Response {

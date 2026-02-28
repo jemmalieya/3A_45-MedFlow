@@ -138,12 +138,20 @@
                   <i class="bi bi-pencil"></i>
                 </button>
 
-                <form class="delete-comment-form" method="post" action="{{ path('commentaire_delete', {id: c.id}) }}">
-                  <input type="hidden" name="token" value="{{ csrf_token('del_commentaire' ~ c.id) }}">
-                  <button class="btn btn-sm btn-light" type="submit" title="Supprimer">
-                    <i class="bi bi-trash"></i>
-                  </button>
-                </form>
+                <form class="delete-comment-form"
+      method="post"
+      action="{{ path('commentaire_delete', {id: c.id}) }}">
+
+  <input type="hidden"
+         name="_token"
+         value="{{ csrf_token('del_commentaire_' ~ c.id) }}">
+
+  <button class="btn btn-sm btn-light"
+          type="submit"
+          title="Supprimer">
+    <i class="bi bi-trash"></i>
+  </button>
+</form>
               </div>
             {% endif %}
 
@@ -186,4 +194,3 @@
       </form>
     </div>
   </div>
-

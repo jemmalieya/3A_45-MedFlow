@@ -37,7 +37,7 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 use App\Entity\User;
 use App\Service\GeminiService;
-use App\Service\OcrService;
+use App\Service\TesseractOcrService;
 use App\Service\EpidemieDetectionService;
 
 
@@ -180,7 +180,7 @@ final class AdController extends AbstractController
         User $user,
         int $i,
         EntityManagerInterface $em,
-        OcrService $ocr,
+        TesseractOcrService $ocr,
         GeminiService $gemini
     ): JsonResponse {
         $docs = $user->getStaffDocuments();
@@ -214,9 +214,20 @@ final class AdController extends AbstractController
         $ocrError = null;
 
         if (str_starts_with($mime, 'image/')) {
-            $res = $ocr->extractText($full);
-            $ocrText = is_string($res['text'] ?? null) ? trim((string) $res['text']) : null;
-            $ocrError = is_string($res['error'] ?? null) ? (string) $res['error'] : null;
+            try {
+                $res = $ocr->extractText($full);
+            } catch (\Throwable $e) {
+                return $this->json(['success' => false, 'error' => 'OCR failed: ' . $e->getMessage()], 500);
+            }
+
+            if (is_array($res)) {
+                $ocrText = is_string($res['text'] ?? null) ? trim((string) $res['text']) : null;
+                $ocrError = is_string($res['error'] ?? null) ? (string) $res['error'] : null;
+            } else {
+                // legacy: service returned string
+                $ocrText = is_string($res) ? trim((string) $res) : null;
+                $ocrError = null;
+            }
 
             if (is_string($ocrText) && $ocrText !== '') {
                 $docs['files'][$i]['ocrText'] = mb_substr($ocrText, 0, 4000);

@@ -1,0 +1,119 @@
+{% extends 'base.html.twig' %}
+{% block title %}À propos de nous{% endblock %}
+
+{% block body %}
+<div class="container py-5">
+    <section class="about-section">
+        <div class="row">
+            <div class="col-md-6">
+                <h2 class="section-title">À propos de MedFlow</h2>
+                <p class="lead">
+                    À l'ère du numérique, l’informatique s’impose comme un moteur d’innovation au service de la santé et du bien-être. C’est dans cette optique que l’équipe <strong>Commit & Pray</strong> a été formée, pour créer des solutions numériques performantes et adaptées aux besoins du secteur de la santé. Nous mettons à profit notre expertise technique et notre esprit d’équipe pour développer des outils qui facilitent la gestion des services hospitaliers, améliorent la qualité des soins et optimisent l’expérience des utilisateurs.
+                </p>
+            </div>
+            <div class="col-md-6">
+                <div class="hero-image">
+                    <img src="{{ asset('assets/img/health/Presentation-PIDEV.png') }}" alt="MedFlow Logo" class="img-fluid rounded shadow-lg">
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="vision-mission mt-5">
+        <div class="row">
+            <div class="col-md-6">
+                <h3 class="sub-section-title">Notre Vision</h3>
+                <p>
+                    Nous croyons que la transformation numérique des établissements hospitaliers peut améliorer la qualité des soins et l'organisation des services. <strong>MedFlow</strong> est une plateforme numérique centralisée, pensée pour répondre aux défis d'accessibilité, de gestion des services et de communication dans les hôpitaux publics.
+                </p>
+            </div>
+            <div class="col-md-6">
+                <h3 class="sub-section-title">Notre Mission</h3>
+                <p>
+                    Offrir une solution digitale innovante qui simplifie les processus non cliniques des hôpitaux, tout en garantissant une expérience fluide, sécurisée et efficace. <strong>MedFlow</strong> centralise les services essentiels tels que la gestion des utilisateurs, les consultations médicales, les événements, et la pharmacie hospitalière, pour une meilleure organisation et un suivi simplifié.
+                </p>
+            </div>
+        </div>
+    </section>
+
+    <section class="team mt-5">
+        <h3 class="section-title">Les ODD (SDGs) que nous ciblons</h3>
+
+        <div class="sdg-cards mt-3">
+            <div class="sdg-card" data-odd="3">
+                <div class="sdg-card-inner">
+                    <div class="sdg-tilt">
+                        <div class="sdg-front">
+                            <img src="{{ asset('assets/img/sdgs/sdg-3.png') }}" alt="ODD 3" class="sdg-icon-img" onerror="this.style.display='none'">
+                        </div>
+                        <div class="sdg-back">
+                            <h4>ODD Principale — ODD 3 : Bonne santé et bien-être</h4>
+                            <ul>
+                                <li>Accès facilité aux services de santé.</li>
+                                <li>Amélioration de l'accès aux produits médicaux.</li>
+                                <li>Sensibilisation et prévention.</li>
+                                <li>Amélioration de la qualité de service.</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="sdg-card" data-odd="9">
+                <div class="sdg-card-inner">
+                    <div class="sdg-tilt">
+                        <div class="sdg-front">
+                            <img src="{{ asset('assets/img/sdgs/sdg-9.png') }}" alt="ODD 9" class="sdg-icon-img" onerror="this.style.display='none'">
+                        </div>
+                        <div class="sdg-back">
+                            <h4>ODD 9 — Industrie, innovation et infrastructure</h4>
+                            <ul>
+                                <li>Digitalise les services hospitaliers non cliniques.</li>
+                                <li>Automatise les processus (rendez-vous, produits, réclamations).</li>
+                                <li>Centralise les données dans un système informatique sécurisé.</li>
+                                <li>Modernise l'infrastructure numérique des hôpitaux publics.</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="sdg-card" data-odd="10">
+                <div class="sdg-card-inner">
+                    <div class="sdg-tilt">
+                        <div class="sdg-front">
+                            <img src="{{ asset('assets/img/sdgs/sdg-10.png') }}" alt="ODD 10" class="sdg-icon-img" onerror="this.style.display='none'">
+                        </div>
+                        <div class="sdg-back">
+                            <h4>ODD 10 — Réduction des inégalités</h4>
+                            <ul>
+                                <li>Réduit les inégalités d’accès à l’information grâce à une plateforme unique, simple et centralisée.</li>
+                                <li>Organise des événements de vaccination ouverts à tous, garantissant l’égalité d’accès aux soins.</li>
+                                <li>Permet à chaque citoyen, sans distinction sociale ou géographique, de bénéficier des campagnes de santé.</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    {# Include interactive script for card tilt/flip #}
+    <script src="{{ asset('assets/js/aboutus.js') }}"></script>
+
+    <section class="team-logo mt-5">
+        <h3 class="section-title">Le Logo de l’Équipe</h3>
+        <p>
+            Le logo de <strong>Commit & Pray</strong> reflète l’esprit d’innovation et de collaboration de notre équipe. Il combine les éléments du développement informatique avec la culture Git, symbolisée par un chat qui incarne le développeur. Les éléments technologiques autour du chat illustrent le code, la collaboration et l’innovation.
+        </p>
+        <div class="logo-image">
+            <img src="{{ asset('assets/img/commitandpray.png') }}" alt="Logo Commit & Pray" class="img-fluid rounded shadow-lg">
+        </div>
+    </section>
+</div>
+
+{% endblock %}
+
+{% block stylesheets %}
+    <link rel="stylesheet" href="{{ asset('css/aboutus.css') }}">
+{% endblock %}

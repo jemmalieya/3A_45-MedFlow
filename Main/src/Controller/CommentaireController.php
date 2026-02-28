@@ -168,34 +168,42 @@ if (!$decision['allow']) {
 
 
 
+
 #[Route('/commentaires/{id}/delete', name: 'commentaire_delete', methods: ['POST'])]
-public function delete(Request $request, Commentaire $commentaire, EntityManagerInterface $em): JsonResponse
+public function delete(Request $request, Commentaire $commentaire, EntityManagerInterface $em): Response
 {
-    if (!$this->isCsrfTokenValid('del_commentaire_' . $commentaire->getId(), $request->request->get('_token'))) {
-        return new JsonResponse(['ok' => false, 'message' => 'CSRF invalide'], 403);
+    if (!$this->isCsrfTokenValid(
+        'del_commentaire_' . $commentaire->getId(),
+        $request->request->get('_token')
+    )) {
+        $this->addFlash('error', 'CSRF invalide');
+        return $this->redirectToRoute('post_show', [
+            'id' => $commentaire->getPost()->getId()
+        ]);
     }
 
-    // ✅ Sauver les IDs AVANT suppression
-    $commentId = $commentaire->getId();
+    $post = $commentaire->getPost();
+ $commentId = $commentaire->getId();
     $post = $commentaire->getPost();
     $postId = $post?->getId();
+    $em->remove($commentaire);
 
     // décrémenter compteur
     if ($post) {
-        $post->setNbrCommentaires(max(0, ($post->getNbrCommentaires() ?? 0) - 1));
+        $post->setNbrCommentaires(
+            max(0, ($post->getNbrCommentaires() ?? 0) - 1)
+        );
     }
 
-    $em->remove($commentaire);
     $em->flush();
 
-    return new JsonResponse([
-        'ok' => true,
-        'postId' => $postId,
-        'nbrCommentaires' => $post?->getNbrCommentaires() ?? 0,
-        'commentId' => $commentId, // ✅ plus jamais null
-    ]);
-}
+    $this->addFlash('success', 'Commentaire supprimé ✅');
 
+   return $this->redirectToRoute('post_index', [
+    'id' => $postId,
+    'ok' => true,
+]);
+}
 
 
 
@@ -290,50 +298,67 @@ return $this->redirectToRoute('post_index');
 }
 
 #[Route('/inline-edit/{id}', name: 'commentaire_inline_edit', methods: ['POST'])]
-public function inlineEdit(Request $request, Commentaire $commentaire, EntityManagerInterface $em, AiCommentModerationService $moderation): JsonResponse
-{
+public function inlineEdit(
+    Request $request,
+    Commentaire $commentaire,
+    EntityManagerInterface $em,
+    AiCommentModerationService $moderation
+): JsonResponse {
+
     $user = $this->getUser();
 
-    // ✅ Autorisation : propriétaire OU admin
+    // ✅ Autorisation
     if (!$user || (!$this->isGranted('ROLE_ADMIN') && $commentaire->getUser() !== $user)) {
         return new JsonResponse(['ok' => false, 'message' => 'Accès refusé.'], 403);
     }
 
     // ✅ CSRF
-    if (!$this->isCsrfTokenValid('edit_commentaire_' . $commentaire->getId(), (string)$request->request->get('_token'))) {
+    if (!$this->isCsrfTokenValid(
+        'edit_commentaire_' . $commentaire->getId(),
+        (string) $request->request->get('_token')
+    )) {
         return new JsonResponse(['ok' => false, 'message' => 'CSRF invalide.'], 403);
     }
 
     $contenu = trim((string) $request->request->get('contenu'));
 
-    // ✅ mêmes validations que chez toi
+    // ✅ Validation
     if ($contenu === '') {
         return new JsonResponse(['ok' => false, 'message' => 'Le commentaire ne peut pas être vide.'], 422);
     }
+
     if (!preg_match('/^\p{L}/u', $contenu)) {
         return new JsonResponse(['ok' => false, 'message' => 'Le commentaire doit commencer par une lettre.'], 422);
     }
+
     preg_match_all('/\p{L}/u', $contenu, $matches);
     if (count($matches[0]) < 2) {
         return new JsonResponse(['ok' => false, 'message' => 'Le commentaire doit contenir au moins 2 lettres.'], 422);
     }
-$decision = $moderation->moderate($contenu);
-dd($decision);
 
-$commentaire->setModerationScore($decision['score']);
-$commentaire->setModerationLabel($decision['label']);
-$commentaire->setModeratedAt(new \DateTimeImmutable());
+    // ✅ IA moderation
+    $decision = $moderation->moderate($contenu);
 
-if (!$decision['allow']) {
-    $commentaire->setStatus('blocked');
-    return new JsonResponse([
-        'ok' => false,
-        'message' => 'Commentaire bloqué automatiquement (IA: '.$decision['label'].' / score '.$decision['score'].')',
-    ], 422);
-} else {
+    $commentaire->setModerationScore($decision['score']);
+    $commentaire->setModerationLabel($decision['label']);
+    $commentaire->setModeratedAt(new \DateTimeImmutable());
+
+    if (!$decision['allow']) {
+        $commentaire->setStatus('blocked');
+
+        return new JsonResponse([
+            'ok' => false,
+            'message' => 'Commentaire bloqué automatiquement (IA: '
+                . $decision['label']
+                . ' / score '
+                . $decision['score']
+                . ')'
+        ], 422);
+    }
+
     $commentaire->setStatus('published');
-}
     $commentaire->setContenu($contenu);
+
     $em->flush();
 
     return new JsonResponse([
@@ -342,6 +367,5 @@ if (!$decision['allow']) {
         'contenu' => $commentaire->getContenu(),
     ]);
 }
-
 
 }

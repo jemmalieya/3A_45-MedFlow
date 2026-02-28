@@ -1409,6 +1409,21 @@ section,
   transform: translateX(3px);
 }
 
+/* Ensure disabled buttons keep visual style when anchors were replaced
+   Override default browser disabled appearance so layout/design remains consistent */
+.featured-departments button.btn-learn-more[disabled],
+.featured-departments button.btn-learn-more[aria-disabled="true"] {
+  background: transparent;
+  border: none;
+  color: var(--accent-color) !important;
+  opacity: 1 !important;
+  pointer-events: none;
+}
+.featured-departments button.btn-learn-more[disabled] span,
+.featured-departments button.btn-learn-more[disabled] i {
+  color: inherit;
+}
+
 @media (max-width: 768px) {
   .featured-departments .department-content {
     padding: 25px 20px;
@@ -1562,6 +1577,17 @@ section,
 .featured-services .service-btn:hover i {
   transform: translateX(5px);
 }
+
+/* Ensure disabled .service-btn keeps its design */
+.featured-services button.service-btn[disabled],
+.featured-services button.service-btn[aria-disabled="true"]{
+  background: transparent;
+  border: none;
+  color: var(--accent-color) !important;
+  opacity: 1 !important;
+  pointer-events: none;
+}
+.featured-services button.service-btn[disabled] i{ color: inherit }
 
 @media (max-width: 768px) {
   .featured-services .service-card {

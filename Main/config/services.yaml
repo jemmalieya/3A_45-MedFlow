@@ -140,6 +140,11 @@ services:
         arguments:
             $ocrspaceKey: '%ocrspace.api_key%'
 
+    App\Service\TesseractOcrService:
+        arguments:
+            $http: '@http_client'
+            $ocrspaceKey: '%ocrspace.api_key%'
+
     # ==================================
     # 🔐 reCAPTCHA
     # ==================================

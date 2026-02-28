@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="fr">
 <head>
   <meta charset="utf-8">
   <meta content="width=device-width, initial-scale=1.0" name="viewport">
@@ -29,9 +29,7 @@
   <link rel="stylesheet" href="{{ asset('assets/css/events.css') }}">
   <script src="{{ asset('assets/js/evenement-show.js') }}"></script>
 
-
   <link rel="stylesheet" href="{{ asset('assets/css/profile-dropdown.css') }}">
-
 
   <!-- Main CSS File -->
   <link href="{{ asset('assets/css/main.css') }}" rel="stylesheet">
@@ -39,21 +37,23 @@
   {% block stylesheets %}{% endblock %}
 </head>
 {{ importmap() }}
-{# Sticky footer layout #}
-<body class="index-page d-flex flex-column min-vh-100">
+{# Mise en page avec footer collant #}
 
-  <!-- HEADER -->
+<body class="index-page d-flex flex-column min-vh-100" data-turbo="false">
+
+  <!-- EN-TÊTE -->
   <header id="header" class="header d-flex align-items-center fixed-top">
     <div class="header-container container-fluid container-xl position-relative d-flex align-items-center justify-content-between">
 
       <a href="{{ path('app_home') }}" class="logo d-flex align-items-center me-auto me-xl-0">
-        <img src="{{ asset('assets/img/img.png') }}" alt="Health Icon" class="medflow-logo" style="width: 40px; height: 40px; margin-left: 10px; transform: rotate(0deg);">
+        <img src="{{ asset('assets/img/img.png') }}" alt="Icône Santé" class="medflow-logo" style="width: 40px; height: 40px; margin-left: 10px; transform: rotate(0deg);">
         <h1 class="sitename">MedFlow</h1>
       </a>
 
       <nav id="navmenu" class="navmenu">
         <ul>
-          <li><a href="{{ path('app_home') }}" class="{{ app.request.attributes.get('_route') == 'app_home' ? 'active' : '' }}">Home</a></li>
+          <li><a href="{{ path('app_home') }}" class="{{ app.request.attributes.get('_route') == 'app_home' ? 'active' : '' }}">Accueil</a></li>
+          <li><a href="{{ path('about') }}" class="{{ app.request.attributes.get('_route') == 'about' ? 'active' : '' }}">About</a></li>
 
           {% if app.user %}
             <li class="dropdown">
@@ -69,30 +69,16 @@
 
           <li><a href="{{ path('post_index') }}">Blog</a></li>
 
-          <li class="dropdown"><a href="#"><span>Consultations</span> <i class="bi bi-chevron-down toggle-dropdown"></i></a>
+          <li class="dropdown">
+            <a href="#"><span>Consultations</span> <i class="bi bi-chevron-down toggle-dropdown"></i></a>
             <ul>
-              <li><a href="{{ path('rendezvous_home') }}">Rendez Vous</a></li>
-              <li><a href="{{ path('rendezvous_list') }}">Mes Appointments</a></li>
+              <li><a href="{{ path('rendezvous_home') }}">Rendez-vous</a></li>
+              <li><a href="{{ path('rendezvous_list') }}">Mes rendez-vous</a></li>
             </ul>
           </li>
 
           <li><a href="{{ path('app_evenements') }}" class="{% if app.request.attributes.get('_route') == 'app_evenements' %}active{% endif %}">Événements</a></li>
 
-          <li><a href="#">About</a></li>
-          <li><a href="#">Services</a></li>
-          <li class="dropdown"><a href="#"><span>More Pages</span> <i class="bi bi-chevron-down toggle-dropdown"></i></a>
-            <ul>
-              <li><a href="#">Department Details</a></li>
-              <li><a href="#">Service Details</a></li>
-              <li><a href="{{ path('rendezvous_list') }}">Mes Appointments</a></li>
-              <li><a href="#">Testimonials</a></li>
-              <li><a href="#">FAQ</a></li>
-              <li><a href="#">Gallery</a></li>
-              <li><a href="#">Terms</a></li>
-              <li><a href="#">Privacy</a></li>
-              <li><a href="#">404</a></li>
-            </ul>
-          </li>
 
           <li>
             <a href="{{ path('front_produit_index') }}"
@@ -115,7 +101,7 @@
         <i class="mobile-nav-toggle d-xl-none bi bi-list"></i>
       </nav>
 
-{# ====== PROFILE DROPDOWN (Avatar) ====== #}
+{# ====== MENU PROFIL (Avatar) ====== #}
 {% if app.user %}
   {% set prenom = app.user.prenom ?? '' %}
   {% set nom = app.user.nom ?? '' %}
@@ -128,7 +114,7 @@
 
   <div class="dropdown ms-3">
 
-    {# ===== Trigger (haut) ===== #}
+    {# ===== Déclencheur ===== #}
     <button class="btn border-0 bg-transparent p-0 dropdown-toggle profile-trigger"
             type="button"
             data-bs-toggle="dropdown"
@@ -154,10 +140,10 @@
       </div>
     </button>
 
-    {# ===== Dropdown menu ===== #}
+    {# ===== Menu déroulant ===== #}
     <ul class="dropdown-menu dropdown-menu-end shadow profile-dd" style="min-width: 320px;">
 
-      {# ===== Header ===== #}
+      {# ===== En-tête ===== #}
       <li class="profile-dd__header">
         <div class="d-flex align-items-center gap-3">
           <div class="profile-dd__avatar">
@@ -195,7 +181,7 @@
         </div>
       </li>
 
-      {# ===== Mini infos ===== #}
+      {# ===== Informations ===== #}
       <li class="profile-dd__meta">
         <div class="meta-row">
           <span class="meta-label"><i class="bi bi-shield-lock"></i> Statut</span>
@@ -232,7 +218,7 @@
                 data-url="{{ path('profile_modal_edit') }}"
                 data-title="Modifier mon profil">
           <span class="profile-dd__icon"><i class="bi bi-pencil-square"></i></span>
-          <span class="profile-dd__text">Modifier profil</span>
+          <span class="profile-dd__text">Modifier le profil</span>
           <span class="profile-dd__chev"><i class="bi bi-chevron-right"></i></span>
         </button>
       </li>
@@ -329,19 +315,18 @@
       });
     });
   </script>
-{# ====== /PROFILE DROPDOWN ====== #}
-
+{# ====== /MENU PROFIL ====== #}
 
     </div>
   </header>
 
-  {# ====== GLOBAL MODAL (PROFILE) ====== #}
+  {# ====== MODAL GLOBAL (PROFIL) ====== #}
   <style>
-    /* ===== MedFlow brand tokens (Profile modals only) ===== */
+    /* ===== Tokens MedFlow (modals profil uniquement) ===== */
     #globalModal, .profile-dd__menu{
-      --mf-primary: #0097B2; /* Dark Turquoise */
+      --mf-primary: #0097B2;
       --mf-primary-rgb: 0, 151, 178;
-      --mf-blue: #003399;   /* Vivid Blue */
+      --mf-blue: #003399;
       --mf-blue-rgb: 0, 51, 153;
 
       --mf-surface: #ffffff;
@@ -373,7 +358,7 @@
       <div class="modal-content">
         <div class="modal-header">
           <h5 class="modal-title" id="globalModalTitle">...</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
         </div>
 
         <div class="modal-body" id="globalModalBody">
@@ -384,14 +369,14 @@
       </div>
     </div>
   </div>
-  {# ====== /GLOBAL MODAL ====== #}
+  {# ====== /MODAL GLOBAL ====== #}
 
   {# CONTENU : pousse le footer vers le bas #}
   <main class="flex-fill mt-5 pt-5">
     {% block body %}{% endblock %}
   </main>
 
-  <!-- FOOTER -->
+  <!-- PIED DE PAGE -->
   <footer id="footer" class="footer position-relative light-background mt-auto">
     <div class="container footer-top">
       <div class="row gy-4">
@@ -400,74 +385,74 @@
             <span class="sitename">MedFlow</span>
           </a>
           <div class="footer-contact pt-3">
-            <p>A108 Adam Street</p>
-            <p>New York, NY 535022</p>
-            <p class="mt-3"><strong>Phone:</strong> <span>+1 5589 55488 55</span></p>
-            <p><strong>Email:</strong> <span>info@example.com</span></p>
+            <p>108 Rue Adam</p>
+            <p>Paris, 75001</p>
+            <p class="mt-3"><strong>Téléphone :</strong> <span>+33 1 55 89 55 48</span></p>
+            <p><strong>E-mail :</strong> <span>info@medflow.fr</span></p>
           </div>
           <div class="social-links d-flex mt-4">
             <a href=""><i class="bi bi-twitter-x"></i></a>
-            <a href=""><i class="bi bi-facebook"></i></a>
+            <a href="https://www.facebook.com/profile.php?id=61575952012453" target="_blank"><i class="bi bi-facebook"></i></a>
             <a href=""><i class="bi bi-instagram"></i></a>
             <a href=""><i class="bi bi-linkedin"></i></a>
           </div>
         </div>
 
         <div class="col-lg-2 col-md-3 footer-links">
-          <h4>Useful Links</h4>
+          <h4>Liens utiles</h4>
           <ul>
-            <li><a href="{{ path('app_home') }}">Home</a></li>
-            <li><a href="#">About us</a></li>
+            <li><a href="{{ path('app_home') }}">Accueil</a></li>
+            <li><a href="#">À propos</a></li>
             <li><a href="#">Services</a></li>
-            <li><a href="#">Terms of service</a></li>
-            <li><a href="#">Privacy policy</a></li>
+            <li><a href="#">Conditions d'utilisation</a></li>
+            <li><a href="#">Politique de confidentialité</a></li>
           </ul>
         </div>
 
         <div class="col-lg-2 col-md-3 footer-links">
-          <h4>Our Services</h4>
+          <h4>Nos Services</h4>
           <ul>
-            <li><a href="#">Web Design</a></li>
-            <li><a href="#">Web Development</a></li>
-            <li><a href="#">Product Management</a></li>
-            <li><a href="#">Marketing</a></li>
-            <li><a href="#">Graphic Design</a></li>
+            <li><a href="#">Cardiologie</a></li>
+            <li><a href="#">Neurologie</a></li>
+            <li><a href="#">Pédiatrie</a></li>
+            <li><a href="#">Oncologie</a></li>
+            <li><a href="#">Urgences</a></li>
           </ul>
         </div>
 
         <div class="col-lg-2 col-md-3 footer-links">
-          <h4>Hic solutasetp</h4>
+          <h4>Patients</h4>
           <ul>
-            <li><a href="#">Molestiae accusamus iure</a></li>
-            <li><a href="#">Excepturi dignissimos</a></li>
-            <li><a href="#">Suscipit distinctio</a></li>
-            <li><a href="#">Dilecta</a></li>
-            <li><a href="#">Sit quas consectetur</a></li>
+            <li><a href="{{ path('rendezvous_home') }}">Prendre rendez-vous</a></li>
+            <li><a href="{{ path('rendezvous_list') }}">Mes rendez-vous</a></li>
+            <li><a href="{{ path('front_produit_index') }}">Pharmacie</a></li>
+            <li><a href="{{ path('post_index') }}">Blog santé</a></li>
+            <li><a href="{{ path('app_evenements') }}">Événements</a></li>
           </ul>
         </div>
 
         <div class="col-lg-2 col-md-3 footer-links">
-          <h4>Nobis illum</h4>
+          <h4>Contact</h4>
           <ul>
-            <li><a href="#">Ipsam</a></li>
-            <li><a href="#">Laudantium dolorum</a></li>
-            <li><a href="#">Dinera</a></li>
-            <li><a href="#">Trodelas</a></li>
-            <li><a href="#">Flexo</a></li>
+            <li><a href="#">Urgences 24h/24</a></li>
+            <li><a href="#">Nous contacter</a></li>
+            <li><a href="{{ path('reclamation_index') }}">Réclamations</a></li>
+            <li><a href="#">FAQ</a></li>
+            <li><a href="#">Témoignages</a></li>
           </ul>
         </div>
       </div>
     </div>
 
     <div class="container copyright text-center mt-4">
-      <p>© <span>Copyright</span> <strong class="px-1 sitename">MyWebsite</strong> <span>All Rights Reserved</span></p>
+      <p>© <span>Copyright</span> <strong class="px-1 sitename">MedFlow</strong> <span>Tous droits réservés</span></p>
       <div class="credits">
-        Designed by <a href="https://bootstrapmade.com/">BootstrapMade</a> | <a href="https://bootstrapmade.com/tools/">DevTools</a>
+        Conçu par <a href="https://bootstrapmade.com/">BootstrapMade</a> | <a href="https://bootstrapmade.com/tools/">DevTools</a>
       </div>
     </div>
   </footer>
 
-  <!-- Scroll Top -->
+  <!-- Retour en haut -->
   <a href="#" id="scroll-top" class="scroll-top d-flex align-items-center justify-content-center">
     <i class="bi bi-arrow-up-short"></i>
   </a>
@@ -481,8 +466,10 @@
   <script src="{{ asset('assets/vendor/imagesloaded/imagesloaded.pkgd.min.js') }}"></script>
   <script src="{{ asset('assets/vendor/isotope-layout/isotope.pkgd.min.js') }}"></script>
   <script src="{{ asset('assets/vendor/glightbox/js/glightbox.min.js') }}"></script>
-
-  {# ✅ SweetAlert + toast functions (avant le JS modal) #}
+  <script type="module">
+  import "@hotwired/turbo";
+</script>
+  {# ✅ SweetAlert + fonctions toast #}
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   <script>
     window.toastSuccess = function(title, text) {
@@ -524,9 +511,8 @@
       const modalTitle = document.getElementById('globalModalTitle');
       const modalBody = document.getElementById('globalModalBody');
 
-      // ✅ évite crash silencieux si modal introuvable
       if (!modalEl || !modalTitle || !modalBody) {
-        console.error('Modal elements missing');
+        console.error('Éléments du modal manquants');
         toastError('Erreur', 'Le modal global est manquant dans base.html.twig');
         return;
       }
@@ -538,7 +524,6 @@
       modal.show();
 
       try {
-        // Force fresh fetch of modal content by appending a cache-busting param
         let reqUrl;
         try {
           const u = new URL(url, window.location.origin);
@@ -559,7 +544,7 @@
 
         modalBody.innerHTML = html;
 
-        // ===== 2FA UI (inside profile edit modal) =====
+        // ===== Interface 2FA =====
         const init2faUi = (root) => {
           const badge = root.querySelector('[data-2fa-badge]');
           const actions = root.querySelector('[data-2fa-actions]');
@@ -580,7 +565,7 @@
           const disableErr = root.querySelector('[data-2fa-disable-error]');
 
           if (!badge || !actions || !enableBtn || !setupBox || !secretInput || !qrBox || !codeInput || !confirmBtn || !cancelBtn || !disableBtn || !disableBox || !disableCode || !disableConfirm || !disableCancel) {
-            return; // Not the profile edit modal
+            return;
           }
 
           const showErr = (box, msg) => {
@@ -623,7 +608,6 @@
 
             const contentType = (res.headers.get('content-type') || '').toLowerCase();
             if (!contentType.includes('application/json')) {
-              // Often means redirect to login (HTML) or a server error page.
               throw new Error('Session expirée ou réponse non JSON. Reconnectez-vous puis réessayez.');
             }
 
@@ -654,7 +638,6 @@
 
           enableBtn.addEventListener('click', async () => {
             hideErr(errBox);
-            // Open immediately so the user sees progress/errors.
             setupBox.hidden = false;
             qrBox.innerHTML = '<div class="text-center py-4"><div class="spinner-border" role="status"></div></div>';
             try {
@@ -662,7 +645,6 @@
               const out = await apiJson('/api/2fa/setup', { method: 'POST' });
               secretInput.value = out.secret || '';
 
-              // Generate QR for authenticator apps (no network needed): otpauth://...
               const uri = out.otpauth_uri || '';
               const qrRes = await fetch('/api/2fa/qr?text=' + encodeURIComponent(uri), {
                 headers: { 'Accept': 'image/svg+xml,text/plain,*/*', 'X-Requested-With': 'XMLHttpRequest' },
@@ -756,7 +738,7 @@
           refreshStatus();
         };
 
-        // ===== Face login UI (inside profile edit modal) =====
+        // ===== Interface Connexion par Visage =====
         const initFaceUi = (root) => {
           const badge = root.querySelector('[data-face-badge]');
           const lockHint = root.querySelector('[data-face-lock-hint]');
@@ -771,7 +753,7 @@
           const statusBox = root.querySelector('[data-face-status]');
 
           if (!badge || !actions || !enrollBtn || !disableBtn || !enrollBox || !video || !captureBtn || !cancelBtn) {
-            return; // Not the profile edit modal
+            return;
           }
 
           let stream = null;
@@ -864,7 +846,6 @@
             await video.play().catch(() => {});
           };
 
-          // ===== MediaPipe (FaceDetector + ImageEmbedder) =====
           const mediapipeWasmRoot = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.0/wasm';
           const mediapipeModuleUrl = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.0';
 
@@ -1016,7 +997,6 @@
           const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
           const captureEmbedding = async () => {
-            // Multi-frame average to reduce noise and false accepts.
             const samples = [];
             const count = 10;
             for (let i = 0; i < count; i++) {
@@ -1048,7 +1028,7 @@
             if (s.locked && lockHint) {
               const until = s.lockedUntil ? new Date(s.lockedUntil) : null;
               const hhmm = until ? until.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : null;
-              lockHint.textContent = hhmm ? `Trop de tentatives: verrouillé jusqu’à ${hhmm}.` : 'Trop de tentatives: verrouillé temporairement.';
+              lockHint.textContent = hhmm ? `Trop de tentatives : verrouillé jusqu'à ${hhmm}.` : 'Trop de tentatives : verrouillé temporairement.';
             }
 
             if (s.enabled && s.enrolled) {
@@ -1097,8 +1077,8 @@
             } catch (e) {
               hardStopStream();
               enrollBox.hidden = true;
-              showErr(e.message || 'Impossible d’activer la caméra.');
-              toastError('Visage', e.message || 'Impossible d’activer la caméra.');
+              showErr(e.message || "Impossible d'activer la caméra.");
+              toastError('Visage', e.message || "Impossible d'activer la caméra.");
               setStatus('');
             } finally {
               enrollBtn.disabled = false;
@@ -1152,7 +1132,6 @@
 
           const modalRoot = document.getElementById('globalModal');
           if (modalRoot) {
-            // Detach only: keep the same stream alive to avoid repeated permission prompts.
             modalRoot.addEventListener('hidden.bs.modal', detachStream);
           }
 
@@ -1164,32 +1143,31 @@
         init2faUi(modalBody);
         initFaceUi(modalBody);
 
-        // ✅ Preview instantané photo (dans le modal edit)
-const fileInput = modalBody.querySelector('input[type="file"]');
-const previewImg = modalBody.querySelector('.js-profile-preview');
+        // ✅ Prévisualisation instantanée de la photo de profil
+        const fileInput = modalBody.querySelector('input[type="file"]');
+        const previewImg = modalBody.querySelector('.js-profile-preview');
 
-if (fileInput && previewImg) {
-  fileInput.addEventListener('change', function () {
-    const file = this.files && this.files[0];
-    if (!file) return;
+        if (fileInput && previewImg) {
+          fileInput.addEventListener('change', function () {
+            const file = this.files && this.files[0];
+            if (!file) return;
 
-    // optionnel: refuser fichiers non images
-    if (!file.type.startsWith('image/')) {
-      toastError('Erreur', 'Veuillez choisir une image (JPG/PNG).');
-      this.value = '';
-      return;
-    }
+            if (!file.type.startsWith('image/')) {
+              toastError('Erreur', 'Veuillez choisir une image (JPG/PNG).');
+              this.value = '';
+              return;
+            }
 
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      previewImg.src = e.target.result;
-      previewImg.classList.remove('preview-animate');
-      void previewImg.offsetWidth; // re-trigger animation
-      previewImg.classList.add('preview-animate');
-    };
-    reader.readAsDataURL(file);
-  });
-}
+            const reader = new FileReader();
+            reader.onload = (e) => {
+              previewImg.src = e.target.result;
+              previewImg.classList.remove('preview-animate');
+              void previewImg.offsetWidth;
+              previewImg.classList.add('preview-animate');
+            };
+            reader.readAsDataURL(file);
+          });
+        }
 
       } catch (err) {
         console.error(err);
@@ -1198,13 +1176,11 @@ if (fileInput && previewImg) {
         return;
       }
 
-      // Render reCAPTCHA widgets inside newly injected modal content.
       if (window.mfRenderRecaptcha) {
         window.mfRenderRecaptcha(modalBody);
       }
 
       const form = modalBody.querySelector('form');
-      // Skip attaching generic handler for staff request form; dedicated JS handles it
       if (form && form.id !== 'staffRequestForm') {
         form.addEventListener('submit', async (ev) => {
           ev.preventDefault();
@@ -1218,7 +1194,6 @@ if (fileInput && previewImg) {
               headers: { 'X-Requested-With': 'XMLHttpRequest' }
             });
 
-            // ✅ si pas JSON (erreur twig/redirect), on affiche HTML au lieu de casser le JS
             const contentType = postRes.headers.get('content-type') || '';
             if (!contentType.includes('application/json')) {
               const txt = await postRes.text();
@@ -1230,26 +1205,23 @@ if (fileInput && previewImg) {
             const data = await postRes.json();
 
             if (data.success) {
-              // ✅ Update avatar in navbar
               if (data.avatarHtml) {
                 const avatarSlot = document.querySelector('[data-avatar-slot]');
                 if (avatarSlot) {
                   avatarSlot.outerHTML = data.avatarHtml;
                 } else {
-                  console.warn("Avatar slot not found in DOM");
+                  console.warn("Emplacement avatar introuvable dans le DOM");
                 }
               } else {
-                console.warn("No avatarHtml in response");
+                console.warn("Pas d'avatarHtml dans la réponse");
               }
 
               modal.hide();
 
-              // Nettoyer backdrop bloqué si jamais
               document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
               document.body.classList.remove('modal-open');
               document.body.style.removeProperty('padding-right');
 
-              // ✅ SweetAlert
               toastSuccess('Succès', data.message || 'Mise à jour réussie ✅');
 
             } else {
@@ -1257,7 +1229,7 @@ if (fileInput && previewImg) {
               toastError('Erreur', 'Veuillez corriger les champs.');
             }
 
-          } catch (err) {  // ✅ catch manquant (BUG bloquant chez toi)
+          } catch (err) {
             console.error(err);
             toastError('Erreur', "Une erreur s'est produite.");
           }
@@ -1272,13 +1244,11 @@ if (fileInput && previewImg) {
   <script src="https://www.google.com/recaptcha/api.js" async defer></script>
 
   <script>
-    // Render reCAPTCHA widgets inside dynamically injected HTML (ex: global modal).
     window.mfRenderRecaptcha = window.mfRenderRecaptcha || function mfRenderRecaptcha(root) {
       root = root || document;
       if (!root || !root.querySelectorAll) return;
 
       if (!window.grecaptcha || typeof window.grecaptcha.render !== 'function') {
-        // Script may still be loading.
         window.setTimeout(function () { window.mfRenderRecaptcha(root); }, 400);
         return;
       }
@@ -1291,7 +1261,7 @@ if (fileInput && previewImg) {
           });
           if (el.dataset) el.dataset.rendered = '1';
         } catch (e) {
-          // ignore
+          // ignorer
         }
       });
     };
@@ -1341,7 +1311,6 @@ if (fileInput && previewImg) {
 
   {% block javascripts %}{% endblock %}
   {% block importmap %}{{ importmap('app') }}{% endblock %}
-
 
 </body>
 </html>

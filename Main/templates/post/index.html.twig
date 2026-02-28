@@ -762,6 +762,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 <turbo-frame id="comments-{{ p.id }}">
   {% include 'commentaire/_block.html.twig' with { p: p, commentErrors: commentErrors } %}
 </turbo-frame>
+
   </div> {# ✅ ferme col-md-8 #}
                 </div>   {# ✅ ferme row #}
 
@@ -973,88 +974,107 @@ document.addEventListener("submit", async function (e) {
 /* ==============================
    ✅ INLINE EDIT commentaire (AJAX) + SweetAlert
    ============================== */
-document.addEventListener("click", async function (e) {
+document.addEventListener("submit", async function (e) {
+  const form = e.target.closest(".delete-comment-form");
+  if (!form) return;
+  e.preventDefault();
+
+  const result = await Swal.fire({
+    title: "Supprimer ce commentaire ?",
+    text: "Cette action est irréversible.",
+    icon: "warning",
+    showCancelButton: true,
+    confirmButtonText: "Supprimer",
+    cancelButtonText: "Annuler"
+  });
+
+  if (!result.isConfirmed) return;
+
+  try {
+    await fetch(form.action, {
+      method: "POST",
+      body: new FormData(form)
+    });
+
+    // ✅ on recharge la page (Symfony fera le redirect correctement)
+    window.location.reload();
+
+  } catch (err) {
+    console.error(err);
+    Swal.fire("Erreur", "Erreur réseau lors de la suppression.", "error");
+  }
+});
+   
+document.addEventListener("click", function (e) {
+
   const btn = e.target.closest(".js-edit-comment");
   if (!btn) return;
 
-  const item = btn.closest("[data-comment-id]");
-  if (!item) return;
+  const row = btn.closest("[data-comment-id]");
+  const textDiv = row.querySelector(".js-comment-text");
+  const editArea = row.querySelector(".js-inline-edit-area");
 
-  const editArea = item.querySelector(".js-inline-edit-area");
-  if (!editArea) return;
-
-  if (!editArea.classList.contains("d-none")) {
-    editArea.classList.add("d-none");
-    editArea.innerHTML = "";
-    return;
-  }
-
-  let textEl = item.querySelector(".js-comment-text");
-  if (!textEl) textEl = item.querySelector(".mt-1, .mt-2");
-  const oldText = (textEl?.textContent || "").trim();
-
+  const currentText = textDiv.textContent.trim();
   const url = btn.dataset.url;
   const token = btn.dataset.token;
 
+  textDiv.classList.add("d-none");
   editArea.classList.remove("d-none");
+
   editArea.innerHTML = `
-    <form class="js-inline-edit-form">
-      <div class="mb-2">
-        <textarea class="form-control" name="contenu" rows="3" style="border-radius:14px;">${oldText}</textarea>
-        <div class="text-danger small mt-1 d-none js-inline-error"></div>
-      </div>
-      <input type="hidden" name="_token" value="${token}">
-      <div class="d-flex justify-content-end gap-2">
-        <button type="button" class="btn btn-light btn-sm rounded-pill js-cancel-inline">Annuler</button>
-        <button type="submit" class="btn btn-mf btn-sm rounded-pill">Enregistrer</button>
-      </div>
-    </form>
+    <div class="d-flex gap-2">
+      <input type="text" class="form-control form-control-sm js-edit-input" value="${currentText}">
+      <button type="button" class="btn btn-sm btn-success js-save-edit">✔</button>
+      <button type="button" class="btn btn-sm btn-secondary js-cancel-edit">✖</button>
+    </div>
   `;
 
-  const form = editArea.querySelector(".js-inline-edit-form");
-  const errorBox = editArea.querySelector(".js-inline-error");
-  const cancelBtn = editArea.querySelector(".js-cancel-inline");
-
-  cancelBtn.addEventListener("click", () => {
+  editArea.querySelector(".js-cancel-edit").onclick = () => {
     editArea.classList.add("d-none");
+    textDiv.classList.remove("d-none");
     editArea.innerHTML = "";
-  });
+  };
 
-  form.addEventListener("submit", async (ev) => {
-    ev.preventDefault();
-    errorBox.classList.add("d-none");
-    errorBox.textContent = "";
+  editArea.querySelector(".js-save-edit").onclick = async () => {
 
-    const fd = new FormData(form);
+    const newText = editArea.querySelector(".js-edit-input").value.trim();
+    if (!newText) return alert("Contenu vide");
 
     try {
+
       const res = await fetch(url, {
         method: "POST",
-        body: fd,
-        headers: { "X-Requested-With": "XMLHttpRequest" }
+        headers: {
+          "X-Requested-With": "XMLHttpRequest",
+          "Accept": "application/json"
+        },
+        body: new URLSearchParams({
+          contenu: newText,
+          _token: token
+        })
       });
 
       const data = await res.json();
 
-      if (!data.ok) {
-        errorBox.textContent = data.message || "Erreur.";
-        errorBox.classList.remove("d-none");
+      if (!res.ok || !data.ok) {
+        alert(data.message || "Erreur serveur");
         return;
       }
 
-      if (textEl) textEl.textContent = data.contenu;
+      textDiv.textContent = data.contenu;
 
       editArea.classList.add("d-none");
+      textDiv.classList.remove("d-none");
       editArea.innerHTML = "";
-
-      swalToast({ title: "Commentaire modifié ✅", icon: "success" });
 
     } catch (err) {
       console.error(err);
-      await Swal.fire("Erreur", "Erreur réseau.", "error");
+      alert("Erreur serveur");
     }
-  });
+  };
+
 });
+
 
 /* ==============================
    ✅ Masquer post (localStorage) + SweetAlert
@@ -1250,90 +1270,6 @@ document.addEventListener("click", async function (e) {
 {# =========================
    ✅ MODALS (en dehors du grid)
    ========================= #}
-{% for p in posts %}
-  <div class="modal fade" id="commentsModal-{{ p.id }}" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg">
-      <div class="modal-content border-0 shadow-lg rounded-4">
-        <div class="modal-header rounded-top-4 text-white" style="background: linear-gradient(90deg, #0097B2, #00BFA6);">
-          <h5 class="modal-title">
-            {% set publishedModalComments = p.commentaires|filter(c => (c.status ?? 'published') == 'published') %}
-            <i class="bi bi-chat-dots me-2"></i> Tous les commentaires ({{ publishedModalComments|length }})
-          </h5>
-          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-        </div>
-
-        <div class="modal-body" style="background:#f8f9fa;">
-         {% set allComments = publishedModalComments|sort((a,b) => b.dateCreation <=> a.dateCreation) %}
-          {% if allComments is empty %}
-            <div class="alert alert-info m-0">Aucun commentaire pour le moment.</div>
-          {% else %}
-            <div class="list-group">
-              {% for c in allComments %}
-                <div class="list-group-item mb-2 rounded-3 shadow-sm" data-comment-id="{{ c.id }}">
-                  <div class="d-flex justify-content-between align-items-start">
-                    <div class="d-flex gap-2 align-items-center">
-                  <div class="ig-c-ava">
-  {% if c.estAnonyme %}
-    <i class="bi bi-incognito"></i>
-  {% else %}
-    {% if c.user %}
-      {{ (c.user.prenom ?? c.user.emailUser ?? 'U')|slice(0,1)|upper }}
-    {% else %}
-      U
-    {% endif %}
-  {% endif %}
-</div>
-                        <small class="text-muted">{{ c.dateCreation|date('d/m/Y H:i') }}</small>
-                      </div>
-                    </div>
-
-                    <div class="d-flex align-items-center gap-2">
-                      {% set badge = c.parametresConfidentialite == 'PRIVE' ? 'danger' : (c.parametresConfidentialite == 'AMIS' ? 'info' : 'success') %}
-                      <span class="badge bg-{{ badge }}" style="font-size:.7rem;border-radius:999px;">
-                        {{ c.parametresConfidentialite }}
-                      </span>
-
-                      {% if app.user and c.user and (c.user.id == app.user.id or is_granted('ROLE_ADMIN')) %}
-                        <button type="button"
-                          class="btn btn-sm btn-light js-edit-comment"
-                          title="Modifier"
-                          data-id="{{ c.id }}"
-                          data-url="{{ path('commentaire_inline_edit', {id: c.id}) }}"
-                          data-token="{{ csrf_token('edit_commentaire_' ~ c.id) }}"
-                        >
-                          <i class="bi bi-pencil"></i>
-                        </button>
-
-                        <form class="delete-comment-form" method="post" action="{{ path('commentaire_delete', {id: c.id}) }}">
-                          <input type="hidden" name="_token" value="{{ csrf_token('del_commentaire_' ~ c.id) }}">
-                          <button class="btn btn-sm btn-light" title="Supprimer" type="submit">
-                            <i class="bi bi-trash"></i>
-                          </button>
-                        </form>
-                      {% endif %}
-                    </div>
-                  </div>
-
-                  <div class="mt-2">
-                    <span class="js-comment-text">{{ c.contenu }}</span>
-                  </div>
-                  <div class="js-inline-edit-area mt-2 d-none"></div>
-                </div>
-              {% endfor %}
-            </div>
-          {% endif %}
-        </div>
-
-        <div class="modal-footer">
-          <button type="button" class="btn btn-outline-secondary rounded-pill" data-bs-dismiss="modal">
-            Fermer
-          </button>
-        </div>
-      </div>
-    </div>
-  </div>
-{% endfor %}
-
 <script>
   function swalToast({title, icon="success"}) {
     Swal.fire({
@@ -1390,17 +1326,7 @@ document.addEventListener("click", async function (e) {
   }
 })();
 </script>
-<div class="modal fade" id="commentsModalGlobal" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
-    <div class="modal-content" style="border-radius:18px;overflow:hidden;border:0;">
-      <div class="modal-header text-white" style="background:linear-gradient(135deg,#00BFA6,#0097B2);">
-        <h5 class="modal-title mb-0">Tous les commentaires</h5>
-        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-      </div>
-      <div class="modal-body" id="modal-comments-body">
-        Chargement...
-      </div>
-    </div>
-  </div>
-</div>
+{% for p in posts %}
+  {% include 'commentaire/_modal.html.twig' with { p: p } %}
+{% endfor %}
 {% endblock %}

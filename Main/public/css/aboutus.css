@@ -1,0 +1,44 @@
+/* Styles for the About page SDG cards */
+.sdg-cards{display:flex;gap:1.5rem;flex-wrap:wrap;margin:1rem auto 0;justify-content:center;align-items:center;max-width:1100px}
+.sdg-card{flex:0 0 320px;width:320px;cursor:pointer;perspective:1200px}
+
+.sdg-card-inner{position:relative;display:block;background:transparent;border-radius:12px;padding:0;transition:transform .45s cubic-bezier(.2,.9,.2,1);transform-style:preserve-3d;min-height:140px}
+.sdg-card:hover .sdg-card-inner{transform:rotateY(180deg)}
+
+.sdg-tilt{display:block;background:#fff;border-radius:12px;padding:8px;box-shadow:0 10px 30px rgba(13,38,79,0.06);transition:transform .12s ease,box-shadow .35s ease;transform-style:preserve-3d;min-height:360px}
+.sdg-card:hover .sdg-tilt{box-shadow:0 22px 40px rgba(13,38,79,0.12)}
+
+.sdg-front, .sdg-back{position:absolute;inset:0;border-radius:12px;backface-visibility:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:12px}
+.sdg-front{z-index:2;background:#fff}
+.sdg-back{transform:rotateY(180deg);background:#fff;overflow:auto}
+
+.sdg-icon-img{width:280px;height:280px;border-radius:12px;display:block;object-fit:contain}
+.sdg-icon-fallback{width:280px;height:280px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-weight:800;color:#fff;font-size:56px}
+.sdg-3{background:#1c9f4a}
+.sdg-9{background:#f36a16}
+.sdg-10{background:#e91e63}
+.sdg-back h4{margin:0 0 8px 0;font-size:1.05rem;text-align:center;padding:0 8px}
+.sdg-back ul{margin:0;padding-left:1rem;padding-right:8px}
+.sdg-back ul li{margin-bottom:.4rem}
+
+@media (max-width:768px){
+  .sdg-tilt{padding:10px}
+  .sdg-card{flex:0 0 220px;width:220px}
+  .sdg-tilt{min-height:220px}
+  .sdg-icon-img{width:200px;height:200px}
+  .sdg-icon-fallback{width:200px;height:200px;font-size:32px}
+}
+
+/* Gentle entrance animation */
+.sdg-card{opacity:0;transform:translateY(10px);animation:sdgFade .5s ease forwards}
+.sdg-card:nth-child(1){animation-delay:.05s}
+.sdg-card:nth-child(2){animation-delay:.12s}
+.sdg-card:nth-child(3){animation-delay:.18s}
+@keyframes sdgFade{to{opacity:1;transform:none}}
+
+/* Team logo sizing on About page */
+.team-logo .logo-image img{max-width:140px;width:140px;height:auto;display:block;margin:0 auto}
+
+@media (max-width:768px){
+  .team-logo .logo-image img{max-width:100px;width:100px}
+}
