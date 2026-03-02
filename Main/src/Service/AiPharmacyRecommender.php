@@ -2,6 +2,7 @@
 
 namespace App\Service;
 
+use App\Entity\Produit;
 use App\Repository\CommandeRepository;
 use App\Repository\ProduitRepository;
 
@@ -18,10 +19,15 @@ class AiPharmacyRecommender
      * - Sinon catégorie la + achetée
      * - Retourner UNIQUEMENT des produits de cette catégorie
      * - Si aucun historique => fallback global non-médicaments
+     *
+     * @return list<Produit>
      */
     public function recommendFromHistory(int $userId, int $limit = 12): array
     {
+        /** @var list<Produit> $items */
         $items = [];
+
+        /** @var list<int> $usedIds */
         $usedIds = [];
 
         $category = null;
@@ -31,45 +37,57 @@ class AiPharmacyRecommender
         if ($topProductId) {
             $topProduct = $this->produitRepo->find($topProductId);
 
-            if ($topProduct) {
+            if ($topProduct instanceof Produit) {
                 $category = (string) $topProduct->getCategorieProduit();
 
                 // inclure le top produit
                 $items[] = $topProduct;
 
-                // ✅ ton entity Produit a getId_produit()
                 $usedIds[] = (int) $topProduct->getId_produit();
             }
         }
 
-        // 2) Si pas de top produit => top catégorie (attention format)
-        if (!$category) {
-            $topCats = $this->commandeRepo->getUserTopCategories($userId, 1);
+// 2) Si pas de top produit => top catégorie
+if ($category === null || trim($category) === '') {
+    /** @var array<int, mixed> $topCats */
+    $topCats = $this->commandeRepo->getUserTopCategories($userId, 1);
 
-            if (!empty($topCats)) {
-                $first = $topCats[0];
+    if ($topCats !== []) {
+        $first = $topCats[0];
 
-                // ✅ gère les 2 formats possibles : string OU array
-                if (is_string($first)) {
-                    $category = $first;
-                } elseif (is_array($first)) {
-                    // adapte la clé selon ton repo : categorie / categorie_produit / category ...
-                    $category = $first['categorie']
-                        ?? $first['categorie_produit']
-                        ?? $first['category']
-                        ?? null;
-                }
+        if (is_string($first)) {
+            $category = trim($first);
+        } elseif (is_array($first)) {
+            $cat = null;
 
-                $category = $category ? trim((string) $category) : null;
+            if (array_key_exists('categorie', $first) && is_string($first['categorie'])) {
+                $cat = $first['categorie'];
+            } elseif (array_key_exists('categorie_produit', $first) && is_string($first['categorie_produit'])) {
+                $cat = $first['categorie_produit'];
+            } elseif (array_key_exists('category', $first) && is_string($first['category'])) {
+                $cat = $first['category'];
             }
+
+            $category = $cat !== null ? trim($cat) : null;
+        } else {
+            $category = null;
         }
+
+        if ($category === '') {
+            $category = null;
+        }
+    }
+}
 
         // 3) Si on a une catégorie => uniquement cette catégorie
         if ($category) {
+            /** @var list<Produit> $sameCat */
             $sameCat = $this->produitRepo->findByCategoryNonMedicaments($category, $limit * 2);
 
             foreach ($sameCat as $p) {
-                if (count($items) >= $limit) break;
+                if (count($items) >= $limit) {
+                    break;
+                }
 
                 $pid = (int) $p->getId_produit();
 
@@ -83,12 +101,15 @@ class AiPharmacyRecommender
         }
 
         // 4) Fallback (aucun historique)
-        return $this->produitRepo->createQueryBuilder('p')
+        /** @var list<Produit> $fallback */
+        $fallback = $this->produitRepo->createQueryBuilder('p')
             ->andWhere('p.status_produit = :st')->setParameter('st', 'Disponible')
             ->andWhere('p.categorie_produit != :med')->setParameter('med', 'Médicaments')
             ->orderBy('p.id_produit', 'DESC')
             ->setMaxResults($limit)
             ->getQuery()
             ->getResult();
+
+        return $fallback;
     }
 }

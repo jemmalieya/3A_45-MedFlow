@@ -10,11 +10,7 @@ class StripePaymentService
     private string $stripeSecretKey;
     private string $appUrl;
 
-    // ✅ Stripe ne supporte pas TND → on facture en EUR
     private string $stripeCurrency = 'eur';
-
-    // ✅ Taux fixe (projet) : 1 DT ≈ 0.30 EUR
-    // (tu peux le changer quand tu veux)
     private float $dtToEurRate = 0.30;
 
     public function __construct(string $stripeSecretKey, string $appUrl)
@@ -24,11 +20,7 @@ class StripePaymentService
     }
 
     /**
-     * $items format:
-     * [
-     *   ['name' => 'Produit A', 'unit_price_dt' => 12.5, 'quantity' => 2],
-     *   ['name' => 'Produit B', 'unit_price_dt' => 5.0,  'quantity' => 1],
-     * ]
+     * @param array<int, array{name?: string, unit_price_dt?: float|int, quantity?: int}> $items
      */
     public function createCheckoutSession(int $commandeId, array $items): StripeCheckoutSession
     {
@@ -41,21 +33,17 @@ class StripePaymentService
         $lineItems = [];
 
         foreach ($items as $item) {
-            $name = (string)($item['name'] ?? 'Produit');
-            $priceDt = (float)($item['unit_price_dt'] ?? 0);
-            $qty = (int)($item['quantity'] ?? 1);
+            $name = (string) ($item['name'] ?? 'Produit');
+            $priceDt = (float) ($item['unit_price_dt'] ?? 0);
+            $qty = (int) ($item['quantity'] ?? 1);
 
             if ($priceDt <= 0 || $qty <= 0) {
                 continue;
             }
 
-            // ✅ Convert DT -> EUR
             $priceEur = $priceDt * $this->dtToEurRate;
-
-            // ✅ Stripe attend des "cents" (EUR * 100)
             $unitAmount = (int) round($priceEur * 100);
 
-            // Stripe refuse 0
             if ($unitAmount < 1) {
                 $unitAmount = 1;
             }
@@ -80,12 +68,10 @@ class StripePaymentService
             'mode' => 'payment',
             'payment_method_types' => ['card'],
             'line_items' => $lineItems,
-
             'success_url' => $this->appUrl . '/commande/paiement/success?session_id={CHECKOUT_SESSION_ID}',
             'cancel_url'  => $this->appUrl . '/commande/paiement/cancel',
-
             'metadata' => [
-                'commande_id' => $commandeId,
+                'commande_id' => (string) $commandeId,
             ],
         ]);
     }
@@ -96,7 +82,6 @@ class StripePaymentService
         return StripeCheckoutSession::retrieve($sessionId);
     }
 
-    // ✅ Optionnel: pour afficher estimation EUR sur la page
     public function convertDtToEur(float $amountDt): float
     {
         return $amountDt * $this->dtToEurRate;

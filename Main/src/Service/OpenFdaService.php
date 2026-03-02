@@ -14,6 +14,20 @@ class OpenFdaService
         private ?string $apiKey = null
     ) {}
 
+    /**
+     * @return array{
+     *   found: bool,
+     *   original_name: string,
+     *   error?: string,
+     *   generic_name?: string,
+     *   brand_names?: string[],
+     *   substance_name?: string[],
+     *   manufacturer?: string[],
+     *   warnings?: string[],
+     *   drug_interactions?: string[],
+     *   contraindications?: string[]
+     * }
+     */
     public function searchDrug(string $drugName): array
     {
         $drugName = trim($drugName);
@@ -34,6 +48,7 @@ class OpenFdaService
             $term
         );
 
+        /** @var array<string, string|int> $params */
         $params = [
             'search' => $query,
             'limit'  => 1,
@@ -50,7 +65,6 @@ class OpenFdaService
                 'headers' => ['Accept' => 'application/json'],
             ]);
 
-            // OpenFDA retourne souvent 404 quand rien trouvé -> on fait fuzzy
             $status = $response->getStatusCode();
             $data = $response->toArray(false);
 
@@ -58,11 +72,14 @@ class OpenFdaService
                 return $this->fuzzySearch($drugName);
             }
 
-            if (!isset($data['results'][0])) {
+            if (!isset($data['results'][0]) || !is_array($data['results'][0])) {
                 return $this->fuzzySearch($drugName);
             }
 
-            return $this->mapResult($drugName, $data['results'][0]);
+            /** @var array<string, mixed> $firstResult */
+            $firstResult = $data['results'][0];
+
+            return $this->mapResult($drugName, $firstResult);
 
         } catch (TransportExceptionInterface $e) {
             return [
@@ -79,11 +96,25 @@ class OpenFdaService
         }
     }
 
+    /**
+     * @return array{
+     *   found: bool,
+     *   original_name: string,
+     *   error?: string,
+     *   generic_name?: string,
+     *   brand_names?: string[],
+     *   substance_name?: string[],
+     *   manufacturer?: string[],
+     *   warnings?: string[],
+     *   drug_interactions?: string[],
+     *   contraindications?: string[]
+     * }
+     */
     private function fuzzySearch(string $drugName): array
     {
         $term = $this->escapeForOpenFda($drugName);
 
-        // Recherche floue
+        /** @var array<string, string|int> $params */
         $params = [
             'search' => sprintf('(openfda.generic_name:*%1$s* OR openfda.brand_name:*%1$s*)', $term),
             'limit'  => 1,
@@ -103,7 +134,7 @@ class OpenFdaService
             $status = $response->getStatusCode();
             $data = $response->toArray(false);
 
-            if ($status !== 200 || isset($data['error']) || !isset($data['results'][0])) {
+            if ($status !== 200 || isset($data['error']) || !isset($data['results'][0]) || !is_array($data['results'][0])) {
                 return [
                     'found' => false,
                     'original_name' => $drugName,
@@ -111,7 +142,10 @@ class OpenFdaService
                 ];
             }
 
-            return $this->mapResult($drugName, $data['results'][0]);
+            /** @var array<string, mixed> $firstResult */
+            $firstResult = $data['results'][0];
+
+            return $this->mapResult($drugName, $firstResult);
 
         } catch (\Throwable $e) {
             return [
@@ -122,20 +156,60 @@ class OpenFdaService
         }
     }
 
+    /**
+     * @param array<string, mixed> $result
+     * @return array{
+     *   found: true,
+     *   original_name: string,
+     *   generic_name: string,
+     *   brand_names: string[],
+     *   substance_name: string[],
+     *   manufacturer: string[],
+     *   warnings: string[],
+     *   drug_interactions: string[],
+     *   contraindications: string[]
+     * }
+     */
     private function mapResult(string $originalName, array $result): array
     {
         $openfda = $result['openfda'] ?? [];
 
+        /** @var array<string, mixed> $openfdaArr */
+        $openfdaArr = is_array($openfda) ? $openfda : [];
+
+        /** @var string[] $brandNames */
+        $brandNames = isset($openfdaArr['brand_name']) && is_array($openfdaArr['brand_name']) ? array_map('strval', $openfdaArr['brand_name']) : [];
+
+        /** @var string[] $substances */
+        $substances = isset($openfdaArr['substance_name']) && is_array($openfdaArr['substance_name']) ? array_map('strval', $openfdaArr['substance_name']) : [];
+
+        /** @var string[] $manufacturers */
+        $manufacturers = isset($openfdaArr['manufacturer_name']) && is_array($openfdaArr['manufacturer_name']) ? array_map('strval', $openfdaArr['manufacturer_name']) : [];
+
+        $generic = $originalName;
+        if (isset($openfdaArr['generic_name']) && is_array($openfdaArr['generic_name']) && isset($openfdaArr['generic_name'][0])) {
+            $generic = (string) $openfdaArr['generic_name'][0];
+        }
+
+        /** @var string[] $warnings */
+        $warnings = isset($result['warnings']) && is_array($result['warnings']) ? array_map('strval', $result['warnings']) : [];
+
+        /** @var string[] $interactions */
+        $interactions = isset($result['drug_interactions']) && is_array($result['drug_interactions']) ? array_map('strval', $result['drug_interactions']) : [];
+
+        /** @var string[] $contra */
+        $contra = isset($result['contraindications']) && is_array($result['contraindications']) ? array_map('strval', $result['contraindications']) : [];
+
         return [
             'found' => true,
             'original_name' => $originalName,
-            'generic_name' => $openfda['generic_name'][0] ?? $originalName,
-            'brand_names' => $openfda['brand_name'] ?? [],
-            'substance_name' => $openfda['substance_name'] ?? [],
-            'manufacturer' => $openfda['manufacturer_name'] ?? [],
-            'warnings' => $result['warnings'] ?? [],
-            'drug_interactions' => $result['drug_interactions'] ?? [],
-            'contraindications' => $result['contraindications'] ?? [],
+            'generic_name' => $generic,
+            'brand_names' => $brandNames,
+            'substance_name' => $substances,
+            'manufacturer' => $manufacturers,
+            'warnings' => $warnings,
+            'drug_interactions' => $interactions,
+            'contraindications' => $contra,
         ];
     }
 
@@ -144,7 +218,6 @@ class OpenFdaService
      */
     private function escapeForOpenFda(string $value): string
     {
-        // on supprime les guillemets dangereux, et on normalise
         $value = trim($value);
         $value = str_replace(['\\', '"'], [' ', ' '], $value);
         $value = preg_replace('/\s+/', ' ', $value);

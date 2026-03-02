@@ -56,29 +56,57 @@ final class AdController extends AbstractController
     }
 
     // ========== PAGE LISTE PRODUITS ==========
-    #[Route('/produits', name: 'ad_produits_liste')]
-    public function produits(ProduitRepository $produitRepo): Response
-    {
-        $produits = $produitRepo->findBy([], ['id_produit' => 'DESC']);
+// ========== PAGE LISTE PRODUITS ==========
+#[Route('/produits', name: 'ad_produits_liste')]
+public function produits(Request $request, ProduitRepository $produitRepo, EntityManagerInterface $em): Response
+{
+    $page = max(1, (int) $request->query->get('page', 1));
+    $pageSize = 20;
 
-        $totalProduits = count($produits);
-        $produitsDisponibles = $produitRepo->count(['status_produit' => 'Disponible']);
-        $produitsRupture = $produitRepo->count(['status_produit' => 'Rupture']);
+    $produits = $produitRepo->createQueryBuilder('p')
+        ->orderBy('p.id_produit', 'DESC')
+        ->setFirstResult(($page - 1) * $pageSize)
+        ->setMaxResults($pageSize)
+        ->getQuery()
+        ->getResult();
 
-        $stockTotal = 0;
-        foreach ($produits as $p) {
-            $stockTotal += (int) $p->getQuantiteProduit();
-        }
+    $conn = $em->getConnection();
+    $totalProduits = (int) $conn->fetchOne("SELECT COUNT(*) FROM produit LIMIT 1");
 
-        return $this->render('dashboard_ad/produits_liste.html.twig', [
-            'produits' => $produits,
-            'totalProduits' => $totalProduits,
-            'produitsDisponibles' => $produitsDisponibles,
-            'produitsRupture' => $produitsRupture,
-            'stockTotal' => $stockTotal,
-        ]);
+    $stockTotal = (int) $conn->fetchOne("
+        SELECT COALESCE(SUM(quantite_produit), 0)
+        FROM produit
+        LIMIT 1
+    ");
+
+    $rows = $conn->fetchAllAssociative("
+        SELECT status_produit AS status, COUNT(*) AS total
+        FROM produit
+        GROUP BY status_produit
+    ");
+
+    $produitsDisponibles = 0;
+    $produitsRupture = 0;
+
+    foreach ($rows as $r) {
+        $status = (string) ($r['status'] ?? '');
+        $total  = (int) ($r['total'] ?? 0);
+
+        if ($status === 'Disponible') $produitsDisponibles = $total;
+        if ($status === 'Rupture')    $produitsRupture = $total;
     }
 
+    return $this->render('dashboard_ad/produits_liste.html.twig', [
+        'produits' => $produits,
+        'totalProduits' => $totalProduits,
+        'produitsDisponibles' => $produitsDisponibles,
+        'produitsRupture' => $produitsRupture,
+        'stockTotal' => $stockTotal,
+        'page' => $page,
+        'pageSize' => $pageSize,
+        'totalPages' => (int) ceil($totalProduits / $pageSize),
+    ]);
+}
     // ========== PAGE LISTE COMMANDES ==========
     #[Route('/commandes', name: 'ad_commandes_liste')]
     public function commandes(CommandeRepository $commandeRepo, EntityManagerInterface $em): Response
@@ -1578,132 +1606,203 @@ public function epidemieApiJson(EpidemieDetectionService $epi): Response
         'topParMaladie' => $epi->getTopProduitsByMaladie(30),
     ]);
 }
+
+
+
 // ========== PAGE STATISTIQUES ==========
-    #[Route('/statistiques', name: 'ad_statistiques')]
-    public function statistiques(
-        UserRepository $userRepo,
-        ProduitRepository $produitRepo,
-        CommandeRepository $commandeRepo,
-        EntityManagerInterface $em
-    ): Response {
-        $totalUsers = $userRepo->count([]);
-        $totalProduits = $produitRepo->count([]);
-        $totalCommandes = $commandeRepo->count([]);
+#[Route('/statistiques', name: 'ad_statistiques')]
+public function statistiques(
+    UserRepository $userRepo,
+    ProduitRepository $produitRepo,
+    CommandeRepository $commandeRepo,
+    EntityManagerInterface $em
+): Response {
 
-        // CA total (payées uniquement)
+    // =========================
+    // KPIs (count) - OK
+    // =========================
+    $totalUsers     = $userRepo->count([]);
+    $totalProduits  = $produitRepo->count([]);
+    $totalCommandes = $commandeRepo->count([]);
+
+    // =========================
+    // CA total (commandes payées) - DQL
+    // =========================
+    $caTotal = 0.0;
+    try {
+        $caTotal = (float) $em->createQuery(
+            "SELECT COALESCE(SUM(c.montant_total), 0)
+             FROM App\Entity\Commande c
+             WHERE c.paid_at IS NOT NULL"
+        )->getSingleScalarResult();
+    } catch (\Throwable $e) {
         $caTotal = 0.0;
-        try {
-            $caTotal = (float) ($em->createQuery(
-                'SELECT COALESCE(SUM(c.montant_total), 0) FROM App\Entity\Commande c WHERE c.paid_at IS NOT NULL'
-            )->getSingleScalarResult() ?? 0);
-        } catch (\Exception $e) {}
-
-        // CA ce mois (optionnel)
-        $caMois = 0.0;
-        $nowY = (int) date('Y');
-        $nowM = (int) date('m');
-
-        try {
-            $commandesPayees = $em->createQuery(
-                'SELECT c FROM App\Entity\Commande c WHERE c.paid_at IS NOT NULL'
-            )->getResult();
-
-            foreach ($commandesPayees as $c) {
-                $y = (int) $c->getPaidAt()->format('Y');
-                $m = (int) $c->getPaidAt()->format('m');
-                if ($y === $nowY && $m === $nowM) {
-                    $caMois += (float) $c->getMontantTotal();
-                }
-            }
-        } catch (\Exception $e) {}
-
-        // ✅ CA par mois (12 derniers mois) — MySQL/MariaDB
-        // Retour: [ ['month' => 'Jan', 'total' => 1200], ... ]
-        $caParMois = [];
-        try {
-            // 12 derniers mois (YYYY-MM)
-            $months = [];
-            $cursor = new \DateTimeImmutable('first day of this month');
-            for ($i = 11; $i >= 0; $i--) {
-                $d = $cursor->modify("-{$i} months");
-                $months[] = $d->format('Y-m');
-            }
-
-            // Query DB (group by YYYY-MM)
-            $rows = $em->getConnection()->fetchAllAssociative("
-                SELECT DATE_FORMAT(paid_at, '%Y-%m') AS ym, COALESCE(SUM(montant_total), 0) AS total
-                FROM commande
-                WHERE paid_at IS NOT NULL
-                GROUP BY ym
-                ORDER BY ym ASC
-            ");
-
-            $map = [];
-            foreach ($rows as $r) {
-                $map[$r['ym']] = (float) $r['total'];
-            }
-
-            // Format final (labels courts)
-            $moisLabel = ['Jan','Fév','Mar','Avr','Mai','Juin','Juil','Aoû','Sep','Oct','Nov','Déc'];
-            foreach ($months as $ym) {
-                [$y, $m] = explode('-', $ym);
-                $mInt = (int) $m;
-                $caParMois[] = [
-                    'month' => $moisLabel[$mInt - 1],
-                    'total' => $map[$ym] ?? 0.0,
-                ];
-            }
-        } catch (\Exception $e) {
-            // si erreur => chart vide
-            $caParMois = [];
-        }
-
-        // ✅ Top 5 produits les plus vendus (uniquement commandes payées)
-        $topProduits = [];
-        try {
-            $topProduits = $em->createQuery(
-                'SELECT p.nom_produit AS nom_produit, SUM(lc.quantite_commandee) as total_vendu
-                 FROM App\Entity\LigneCommande lc
-                 JOIN lc.produit p
-                 JOIN lc.commande c
-                 WHERE c.paid_at IS NOT NULL
-                 GROUP BY p.id_produit, p.nom_produit
-                 ORDER BY total_vendu DESC'
-            )->setMaxResults(5)->getResult();
-        } catch (\Exception $e) {}
-
-        // Produits en stock faible
-        $produitsRupture = $produitRepo->createQueryBuilder('p')
-            ->where('p.quantite_produit <= 5')
-            ->orderBy('p.quantite_produit', 'ASC')
-            ->setMaxResults(10)
-            ->getQuery()
-            ->getResult();
-
-        // Commandes par statut
-        $commandesParStatut = [
-            'En attente' => $commandeRepo->count(['statut_commande' => 'En attente']),
-            'En cours' => $commandeRepo->count(['statut_commande' => 'En cours']),
-            'En livraison' => $commandeRepo->count(['statut_commande' => 'En livraison']),
-            'Livrée' => $commandeRepo->count(['statut_commande' => 'Livrée']),
-            'Annulée' => $commandeRepo->count(['statut_commande' => 'Annulée']),
-        ];
-
-        // Dernières commandes
-        $dernieresCommandes = $commandeRepo->findBy([], ['date_creation_commande' => 'DESC'], 5);
-
-        return $this->render('dashboard_ad/statistiques.html.twig', [
-            'totalUsers' => $totalUsers,
-            'totalProduits' => $totalProduits,
-            'totalCommandes' => $totalCommandes,
-            'caTotal' => $caTotal,
-            'caMois' => $caMois,
-            'caParMois' => $caParMois,
-            'topProduits' => $topProduits,
-            'produitsRupture' => $produitsRupture,
-            'commandesParStatut' => $commandesParStatut,
-            'dernieresCommandes' => $dernieresCommandes,
-        ]);
     }
 
+    // =========================
+    // CA du mois courant - DQL
+    // =========================
+    $caMois = 0.0;
+    try {
+        $start = new \DateTimeImmutable('first day of this month 00:00:00');
+        $end   = $start->modify('+1 month');
+
+        $caMois = (float) $em->createQuery(
+            "SELECT COALESCE(SUM(c.montant_total), 0)
+             FROM App\Entity\Commande c
+             WHERE c.paid_at >= :start
+               AND c.paid_at <  :end"
+        )
+            ->setParameter('start', $start)
+            ->setParameter('end', $end)
+            ->getSingleScalarResult();
+    } catch (\Throwable $e) {
+        $caMois = 0.0;
+    }
+
+    // =========================================
+    // CA par mois (12 derniers mois) - SQL MySQL/MariaDB
+    // ✅ FIX: filtre de période (>= start et < end) pour éviter SELECT illimité
+    // Retour: [ ['month' => 'Jan', 'total' => 1200], ... ]
+    // =========================================
+    $caParMois = [];
+    try {
+        $cursor = new \DateTimeImmutable('first day of this month 00:00:00');
+        $start12 = $cursor->modify('-11 months');   // début fenêtre 12 mois
+        $end12   = $cursor->modify('+1 month');     // fin fenêtre (début mois prochain)
+
+        // Liste des 12 mois dans l’ordre (YYYY-MM)
+        $months = [];
+        for ($i = 0; $i < 12; $i++) {
+            $months[] = $start12->modify("+{$i} months")->format('Y-m');
+        }
+
+        // Query DB : group by YYYY-MM, mais limitée à 12 mois ✅
+        $rows = $em->getConnection()->fetchAllAssociative("
+        SELECT DATE_FORMAT(paid_at, '%Y-%m') AS ym,
+               COALESCE(SUM(montant_total), 0) AS total
+        FROM commande
+        WHERE paid_at IS NOT NULL
+          AND paid_at >= :start
+          AND paid_at <  :end
+        GROUP BY ym
+        ORDER BY ym ASC
+        LIMIT 12
+    ", [
+        'start' => $start12->format('Y-m-d H:i:s'),
+        'end'   => $end12->format('Y-m-d H:i:s'),
+    ]);
+        $map = [];
+        foreach ($rows as $r) {
+            $map[(string) $r['ym']] = (float) $r['total'];
+        }
+
+        $moisLabel = ['Jan','Fév','Mar','Avr','Mai','Juin','Juil','Aoû','Sep','Oct','Nov','Déc'];
+
+        foreach ($months as $ym) {
+            [, $m] = explode('-', $ym);
+            $mInt = (int) $m;
+
+            $caParMois[] = [
+                'month' => $moisLabel[$mInt - 1],
+                'total' => $map[$ym] ?? 0.0,
+            ];
+        }
+    } catch (\Throwable $e) {
+        $caParMois = [];
+    }
+
+    // =========================================
+    // Top 5 produits les plus vendus (commandes payées)
+    // =========================================
+    $topProduits = [];
+    try {
+        $topProduits = $em->getConnection()->fetchAllAssociative("
+            SELECT
+                p.nom_produit AS nom_produit,
+                SUM(lc.quantite_commandee) AS total_vendu
+            FROM commande_produit lc
+            INNER JOIN produit p ON lc.produit_id = p.id_produit
+            INNER JOIN commande c ON lc.commande_id = c.id_commande
+            WHERE c.paid_at IS NOT NULL
+            GROUP BY p.id_produit, p.nom_produit
+            ORDER BY total_vendu DESC
+            LIMIT 5
+        ");
+    } catch (\Throwable $e) {
+        $topProduits = [];
+    }
+
+    // =========================================
+    // Produits en stock faible (limit 10) - OK
+    // =========================================
+    $produitsRupture = $produitRepo->createQueryBuilder('p')
+        ->where('p.quantite_produit <= :seuil')
+        ->setParameter('seuil', 5)
+        ->orderBy('p.quantite_produit', 'ASC')
+        ->setMaxResults(10)
+        ->getQuery()
+        ->getResult();
+
+// =========================================
+// Commandes par statut (12 derniers mois) ✅
+// =========================================
+$commandesParStatut = [
+    'En attente'   => 0,
+    'En cours'     => 0,
+    'En livraison' => 0,
+    'Livrée'       => 0,
+    'Annulée'      => 0,
+];
+
+try {
+    $end   = new \DateTimeImmutable('first day of this month 00:00:00');
+    $start = $end->modify('-11 months');      // fenêtre 12 mois
+    $end2  = $end->modify('+1 month');        // inclus mois courant
+
+    $rows = $em->getConnection()->fetchAllAssociative("
+        SELECT statut_commande AS statut, COUNT(*) AS total
+        FROM commande
+        WHERE date_creation_commande >= :start
+          AND date_creation_commande <  :end
+        GROUP BY statut_commande
+    ", [
+        'start' => $start->format('Y-m-d H:i:s'),
+        'end'   => $end2->format('Y-m-d H:i:s'),
+    ]);
+
+    foreach ($rows as $r) {
+        $statut = (string) $r['statut'];
+        $total  = (int) $r['total'];
+
+        if (array_key_exists($statut, $commandesParStatut)) {
+            $commandesParStatut[$statut] = $total;
+        }
+    }
+} catch (\Throwable $e) {
+    // garde les zéros
 }
+
+    // =========================================
+    // Dernières commandes (limit 5) - OK
+    // =========================================
+    $dernieresCommandes = $commandeRepo->findBy([], ['date_creation_commande' => 'DESC'], 5);
+
+    return $this->render('dashboard_ad/statistiques.html.twig', [
+        'totalUsers' => $totalUsers,
+        'totalProduits' => $totalProduits,
+        'totalCommandes' => $totalCommandes,
+
+        'caTotal' => $caTotal,
+        'caMois' => $caMois,
+        'caParMois' => $caParMois,
+
+        'topProduits' => $topProduits,
+        'produitsRupture' => $produitsRupture,
+        'commandesParStatut' => $commandesParStatut,
+        'dernieresCommandes' => $dernieresCommandes,
+    ]);
+}
+
+}
+

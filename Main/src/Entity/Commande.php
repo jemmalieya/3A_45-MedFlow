@@ -8,32 +8,31 @@ use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity(repositoryClass: CommandeRepository::class)]
+#[ORM\Table(name: 'commande')]
 class Commande
 {
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column(name: "id_commande")]
-    private ?int $id_commande = null;
+    private int $id_commande = 0; // ✅ Doctrine l’assigne
 
-    // Relation avec l'entité User (clé étrangère)
     #[ORM\ManyToOne(targetEntity: User::class, inversedBy: 'commandes')]
-    #[ORM\JoinColumn(name: "id_user", referencedColumnName: "id", nullable: false)]
-    private ?User $user;
+    #[ORM\JoinColumn(name: "user_id", referencedColumnName: "id", nullable: false, onDelete: "CASCADE")]
+    private User $user;
 
-    #[ORM\Column]
-    private ?\DateTimeImmutable $date_creation_commande = null;
+    #[ORM\Column(name: "date_creation_commande", type: "datetime_immutable", nullable: false)]
+    private \DateTimeImmutable $date_creation_commande;
 
-    #[ORM\Column(length: 150)]
-    private ?string $statut_commande = null;
+    #[ORM\Column(name: "statut_commande", length: 150, nullable: false)]
+    private string $statut_commande;
 
-    #[ORM\Column]
-    private ?float $montant_total = null;
+    #[ORM\Column(name: "montant_total_cents", type: "integer", nullable: false)]
+    private int $montant_total_cents = 0;
 
-    // ✅ Stripe
-    #[ORM\Column(length: 255, nullable: true)]
+    #[ORM\Column(name: "stripe_session_id", length: 255, nullable: true)]
     private ?string $stripe_session_id = null;
 
-    #[ORM\Column(nullable: true)]
+    #[ORM\Column(name: "paid_at", type: "datetime_immutable", nullable: true)]
     private ?\DateTimeImmutable $paid_at = null;
 
     /**
@@ -42,7 +41,7 @@ class Commande
     #[ORM\OneToMany(
         targetEntity: LigneCommande::class,
         mappedBy: 'commande',
-        cascade: ['persist', 'remove'], // ✅ IMPORTANT (persist ajouté)
+        cascade: ['persist', 'remove'],
         orphanRemoval: true
     )]
     private Collection $ligne_commandes;
@@ -50,18 +49,16 @@ class Commande
     public function __construct()
     {
         $this->ligne_commandes = new ArrayCollection();
+        $this->date_creation_commande = new \DateTimeImmutable();
+        $this->statut_commande = 'En attente';
     }
-
-    // =========================
-    //         GETTERS/SETTERS
-    // =========================
 
     public function getIdCommande(): ?int
     {
-        return $this->id_commande;
+        return $this->id_commande > 0 ? $this->id_commande : null;
     }
 
-    public function getUser(): ?User
+    public function getUser(): User
     {
         return $this->user;
     }
@@ -72,7 +69,7 @@ class Commande
         return $this;
     }
 
-    public function getDateCreationCommande(): ?\DateTimeImmutable
+    public function getDateCreationCommande(): \DateTimeImmutable
     {
         return $this->date_creation_commande;
     }
@@ -83,7 +80,7 @@ class Commande
         return $this;
     }
 
-    public function getStatutCommande(): ?string
+    public function getStatutCommande(): string
     {
         return $this->statut_commande;
     }
@@ -94,18 +91,28 @@ class Commande
         return $this;
     }
 
-    public function getMontantTotal(): ?float
+    public function getMontantTotalCents(): int
     {
-        return $this->montant_total;
+        return $this->montant_total_cents;
+    }
+
+    public function setMontantTotalCents(int $cents): self
+    {
+        $this->montant_total_cents = max(0, $cents);
+        return $this;
+    }
+
+    public function getMontantTotal(): float
+    {
+        return $this->montant_total_cents / 100;
     }
 
     public function setMontantTotal(float $montant_total): self
     {
-        $this->montant_total = $montant_total;
+        $this->montant_total_cents = max(0, (int) round($montant_total * 100));
         return $this;
     }
 
-    // ✅ Stripe
     public function getStripeSessionId(): ?string
     {
         return $this->stripe_session_id;
@@ -140,9 +147,8 @@ class Commande
     {
         if (!$this->ligne_commandes->contains($ligneCommande)) {
             $this->ligne_commandes->add($ligneCommande);
-            $ligneCommande->setCommande($this); // ✅ lien obligatoire
+            $ligneCommande->setCommande($this);
         }
-
         return $this;
     }
 
@@ -153,7 +159,6 @@ class Commande
                 $ligneCommande->setCommande(null);
             }
         }
-
         return $this;
     }
 }

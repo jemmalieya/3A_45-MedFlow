@@ -1,4 +1,4 @@
-{# templates/produits/admin_index.html.twig (exemple) #}
+{# templates/produits/admin_index.html.twig #}
 {% extends 'base_dashboard.html.twig' %}
 
 {% block title %}Gestion des Produits{% endblock %}
@@ -6,11 +6,7 @@
 {% block body %}
 
 <style>
-/* ==========================================================
-   PRODUITS — DESIGN STYLE "RÉCLAMATIONS" (BLUE / CLEAN)
-   + Quantité & Statut en BADGE BLANC (lisible)
-   ========================================================== */
-
+/* ======== (TON CSS INCHANGÉ) ======== */
 :root{
   --blue-50:#eff6ff;
   --blue-100:#dbeafe;
@@ -42,10 +38,9 @@
   min-height: 100vh;
   padding: 28px 0 60px;
 }
-
 .container-fluid{ max-width: 1400px; }
 
-/* ===== Header "Réclamations-like" ===== */
+/* Header */
 .hero{
   border-radius: var(--radius);
   background: linear-gradient(135deg, #0891b2 0%, #3b82f6 55%, #2563eb 100%);
@@ -53,17 +48,14 @@
   overflow: hidden;
   position: relative;
 }
-
 .hero::after{
   content:"";
   position:absolute;
   inset:-60px -60px auto auto;
-  width:220px;
-  height:220px;
+  width:220px;height:220px;
   background: radial-gradient(circle, rgba(255,255,255,.22) 0%, rgba(255,255,255,0) 70%);
   transform: rotate(20deg);
 }
-
 .hero-inner{
   padding: 26px 28px;
   display:flex;
@@ -72,14 +64,7 @@
   gap: 16px;
   flex-wrap: wrap;
 }
-
-.hero-left{
-  display:flex;
-  align-items:center;
-  gap: 14px;
-  color:#fff;
-}
-
+.hero-left{ display:flex; align-items:center; gap:14px; color:#fff; }
 .hero-icon{
   width:54px;height:54px;
   border-radius: 16px;
@@ -88,7 +73,6 @@
   display:flex;align-items:center;justify-content:center;
   box-shadow: 0 10px 24px rgba(0,0,0,.12);
 }
-
 .hero-title{
   margin:0;
   font-weight: 800;
@@ -96,7 +80,6 @@
   font-size: 32px;
   text-shadow: 0 3px 10px rgba(0,0,0,.15);
 }
-
 .hero-sub{
   margin:6px 0 0;
   color: rgba(255,255,255,.88);
@@ -106,7 +89,6 @@
   gap:10px;
   flex-wrap: wrap;
 }
-
 .pill{
   display:inline-flex;
   align-items:center;
@@ -119,20 +101,12 @@
   background: rgba(255,255,255,.18);
   border: 1px solid rgba(255,255,255,.25);
 }
-
 .pill-dark{
   background: rgba(15, 23, 42, .18);
   border: 1px solid rgba(255,255,255,.20);
 }
+.hero-right{ display:flex; gap:10px; align-items:center; flex-wrap: wrap; }
 
-.hero-right{
-  display:flex;
-  gap: 10px;
-  align-items:center;
-  flex-wrap: wrap;
-}
-
-/* Buttons */
 .btn-hero{
   border: none !important;
   border-radius: 14px !important;
@@ -141,20 +115,14 @@
   box-shadow: 0 10px 24px rgba(0,0,0,.12);
   transition: .2s ease;
 }
-
 .btn-hero:hover{ transform: translateY(-2px); }
-
 .btn-add{
   background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%) !important;
   color: #111827 !important;
 }
+.btn-orders{ background:#fff !important; color: var(--blue-800) !important; }
 
-.btn-orders{
-  background: #fff !important;
-  color: var(--blue-800) !important;
-}
-
-/* ===== Toolbar like réclamations ===== */
+/* Panel */
 .panel{
   margin-top: 18px;
   background: linear-gradient(135deg, #0ea5b8 0%, #60a5fa 60%, #3b82f6 100%);
@@ -162,7 +130,6 @@
   box-shadow: var(--shadow-md);
   overflow: hidden;
 }
-
 .panel-inner{
   padding: 16px 18px;
   display:flex;
@@ -171,7 +138,6 @@
   gap: 12px;
   flex-wrap: wrap;
 }
-
 .panel-title{
   color:#fff;
   font-weight: 900;
@@ -180,15 +146,7 @@
   align-items:center;
   gap:10px;
 }
-
-.toolbar{
-  display:flex;
-  align-items:center;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-
-/* toolbar inputs */
+.toolbar{ display:flex; align-items:center; gap: 10px; flex-wrap: wrap; }
 .tool{
   border-radius: 14px !important;
   border: 1px solid rgba(255,255,255,.35) !important;
@@ -199,10 +157,8 @@
   outline: none !important;
   box-shadow: 0 8px 18px rgba(0,0,0,.10);
 }
-
 .tool::placeholder{ color: rgba(255,255,255,.78); }
-
-.tool option{ color:#111827; } /* dropdown options */
+.tool option{ color:#111827; }
 
 .btn-tool{
   border-radius: 14px !important;
@@ -216,7 +172,7 @@
 }
 .btn-tool:hover{ transform: translateY(-2px); }
 
-/* ===== Content card ===== */
+/* Content */
 .content-card{
   margin-top: 16px;
   background: var(--card);
@@ -225,10 +181,8 @@
   overflow:hidden;
 }
 
-/* ===== Stats row ===== */
-.stats-row{
-  padding: 16px 18px 0;
-}
+/* Stats */
+.stats-row{ padding: 16px 18px 0; }
 .stat{
   background:#fff;
   border-radius: 16px;
@@ -249,7 +203,7 @@
 }
 .stat .l{ color: var(--muted); font-weight: 700; }
 
-/* ===== Inventory alert ===== */
+/* Inventory alert */
 .inv-alert{
   margin: 14px 18px 0;
   border-radius: 18px;
@@ -263,12 +217,7 @@
   gap: 12px;
   flex-wrap: wrap;
 }
-
-.inv-left{
-  display:flex;
-  align-items:center;
-  gap: 12px;
-}
+.inv-left{ display:flex; align-items:center; gap: 12px; }
 .inv-bell{
   width:52px;height:52px;
   border-radius: 999px;
@@ -279,7 +228,6 @@
 }
 .inv-title{ margin:0; font-weight: 900; color:#111827; }
 .inv-meta{ color: var(--muted); font-weight: 700; }
-
 .btn-inv{
   background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%) !important;
   border:none !important;
@@ -288,13 +236,9 @@
   padding: 10px 14px !important;
 }
 
-/* ===== Table ===== */
+/* Table */
 .table-wrap{ padding: 12px 0 0; }
-
-.table{
-  margin:0;
-}
-
+.table{ margin:0; }
 .table thead th{
   background: #eef6ff !important;
   color: #0f2a5f !important;
@@ -305,22 +249,16 @@
   border: none !important;
   padding: 14px 14px !important;
 }
-
 .table tbody td{
   padding: 16px 14px !important;
   border-top: 1px solid #eef2ff !important;
   vertical-align: middle;
 }
-
-.tr-row{
-  transition: .2s ease;
-}
+.tr-row{ transition: .2s ease; }
 .tr-row:hover{
   background: linear-gradient(135deg, var(--blue-50) 0%, #fff 70%);
   transform: translateX(4px);
 }
-
-/* Image */
 .pimg{
   width:64px;height:64px;
   border-radius: 14px;
@@ -335,7 +273,7 @@
   box-shadow: 0 14px 28px rgba(59,130,246,.20);
 }
 
-/* ===== BADGES BLANCS (Quantité + Statut) ===== */
+/* Badges blancs */
 .pill-white{
   display:inline-flex;
   align-items:center;
@@ -349,8 +287,6 @@
   box-shadow: 0 8px 18px rgba(15, 23, 42, .06);
   white-space: nowrap;
 }
-
-/* Quantité */
 .qty-ok{ border-color: rgba(37,99,235,.35); color: var(--blue-800); }
 .qty-low{ border-color: rgba(239,68,68,.35); color: #991b1b; }
 .qty-num{
@@ -362,23 +298,17 @@
   background: rgba(37,99,235,.10);
   color: var(--blue-800);
 }
-.qty-low .qty-num{
-  background: rgba(239,68,68,.12);
-  color:#991b1b;
-}
+.qty-low .qty-num{ background: rgba(239,68,68,.12); color:#991b1b; }
 
-/* Statut */
 .st-dispo{ border-color: rgba(16,185,129,.35); color: #065f46; }
 .st-rupture{ border-color: rgba(245,158,11,.45); color: #92400e; }
 .st-indispo{ border-color: rgba(239,68,68,.35); color: #991b1b; }
-
 .st-dot{
   width:10px;height:10px;border-radius:999px;
   background: currentColor;
   box-shadow: 0 0 0 4px rgba(0,0,0,0.03);
 }
 
-/* Actions */
 .btn-action{
   width:40px;height:40px;
   display:inline-flex;
@@ -420,7 +350,6 @@
 @keyframes slideOutRight{ from{opacity:1;transform:translateX(0)} to{opacity:0;transform:translateX(80px)} }
 .flash-message.slide-out{ animation: slideOutRight .35s ease forwards; }
 
-/* Confirm overlay */
 .confirm-overlay{
   position: fixed;
   inset: 0;
@@ -449,15 +378,17 @@
 }
 </style>
 
-{# ====== STATS ====== #}
-{% set statsBase = produits is defined ? produits : pagination %}
+{# ====== PAGINATION META (de ton controller Doctrine native) ====== #}
+{% set page = pagination.page %}
+{% set pages = pagination.pages %}
+{% set totalCount = pagination.total %}
 
-{% set totalCount = statsBase|length %}
+{# ====== STATS (sur la page actuelle seulement - c'est OK visuellement) ====== #}
 {% set dispoCount = 0 %}
 {% set ruptureStatCount = 0 %}
 {% set indispoCount = 0 %}
 
-{% for p in statsBase %}
+{% for p in produits %}
   {% if p.statusProduit == 'Disponible' %}
     {% set dispoCount = dispoCount + 1 %}
   {% elseif p.statusProduit == 'Rupture' %}
@@ -476,7 +407,6 @@
 <section class="section-page">
   <div class="container-fluid">
 
-    {# ===== HERO (comme Réclamations) ===== #}
     <div class="hero">
       <div class="hero-inner">
         <div class="hero-left">
@@ -503,7 +433,6 @@
       </div>
     </div>
 
-    {# ===== FLASH ===== #}
     <div id="flash-messages-container">
       {% for message in app.flashes('success') %}
         <div class="alert alert-success flash-message" role="alert">
@@ -522,7 +451,6 @@
       {% endfor %}
     </div>
 
-    {# ===== PANEL (barre outils comme Réclamations) ===== #}
     <div class="panel">
       <div class="panel-inner">
         <h3 class="panel-title"><i class="bi bi-list-ul"></i> Liste des Produits</h3>
@@ -551,10 +479,8 @@
       </div>
     </div>
 
-    {# ===== CONTENT CARD ===== #}
     <div class="content-card">
 
-      {# ===== STATS ===== #}
       <div class="stats-row">
         <div class="row g-3">
           <div class="col-md-3">
@@ -568,27 +494,26 @@
             <div class="stat">
               <i class="bi bi-check-circle text-success" style="font-size: 26px;"></i>
               <div class="n">{{ dispoCount }}</div>
-              <div class="l">Disponibles</div>
+              <div class="l">Disponibles (page)</div>
             </div>
           </div>
           <div class="col-md-3">
             <div class="stat">
               <i class="bi bi-exclamation-triangle text-warning" style="font-size: 26px;"></i>
               <div class="n">{{ ruptureStatCount }}</div>
-              <div class="l">En Rupture</div>
+              <div class="l">En Rupture (page)</div>
             </div>
           </div>
           <div class="col-md-3">
             <div class="stat">
               <i class="bi bi-x-circle text-danger" style="font-size: 26px;"></i>
               <div class="n">{{ indispoCount }}</div>
-              <div class="l">Indisponibles</div>
+              <div class="l">Indisponibles (page)</div>
             </div>
           </div>
         </div>
       </div>
 
-      {# ===== ALERT INVENTAIRE ===== #}
       {% if hasAlerts %}
         <div class="inv-alert">
           <div class="inv-left">
@@ -608,7 +533,6 @@
         </div>
       {% endif %}
 
-      {# ===== TABLE ===== #}
       <div class="table-wrap">
         <div class="table-responsive">
           <table class="table align-middle" id="produitsTable">
@@ -626,11 +550,12 @@
             </thead>
 
             <tbody>
-              {% for produit in pagination %}
+              {% for produit in produits %}
                 <tr class="tr-row"
                     data-name="{{ produit.nomProduit|lower }}"
                     data-qty="{{ produit.quantiteProduit }}"
                     data-price="{{ produit.prixProduit }}">
+
                   <td>
                     {% set img = produit.imageProduit %}
                     {% set imgUrl = 'https://via.placeholder.com/70?text=No+Img' %}
@@ -651,9 +576,7 @@
                          onerror="this.onerror=null;this.src='https://via.placeholder.com/70?text=No+Img';" />
                   </td>
 
-                  <td>
-                    <div class="fw-bold text-dark">{{ produit.nomProduit }}</div>
-                  </td>
+                  <td><div class="fw-bold text-dark">{{ produit.nomProduit }}</div></td>
 
                   <td>
                     <span class="fw-bold" style="color: var(--success);">
@@ -661,7 +584,6 @@
                     </span>
                   </td>
 
-                  {# ===== Quantité badge BLANC ===== #}
                   <td class="text-center">
                     {% set isLow = produit.quantiteProduit < seuil %}
                     <span class="pill-white {{ isLow ? 'qty-low' : 'qty-ok' }}">
@@ -676,7 +598,6 @@
                     </span>
                   </td>
 
-                  {# ===== Statut badge BLANC ===== #}
                   <td class="text-center">
                     {% if produit.statusProduit == 'Disponible' %}
                       <span class="pill-white st-dispo">
@@ -726,6 +647,7 @@
                       </form>
                     </div>
                   </td>
+
                 </tr>
               {% else %}
                 <tr>
@@ -739,14 +661,32 @@
           </table>
         </div>
 
-        {# PAGINATION #}
+        {# ===== PAGINATION (SANS KNP) ===== #}
         <div class="p-3">
-          <div class="d-flex justify-content-center">
-            {{ knp_pagination_render(pagination) }}
-          </div>
-        </div>
-      </div>
+          <nav class="d-flex justify-content-center">
+            <ul class="pagination mb-0">
+              <li class="page-item {{ page <= 1 ? 'disabled' : '' }}">
+                <a class="page-link"
+                   href="{{ path('admin_produits_index', app.request.query.all | merge({'page': page-1})) }}">
+                  Précédent
+                </a>
+              </li>
 
+              <li class="page-item disabled">
+                <span class="page-link">Page {{ page }} / {{ pages }}</span>
+              </li>
+
+              <li class="page-item {{ page >= pages ? 'disabled' : '' }}">
+                <a class="page-link"
+                   href="{{ path('admin_produits_index', app.request.query.all | merge({'page': page+1})) }}">
+                  Suivant
+                </a>
+              </li>
+            </ul>
+          </nav>
+        </div>
+
+      </div>
     </div>
   </div>
 </section>
@@ -854,7 +794,7 @@ document.addEventListener('DOMContentLoaded', function() {
     [...document.querySelectorAll('[data-bs-toggle="tooltip"]')].forEach(el => new bootstrap.Tooltip(el));
   }
 
-  // 3) Inventory modal (2 boutons: top + card)
+  // 3) Inventory modal
   const invModalEl = document.getElementById('inventoryAlertModal');
 
   function openInvModal(){
@@ -879,15 +819,12 @@ document.addEventListener('DOMContentLoaded', function() {
     const rows = [...tbody.querySelectorAll('tr')];
 
     rows.forEach(row => {
-      // ignorer la ligne "Aucun produit"
       if (row.querySelector('td[colspan]')) return;
       row.style.display = row.textContent.toLowerCase().includes(filter) ? '' : 'none';
     });
   }
 
-  if (searchInput) {
-    searchInput.addEventListener('input', applyFilter);
-  }
+  if (searchInput) searchInput.addEventListener('input', applyFilter);
 
   // 5) Sort (client-side on current page)
   const sortSelect = document.getElementById('sortSelect');
@@ -896,10 +833,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (!tbody) return;
     const rows = [...tbody.querySelectorAll('tr')].filter(r => !r.querySelector('td[colspan]'));
 
-    const get = (r, key) => {
-      const v = r.dataset[key];
-      return v ?? '';
-    };
+    const get = (r, key) => (r.dataset[key] ?? '');
 
     const compare = (a, b) => {
       switch(mode){

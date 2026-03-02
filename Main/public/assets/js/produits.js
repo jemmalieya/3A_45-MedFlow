@@ -1,19 +1,27 @@
 /* public/assets/js/produits.js */
-console.log("✅ produits.js chargé (FULL stable + auto-carousel)");
+console.log("✅ produits.js chargé (FINAL stable + no double add)");
 
-// ==================================================
-// ✅ HANDLERS ROBUSTES (mode sombre / contact / IA)
-// - Event delegation => marche même si le DOM est remplacé (Turbo, Ajax, etc.)
-// - Évite le bug: "déjà initialisé -> skip" puis plus aucun clic ne marche
-// ==================================================
-(function pharmacieDelegates() {
-  if (window.__PHARMACIE_DELEGATES__) return;
-  window.__PHARMACIE_DELEGATES__ = true;
+(function PHARMACIE_APP() {
+  // ✅ Anti double init (même si script chargé 2 fois)
+  if (window.__PHARMACIE_APP_INIT__) {
+    console.warn("⚠️ produits.js déjà initialisé -> skip");
+    return;
+  }
+  window.__PHARMACIE_APP_INIT__ = true;
 
-  const THEME_KEY = "theme"; // localStorage
+  // ==================================================
+  // ✅ GLOBAL LOCKS (anti double click / double request)
+  // ==================================================
+  const cartLocks = new Set(); // lock par productId (grille)
+  const railLocks = new Set(); // lock par productId (rail)
   let contactInFlight = false;
   let aiInFlight = false;
 
+  const THEME_KEY = "theme";
+
+  // ==================================================
+  // ✅ THEME
+  // ==================================================
   function applySavedTheme() {
     const theme = localStorage.getItem(THEME_KEY) === "dark" ? "dark" : "light";
     document.body.classList.toggle("dark", theme === "dark");
@@ -25,6 +33,58 @@ console.log("✅ produits.js chargé (FULL stable + auto-carousel)");
     applySavedTheme();
   }
 
+  // ==================================================
+  // ✅ FLASH
+  // ==================================================
+  function showFlashMessage(message, type) {
+    const container = document.getElementById("flash-messages-container");
+    if (!container) return;
+
+    const alert = document.createElement("div");
+    alert.className = `alert-custom alert-${type}`;
+    alert.innerHTML = `
+      <i class="bi bi-${type === "success" ? "check" : "x"}-circle-fill"></i>
+      <span>${escapeHtml(message)}</span>
+      <button type="button" class="btn-close-custom">×</button>
+    `;
+
+    alert.querySelector(".btn-close-custom")?.addEventListener("click", () => alert.remove());
+
+    container.appendChild(alert);
+    setTimeout(() => alert.classList.add("show"), 10);
+
+    setTimeout(() => {
+      alert.style.animation = "slideOut 0.4s ease forwards";
+      setTimeout(() => alert.remove(), 400);
+    }, 3000);
+  }
+
+  function autoRemoveExistingFlash() {
+    setTimeout(() => {
+      document.querySelectorAll(".alert-custom").forEach((alert) => {
+        alert.style.animation = "slideOut 0.4s ease forwards";
+        setTimeout(() => alert.remove(), 400);
+      });
+    }, 3000);
+  }
+
+  // ==================================================
+  // ✅ CART BADGE
+  // ==================================================
+  function updateCartBadge(newCount) {
+    const badge = document.getElementById("cart-count");
+    if (!badge) return;
+
+    const count = parseInt(newCount || "0", 10);
+    badge.textContent = String(count);
+
+    if (count <= 0) badge.classList.add("d-none");
+    else badge.classList.remove("d-none");
+  }
+
+  // ==================================================
+  // ✅ QR CONTACT
+  // ==================================================
   async function openContactQrModal() {
     if (contactInFlight) return;
 
@@ -76,7 +136,7 @@ console.log("✅ produits.js chargé (FULL stable + auto-carousel)");
       try {
         data = JSON.parse(raw);
       } catch {
-        throw new Error("Réponse non-JSON (redirect / erreur serveur)." );
+        throw new Error("Réponse non-JSON (redirect / erreur serveur).");
       }
 
       if (!res.ok) throw new Error(data.error || `Erreur HTTP ${res.status}`);
@@ -96,6 +156,9 @@ console.log("✅ produits.js chargé (FULL stable + auto-carousel)");
     }
   }
 
+  // ==================================================
+  // ✅ AI PANEL
+  // ==================================================
   function toggleAiPanel() {
     const panel = document.getElementById("aiPanel");
     const input = document.getElementById("aiInput");
@@ -163,147 +226,112 @@ console.log("✅ produits.js chargé (FULL stable + auto-carousel)");
     }
   }
 
-  // Appliquer le thème dès que possible
-  document.addEventListener("DOMContentLoaded", applySavedTheme);
-  document.addEventListener("turbo:load", applySavedTheme);
-  applySavedTheme();
+  // ==================================================
+  // ✅ PANIER (GRILLE) — Event Delegation + Lock
+  // ==================================================
+  async function handleAddToCart(btn) {
+    const id = btn?.dataset?.id;
+    const stock = parseInt(btn?.dataset?.stock || "0", 10);
+    if (!id) return;
 
-  // Click delegation
-  document.addEventListener("click", (e) => {
-    const target = e.target && e.target.closest ? e.target.closest("#themeToggle, #btnContactQr, #aiFab, #aiClose, #aiSend") : null;
-    if (!target) return;
+    // 🔒 anti double request
+    if (cartLocks.has(id)) return;
+    cartLocks.add(id);
 
-    if (target.id === "themeToggle") {
-      e.preventDefault();
-      toggleTheme();
-      return;
-    }
+    const oldHtml = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = `<i class="bi bi-hourglass-split"></i><span>Ajout...</span>`;
 
-    if (target.id === "btnContactQr") {
-      e.preventDefault();
-      openContactQrModal();
-      return;
-    }
-
-    if (target.id === "aiFab") {
-      e.preventDefault();
-      toggleAiPanel();
-      return;
-    }
-
-    if (target.id === "aiClose") {
-      e.preventDefault();
-      closeAiPanel();
-      return;
-    }
-
-    if (target.id === "aiSend") {
-      e.preventDefault();
-      askAi();
-    }
-  });
-
-  // Enter-to-send delegation
-  document.addEventListener("keydown", (e) => {
-    if (e.key !== "Enter") return;
-    const isAiInput = e.target && e.target.id === "aiInput";
-    if (!isAiInput) return;
-    e.preventDefault();
-    askAi();
-  });
-})();
-
-// ✅ anti double init
-if (window.__PHARMACIE_INIT_DONE__) {
-  console.warn("⚠️ produits.js déjà initialisé -> skip");
-} else {
-  window.__PHARMACIE_INIT_DONE__ = true;
-
-  document.addEventListener("DOMContentLoaded", () => {
-    // ==================================================
-    // 1) FLASH AUTO-SUPPRESSION + FERMETURE
-    // ==================================================
-    setTimeout(() => {
-      document.querySelectorAll(".alert-custom").forEach((alert) => {
-        alert.style.animation = "slideOut 0.4s ease forwards";
-        setTimeout(() => alert.remove(), 400);
+    try {
+      // ✅ vérifier quantité dans panier
+      const checkRes = await fetch(`/panier/verifier/${id}`, {
+        headers: { "X-Requested-With": "XMLHttpRequest" },
+        cache: "no-store",
       });
-    }, 3000);
 
-    document.addEventListener("click", (e) => {
-      if (e.target && e.target.classList.contains("btn-close-custom")) {
-        const parent = e.target.closest(".alert-custom");
-        if (parent) parent.remove();
+      const checkData = await checkRes.json().catch(() => ({}));
+      const quantiteDansPanier = parseInt(checkData.quantite || "0", 10);
+
+      if (stock > 0 && quantiteDansPanier >= stock) {
+        showFlashMessage(`Stock insuffisant ! Max ${stock}`, "error");
+        return;
       }
-    });
 
-    // ==================================================
-    // 2) PANIER AJAX (boutons grille produits)
-    // ==================================================
-    document.querySelectorAll(".btn-add-cart").forEach((btn) => {
-      btn.addEventListener("click", async () => {
-        const id = btn.dataset.id;
-        const stock = parseInt(btn.dataset.stock || "0", 10);
-
-        btn.disabled = true;
-
-        try {
-          // vérifier quantité dans panier si endpoint existe
-          const checkRes = await fetch(`/panier/verifier/${id}`, {
-            headers: { "X-Requested-With": "XMLHttpRequest" },
-            cache: "no-store",
-          });
-
-          const checkData = await checkRes.json().catch(() => ({}));
-          const quantiteDansPanier = parseInt(checkData.quantite || "0", 10);
-
-          if (stock > 0 && quantiteDansPanier >= stock) {
-            showFlashMessage(`Stock insuffisant ! Max ${stock}`, "error");
-            btn.disabled = false;
-            return;
-          }
-
-          const addRes = await fetch(`/panier/ajouter/${id}`, {
-            method: "POST",
-            headers: { "X-Requested-With": "XMLHttpRequest" },
-            cache: "no-store",
-          });
-
-          const addData = await addRes.json().catch(() => ({}));
-
-          if (!addRes.ok || !addData.success) {
-            showFlashMessage(addData.message || "Erreur ajout", "error");
-            btn.disabled = false;
-            return;
-          }
-
-          showFlashMessage(addData.message || "Ajouté au panier", "success");
-          updateCartBadge(addData.count);
-          btn.disabled = false;
-        } catch (e) {
-          console.error(e);
-          showFlashMessage("Erreur réseau", "error");
-          btn.disabled = false;
-        }
+      // ✅ ajouter
+      const addRes = await fetch(`/panier/ajouter/${id}`, {
+        method: "POST",
+        headers: { "X-Requested-With": "XMLHttpRequest" },
+        cache: "no-store",
       });
-    });
 
-    // ==================================================
-    // 3) FILTRES + TRI
-    // ==================================================
+      const addData = await addRes.json().catch(() => ({}));
+      if (!addRes.ok || !addData.success) {
+        showFlashMessage(addData.message || "Erreur ajout", "error");
+        return;
+      }
+
+      showFlashMessage(addData.message || "Ajouté au panier", "success");
+      updateCartBadge(addData.count);
+    } catch (err) {
+      console.error(err);
+      showFlashMessage("Erreur réseau", "error");
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = oldHtml;
+      cartLocks.delete(id);
+    }
+  }
+
+  // ==================================================
+  // ✅ PANIER (RAILS) — Lock aussi
+  // ==================================================
+  async function addToCartFromRail(productId) {
+    if (!productId) return;
+
+    if (railLocks.has(productId)) return;
+    railLocks.add(productId);
+
+    try {
+      const res = await fetch(`/panier/ajouter/${productId}`, {
+        method: "POST",
+        headers: { "X-Requested-With": "XMLHttpRequest" },
+        cache: "no-store",
+      });
+
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.success) {
+        showFlashMessage(data.message || "Erreur ajout", "error");
+        return;
+      }
+
+      showFlashMessage(data.message || "Ajouté", "success");
+      updateCartBadge(data.count);
+    } catch (e) {
+      console.error(e);
+      showFlashMessage("Erreur réseau", "error");
+    } finally {
+      railLocks.delete(productId);
+    }
+  }
+
+  // ==================================================
+  // ✅ FILTRES + TRI
+  // ==================================================
+  function initFilters() {
     const searchInput = document.getElementById("searchInput");
     const clearSearchBtn = document.getElementById("clearSearch");
     const sortPriceSelect = document.getElementById("sortPrice");
     const sortStockSelect = document.getElementById("sortStock");
     const filterCategorySelect = document.getElementById("filterCategory");
     const produitsContainer = document.getElementById("produitsContainer");
-    const produitItems = Array.from(document.querySelectorAll(".produit-item"));
     const noResults = document.getElementById("noResults");
     const resultCount = document.getElementById("count");
 
-    function filterAndSortProducts() {
-      if (!searchInput || !filterCategorySelect || !produitsContainer) return;
+    if (!searchInput || !filterCategorySelect || !produitsContainer) return;
 
+    const produitItems = Array.from(document.querySelectorAll(".produit-item"));
+
+    function filterAndSortProducts() {
       const searchTerm = (searchInput.value || "").toLowerCase().trim();
       const selectedCategory = (filterCategorySelect.value || "").toLowerCase().trim();
       const sortPriceOrder = sortPriceSelect ? sortPriceSelect.value : "";
@@ -366,306 +394,211 @@ if (window.__PHARMACIE_INIT_DONE__) {
       if (clearSearchBtn) clearSearchBtn.style.display = searchTerm ? "block" : "none";
     }
 
-    if (searchInput) searchInput.addEventListener("input", filterAndSortProducts);
-    if (sortPriceSelect) sortPriceSelect.addEventListener("change", filterAndSortProducts);
-    if (sortStockSelect) sortStockSelect.addEventListener("change", filterAndSortProducts);
-    if (filterCategorySelect) filterCategorySelect.addEventListener("change", filterAndSortProducts);
+    searchInput.addEventListener("input", filterAndSortProducts);
+    sortPriceSelect?.addEventListener("change", filterAndSortProducts);
+    sortStockSelect?.addEventListener("change", filterAndSortProducts);
+    filterCategorySelect.addEventListener("change", filterAndSortProducts);
 
-    if (clearSearchBtn) {
-      clearSearchBtn.addEventListener("click", () => {
-        if (searchInput) searchInput.value = "";
-        if (filterCategorySelect) filterCategorySelect.value = "";
-        if (sortPriceSelect) sortPriceSelect.value = "";
-        if (sortStockSelect) sortStockSelect.value = "";
-        if (searchInput) searchInput.focus();
-        filterAndSortProducts();
-      });
-    }
+    clearSearchBtn?.addEventListener("click", () => {
+      searchInput.value = "";
+      filterCategorySelect.value = "";
+      if (sortPriceSelect) sortPriceSelect.value = "";
+      if (sortStockSelect) sortStockSelect.value = "";
+      searchInput.focus();
+      filterAndSortProducts();
+    });
 
     filterAndSortProducts();
+  }
 
-    // ==================================================
-    // 4) RECHERCHE VOCALE
-    // ==================================================
+  // ==================================================
+  // ✅ RECHERCHE VOCALE
+  // ==================================================
+  function initVoiceSearch() {
     const voiceBtn = document.getElementById("voiceSearchBtn");
+    const searchInput = document.getElementById("searchInput");
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 
+    if (!voiceBtn) return;
+
     if (!SpeechRecognition) {
-      if (voiceBtn) voiceBtn.style.display = "none";
-    } else if (voiceBtn && searchInput) {
-      const recognition = new SpeechRecognition();
-      recognition.lang = "fr-FR";
-      recognition.interimResults = false;
-      recognition.maxAlternatives = 1;
-
-      voiceBtn.addEventListener("click", () => {
-        try { recognition.start(); } catch (_) {}
-      });
-
-      recognition.onstart = () => {
-        voiceBtn.classList.add("listening");
-        voiceBtn.innerHTML = '<i class="bi bi-mic-mute-fill"></i>';
-      };
-      recognition.onend = () => {
-        voiceBtn.classList.remove("listening");
-        voiceBtn.innerHTML = '<i class="bi bi-mic-fill"></i>';
-      };
-      recognition.onerror = () => {
-        voiceBtn.classList.remove("listening");
-        voiceBtn.innerHTML = '<i class="bi bi-mic-fill"></i>';
-      };
-      recognition.onresult = (event) => {
-        const text = (event.results?.[0]?.[0]?.transcript || "").trim();
-        if (!text) return;
-        searchInput.value = text;
-        filterAndSortProducts();
-      };
-    }
-
-    // ==================================================
-    // 5) QR CONTACT (modal)
-    // ==================================================
-    // Handled globally by pharmacieDelegates()
-
-    // ==================================================
-    // 6) ✅ RECO RAILS (Best + AI) — AUTO TRAIN STABLE
-    // ==================================================
-    // ==================================================
-// 6) ✅ RECO RAILS (Best + AI) — TRAIN AUTO (CSS) STABLE
-// ==================================================
-loadRail("bestTrack", "bestEmpty", "/produits/api/best-sellers", { uniqueByCategory: true, autoScroll: true });
-loadRail("aiTrack", "aiEmpty", "/produits/api/reco-ai", { uniqueByCategory: false, autoScroll: true });
-
-async function loadRail(trackId, emptyId, apiUrl, opts = {}) {
-  const track = document.getElementById(trackId);
-  const empty = document.getElementById(emptyId);
-  if (!track) return;
-
-  // reset
-  track.classList.remove("auto-scroll");
-  track.style.removeProperty("--reco-shift");
-  track.innerHTML = "";
-  if (empty) empty.style.display = "none";
-
-  try {
-    const res = await fetch(apiUrl, {
-      headers: { "X-Requested-With": "XMLHttpRequest" },
-      cache: "no-store",
-    });
-
-    const data = await res.json().catch(() => ({}));
-
-    // texte explicatif IA
-    if (apiUrl.includes("/reco-ai")) {
-      const txt = document.getElementById("aiBasedOnText");
-      if (txt && data?.explainText) txt.textContent = data.explainText;
-    }
-
-    if (!data.success || !Array.isArray(data.items) || data.items.length === 0) {
-      if (empty) empty.style.display = "block";
+      voiceBtn.style.display = "none";
       return;
     }
 
-    renderRail(track, data.items, opts);
+    if (!searchInput) return;
 
-  } catch (e) {
-    console.error("Reco rail error:", e);
-    if (empty) {
-      empty.style.display = "block";
-      empty.textContent = "Erreur de chargement";
-    }
-  }
-}
+    const recognition = new SpeechRecognition();
+    recognition.lang = "fr-FR";
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
 
-function renderRail(trackEl, items, { uniqueByCategory = false, autoScroll = true } = {}) {
-  // 1) filtrage 1 par catégorie (option)
-  let list = items;
-  if (uniqueByCategory) {
-    const seen = new Set();
-    const out = [];
-    for (const p of items) {
-      const cat = (p.categorie || "Autre").trim().toLowerCase();
-      if (seen.has(cat)) continue;
-      seen.add(cat);
-      out.push(p);
-    }
-    list = out;
-  }
-
-  // 2) anti doublons id
-  const seenId = new Set();
-  list = list.filter((p) => {
-    const id = p?.id;
-    if (!id) return true;
-    if (seenId.has(id)) return false;
-    seenId.add(id);
-    return true;
-  });
-
-  // 3) HTML cartes
-  const html = list.map((p) => {
-    const badges = Array.isArray(p.badges) ? p.badges : [];
-    const badgeHtml = badges.length
-      ? `<div class="reco-badges">${badges.map(b => `<span class="reco-badge">${escapeHtml(b)}</span>`).join("")}</div>`
-      : "";
-
-    const img = p.image || "";
-    return `
-      <div class="reco-card">
-        ${badgeHtml}
-        <img class="reco-img" src="${img}" alt="${escapeHtml(p.nom || "")}" loading="lazy"
-             onerror="this.src='https://via.placeholder.com/260x160/e5e7eb/6b7280?text=Image'">
-        <div class="reco-body">
-          <div class="reco-cat">${escapeHtml(p.categorie || "")}</div>
-          <div class="reco-name">${escapeHtml(p.nom || "")}</div>
-          <div class="reco-price">${Number(p.prix ?? 0).toFixed(2)} DT</div>
-          <button class="btn btn-sm btn-primary w-100 reco-btn" type="button" data-add-rail="${p.id}">
-            <i class="bi bi-cart-plus me-1"></i> Ajouter
-          </button>
-        </div>
-      </div>
-    `;
-  }).join("");
-
-  // inner principal
-  trackEl.innerHTML = `<div class="reco-inner">${html}</div>`;
-
-  // bind add
-  trackEl.querySelectorAll("[data-add-rail]").forEach((btn) => {
-    btn.addEventListener("click", () => addToCartFromRail(btn.getAttribute("data-add-rail")));
-  });
-
-  // 4) auto-scroll CSS (train)
-  if (autoScroll) enableCssTrain(trackEl);
-}
-
-function enableCssTrain(trackEl) {
-  const inner = trackEl.querySelector(".reco-inner");
-  if (!inner) return;
-
-  // pas assez d'items => pas de train
-  const cards = inner.querySelectorAll(".reco-card");
-  if (cards.length < 4) return;
-
-  // clone 1 fois pour défilement infini
-  const clone = inner.cloneNode(true);
-  clone.classList.add("reco-clone");
-  trackEl.appendChild(clone);
-
-  // attendre que les images donnent une vraie largeur
-  waitImagesLoaded(trackEl).then(() => {
-    const shift = inner.scrollWidth; // largeur du 1er inner
-    if (!shift || shift < 200) return;
-
-    trackEl.style.setProperty("--reco-shift", shift + "px");
-    trackEl.classList.add("auto-scroll");
-  });
-}
-
-function waitImagesLoaded(trackEl) {
-  const imgs = Array.from(trackEl.querySelectorAll("img"));
-  if (imgs.length === 0) return Promise.resolve();
-
-  return Promise.all(
-    imgs.map((img) => {
-      if (img.complete) return Promise.resolve();
-      return new Promise((resolve) => {
-        img.addEventListener("load", resolve, { once: true });
-        img.addEventListener("error", resolve, { once: true });
-      });
-    })
-  );
-}
-
-async function addToCartFromRail(productId) {
-  try {
-    const res = await fetch(`/panier/ajouter/${productId}`, {
-      method: "POST",
-      headers: { "X-Requested-With": "XMLHttpRequest" },
-      cache: "no-store",
+    voiceBtn.addEventListener("click", () => {
+      try { recognition.start(); } catch (_) {}
     });
 
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok || !data.success) {
-      showFlashMessage(data.message || "Erreur ajout", "error");
-      return;
-    }
-
-    showFlashMessage(data.message || "Ajouté", "success");
-    updateCartBadge(data.count);
-
-  } catch (e) {
-    console.error(e);
-    showFlashMessage("Erreur réseau", "error");
-  }
-}
-
-function escapeHtml(str) {
-  return String(str)
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
-}
-    // ==================================================
-    // 7) GROQ CHAT
-    // ==================================================
-    const fab = document.getElementById("aiFab");
-    const panel = document.getElementById("aiPanel");
-    const closeBtn = document.getElementById("aiClose");
-    const body = document.getElementById("aiBody");
-    const aiInput = document.getElementById("aiInput");
-    const send = document.getElementById("aiSend");
-
-    const addMsg = (text, who) => {
-      if (!body) return;
-      const div = document.createElement("div");
-      div.className = "ai-msg " + (who === "user" ? "ai-user" : "ai-bot");
-      div.textContent = text;
-      body.appendChild(div);
-      body.scrollTop = body.scrollHeight;
+    recognition.onstart = () => {
+      voiceBtn.classList.add("listening");
+      voiceBtn.innerHTML = '<i class="bi bi-mic-mute-fill"></i>';
     };
+    recognition.onend = () => {
+      voiceBtn.classList.remove("listening");
+      voiceBtn.innerHTML = '<i class="bi bi-mic-fill"></i>';
+    };
+    recognition.onerror = () => {
+      voiceBtn.classList.remove("listening");
+      voiceBtn.innerHTML = '<i class="bi bi-mic-fill"></i>';
+    };
+    recognition.onresult = (event) => {
+      const text = (event.results?.[0]?.[0]?.transcript || "").trim();
+      if (!text) return;
+      searchInput.value = text;
+      // déclenche input event pour filtres
+      searchInput.dispatchEvent(new Event("input", { bubbles: true }));
+    };
+  }
 
-    // Handled globally by pharmacieDelegates()
+  // ==================================================
+  // ✅ RAILS (Best + AI)
+  // ==================================================
+  async function loadRail(trackId, emptyId, apiUrl, opts = {}) {
+    const track = document.getElementById(trackId);
+    const empty = document.getElementById(emptyId);
+    if (!track) return;
 
-    const ask = async () => {
-      const message = (aiInput?.value || "").trim();
-      if (!message) return;
+    track.classList.remove("auto-scroll");
+    track.style.removeProperty("--reco-shift");
+    track.innerHTML = "";
+    if (empty) empty.style.display = "none";
 
-      aiInput.value = "";
-      addMsg(message, "user");
+    try {
+      const res = await fetch(apiUrl, {
+        headers: { "X-Requested-With": "XMLHttpRequest" },
+        cache: "no-store",
+      });
 
-      if (send) send.disabled = true;
-      if (aiInput) aiInput.disabled = true;
+      const data = await res.json().catch(() => ({}));
 
-      try {
-        const res = await fetch("/api/pharmacie/ai", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ message }),
-        });
-
-        const data = await res.json().catch(() => null);
-        if (!res.ok || !data || !data.ok) {
-          addMsg((data && data.reply) ? data.reply : "Erreur IA. Réessaie.", "bot");
-        } else {
-          addMsg(data.reply, "bot");
-        }
-      } catch (_) {
-        addMsg("Erreur réseau. Vérifie ta connexion.", "bot");
-      } finally {
-        if (send) send.disabled = false;
-        if (aiInput) aiInput.disabled = false;
-        aiInput && aiInput.focus();
+      if (apiUrl.includes("/reco-ai")) {
+        const txt = document.getElementById("aiBasedOnText");
+        if (txt && data?.explainText) txt.textContent = data.explainText;
       }
-    };
 
-    // Handled globally by pharmacieDelegates()
+      if (!data.success || !Array.isArray(data.items) || data.items.length === 0) {
+        if (empty) empty.style.display = "block";
+        return;
+      }
 
-    // ==================================================
-    // 8) TTS
-    // ==================================================
+      renderRail(track, data.items, opts);
+    } catch (e) {
+      console.error("Reco rail error:", e);
+      if (empty) {
+        empty.style.display = "block";
+        empty.textContent = "Erreur de chargement";
+      }
+    }
+  }
+
+  function renderRail(trackEl, items, { uniqueByCategory = false, autoScroll = true } = {}) {
+    let list = items;
+
+    // 1 par catégorie (option)
+    if (uniqueByCategory) {
+      const seen = new Set();
+      const out = [];
+      for (const p of items) {
+        const cat = (p.categorie || "Autre").trim().toLowerCase();
+        if (seen.has(cat)) continue;
+        seen.add(cat);
+        out.push(p);
+      }
+      list = out;
+    }
+
+    // anti doublons par id
+    const seenId = new Set();
+    list = list.filter((p) => {
+      const id = p?.id;
+      if (!id) return true;
+      if (seenId.has(id)) return false;
+      seenId.add(id);
+      return true;
+    });
+
+    const html = list.map((p) => {
+      const badges = Array.isArray(p.badges) ? p.badges : [];
+      const badgeHtml = badges.length
+        ? `<div class="reco-badges">${badges.map(b => `<span class="reco-badge">${escapeHtml(b)}</span>`).join("")}</div>`
+        : "";
+
+      const img = p.image || "";
+      return `
+        <div class="reco-card">
+          ${badgeHtml}
+          <img class="reco-img" src="${img}" alt="${escapeHtml(p.nom || "")}" loading="lazy"
+               onerror="this.src='https://via.placeholder.com/260x160/e5e7eb/6b7280?text=Image'">
+          <div class="reco-body">
+            <div class="reco-cat">${escapeHtml(p.categorie || "")}</div>
+            <div class="reco-name">${escapeHtml(p.nom || "")}</div>
+            <div class="reco-price">${Number(p.prix ?? 0).toFixed(2)} DT</div>
+            <button class="btn btn-sm btn-primary w-100 reco-btn" type="button" data-add-rail="${p.id}">
+              <i class="bi bi-cart-plus me-1"></i> Ajouter
+            </button>
+          </div>
+        </div>
+      `;
+    }).join("");
+
+    trackEl.innerHTML = `<div class="reco-inner">${html}</div>`;
+
+    // binds add (uniquement dans rail, safe car rail est recréé)
+    trackEl.querySelectorAll("[data-add-rail]").forEach((btn) => {
+      btn.addEventListener("click", () => addToCartFromRail(btn.getAttribute("data-add-rail")));
+    });
+
+    if (autoScroll) enableCssTrain(trackEl);
+  }
+
+  function enableCssTrain(trackEl) {
+    const inner = trackEl.querySelector(".reco-inner");
+    if (!inner) return;
+
+    const cards = inner.querySelectorAll(".reco-card");
+    if (cards.length < 4) return;
+
+    // clone 1 fois
+    const clone = inner.cloneNode(true);
+    clone.classList.add("reco-clone");
+    trackEl.appendChild(clone);
+
+    waitImagesLoaded(trackEl).then(() => {
+      const shift = inner.scrollWidth;
+      if (!shift || shift < 200) return;
+
+      trackEl.style.setProperty("--reco-shift", shift + "px");
+      trackEl.classList.add("auto-scroll");
+    });
+  }
+
+  function waitImagesLoaded(trackEl) {
+    const imgs = Array.from(trackEl.querySelectorAll("img"));
+    if (imgs.length === 0) return Promise.resolve();
+
+    return Promise.all(
+      imgs.map((img) => {
+        if (img.complete) return Promise.resolve();
+        return new Promise((resolve) => {
+          img.addEventListener("load", resolve, { once: true });
+          img.addEventListener("error", resolve, { once: true });
+        });
+      })
+    );
+  }
+
+  // ==================================================
+  // ✅ TTS
+  // ==================================================
+  function initTTS() {
     const canSpeak = ("speechSynthesis" in window) && ("SpeechSynthesisUtterance" in window);
 
     const stopSpeak = () => {
@@ -712,46 +645,119 @@ function escapeHtml(str) {
       window.speechSynthesis.speak(u);
     };
 
-    document.querySelectorAll(".btn-tts").forEach((btn) => btn.addEventListener("click", () => speak(btn)));
+    // delegation simple pour TTS
+    document.addEventListener("click", (e) => {
+      const btn = e.target?.closest?.(".btn-tts");
+      if (!btn) return;
+      e.preventDefault();
+      speak(btn);
+    });
+
     document.querySelectorAll(".modal").forEach((m) => m.addEventListener("hidden.bs.modal", stopSpeak));
     window.addEventListener("beforeunload", stopSpeak);
-  });
-}
+  }
 
-// ==================================================
-// UTILITAIRES (global)
-// ==================================================
-function updateCartBadge(newCount) {
-  const badge = document.getElementById("cart-count");
-  if (!badge) return;
+  // ==================================================
+  // ✅ HELPERS
+  // ==================================================
+  function escapeHtml(str) {
+    return String(str)
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#039;");
+  }
 
-  const count = parseInt(newCount || "0", 10);
-  badge.textContent = count;
+  // ==================================================
+  // ✅ GLOBAL EVENTS (ONE TIME)
+  // ==================================================
+  function bindGlobalDelegation() {
+    // Click delegation (theme/contact/AI/add-to-cart grid)
+    document.addEventListener("click", (e) => {
+      const el = e.target?.closest?.("#themeToggle, #btnContactQr, #aiFab, #aiClose, #aiSend, .btn-add-cart");
+      if (!el) return;
 
-  if (count <= 0) badge.classList.add("d-none");
-  else badge.classList.remove("d-none");
-}
+      // Theme
+      if (el.id === "themeToggle") {
+        e.preventDefault();
+        toggleTheme();
+        return;
+      }
 
-function showFlashMessage(message, type) {
-  const container = document.getElementById("flash-messages-container");
-  if (!container) return;
+      // Contact QR
+      if (el.id === "btnContactQr") {
+        e.preventDefault();
+        openContactQrModal();
+        return;
+      }
 
-  const alert = document.createElement("div");
-  alert.className = `alert-custom alert-${type}`;
-  alert.innerHTML = `
-    <i class="bi bi-${type === "success" ? "check" : "x"}-circle-fill"></i>
-    <span>${message}</span>
-    <button type="button" class="btn-close-custom">×</button>
-  `;
+      // AI
+      if (el.id === "aiFab") {
+        e.preventDefault();
+        toggleAiPanel();
+        return;
+      }
+      if (el.id === "aiClose") {
+        e.preventDefault();
+        closeAiPanel();
+        return;
+      }
+      if (el.id === "aiSend") {
+        e.preventDefault();
+        askAi();
+        return;
+      }
 
-  alert.querySelector(".btn-close-custom").addEventListener("click", () => alert.remove());
+      // ✅ Add to cart (GRILLE)
+      if (el.classList.contains("btn-add-cart")) {
+        e.preventDefault();
+        handleAddToCart(el);
+      }
+    });
 
-  container.appendChild(alert);
-  setTimeout(() => alert.classList.add("show"), 10);
+    // Enter-to-send AI
+    document.addEventListener("keydown", (e) => {
+      if (e.key !== "Enter") return;
+      const isAiInput = e.target && e.target.id === "aiInput";
+      if (!isAiInput) return;
+      e.preventDefault();
+      askAi();
+    });
 
-  setTimeout(() => {
-    alert.style.animation = "slideOut 0.4s ease forwards";
-    setTimeout(() => alert.remove(), 400);
-  }, 3000);
-}
-// Theme toggle handled globally by pharmacieDelegates()
+    // close flash by x (si flash généré côté serveur)
+    document.addEventListener("click", (e) => {
+      if (e.target && e.target.classList.contains("btn-close-custom")) {
+        const parent = e.target.closest(".alert-custom");
+        if (parent) parent.remove();
+      }
+    });
+  }
+
+  // ==================================================
+  // ✅ INIT (DOM ready + turbo safe)
+  // ==================================================
+  function initPage() {
+    applySavedTheme();
+    autoRemoveExistingFlash();
+    initFilters();
+    initVoiceSearch();
+    initTTS();
+
+    // Rails
+    loadRail("bestTrack", "bestEmpty", "/produits/api/best-sellers", { uniqueByCategory: true, autoScroll: true });
+    loadRail("aiTrack", "aiEmpty", "/produits/api/reco-ai", { uniqueByCategory: false, autoScroll: true });
+  }
+
+  // Bind global delegation once
+  bindGlobalDelegation();
+
+  // Apply theme ASAP
+  applySavedTheme();
+
+  // Standard DOM init
+  document.addEventListener("DOMContentLoaded", initPage);
+
+  // Turbo compatibility (si jamais tu utilises Turbo)
+  document.addEventListener("turbo:load", initPage);
+})();
