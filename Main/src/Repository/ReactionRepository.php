@@ -5,7 +5,8 @@ namespace App\Repository;
 use App\Entity\Reaction;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
-
+use App\Entity\Post;
+use App\Entity\User;
 /**
  * @extends ServiceEntityRepository<Reaction>
  */
@@ -16,8 +17,11 @@ class ReactionRepository extends ServiceEntityRepository
         parent::__construct($registry, Reaction::class);
     }
 
-    public function findOneByPostAndUser($post, $user): ?Reaction
-    {
-        return $this->findOneBy(['post' => $post, 'user' => $user]);
-    }
+   public function findOneByPostAndUser(Post $post, User $user): ?Reaction
+{
+    return $this->findOneBy([
+        'post' => $post,
+        'user' => $user
+    ]);
+}
 }

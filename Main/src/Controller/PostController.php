@@ -48,8 +48,8 @@ class PostController extends AbstractController
         $tags = [];
         foreach ($posts as $p) {
             if ($p->getHashtags()) {
-                $parts = preg_split('/\s+|,/', trim($p->getHashtags()));
-                foreach ($parts as $t) {
+                $parts = preg_split('/\s+|,/', trim((string) $p->getHashtags())) ?: [];
+foreach ($parts as $t) {
                     $t = trim($t);
                     if ($t === '') continue;
                     if ($t[0] !== '#') $t = '#'.$t;
@@ -104,12 +104,11 @@ if ($user) {
 public function new(Request $request, EntityManagerInterface $em, BadWordsService $badWordsService): Response
 {
     // ✅ Forcer l'utilisateur à être connecté
-    $user = $this->getUser();
-    if (!$user) {
-        // ✅ SweetAlert warning
-        $this->addFlash('swal_warning', 'Vous devez être connecté pour créer un post.');
-        return $this->redirectToRoute('app_login');
-    }
+   $user = $this->getUser();
+if (!$user instanceof User) {
+    $this->addFlash('swal_warning', 'Vous devez être connecté pour créer un post.');
+    return $this->redirectToRoute('app_login');
+}
 
     $post = new Post();
     $post->setDateCreation(new \DateTimeImmutable());
@@ -177,8 +176,11 @@ public function edit(Request $request, Post $post, EntityManagerInterface $em): 
     if ($form->isSubmitted() && $form->isValid()) {
         // ✅ S'assurer que l'utilisateur reste assigné
         if (!$post->getUser()) {
-            $post->setUser($this->getUser());
-        }
+    $u = $this->getUser();
+    if ($u instanceof User) {
+        $post->setUser($u);
+    }
+}
         // ✅ URL image (champ HTML "image_url" dans twig)
         $imageUrl = trim((string) $request->request->get('image_url', ''));
 
@@ -212,7 +214,12 @@ public function show(Post $post): Response
     #[Route('/{id}/delete', name: 'post_delete', requirements: ['id' => '\d+'], methods: ['POST'])]
     public function delete(Request $request, Post $post, EntityManagerInterface $em): Response
     {
-        if ($this->isCsrfTokenValid('delete_post_'.$post->getId(), $request->request->get('_token'))) {
+$token = $request->request->get('_token');
+
+if ($this->isCsrfTokenValid(
+    'delete_post_' . $post->getId(),
+    is_string($token) ? $token : null
+)) {
             $em->remove($post);
             $em->flush();
             $this->addFlash('success', 'Post supprimé.');
@@ -226,7 +233,12 @@ public function show(Post $post): Response
 #[Route('/{id}/react', name: 'post_react', methods: ['POST'])]
     public function react(Post $post, Request $request, EntityManagerInterface $em): JsonResponse
     {
-        if (!$this->isCsrfTokenValid('react_post_'.$post->getId(), $request->request->get('_token'))) {
+        $token = $request->request->get('_token');
+
+if ($this->isCsrfTokenValid(
+    'delete_post_' . $post->getId(),
+    is_string($token) ? $token : null
+)) {
             return new JsonResponse(['ok' => false, 'message' => 'CSRF invalid'], 403);
         }
 
@@ -234,9 +246,9 @@ public function show(Post $post): Response
 
         // require auth
         $user = $this->getUser();
-        if (!$user) {
-            return new JsonResponse(['ok' => false, 'message' => 'Authentication required'], 403);
-        }
+if (!$user instanceof User) {
+    return new JsonResponse(['ok' => false, 'message' => 'Authentication required'], 403);
+}
 
         /** @var ReactionRepository $reactionRepo */
         $reactionRepo = $em->getRepository(Reaction::class);
@@ -308,20 +320,14 @@ public function show(Post $post): Response
 public function exportAllPdf(PostRepository $repo, Request $request): Response
 {
     $q = trim((string) $request->query->get('q', ''));
-    $sort = (string) $request->query->get('sort', 'date_desc');
+$sort = (string) $request->query->get('sort', 'date_desc');
 
-    // ✅ On garde la même logique que ton index (recherche + tri)
-    if ($q !== '') {
-        // si tu as déjà searchWithSort
-        $posts = method_exists($repo, 'searchWithSort')
-            ? $repo->searchWithSort($q, $sort)
-            : $repo->search($q);
-    } else {
-        // si tu as déjà findAllSorted
-        $posts = method_exists($repo, 'findAllSorted')
-            ? $repo->findAllSorted($sort)
-            : $repo->findBy([], ['date_creation' => 'DESC']);
-    }
+// ✅ Même logique que index, sans method_exists
+if ($q !== '') {
+    $posts = $repo->searchWithSort($q, $sort);
+} else {
+    $posts = $repo->findAllSorted($sort);
+}
 
     // ✅ Stats "innovantes"
     $totalPosts = count($posts);
@@ -471,8 +477,12 @@ public function aiGenerate(Request $request, GeminiService $gemini, LoggerInterf
 public function approve(Post $post, Request $request, EntityManagerInterface $em): Response
 {
    // $this->denyAccessUnlessGranted('ROLE_ADMIN');
+$token = $request->request->get('_token');
 
-    if (!$this->isCsrfTokenValid('approve_post_'.$post->getId(), $request->request->get('_token'))) {
+if ($this->isCsrfTokenValid(
+    'delete_post_' . $post->getId(),
+    is_string($token) ? $token : null
+)) {
         $this->addFlash('danger', 'Token CSRF invalide.');
         return $this->redirectToRoute('admin_posts_pending');
     }
@@ -495,8 +505,12 @@ public function approve(Post $post, Request $request, EntityManagerInterface $em
 public function reject(Post $post, Request $request, EntityManagerInterface $em): Response
 {
   //  $this->denyAccessUnlessGranted('ROLE_ADMIN');
+$token = $request->request->get('_token');
 
-    if (!$this->isCsrfTokenValid('reject_post_'.$post->getId(), $request->request->get('_token'))) {
+if ($this->isCsrfTokenValid(
+    'delete_post_' . $post->getId(),
+    is_string($token) ? $token : null
+)) {
         $this->addFlash('danger', 'Token CSRF invalide.');
         return $this->redirectToRoute('admin_posts_pending');
     }
@@ -549,7 +563,12 @@ public function moderationAck(Post $post, Request $request, EntityManagerInterfa
     }
 
     // IMPORTANT: _token (sans espace)
-    if (!$this->isCsrfTokenValid('moderation_ack_'.$post->getId(), (string)$request->request->get('_token'))) {
+    $token = $request->request->get('_token');
+
+if ($this->isCsrfTokenValid(
+    'delete_post_' . $post->getId(),
+    is_string($token) ? $token : null
+)) {
         return new JsonResponse(['ok' => false, 'message' => 'CSRF invalid'], 403);
     }
 

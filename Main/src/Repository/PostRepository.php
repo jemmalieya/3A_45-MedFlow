@@ -5,7 +5,7 @@ namespace App\Repository;
 use App\Entity\Post;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
-
+use Doctrine\ORM\QueryBuilder;
 /**
  * @extends ServiceEntityRepository<Post>
  */
@@ -16,6 +16,9 @@ class PostRepository extends ServiceEntityRepository
         parent::__construct($registry, Post::class);
     }
 
+/**
+ * @return Post[]
+ */
 public function search(string $q): array
 {
     $q = trim($q);
@@ -43,6 +46,9 @@ public function search(string $q): array
     return $qb->getQuery()->getResult();
 }
 
+/**
+ * @return Post[]
+ */
 public function findAllSorted(string $sort): array
 {
     $qb = $this->createQueryBuilder('p')
@@ -58,6 +64,9 @@ public function findAllSorted(string $sort): array
     return $qb->getQuery()->getResult();
 }
 
+/**
+ * @return Post[]
+ */
 public function searchWithSort(string $q, string $sort): array
 {
     $qb = $this->createQueryBuilder('p')
@@ -79,7 +88,9 @@ public function searchWithSort(string $q, string $sort): array
 /**
  * ✅ Applique le tri choisi
  */
-private function applySort($qb, string $sort): void
+
+
+private function applySort(QueryBuilder $qb, string $sort): void
 {
     switch ($sort) {
         case 'date_asc':
@@ -103,6 +114,9 @@ private function applySort($qb, string $sort): void
     }
 }
 
+/**
+ * @return Post[]
+ */
 public function findRecentWithUsers(int $limit = 5): array
 {
     return $this->createQueryBuilder('p')
@@ -117,6 +131,14 @@ public function findRecentWithUsers(int $limit = 5): array
         ->getQuery()
         ->getResult();
 }
+/**
+ * @return array{
+ *     totalPosts: int,
+ *     totalReactions: int,
+ *     totalComments: int,
+ *     engagement: float|int
+ * }
+ */
 public function getKpis(): array
 {
     $qb = $this->createQueryBuilder('p')
@@ -138,6 +160,9 @@ public function getKpis(): array
     ];
 }
 
+/**
+ * @return array<int, array{label: string|null, total: int|string}>
+ */
 public function countByCategorie(): array
 {
     return $this->createQueryBuilder('p')
@@ -148,6 +173,9 @@ public function countByCategorie(): array
         ->getArrayResult();
 }
 
+/**
+ * @return array<int, array{label: string|null, total: int|string}>
+ */
 public function countByHumeur(): array
 {
     return $this->createQueryBuilder('p')
@@ -158,6 +186,9 @@ public function countByHumeur(): array
         ->getArrayResult();
 }
 
+/**
+ * @return Post[]
+ */
 public function topPostsByReactions(int $limit = 5): array
 {
     return $this->createQueryBuilder('p')
@@ -167,7 +198,14 @@ public function topPostsByReactions(int $limit = 5): array
         ->getResult();
 }
 
-  public function getBlogKpis(\DateTimeInterface $from, \DateTimeInterface $to): array
+/**
+ * @return array{
+ *     totalPosts: int,
+ *     totalReactions: int,
+ *     totalComments: int
+ * }
+ */
+public function getBlogKpis(\DateTimeInterface $from, \DateTimeInterface $to): array
 {
     $row = $this->createQueryBuilder('p')
         ->select('COUNT(p.id) AS totalPosts')
@@ -186,6 +224,9 @@ public function topPostsByReactions(int $limit = 5): array
     ];
 }
 
+/**
+ * @return Post[]
+ */
 public function topBlogPostsByReactions(\DateTimeInterface $from, \DateTimeInterface $to, int $limit = 5): array
 {
     return $this->createQueryBuilder('p')
@@ -198,9 +239,13 @@ public function topBlogPostsByReactions(\DateTimeInterface $from, \DateTimeInter
         ->getResult();
 }
 
+/**
+ * @return array<int, array{label: string, total: numeric-string}>
+ */
 public function countBlogByCategorie(\DateTimeInterface $from, \DateTimeInterface $to): array
 {
-    return $this->createQueryBuilder('p')
+    /** @var array<int, array{label: string, total: numeric-string}> $rows */
+    $rows = $this->createQueryBuilder('p')
         ->select("COALESCE(p.categorie, 'Sans catégorie') AS label, COUNT(p.id) AS total")
         ->andWhere('p.date_creation BETWEEN :from AND :to')
         ->setParameter('from', $from)
@@ -209,11 +254,17 @@ public function countBlogByCategorie(\DateTimeInterface $from, \DateTimeInterfac
         ->orderBy('total', 'DESC')
         ->getQuery()
         ->getArrayResult();
+
+    return $rows;
 }
 
+/**
+ * @return array<int, array{label: string, total: numeric-string}>
+ */
 public function countBlogByHumeur(\DateTimeInterface $from, \DateTimeInterface $to): array
 {
-    return $this->createQueryBuilder('p')
+    /** @var array<int, array{label: string, total: numeric-string}> $rows */
+    $rows = $this->createQueryBuilder('p')
         ->select("COALESCE(p.humeur, 'Non définie') AS label, COUNT(p.id) AS total")
         ->andWhere('p.date_creation BETWEEN :from AND :to')
         ->setParameter('from', $from)
@@ -222,8 +273,13 @@ public function countBlogByHumeur(\DateTimeInterface $from, \DateTimeInterface $
         ->orderBy('total', 'DESC')
         ->getQuery()
         ->getArrayResult();
+
+    return $rows;
 }
 
+/**
+ * @return array<int, array{day: string, total: int}>
+ */
 public function countBlogByDay(\DateTimeInterface $from, \DateTimeInterface $to): array
 {
     $rows = $this->createQueryBuilder('p')

@@ -155,9 +155,10 @@ public function setModerationSeen(bool $seen): self
     #[ORM\JoinColumn(nullable: true, onDelete: 'CASCADE')]
     private ?User $user = null;
 
-    #[ORM\OneToMany(mappedBy: 'post', targetEntity: Commentaire::class, cascade: ['persist', 'remove'], orphanRemoval: true)]
-    #[ORM\OrderBy(['date_creation' => 'DESC'])]
-    private Collection $commentaires;
+  /** @var Collection<int, Commentaire> */
+#[ORM\OneToMany(mappedBy: 'post', targetEntity: Commentaire::class, cascade: ['persist', 'remove'], orphanRemoval: true)]
+#[ORM\OrderBy(['date_creation' => 'DESC'])]
+private Collection $commentaires;
 
     // src/Entity/Post.php
 #[ORM\Column(type: 'boolean')]

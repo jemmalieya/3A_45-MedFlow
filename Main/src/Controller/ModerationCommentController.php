@@ -106,16 +106,22 @@ class ModerationCommentController extends AbstractController
         $freq = [];
         $stop = ['le','la','les','un','une','des','de','du','au','aux','et','ou','a','à','en','dans','pour','sur','ce','cet','cette','ces','je','tu','il','elle','nous','vous','ils','elles','mon','ton','son','mes','tes','ses','est','suis','es','être','pas','plus','moins','très','tres'];
 
-        foreach ($blockedTexts as $row) {
-            $text = mb_strtolower((string) ($row['contenu'] ?? ''));
-            $text = preg_replace('/[^\p{L}\p{N}\s]/u', ' ', $text);
-            $words = preg_split('/\s+/', trim($text)) ?: [];
-            foreach ($words as $w) {
-                if (mb_strlen($w) < 3) continue;
-                if (in_array($w, $stop, true)) continue;
-                $freq[$w] = ($freq[$w] ?? 0) + 1;
-            }
-        }
+     foreach ($blockedTexts as $row) {
+
+    $text = mb_strtolower((string) ($row['contenu'] ?? ''));
+
+    $text = preg_replace('/[^\p{L}\p{N}\s]/u', ' ', $text);
+    $text = (string) $text; // ✅ AJOUT IMPORTANT
+
+    $words = preg_split('/\s+/', trim($text)) ?: [];
+
+    foreach ($words as $w) {
+        if (mb_strlen($w) < 3) continue;
+        if (in_array($w, $stop, true)) continue;
+
+        $freq[$w] = ($freq[$w] ?? 0) + 1;
+    }
+}
 
         arsort($freq);
         $topWords = array_slice($freq, 0, 10, true);

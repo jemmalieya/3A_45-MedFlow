@@ -294,7 +294,7 @@ public function setNotificationEnvoyee(bool $notificationEnvoyee): static
     /**
      * @var Collection<int, ReponseReclamation>
      */
-    #[ORM\OneToMany(targetEntity: ReponseReclamation::class, mappedBy: 'reclamation', orphanRemoval: true)]
+    #[ORM\OneToMany(targetEntity: ReponseReclamation::class, mappedBy: 'reclamation',cascade:["persist", "remove"], orphanRemoval: true)]
     private Collection $reponses;
 
     public function __construct()
