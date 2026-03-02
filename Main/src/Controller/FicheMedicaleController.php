@@ -33,11 +33,22 @@ final class FicheMedicaleController extends AbstractController
         // Fetch User entity for staff
         // Use injected EntityManagerInterface
         $staffUser = $entityManager->getRepository(\App\Entity\User::class)->find($idStaff);
-        // Fetch all RendezVous for a specific staff member
-        $rendezvous = $repo->findBy(['staff' => $staffUser], ['datetime' => 'DESC']);
+        // Fetch all RendezVous for a specific staff member, eager load 'mode' to avoid N+1
+        $qb = $repo->createQueryBuilder('r')
+            ->leftJoin('r.mode', 'm')
+            ->addSelect('m')
+            ->where('r.staff = :staff')
+            ->setParameter('staff', $staffUser)
+            ->orderBy('r.datetime', 'DESC');
+        $rendezvous = $qb->getQuery()->getResult();
 
-        // Fetch all FicheMedicales related to RendezVous of this staff member
-        $fiches = $ficheRepo->findFichesByStaffId($idStaff); // If this uses idStaff, update to use staffUser if needed
+        // Fetch all FicheMedicales related to RendezVous of this staff member, eager load rendezVous to avoid N+1
+        $qbFiche = $ficheRepo->createQueryBuilder('f')
+            ->leftJoin('f.rendezVous', 'r')
+            ->addSelect('r')
+            ->where('r.staff = :staff')
+            ->setParameter('staff', $staffUser);
+        $fiches = $qbFiche->getQuery()->getResult();
 
         // Also fetch prescriptions related to this staff's fiches (via fiche -> rendez_vous -> staff)
             $prescriptions = $prescRepo->createQueryBuilder('p')
@@ -93,9 +104,11 @@ final class FicheMedicaleController extends AbstractController
             $rendez = $rendezRepo->find((int)$rendezvousId);
             if ($rendez && $rendez->getPatient()) {
                 $doctorName = $rendez->getStaff() ? $rendez->getStaff()->getNom() . ' ' . $rendez->getStaff()->getPrenom() : 'Médecin';
-                // Generate room name as in JS: medflow-<timestamp>-<random>
                 $roomName = 'medflow-' . time() . '-' . rand(1000,9999);
-                $mailerService->sendJitsiLink($rendez->getPatient()->getEmailUser(), $doctorName, $roomName);
+                $email = $rendez->getPatient()->getEmailUser();
+                if (is_string($email) && $email !== '') {
+                    $mailerService->sendJitsiLink($email, $doctorName, $roomName);
+                }
             }
         }
 
@@ -119,10 +132,11 @@ final class FicheMedicaleController extends AbstractController
 
             if ($request->request->has('save')) {
                 // Get fields from form
-                $diagnostic = trim($request->request->get('diagnostic') ?? '');
-                $observations = trim($request->request->get('observations') ?? '');
-                $resultats = trim($request->request->get('resultatsExamens') ?? '');
-                $signature = $request->request->get('signature') ?? null;
+                $diagnostic = trim((string)($request->request->get('diagnostic') ?? ''));
+                $observations = trim((string)($request->request->get('observations') ?? ''));
+                $resultats = trim((string)($request->request->get('resultatsExamens') ?? ''));
+                $sigVal = $request->request->get('signature');
+                $signature = is_string($sigVal) || is_null($sigVal) ? $sigVal : (string)$sigVal;
    
                 // PHP Server-side validation (controle de saisie)
                 $validationErrors = [];
@@ -190,25 +204,25 @@ final class FicheMedicaleController extends AbstractController
                 // If we don't have a fiche entity yet, create and persist now
                 if (!$fiche) {
                     $rendezId = $request->request->get('rendezvous_id');
-                    $rendez = $rendezId ? $rendezRepo->find((int)$rendezId) : null;
-                    if (!$rendez) {
+                    if (!$rendezId) {
                         return $this->redirectToRoute('app_fiche_medicale');
                     }
-
+                    // Use getReference to avoid SELECT query
+                    $rendez = $em->getReference(\App\Entity\RendezVous::class, (int)$rendezId);
                     $fiche = new FicheMedicale();
                     $fiche->setRendezVous($rendez);
 
                     // startTime may be passed as hidden input
                     $startStr = $request->request->get('startTime');
-                    if ($startStr) {
+                    if (is_string($startStr) && $startStr !== '') {
                         try {
-                            $startDt = new \DateTime($startStr);
+                            $startDt = new \DateTimeImmutable($startStr);
                             $fiche->setStartTime($startDt);
                         } catch (\Exception $e) {
-                            $fiche->setStartTime(new \DateTime());
+                            $fiche->setStartTime(new \DateTimeImmutable());
                         }
                     } else {
-                        $fiche->setStartTime(new \DateTime());
+                        $fiche->setStartTime(new \DateTimeImmutable());
                     }
                 }
 
@@ -217,12 +231,12 @@ final class FicheMedicaleController extends AbstractController
                 $fiche->setResultatsExamens($resultats);
                 $fiche->setSignature($signature);
 
-                $end = new \DateTime();
+                $end = new \DateTimeImmutable();
                 $fiche->setEndTime($end);
-                $fiche->setCreatedAt(new \DateTime());
+                $fiche->setCreatedAt(new \DateTimeImmutable());
 
                 $start = $fiche->getStartTime();
-                if ($start instanceof \DateTime && $end instanceof \DateTime) {
+                if ($start instanceof \DateTime) {
                     $diff = $end->getTimestamp() - $start->getTimestamp();
                     $minutes = (int) round($diff / 60);
                     $fiche->setDureeMinutes($minutes);
@@ -277,11 +291,11 @@ final class FicheMedicaleController extends AbstractController
 
         // Determine idStaff for cancel button redirect
         $idStaff = null;
-        if ($fiche && $fiche->getRendezVous()) {
+        if ($fiche && $fiche->getRendezVous() && $fiche->getRendezVous()->getStaff()) {
             $idStaff = $fiche->getRendezVous()->getStaff()->getId();
         } elseif ($rendezvousId) {
             $rendez = $rendezRepo->find((int)$rendezvousId);
-            if ($rendez) {
+            if ($rendez && $rendez->getStaff()) {
                 $idStaff = $rendez->getStaff()->getId();
             }
         }
@@ -303,7 +317,7 @@ final class FicheMedicaleController extends AbstractController
         }
 
         $token = $request->request->get('_token');
-        if ($this->isCsrfTokenValid('delete'.$fiche->getId(), $token)) {
+        if ($this->isCsrfTokenValid('delete'.$fiche->getId(), is_string($token) ? $token : (string)$token)) {
             $rendez = $fiche->getRendezVous();
             $em->remove($fiche);
             $em->flush();

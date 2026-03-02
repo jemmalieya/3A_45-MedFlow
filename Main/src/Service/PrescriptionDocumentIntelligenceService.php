@@ -6,6 +6,9 @@ use Symfony\Component\HttpFoundation\File\UploadedFile;
 
 class PrescriptionDocumentIntelligenceService
 {
+    /**
+     * @return array{raw_text: string, parsed: array<string, string>}
+     */
     public function extractText(UploadedFile $file): array
     {
         $ext = strtolower($file->getClientOriginalExtension());
@@ -18,12 +21,18 @@ class PrescriptionDocumentIntelligenceService
         } else {
             throw new \Exception('Unsupported file type.');
         }
-        return [
-            'raw_text' => $text,
-            'parsed' => $this->parsePrescriptionData($text)
-        ];
+            // Ensure $text is a string for parsePrescriptionData
+            $textForParse = is_string($text) ? $text : '';
+            return [
+                'raw_text' => is_string($text) ? $text : '',
+                'parsed' => $this->parsePrescriptionData($textForParse)
+            ];
     }
 
+    /**
+     * @param string $text
+     * @return array<string, string>
+     */
     private function parsePrescriptionData(string $text): array
     {
         $parsed = [

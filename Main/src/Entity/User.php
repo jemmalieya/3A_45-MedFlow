@@ -10,6 +10,8 @@ use Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface;
 use Symfony\Component\Validator\Constraints as Assert;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\Common\Collections\ArrayCollection;
+use Symfony\Component\Serializer\Annotation\Ignore;
+use SensitiveParameter;
 
 #[UniqueEntity(fields: ['emailUser'], message: 'Cet email est déjà utilisé.')]
 #[UniqueEntity(fields: ['cin'], message: 'Ce CIN est déjà utilisé.')]
@@ -22,13 +24,14 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     private ?string $plainPassword = null;
 
     #[ORM\Column(length: 255, nullable: true)]
-private ?string $googleId = null;
+    private ?string $googleId = null;
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
+    /** @phpstan-ignore-next-line Doctrine sets the id via metadata */
     private ?int $id = null;
 
-    #[ORM\Column(length: 8, unique: true)]
+    #[ORM\Column(length: 8, unique: true, nullable: true)]
     #[Assert\NotBlank(message: "Le CIN est obligatoire.")]
     #[Assert\Regex(pattern: "/^\d{8}$/", message: "Le CIN doit contenir exactement 8 chiffres.")]
     private ?string $cin = null;
@@ -36,24 +39,24 @@ private ?string $googleId = null;
     #[ORM\Column(length: 255, nullable: true)]
     private ?string $profilePicture = null;
 
-   #[ORM\Column(length: 100)]
+    #[ORM\Column(length: 100, nullable: true)]
     #[Assert\NotBlank(message: "Le nom est obligatoire.")]
     #[Assert\Length(max: 100, maxMessage: "Le nom ne doit pas dépasser {{ limit }} caractères.")]
     #[Assert\Regex(pattern: "/^[a-zA-ZÀ-ÿ\s'-]+$/", message: "Le nom ne doit contenir que des lettres.")]
     private ?string $nom = null;
 
-    #[ORM\Column(length: 100)]
+    #[ORM\Column(length: 100, nullable: true)]
     #[Assert\NotBlank(message: "Le prénom est obligatoire.")]
     #[Assert\Length(max: 100, maxMessage: "Le prénom ne doit pas dépasser {{ limit }} caractères.")]
     #[Assert\Regex(pattern: "/^[a-zA-ZÀ-ÿ\s'-]+$/", message: "Le prénom ne doit contenir que des lettres.")]
     private ?string $prenom = null;
-   #[ORM\Column(type: Types::DATE_MUTABLE)]
+    #[ORM\Column(type: Types::DATE_MUTABLE, nullable: true)]
     #[Assert\NotBlank(message: "La date de naissance est obligatoire.")]
     private ?\DateTimeInterface $dateNaissance = null;
 
 
 
-   #[ORM\Column(length: 20)]
+    #[ORM\Column(length: 20, nullable: true)]
     #[Assert\NotBlank(message: "Le téléphone est obligatoire.")]
     #[Assert\Regex(
         pattern: "/^\+?\d{8,15}$/",
@@ -62,15 +65,16 @@ private ?string $googleId = null;
     private ?string $telephoneUser = null;
 
 
-    #[ORM\Column(length: 180, unique: true)]
+    #[ORM\Column(length: 180, unique: true, nullable: true)]
     #[Assert\NotBlank(message: "L'email est obligatoire.")]
     #[Assert\Email(message: "Email invalide.")]
     private ?string $emailUser = null;
 
-   #[ORM\Column(length: 180, nullable: true)]
+    #[ORM\Column(length: 180, nullable: true)]
     #[Assert\Length(max: 180, maxMessage: "L'adresse ne doit pas dépasser {{ limit }} caractères.")]
     private ?string $adresseUser = null;
-    #[ORM\Column(length: 255)]
+    #[Ignore]
+    #[ORM\Column(length: 255, nullable: true)]
     private ?string $password = null;
 
     #[ORM\Column(type: Types::DATETIME_MUTABLE, nullable: true)]
@@ -99,6 +103,7 @@ private ?string $googleId = null;
     private ?\DateTimeInterface $bannedAt = null;
         // ===== Sécurité / rôles système =====
     
+    #[Ignore]
     #[ORM\Column(length: 64, nullable: true)]
     private ?string $totpSecret = null;
 
@@ -109,6 +114,9 @@ private ?string $googleId = null;
     #[ORM\Column(options: ['default' => false])]
     private bool $faceLoginEnabled = false;
 
+    /**
+     * @var array{v:int,type:string,dim:int,vec:array<int,float>}|null
+     */
     #[ORM\Column(type: Types::JSON, nullable: true)]
     private ?array $faceReferenceEmbedding = null;
 
@@ -131,16 +139,20 @@ private ?string $googleId = null;
     private ?string $typeStaff = null; // ex: MEDECIN, INFIRMIER...
 
     // ===== Vérification email =====
+    #[Ignore]
     #[ORM\Column(length: 255, nullable: true)]
     private ?string $verificationToken = null;
 
+    #[Ignore]
     #[ORM\Column(type: Types::DATETIME_MUTABLE, nullable: true)]
     private ?\DateTimeInterface $tokenExpiresAt = null;
 
     // ===== Réinitialisation de mot de passe =====
+    #[Ignore]
     #[ORM\Column(length: 255, nullable: true)]
     private ?string $resetToken = null;
 
+    #[Ignore]
     #[ORM\Column(type: Types::DATETIME_MUTABLE, nullable: true)]
     private ?\DateTimeInterface $resetTokenExpiresAt = null;
 
@@ -162,11 +174,21 @@ private ?string $googleId = null;
     #[ORM\Column(length: 255, nullable: true)]
     private ?string $staffRequestProofPath = null;
 
+    /**
+     * Professional request metadata and stored file info.
+     *
+     * @var array<string, mixed>|null
+     */
     #[ORM\Column(type: Types::JSON, nullable: true)]
     private ?array $staffDocuments = null; // Professional: metadata + files for staff request
     
     #[ORM\Column(type: Types::TEXT, nullable: true)]
     private ?string $staffRequestReason = null;
+    /**
+     * @var Collection<int, Post>
+     */
+    #[ORM\OneToMany(mappedBy: 'user', targetEntity: Post::class)]
+    private Collection $posts;
 
 #[ORM\OneToMany(mappedBy: 'user', targetEntity: Post::class, cascade: ['persist'])]
 private Collection $posts;
@@ -181,6 +203,9 @@ private Collection $commentaires;
     #[ORM\Column(nullable: true)]
     private ?int $staffReviewedBy = null; // id admin (simple)
 
+    /**
+     * @var Collection<int, Commande>
+     */
     #[ORM\OneToMany(mappedBy: 'user', targetEntity: Commande::class)]
     private Collection $commandes;
     
@@ -193,6 +218,9 @@ private Collection $commentaires;
         $this->reclamations = new ArrayCollection();
     }
     
+    /**
+     * @return Collection<int, Commande>
+     */
     public function getCommandes(): Collection
     {
         return $this->commandes;
@@ -224,16 +252,16 @@ private Collection $commentaires;
         return $this->password;
     }
 
-    public function setPassword(string $password): self
+    public function setPassword(#[SensitiveParameter] string $password): self
     {
         $this->password = $password;
         return $this;
     }
 
-    public function getId(): ?int
-    {
-        return $this->id;
-    }
+  public function getId(): ?int
+{
+    return $this->id;
+}
 
     public function getCin(): ?string
     {
@@ -339,9 +367,21 @@ private Collection $commentaires;
         return $this->bannedAt;
     }
 
-    public function setBannedAt(?\DateTimeInterface $bannedAt): self
+    protected function setBannedAt(?\DateTimeInterface $bannedAt): self
     {
         $this->bannedAt = $bannedAt;
+        return $this;
+    }
+
+    public function markBannedAt(?\DateTimeInterface $at = null): self
+    {
+        $this->bannedAt = $at ?? new \DateTimeImmutable();
+        return $this;
+    }
+
+    public function clearBannedAt(): self
+    {
+        $this->bannedAt = null;
         return $this;
     }
 
@@ -350,7 +390,7 @@ private Collection $commentaires;
         return $this->derniereConnexion;
     }
 
-    public function setDerniereConnexion(?\DateTimeInterface $derniereConnexion): self
+    protected function setDerniereConnexion(?\DateTimeInterface $derniereConnexion): self
     {
         $this->derniereConnexion = $derniereConnexion;
         return $this;
@@ -383,9 +423,15 @@ private Collection $commentaires;
         return $this->lastLoginAt;
     }
 
-    public function setLastLoginAt(?\DateTimeInterface $lastLoginAt): self
+    protected function setLastLoginAt(?\DateTimeInterface $lastLoginAt): self
     {
         $this->lastLoginAt = $lastLoginAt;
+        return $this;
+    }
+
+    public function touchLastLoginAt(?\DateTimeInterface $at = null): self
+    {
+        $this->lastLoginAt = $at ?? new \DateTime();
         return $this;
     }
 
@@ -463,7 +509,7 @@ private Collection $commentaires;
         return $this->verificationToken;
     }
 
-    public function setVerificationToken(?string $verificationToken): self
+    public function setVerificationToken(#[SensitiveParameter] ?string $verificationToken): self
     {
         $this->verificationToken = $verificationToken;
         return $this;
@@ -474,9 +520,15 @@ private Collection $commentaires;
         return $this->tokenExpiresAt;
     }
 
-    public function setTokenExpiresAt(?\DateTimeInterface $tokenExpiresAt): self
+    protected function setTokenExpiresAt(#[SensitiveParameter] ?\DateTimeInterface $tokenExpiresAt): self
     {
         $this->tokenExpiresAt = $tokenExpiresAt;
+        return $this;
+    }
+
+    public function updateTokenExpiresAt(?\DateTimeInterface $at): self
+    {
+        $this->tokenExpiresAt = $at;
         return $this;
     }
 
@@ -518,9 +570,15 @@ private Collection $commentaires;
         return $this->staffRequestedAt;
     }
 
-    public function setStaffRequestedAt(?\DateTimeInterface $staffRequestedAt): self
+    protected function setStaffRequestedAt(?\DateTimeInterface $staffRequestedAt): self
     {
         $this->staffRequestedAt = $staffRequestedAt;
+        return $this;
+    }
+
+    public function markStaffRequestedAt(?\DateTimeInterface $at = null): self
+    {
+        $this->staffRequestedAt = $at ?? new \DateTime();
         return $this;
     }
 
@@ -529,9 +587,21 @@ private Collection $commentaires;
         return $this->staffReviewedAt;
     }
 
-    public function setStaffReviewedAt(?\DateTimeInterface $staffReviewedAt): self
+    protected function setStaffReviewedAt(?\DateTimeInterface $staffReviewedAt): self
     {
         $this->staffReviewedAt = $staffReviewedAt;
+        return $this;
+    }
+
+    public function clearStaffReviewedAt(): self
+    {
+        $this->staffReviewedAt = null;
+        return $this;
+    }
+
+    public function markStaffReviewedAt(?\DateTimeInterface $at = null): self
+    {
+        $this->staffReviewedAt = $at ?? new \DateTime();
         return $this;
     }
 
@@ -557,11 +627,17 @@ private Collection $commentaires;
         return $this;
     }
 
+    /**
+     * @return array<string, mixed>|null
+     */
     public function getStaffDocuments(): ?array
     {
         return $this->staffDocuments;
     }
 
+    /**
+     * @param array<string, mixed>|null $docs
+     */
     public function setStaffDocuments(?array $docs): self
     {
         $this->staffDocuments = $docs;
@@ -668,7 +744,7 @@ private Collection $commentaires;
         return $this->resetToken;
     }
 
-    public function setResetToken(?string $resetToken): self
+    public function setResetToken(#[SensitiveParameter] ?string $resetToken): self
     {
         $this->resetToken = $resetToken;
         return $this;
@@ -679,9 +755,15 @@ private Collection $commentaires;
         return $this->resetTokenExpiresAt;
     }
 
-    public function setResetTokenExpiresAt(?\DateTimeInterface $resetTokenExpiresAt): self
+    protected function setResetTokenExpiresAt(#[SensitiveParameter] ?\DateTimeInterface $resetTokenExpiresAt): self
     {
         $this->resetTokenExpiresAt = $resetTokenExpiresAt;
+        return $this;
+    }
+
+    public function updateResetTokenExpiresAt(?\DateTimeInterface $at): self
+    {
+        $this->resetTokenExpiresAt = $at;
         return $this;
     }
 
@@ -701,7 +783,7 @@ private Collection $commentaires;
         return $this->totpSecret;
     }
 
-    public function setTotpSecret(?string $totpSecret): self
+    public function setTotpSecret(#[SensitiveParameter] ?string $totpSecret): self
     {
         $this->totpSecret = $totpSecret;
         return $this;
@@ -729,11 +811,17 @@ private Collection $commentaires;
         return $this;
     }
 
+    /**
+     * @return array{v:int,type:string,dim:int,vec:array<int,float>}|null
+     */
     public function getFaceReferenceEmbedding(): ?array
     {
         return $this->faceReferenceEmbedding;
     }
 
+    /**
+     * @param array{v:int,type:string,dim:int,vec:array<int,float>}|null $embedding
+     */
     public function setFaceReferenceEmbedding(?array $embedding): self
     {
         $this->faceReferenceEmbedding = $embedding;
@@ -745,9 +833,21 @@ private Collection $commentaires;
         return $this->faceEnrolledAt;
     }
 
-    public function setFaceEnrolledAt(?\DateTimeInterface $at): self
+    protected function setFaceEnrolledAt(?\DateTimeInterface $at): self
     {
         $this->faceEnrolledAt = $at;
+        return $this;
+    }
+
+    public function markFaceEnrolledAt(?\DateTimeInterface $at = null): self
+    {
+        $this->faceEnrolledAt = $at ?? new \DateTime();
+        return $this;
+    }
+
+    public function clearFaceEnrolledAt(): self
+    {
+        $this->faceEnrolledAt = null;
         return $this;
     }
 
@@ -756,9 +856,21 @@ private Collection $commentaires;
         return $this->faceLastVerifiedAt;
     }
 
-    public function setFaceLastVerifiedAt(?\DateTimeInterface $at): self
+    protected function setFaceLastVerifiedAt(?\DateTimeInterface $at): self
     {
         $this->faceLastVerifiedAt = $at;
+        return $this;
+    }
+
+    public function markFaceLastVerifiedAt(?\DateTimeInterface $at = null): self
+    {
+        $this->faceLastVerifiedAt = $at ?? new \DateTime();
+        return $this;
+    }
+
+    public function clearFaceLastVerifiedAt(): self
+    {
+        $this->faceLastVerifiedAt = null;
         return $this;
     }
 
@@ -784,9 +896,21 @@ private Collection $commentaires;
         return $this->faceLockedUntil;
     }
 
-    public function setFaceLockedUntil(?\DateTimeInterface $until): self
+    protected function setFaceLockedUntil(?\DateTimeInterface $until): self
     {
         $this->faceLockedUntil = $until;
+        return $this;
+    }
+
+    public function lockFaceUntil(?\DateTimeInterface $until): self
+    {
+        $this->faceLockedUntil = $until;
+        return $this;
+    }
+
+    public function clearFaceLock(): self
+    {
+        $this->faceLockedUntil = null;
         return $this;
     }
 

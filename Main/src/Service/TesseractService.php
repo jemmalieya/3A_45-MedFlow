@@ -6,7 +6,7 @@ use Symfony\Component\Process\Process;
 
 class TesseractService
 {
-    private $tesseractPath;
+    private string $tesseractPath;
 
     public function __construct(string $tesseractPath = 'tesseract')
     {

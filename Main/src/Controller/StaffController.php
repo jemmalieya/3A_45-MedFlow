@@ -1,5 +1,7 @@
 <?php
 namespace App\Controller;
+use DateTimeImmutable;
+use DateTimeInterface;
 
 use App\Entity\User;
 use Dompdf\Dompdf;
@@ -55,12 +57,15 @@ class StaffController extends AbstractController
             $counts[$t]++;
             // Approximate "new" based on available timestamps
             $created = null;
-            if (method_exists($p, 'getDerniereConnexion') && $p->getDerniereConnexion() instanceof \DateTimeInterface) {
+            $lastConn = $p->getDerniereConnexion();
+            if ($lastConn instanceof \DateTimeInterface) {
                 // Use last connection as a proxy for recent signup/activity
-                $created = $p->getDerniereConnexion();
-            } elseif (method_exists($p, 'getTokenExpiresAt') && $p->getTokenExpiresAt() instanceof \DateTimeInterface) {
-                // Registration sets token_expires_at = now + 24h; infer signup time by subtracting 24h
-                $created = (clone $p->getTokenExpiresAt())->modify('-24 hours');
+                $created = $lastConn;
+            } else {
+                $tokenExpiresAt = $p->getTokenExpiresAt();
+                if ($tokenExpiresAt instanceof \DateTimeInterface) {
+                    $created = \DateTimeImmutable::createFromInterface($tokenExpiresAt)->modify('-24 hours');
+                }
             }
             if ($created instanceof \DateTimeInterface) {
                 $diff = $now->getTimestamp() - $created->getTimestamp();
@@ -217,6 +222,16 @@ public function patientsStats(UserRepository $repo, ChartBuilderInterface $chart
         return 'INCOMPLETE';
     }
 
+    /**
+     * @return array{
+     *   score:int,
+     *   scoreMissing:int,
+     *   scoreInvalid:int,
+     *   incomplete:bool,
+     *   contactBad:bool,
+     *   details:array<int,string>
+     * }
+     */
     private function qualityScore(User $p): array
     {
         $score = 0; $miss = 0; $invalid = 0; $details = [];
@@ -248,6 +263,15 @@ public function patientsStats(UserRepository $repo, ChartBuilderInterface $chart
         ];
     }
 
+    /**
+     * @param array<int,User> $patients
+     * @return array{
+     *   total:int,
+     *   verifiedPct:int,
+     *   completePct:int,
+     *   missing:array{telephone:int,adresse:int,cin:int,email:int}
+     * }
+     */
     private function buildStats(array $patients): array
     {
         $total = count($patients);
@@ -263,8 +287,8 @@ public function patientsStats(UserRepository $repo, ChartBuilderInterface $chart
         }
         return [
             'total' => $total,
-            'verifiedPct' => $total ? round($verified * 100 / $total) : 0,
-            'completePct' => $total ? round($complete * 100 / $total) : 0,
+            'verifiedPct' => $total ? (int) round($verified * 100 / $total) : 0,
+            'completePct' => $total ? (int) round($complete * 100 / $total) : 0,
             'missing' => $missing,
         ];
     }
@@ -285,6 +309,8 @@ public function patientsStats(UserRepository $repo, ChartBuilderInterface $chart
             'subject' => 'Mise à jour de votre dossier',
             'htmlContent' => "<p>Bonjour, veuillez mettre à jour vos informations administratives sur MedFlow.</p>",
         ];
+        $body = json_encode($payload, JSON_THROW_ON_ERROR);
+
         $ch = curl_init('https://api.brevo.com/v3/smtp/email');
         curl_setopt_array($ch, [
             CURLOPT_HTTPHEADER => [
@@ -292,7 +318,7 @@ public function patientsStats(UserRepository $repo, ChartBuilderInterface $chart
                 'Content-Type: application/json',
             ],
             CURLOPT_POST => true,
-            CURLOPT_POSTFIELDS => json_encode($payload),
+            CURLOPT_POSTFIELDS => $body,
             CURLOPT_RETURNTRANSFER => true,
         ]);
         $response = curl_exec($ch);

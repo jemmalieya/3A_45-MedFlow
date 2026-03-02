@@ -41,6 +41,10 @@ class UserRepository extends ServiceEntityRepository
     //        ;
     //    }
     // src/Repository/UserRepository.php
+    /**
+     * @param array<string, mixed> $filters
+     * @return User[]
+     */
     public function findPatientsWithFilters(array $filters = []): array
     {
         $qb = $this->createQueryBuilder('u')
@@ -57,7 +61,10 @@ class UserRepository extends ServiceEntityRepository
                ->setParameter('v', $filters['verified']);
         }
     
-        return $qb->orderBy('u.id', 'DESC')->getQuery()->getResult();
+        /** @var User[] $result */
+        $result = $qb->orderBy('u.id', 'DESC')->getQuery()->getResult();
+
+        return $result;
     }
     
     /**

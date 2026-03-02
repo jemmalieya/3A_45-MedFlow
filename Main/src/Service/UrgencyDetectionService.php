@@ -13,7 +13,7 @@ class UrgencyDetectionService
     public function __construct(HttpClientInterface $client)
     {
         $this->client = $client;
-        $this->openaiApiKey = $_ENV['OPENAI_API_KEYW'] ?? getenv('OPENAI_API_KEYW') ?? '';
+        $this->openaiApiKey = $_ENV['OPENAI_API_KEYW'] ?? (getenv('OPENAI_API_KEYW') ?: '');
     }
 
     public function detectUrgency(string $motif): string
