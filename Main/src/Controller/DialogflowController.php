@@ -14,7 +14,7 @@ use Symfony\Component\Routing\Annotation\Route;
 class DialogflowController extends AbstractController
 {
     #[Route('/dialogflow/webhook', name: 'dialogflow_webhook', methods: ['POST'])]
-    public function webhook(Request $request, EntityManagerInterface $em, DialogflowService $dialogflowService): JsonResponse
+    public function webhook(Request $request, EntityManagerInterface $em, DialogflowService $dialogflowService, \App\Repository\RendezVousRepository $rendezVousRepo): JsonResponse
     {
         $data = json_decode($request->getContent(), true);
         // TEMP: Log the full Dialogflow payload for debugging
@@ -59,7 +59,7 @@ class DialogflowController extends AbstractController
                     'fulfillmentText' => "Impossible de trouver le patient pour afficher la liste des rendez-vous (identifiant manquant ou invalide)."
                 ]);
             }
-            $rdvs = $em->getRepository(RendezVous::class)->findByPatient($patientId);
+            $rdvs = $rendezVousRepo->findByPatient($patientId);
             if (!$rdvs) {
                 return new JsonResponse([
                     'fulfillmentText' => "Vous n'avez aucun rendez-vous enregistré."
@@ -85,7 +85,7 @@ class DialogflowController extends AbstractController
                     'fulfillmentText' => "Impossible de trouver le patient pour le rappel de rendez-vous (identifiant manquant ou invalide)."
                 ]);
             }
-            $nextRdv = $em->getRepository(RendezVous::class)->findNextUpcomingByPatient($patientId);
+            $nextRdv = $rendezVousRepo->findNextUpcomingByPatient($patientId);
             if (!$nextRdv) {
                 return new JsonResponse([
                     'fulfillmentText' => "Vous n'avez aucun rendez-vous à venir."
