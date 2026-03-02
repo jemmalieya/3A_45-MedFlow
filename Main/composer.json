@@ -7,6 +7,7 @@
         "php": ">=8.1",
         "ext-ctype": "*",
         "ext-iconv": "*",
+        "ahmed-bhs/doctrine-doctor": "^1.0",
         "chillerlan/php-qrcode": "5.0",
         "cloudinary/cloudinary_php": "^3.1",
         "doctrine/dbal": "^3",
@@ -65,7 +66,8 @@
         "twig/extra-bundle": "^2.12|^3.0",
         "twig/twig": "^2.12|^3.0",
         "twilio/sdk": "^8.11",
-        "vich/uploader-bundle": "^2.9"
+        "vich/uploader-bundle": "^2.9",
+        "webmozart/assert": "1.11"
     },
     "config": {
         "allow-plugins": {
@@ -117,6 +119,7 @@
         }
     },
     "require-dev": {
+        "phpstan/phpstan": "^2.1",
         "phpunit/phpunit": "^11.5",
         "symfony/browser-kit": "6.4.*",
         "symfony/css-selector": "6.4.*",

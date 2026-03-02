@@ -4,6 +4,7 @@ namespace App\Repository;
 
 use App\Entity\Produit;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
+use Doctrine\ORM\QueryBuilder;
 use Doctrine\Persistence\ManagerRegistry;
 
 /**
@@ -16,26 +17,24 @@ class ProduitRepository extends ServiceEntityRepository
         parent::__construct($registry, Produit::class);
     }
 
+    /* ============================================================
+     * FRONT - Recherche / filtres / tri + PAGINATION
+     * ============================================================ */
+
     /**
-     * ✅ Recherche + filtres + tri (prix + stock)
-     *
-     * @param string|null $search Recherche par nom, description, ou catégorie
-     * @param string|null $category Filtrage par catégorie
-     * @param string|null $sortPrice Tri par prix: asc | desc
-     * @param string|null $sortStock Tri par stock: asc | desc
-     *
-     * @return Produit[]
+     * ✅ QueryBuilder FRONT (filtres + tri)
+     * (utile si un jour tu utilises KnpPaginator côté front)
      */
-    public function findFiltered(
+    public function qbFrontFiltered(
         ?string $search = null,
         ?string $category = null,
         ?string $sortPrice = null,
         ?string $sortStock = null
-    ): array {
+    ): QueryBuilder {
         $qb = $this->createQueryBuilder('p');
 
-        // ✅ Search
-        if ($search && trim($search) !== '') {
+        // Search
+        if ($search !== null && trim($search) !== '') {
             $s = '%' . mb_strtolower(trim($search)) . '%';
             $qb->andWhere(
                 'LOWER(p.nom_produit) LIKE :s
@@ -44,13 +43,13 @@ class ProduitRepository extends ServiceEntityRepository
             )->setParameter('s', $s);
         }
 
-        // ✅ Category filter
-        if ($category && trim($category) !== '') {
+        // Category filter
+        if ($category !== null && trim($category) !== '') {
             $qb->andWhere('p.categorie_produit = :cat')
                ->setParameter('cat', trim($category));
         }
 
-        // ✅ Sort by price (or default by name)
+        // Sort by price (or default by name)
         if ($sortPrice === 'asc') {
             $qb->orderBy('p.prix_produit', 'ASC');
         } elseif ($sortPrice === 'desc') {
@@ -59,38 +58,179 @@ class ProduitRepository extends ServiceEntityRepository
             $qb->orderBy('p.nom_produit', 'ASC');
         }
 
-        // ✅ Sort by stock (secondary sort)
+        // Secondary sort by stock
         if ($sortStock === 'asc') {
             $qb->addOrderBy('p.quantite_produit', 'ASC');
         } elseif ($sortStock === 'desc') {
             $qb->addOrderBy('p.quantite_produit', 'DESC');
         }
 
-        return $qb->getQuery()->getResult();
+        return $qb;
     }
 
     /**
-     * ✅ Récupère toutes les catégories distinctes des produits
+     * ✅ FRONT : liste paginée (Doctrine Doctor OK)
      *
-     * @return string[]
+     * @return Produit[]
      */
-    public function findAllCategories(): array
+    public function findFiltered(
+        ?string $search = null,
+        ?string $category = null,
+        ?string $sortPrice = null,
+        ?string $sortStock = null,
+        int $page = 1,
+        int $pageSize = 12
+    ): array {
+        $qb = $this->qbFrontFiltered($search, $category, $sortPrice, $sortStock);
+
+        $page = max(1, $page);
+        $pageSize = max(1, min(100, $pageSize));
+        $offset = ($page - 1) * $pageSize;
+
+        return $qb
+            ->setFirstResult($offset)
+            ->setMaxResults($pageSize)
+            ->getQuery()
+            ->getResult();
+    }
+
+    /**
+     * ✅ FRONT : total (pour pagination)
+     */
+    public function countFiltered(?string $search = null, ?string $category = null): int
     {
+        $qb = $this->createQueryBuilder('p')
+            ->select('COUNT(p.id_produit)');
+
+        if ($search !== null && trim($search) !== '') {
+            $s = '%' . mb_strtolower(trim($search)) . '%';
+            $qb->andWhere(
+                'LOWER(p.nom_produit) LIKE :s
+                 OR LOWER(p.description_produit) LIKE :s
+                 OR LOWER(p.categorie_produit) LIKE :s'
+            )->setParameter('s', $s);
+        }
+
+        if ($category !== null && trim($category) !== '') {
+            $qb->andWhere('p.categorie_produit = :cat')
+               ->setParameter('cat', trim($category));
+        }
+
+        return (int) $qb->getQuery()->getSingleScalarResult();
+    }
+
+       /**
+     * ✅ Récupère toutes les catégories distinctes (limitée)
+     *
+     * @return list<string>
+     */
+    public function findAllCategories(int $limit = 50): array
+    {
+        $limit = max(1, min(200, $limit));
+
+        /** @var array<int, array{categorie: mixed}> $rows */
         $rows = $this->createQueryBuilder('p')
             ->select('DISTINCT p.categorie_produit AS categorie')
             ->where('p.categorie_produit IS NOT NULL')
             ->orderBy('categorie', 'ASC')
+            ->setMaxResults($limit)
             ->getQuery()
             ->getArrayResult();
 
-        return array_map(fn ($r) => (string) $r['categorie'], $rows);
+        $out = [];
+        foreach ($rows as $r) {
+            $c = $r['categorie'] ?? null;
+            if (is_string($c) && $c !== '') {
+                $out[] = $c;
+            }
+        }
+
+        return $out;
     }
 
     /**
+     * ✅ Compter produits disponibles
+     */
+    public function countAvailableProducts(): int
+    {
+        return (int) $this->createQueryBuilder('p')
+            ->select('COUNT(p.id_produit)')
+            ->andWhere('p.status_produit = :st')
+            ->setParameter('st', 'Disponible')
+            ->getQuery()
+            ->getSingleScalarResult();
+    }
+
+    /**
+     * ✅ Compter produits en rupture (évite findAll())
+     */
+    public function countRuptureProducts(): int
+    {
+        return (int) $this->createQueryBuilder('p')
+            ->select('COUNT(p.id_produit)')
+            ->andWhere('LOWER(p.status_produit) = :st')
+            ->setParameter('st', 'rupture')
+            ->getQuery()
+            ->getSingleScalarResult();
+    }
+
+    /**
+     * ✅ Compter produits stock faible (<= seuil)
+     */
+    public function countLowStockProducts(int $threshold = 10): int
+    {
+        return (int) $this->createQueryBuilder('p')
+            ->select('COUNT(p.id_produit)')
+            ->andWhere('p.quantite_produit IS NOT NULL')
+            ->andWhere('p.quantite_produit <= :t')
+            ->setParameter('t', $threshold)
+            ->getQuery()
+            ->getSingleScalarResult();
+    }
+
+    /**
+     * ✅ Liste produits en rupture (limitée)
+     *
+     * @return Produit[]
+     */
+    public function findRuptureProducts(int $limit = 50): array
+    {
+        $limit = max(1, min(200, $limit));
+
+        return $this->createQueryBuilder('p')
+            ->andWhere('LOWER(p.status_produit) = :st')
+            ->setParameter('st', 'rupture')
+            ->orderBy('p.quantite_produit', 'ASC')
+            ->setMaxResults($limit)
+            ->getQuery()
+            ->getResult();
+    }
+
+    /**
+     * ✅ Produits à stock faible (<= seuil) (limitée)
+     *
+     * @return Produit[]
+     */
+    public function findLowStockProducts(int $threshold = 10, int $limit = 50): array
+    {
+        $limit = max(1, min(200, $limit));
+
+        return $this->createQueryBuilder('p')
+            ->andWhere('p.quantite_produit IS NOT NULL')
+            ->andWhere('p.quantite_produit <= :t')
+            ->setParameter('t', $threshold)
+            ->orderBy('p.quantite_produit', 'ASC')
+            ->setMaxResults($limit)
+            ->getQuery()
+            ->getResult();
+    }
+
+    /* ============================================================
+     * RECO / SIMILAIRES (déjà OK car setMaxResults)
+     * ============================================================ */
+
+    /**
      * ✅ fallback "AI-like" : produits similaires (hors médicaments)
-     * - privilégie catégories préférées
-     * - option : proche d'un prix cible
-     * - exclut certains produits
      *
      * @param string[] $preferredCategories
      * @param float|null $targetPrice
@@ -103,6 +243,8 @@ class ProduitRepository extends ServiceEntityRepository
         array $excludeIds = [],
         int $limit = 12
     ): array {
+        $limit = max(1, min(50, $limit));
+
         $qb = $this->createQueryBuilder('p')
             ->andWhere('p.status_produit = :st')->setParameter('st', 'Disponible')
             ->andWhere('p.categorie_produit != :med')->setParameter('med', 'Médicaments');
@@ -140,6 +282,8 @@ class ProduitRepository extends ServiceEntityRepository
         array $excludeIds = [],
         int $limit = 12
     ): array {
+        $limit = max(1, min(50, $limit));
+
         $qb = $this->createQueryBuilder('p')
             ->andWhere('p.status_produit = :st')->setParameter('st', 'Disponible')
             ->andWhere('p.categorie_produit != :med')->setParameter('med', 'Médicaments');
@@ -161,12 +305,14 @@ class ProduitRepository extends ServiceEntityRepository
     }
 
     /**
-     * ✅ Produits non-médicaments d'une catégorie (sans exclure)
+     * ✅ Produits non-médicaments d'une catégorie
      *
      * @return Produit[]
      */
     public function findByCategoryNonMedicaments(string $category, int $limit = 12): array
     {
+        $limit = max(1, min(50, $limit));
+
         return $this->createQueryBuilder('p')
             ->andWhere('p.status_produit = :st')->setParameter('st', 'Disponible')
             ->andWhere('p.categorie_produit = :cat')->setParameter('cat', $category)
@@ -177,11 +323,14 @@ class ProduitRepository extends ServiceEntityRepository
             ->getResult();
     }
 
+    /* ============================================================
+     * ADMIN - QB déjà paginé via KNP
+     * ============================================================ */
+
     /**
      * ✅ QueryBuilder pour liste admin (pagination, filtres back-office, etc.)
-     * (on retourne le QB, pas un tableau)
      */
-    public function qbAdminList(?string $search = null, ?string $category = null)
+    public function qbAdminList(?string $search = null, ?string $category = null): QueryBuilder
     {
         $qb = $this->createQueryBuilder('p')
             ->orderBy('p.id_produit', 'DESC');

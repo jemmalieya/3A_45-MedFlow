@@ -31,6 +31,5 @@ class PrescriptionType extends AbstractType
     }
     public function __construct()
 {
-    $this->createdAt = new \DateTimeImmutable();
 }
 }

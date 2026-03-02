@@ -1,0 +1,7 @@
+parameters:
+
+    ignoreErrors:
+        - '#Call to an undefined method#'
+    level: 8
+    paths:
+        - src

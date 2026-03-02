@@ -1,7 +1,7 @@
 {% extends 'base_dashboard.html.twig' %}
 
 {% block title %}
-  {% if commande is defined %}
+  {% if commande is defined and commande %}
     Commande #{{ commande.idCommande }}
   {% else %}
     Gestion des commandes
@@ -302,8 +302,7 @@ hr{ border-color: var(--gray-200); opacity:1; margin:1.5rem 0; }
 {# ============================
    LISTE DES COMMANDES
 ============================ #}
-{% if commande is not defined %}
-
+{% if commande is not defined or not commande %}
 <div class="container-fluid py-4">
   <div class="d-flex justify-content-between align-items-center mb-4">
     <div>

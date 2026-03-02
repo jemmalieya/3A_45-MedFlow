@@ -17,12 +17,51 @@ use Symfony\Component\HttpFoundation\File\UploadedFile;
 #[Route('/panier')]
 class PanierController extends AbstractController
 {
+    /**
+     * ✅ Fix PHPStan: getParameter() returns mixed
+     */
+    private function getParameterString(string $name): string
+    {
+        $value = $this->getParameter($name);
+
+        if (!is_string($value) || $value === '') {
+            throw new \RuntimeException(sprintf('Parameter "%s" must be a non-empty string.', $name));
+        }
+
+        return $value;
+    }
+
+    /**
+     * ✅ Normalise le panier pour DrugInteractionService:
+     * - clés -> int
+     * - item -> array<string,mixed>
+     *
+     * @param array<int|string, array{quantite?:int, prix?:float}> $panier
+     * @return array<int, array<string, mixed>>
+     */
+    private function normalizePanierForInteractions(array $panier): array
+    {
+        $out = [];
+
+        foreach ($panier as $k => $item) {
+            $id = (int) $k;
+
+            $out[$id] = [
+                'quantite' => (int) ($item['quantite'] ?? 0),
+                'prix'     => (float) ($item['prix'] ?? 0.0),
+            ];
+        }
+
+        return $out;
+    }
+
     #[Route('', name: 'panier_index', methods: ['GET'])]
     public function index(
         SessionInterface $session,
         EntityManagerInterface $em,
         DrugInteractionService $interactionService
     ): Response {
+        /** @var array<int|string, array{quantite?:int, prix?:float}> $panier */
         $panier = $session->get('panier', []);
 
         $produitsPanier = [];
@@ -30,22 +69,34 @@ class PanierController extends AbstractController
 
         foreach ($panier as $id => $item) {
             $produit = $em->getRepository(Produit::class)->find($id);
-            if (!$produit) continue;
+            if (!$produit) {
+                continue;
+            }
 
-            $qty = (int)($item['quantite'] ?? 0);
-            if ($qty <= 0) continue;
+            $qty = (int) ($item['quantite'] ?? 0);
+            if ($qty <= 0) {
+                continue;
+            }
 
-            $produit->quantite_panier = $qty;
-            $produitsPanier[] = $produit;
-            $total += (float)$produit->getPrixProduit() * $qty;
+            // ✅ FIX: ne pas utiliser une propriété inexistante (quantite_panier)
+            $produitsPanier[] = [
+                'produit' => $produit,
+                'quantite' => $qty,
+            ];
+
+            $total += (float) $produit->getPrixProduit() * $qty;
         }
 
-        $interactionResult = $interactionService->checkCartInteractions($panier);
+        // ✅ FIX PHPStan: type attendu par DrugInteractionService
+        $interactionResult = $interactionService->checkCartInteractions(
+            $this->normalizePanierForInteractions($panier)
+        );
 
         // ✅ canValidate (ordonnance permet de débloquer SI danger)
         $canValidate = true;
 
-        if (($interactionResult['severity'] ?? null) === 'danger') {
+        // ✅ FIX PHPStan: severity existe déjà dans le type => pas de ??
+        if ($interactionResult['severity'] === 'danger') {
             $canValidate = false;
 
             $ok = (bool) $session->get('ordonnance_ok', false);
@@ -67,6 +118,7 @@ class PanierController extends AbstractController
         $session->remove('ordonnance_ocr_text');
 
         return $this->render('panier/index.html.twig', [
+            // ✅ maintenant c’est une liste [{produit, quantite}]
             'produits' => $produitsPanier,
             'total' => $total,
             'interactionResult' => $interactionResult,
@@ -82,12 +134,18 @@ class PanierController extends AbstractController
         SessionInterface $session,
         DrugInteractionService $interactionService
     ): JsonResponse {
+        /** @var array<int|string, array{quantite?:int, prix?:float}> $panier */
         $panier = $session->get('panier', []);
-        $interactionResult = $interactionService->checkCartInteractions($panier);
+
+        // ✅ FIX PHPStan: type attendu par DrugInteractionService
+        $interactionResult = $interactionService->checkCartInteractions(
+            $this->normalizePanierForInteractions($panier)
+        );
 
         $canValidate = true;
 
-        if (($interactionResult['severity'] ?? null) === 'danger') {
+        // ✅ FIX PHPStan: severity existe déjà
+        if ($interactionResult['severity'] === 'danger') {
             $canValidate = false;
 
             $ok = (bool) $session->get('ordonnance_ok', false);
@@ -107,21 +165,26 @@ class PanierController extends AbstractController
     #[Route('/count', name: 'panier_count', methods: ['GET'])]
     public function count(SessionInterface $session): JsonResponse
     {
-        return new JsonResponse(['count' => $this->getCount($session->get('panier', []))]);
+        /** @var array<int|string, array{quantite?:int, prix?:float}> $panier */
+        $panier = $session->get('panier', []);
+
+        return new JsonResponse(['count' => $this->getCount($panier)]);
     }
 
     #[Route('/verifier/{id}', name: 'panier_verifier', methods: ['GET'])]
     public function verifier(Produit $produit, SessionInterface $session): JsonResponse
     {
+        /** @var array<int|string, array{quantite?:int, prix?:float}> $panier */
         $panier = $session->get('panier', []);
+
         $id = $produit->getId_produit();
 
         return new JsonResponse([
-            'quantite' => isset($panier[$id]) ? (int)($panier[$id]['quantite'] ?? 0) : 0
+            'quantite' => isset($panier[$id]) ? (int) ($panier[$id]['quantite'] ?? 0) : 0,
         ]);
     }
 
-    // ✅ IMPORTANT: dès que panier change -> ordonnance invalidée (sinon faux déblocage)
+    // ✅ IMPORTANT: dès que panier change -> ordonnance invalidée
     private function invalidateOrdonnance(SessionInterface $session): void
     {
         $session->remove('ordonnance_ok');
@@ -133,30 +196,31 @@ class PanierController extends AbstractController
     {
         $this->invalidateOrdonnance($session);
 
+        /** @var array<int|string, array{quantite?:int, prix?:float}> $panier */
         $panier = $session->get('panier', []);
+
         $id = $produit->getId_produit();
 
         if ($produit->getStatusProduit() !== 'Disponible') {
             return new JsonResponse(['success' => false, 'message' => 'Produit indisponible.'], 400);
         }
 
-        $stock = (int)($produit->getQuantiteProduit() ?? 0);
-        $q = isset($panier[$id]) ? (int)($panier[$id]['quantite'] ?? 0) : 0;
+        $stock = $produit->getQuantiteProduit();
+                $q = isset($panier[$id]) ? (int) ($panier[$id]['quantite'] ?? 0) : 0;
 
         if ($stock > 0 && $q >= $stock) {
             return new JsonResponse(['success' => false, 'message' => 'Stock insuffisant !'], 400);
         }
 
         $panier[$id]['quantite'] = $q + 1;
-        $panier[$id]['prix'] = (float)$produit->getPrixProduit();
+        $panier[$id]['prix'] = (float) $produit->getPrixProduit();
         $session->set('panier', $panier);
 
         return new JsonResponse([
             'success' => true,
             'message' => $produit->getNomProduit().' ajouté ✅',
             'count' => $this->getCount($panier),
-            'quantite' => (int)$panier[$id]['quantite'],
-        ]);
+'quantite' => (int) $panier[$id]['quantite'],        ]);
     }
 
     #[Route('/augmenter/{id}', name: 'panier_augmenter', methods: ['POST'])]
@@ -164,15 +228,17 @@ class PanierController extends AbstractController
     {
         $this->invalidateOrdonnance($session);
 
+        /** @var array<int|string, array{quantite?:int, prix?:float}> $panier */
         $panier = $session->get('panier', []);
+
         $id = $produit->getId_produit();
 
         if (!isset($panier[$id])) {
             return new JsonResponse(['success' => false, 'message' => 'Produit absent du panier.'], 400);
         }
 
-        $stock = (int)($produit->getQuantiteProduit() ?? 0);
-        $newQty = (int)($panier[$id]['quantite'] ?? 0) + 1;
+        $stock = $produit->getQuantiteProduit();
+                $newQty = (int) ($panier[$id]['quantite'] ?? 0) + 1;
 
         if ($stock > 0 && $newQty > $stock) {
             return new JsonResponse(['success' => false, 'message' => 'Stock épuisé.'], 400);
@@ -193,26 +259,33 @@ class PanierController extends AbstractController
     {
         $this->invalidateOrdonnance($session);
 
+        /** @var array<int|string, array{quantite?:int, prix?:float}> $panier */
         $panier = $session->get('panier', []);
+
         $id = $produit->getId_produit();
 
         if (!isset($panier[$id])) {
             return new JsonResponse(['success' => false, 'message' => 'Produit absent du panier.'], 400);
         }
 
-        $panier[$id]['quantite'] = (int)$panier[$id]['quantite'] - 1;
+        $panier[$id]['quantite'] = (int) ($panier[$id]['quantite'] ?? 0) - 1;
 
         if ($panier[$id]['quantite'] <= 0) {
             unset($panier[$id]);
             $session->set('panier', $panier);
-            return new JsonResponse(['success' => true, 'quantite' => 0, 'count' => $this->getCount($panier)]);
+
+            return new JsonResponse([
+                'success' => true,
+                'quantite' => 0,
+                'count' => $this->getCount($panier),
+            ]);
         }
 
         $session->set('panier', $panier);
 
         return new JsonResponse([
             'success' => true,
-            'quantite' => (int)$panier[$id]['quantite'],
+'quantite' => (int) $panier[$id]['quantite'],
             'count' => $this->getCount($panier),
         ]);
     }
@@ -222,7 +295,9 @@ class PanierController extends AbstractController
     {
         $this->invalidateOrdonnance($session);
 
+        /** @var array<int|string, array{quantite?:int, prix?:float}> $panier */
         $panier = $session->get('panier', []);
+
         unset($panier[$produit->getId_produit()]);
         $session->set('panier', $panier);
 
@@ -238,23 +313,48 @@ class PanierController extends AbstractController
         return new JsonResponse(['success' => true, 'count' => 0]);
     }
 
+    /**
+     * @param array<int|string, array{quantite?:int, prix?:float}> $panier
+     */
     private function getCount(array $panier): int
     {
-        return array_sum(array_map(fn($i) => (int)($i['quantite'] ?? 0), $panier));
+        $sum = 0;
+        foreach ($panier as $item) {
+            $sum += (int) ($item['quantite'] ?? 0);
+        }
+        return $sum;
     }
 
+    /**
+     * @param array<int|string, array{quantite?:int, prix?:float}> $panier
+     */
     private function cartHash(array $panier): string
     {
         ksort($panier);
-        return hash('sha256', json_encode($panier));
+
+        $json = json_encode($panier, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        if ($json === false) {
+            $json = '';
+        }
+
+        return hash('sha256', $json);
     }
 
     private function normalize(string $s): string
     {
         $s = mb_strtoupper($s);
-        $s = iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $s) ?: $s;
-        $s = preg_replace('/[^A-Z0-9\s]/', ' ', $s);
-        $s = preg_replace('/\s+/', ' ', $s);
+
+        $converted = iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $s);
+        if (is_string($converted) && $converted !== '') {
+            $s = $converted;
+        }
+
+        $r1 = preg_replace('/[^A-Z0-9\s]/', ' ', $s);
+        $s = is_string($r1) ? $r1 : $s;
+
+        $r2 = preg_replace('/\s+/', ' ', $s);
+        $s = is_string($r2) ? $r2 : $s;
+
         return trim($s);
     }
 
@@ -265,15 +365,22 @@ class PanierController extends AbstractController
         DrugInteractionService $interactionService,
         OcrService $ocr
     ): Response {
+        /** @var array<int|string, array{quantite?:int, prix?:float}> $panier */
         $panier = $session->get('panier', []);
+
         if (empty($panier)) {
             $session->set('ordonnance_status', 'refused');
             $this->addFlash('error', 'Panier vide.');
             return $this->redirectToRoute('panier_index');
         }
 
-        $interaction = $interactionService->checkCartInteractions($panier);
-        if (($interaction['severity'] ?? null) !== 'danger') {
+        // ✅ FIX PHPStan: type attendu par DrugInteractionService
+        $interaction = $interactionService->checkCartInteractions(
+            $this->normalizePanierForInteractions($panier)
+        );
+
+        // ✅ FIX PHPStan: severity existe déjà
+        if ($interaction['severity'] !== 'danger') {
             $session->set('ordonnance_status', 'approved');
             $this->addFlash('success', 'Pas d’interaction dangereuse → ordonnance non nécessaire ✅');
             return $this->redirectToRoute('panier_index');
@@ -281,6 +388,7 @@ class PanierController extends AbstractController
 
         /** @var UploadedFile|null $file */
         $file = $request->files->get('ordonnance');
+
         if (!$file) {
             $session->set('ordonnance_status', 'refused');
             $this->addFlash('error', 'Veuillez choisir une image d’ordonnance.');
@@ -294,10 +402,13 @@ class PanierController extends AbstractController
             return $this->redirectToRoute('panier_index');
         }
 
-        $dir = $this->getParameter('kernel.project_dir') . '/public/uploads/ordonnances';
+        // ✅ FIX PHPStan: kernel.project_dir -> string
+        $projectDir = $this->getParameterString('kernel.project_dir');
+        $dir = $projectDir . '/public/uploads/ordonnances';
+
         @mkdir($dir, 0777, true);
 
-        $filename = 'ord_' . uniqid() . '.' . $ext;
+        $filename = 'ord_' . uniqid('', true) . '.' . $ext;
         $file->move($dir, $filename);
         $path = $dir . '/' . $filename;
 
@@ -310,19 +421,22 @@ class PanierController extends AbstractController
         }
 
         $ocrNorm = $this->normalize($text);
-        $pairs = $interaction['interactions'] ?? [];
+
+        // ✅ FIX PHPStan: interactions existe déjà (pas ??)
+        $pairs = $interaction['interactions'];
 
         $ok = false;
         $foundDrugs = [];
 
         foreach ($pairs as $it) {
-            $d1 = $this->normalize((string)($it['drug1'] ?? ''));
-            $d2 = $this->normalize((string)($it['drug2'] ?? ''));
+            // ✅ drug1/drug2 existent déjà (pas ??)
+            $d1 = $this->normalize($it['drug1']);
+            $d2 = $this->normalize($it['drug2']);
 
-            if ($d1 && $d2 && str_contains($ocrNorm, $d1) && str_contains($ocrNorm, $d2)) {
+            if ($d1 !== '' && $d2 !== '' && str_contains($ocrNorm, $d1) && str_contains($ocrNorm, $d2)) {
                 $ok = true;
-                $foundDrugs[] = (string)$it['drug1'];
-                $foundDrugs[] = (string)$it['drug2'];
+                $foundDrugs[] = $it['drug1'];
+                $foundDrugs[] = $it['drug2'];
                 break;
             }
         }

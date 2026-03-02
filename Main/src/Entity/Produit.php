@@ -13,81 +13,45 @@ class Produit
 {
     #[ORM\Id]
     #[ORM\GeneratedValue]
-    #[ORM\Column]
-    private ?int $id_produit = null;
+    #[ORM\Column(name: "id_produit")]
+    private int $id_produit = 0;
 
-    // ✅ Nom du produit
-    #[ORM\Column(length: 150)]
+    // ✅ Nom du produit (NON nullable)
+    #[ORM\Column(name: "nom_produit", length: 150, nullable: false)]
     #[Assert\NotBlank(message: "Le nom du produit est obligatoire.")]
-    #[Assert\Length(
-        min: 3,
-        max: 150,
-        minMessage: "Le nom doit contenir au moins {{ limit }} caractères.",
-        maxMessage: "Le nom ne peut pas dépasser {{ limit }} caractères."
-    )]
-    #[Assert\Regex(
-        pattern: '/^[a-zA-ZàâäéèêëïîôùûüÿçÀÂÄÉÈÊËÏÎÔÙÛÜŸÇ\s\-]+$/u',
-        message: "Le nom ne peut contenir que des lettres, espaces et tirets."
-    )]
-    private ?string $nom_produit = null;
+    #[Assert\Length(min: 3, max: 150, minMessage: "Le nom doit contenir au moins {{ limit }} caractères.", maxMessage: "Le nom ne peut pas dépasser {{ limit }} caractères.")]
+    #[Assert\Regex(pattern: '/^[a-zA-ZàâäéèêëïîôùûüÿçÀÂÄÉÈÊËÏÎÔÙÛÜŸÇ\s\-]+$/u', message: "Le nom ne peut contenir que des lettres, espaces et tirets.")]
+    private string $nom_produit = '';
 
-    // ✅ Description
-    #[ORM\Column(length: 255)]
+    // ✅ Description (NON nullable)
+    #[ORM\Column(name: "description_produit", length: 255, nullable: false)]
     #[Assert\NotBlank(message: "La description est obligatoire.")]
-    #[Assert\Length(
-        min: 10,
-        max: 255,
-        minMessage: "La description doit contenir au moins {{ limit }} caractères.",
-        maxMessage: "La description ne peut pas dépasser {{ limit }} caractères."
-    )]
-    private ?string $description_produit = null;
+    #[Assert\Length(min: 10, max: 255, minMessage: "La description doit contenir au moins {{ limit }} caractères.", maxMessage: "La description ne peut pas dépasser {{ limit }} caractères.")]
+    private string $description_produit = '';
 
-    // ✅ Prix
-    #[ORM\Column]
+    // ✅ Prix (NON nullable)
+    #[ORM\Column(name: "prix_produit", type: "float", nullable: false)]
     #[Assert\NotNull(message: "Le prix est obligatoire.")]
     #[Assert\Positive(message: "Le prix doit être positif.")]
-    #[Assert\Range(
-        min: 0.01,
-        max: 999999.99,
-        notInRangeMessage: "Le prix doit être entre {{ min }} et {{ max }} DT."
-    )]
-    private ?float $prix_produit = null;
+    #[Assert\Range(min: 0.01, max: 999999.99, notInRangeMessage: "Le prix doit être entre {{ min }} et {{ max }} DT.")]
+    private float $prix_produit = 0.0;
 
-    // ✅ Quantité
-    #[ORM\Column]
+    // ✅ Quantité (NON nullable)
+    #[ORM\Column(name: "quantite_produit", type: "integer", nullable: false)]
     #[Assert\NotNull(message: "La quantité est obligatoire.")]
     #[Assert\PositiveOrZero(message: "La quantité ne peut pas être négative.")]
-    #[Assert\Range(
-        min: 0,
-        max: 100000,
-        notInRangeMessage: "La quantité doit être entre {{ min }} et {{ max }}."
-    )]
-    #[Assert\Type(
-        type: 'integer',
-        message: "La quantité doit être un nombre entier."
-    )]
-    private ?int $quantite_produit = null;
-// ✅ Image (nom de fichier dans /public/uploads/produits)
-#[ORM\Column(length: 255, nullable: true)]
-#[Assert\NotBlank(message: "L'image du produit est obligatoire.", groups: ['create'])]
-#[Assert\Length(
-    max: 255,
-    maxMessage: "Le nom de fichier ne peut pas dépasser {{ limit }} caractères."
-)]
-private ?string $image_produit = null;
+    #[Assert\Range(min: 0, max: 100000, notInRangeMessage: "La quantité doit être entre {{ min }} et {{ max }}.")]
+    #[Assert\Type(type: 'integer', message: "La quantité doit être un nombre entier.")]
+    private int $quantite_produit = 0;
 
-public function getImageProduit(): ?string
-{
-    return $this->image_produit;
-}
+    // ✅ Image (nullable = OK)
+    #[ORM\Column(name: "image_produit", length: 255, nullable: true)]
+    #[Assert\NotBlank(message: "L'image du produit est obligatoire.", groups: ['create'])]
+    #[Assert\Length(max: 255, maxMessage: "Le nom de fichier ne peut pas dépasser {{ limit }} caractères.")]
+    private ?string $image_produit = null;
 
-public function setImageProduit(?string $image_produit): static
-{
-    $this->image_produit = $image_produit !== null ? trim($image_produit) : null;
-    return $this;
-}
-    // ✅ Catégorie
-    #[ORM\Column(length: 150)]
+    // ✅ Catégorie (NON nullable)
+    #[ORM\Column(name: "categorie_produit", length: 150, nullable: false)]
     #[Assert\NotBlank(message: "La catégorie est obligatoire.")]
     #[Assert\Choice(
         choices: [
@@ -104,16 +68,13 @@ public function setImageProduit(?string $image_produit): static
         ],
         message: "Veuillez sélectionner une catégorie valide."
     )]
-    private ?string $categorie_produit = null;
+    private string $categorie_produit = 'Médicaments';
 
-    // ✅ Statut
-    #[ORM\Column(length: 50)]
+    // ✅ Statut (NON nullable)
+    #[ORM\Column(name: "status_produit", length: 50, nullable: false)]
     #[Assert\NotBlank(message: "Le statut est obligatoire.")]
-    #[Assert\Choice(
-        choices: ['Disponible', 'Rupture', 'Indisponible'],
-        message: "Le statut doit être : Disponible, Rupture ou Indisponible."
-    )]
-    private ?string $status_produit = null;
+    #[Assert\Choice(choices: ['Disponible', 'Rupture', 'Indisponible'], message: "Le statut doit être : Disponible, Rupture ou Indisponible.")]
+    private string $status_produit = 'Disponible';
 
     /**
      * @var Collection<int, LigneCommande>
@@ -128,83 +89,87 @@ public function setImageProduit(?string $image_produit): static
 
     public function getId_produit(): ?int
     {
-        return $this->id_produit;
+        return $this->id_produit > 0 ? $this->id_produit : null;
     }
 
-    public function getNomProduit(): ?string
+    public function getNomProduit(): string
     {
         return $this->nom_produit;
     }
 
-    // ✅ accepte null pour éviter crash en edit
-    public function setNomProduit(?string $nom_produit): static
+    public function setNomProduit(string $nom_produit): static
     {
-        $this->nom_produit = $nom_produit !== null ? trim($nom_produit) : null;
+        $this->nom_produit = trim($nom_produit);
         return $this;
     }
 
-    public function getDescriptionProduit(): ?string
+    public function getDescriptionProduit(): string
     {
         return $this->description_produit;
     }
 
-    // ✅ accepte null pour éviter crash en edit
-    public function setDescriptionProduit(?string $description_produit): static
+    public function setDescriptionProduit(string $description_produit): static
     {
-        $this->description_produit = $description_produit !== null ? trim($description_produit) : null;
+        $this->description_produit = trim($description_produit);
         return $this;
     }
 
-    public function getPrixProduit(): ?float
+    public function getPrixProduit(): float
     {
         return $this->prix_produit;
     }
 
-    // ✅ FIX: accepter null pour éviter "float, null given" en edit
-    public function setPrixProduit(?float $prix_produit): static
+    public function setPrixProduit(float $prix_produit): static
     {
-        $this->prix_produit = ($prix_produit !== null) ? round($prix_produit, 2) : null;
+        $this->prix_produit = round($prix_produit, 2);
         return $this;
     }
 
-    public function getQuantiteProduit(): ?int
+    public function getQuantiteProduit(): int
     {
         return $this->quantite_produit;
     }
 
-    // ✅ FIX: accepter null pour éviter "int, null given" en edit
-    public function setQuantiteProduit(?int $quantite_produit): static
+    public function setQuantiteProduit(int $quantite_produit): static
     {
         $this->quantite_produit = $quantite_produit;
         return $this;
     }
 
-   
+    public function getImageProduit(): ?string
+    {
+        return $this->image_produit;
+    }
 
-    public function getCategorieProduit(): ?string
+    public function setImageProduit(?string $image_produit): static
+    {
+        $this->image_produit = $image_produit !== null ? trim($image_produit) : null;
+        return $this;
+    }
+
+    public function getCategorieProduit(): string
     {
         return $this->categorie_produit;
     }
 
-    // ✅ FIX IMPORTANT: accepter null
-    public function setCategorieProduit(?string $categorie_produit): static
+    public function setCategorieProduit(string $categorie_produit): static
     {
-        $this->categorie_produit = $categorie_produit !== null ? trim($categorie_produit) : null;
+        $this->categorie_produit = trim($categorie_produit);
         return $this;
     }
 
-    public function getStatusProduit(): ?string
+    public function getStatusProduit(): string
     {
         return $this->status_produit;
     }
 
-    // ✅ FIX IMPORTANT: accepter null
-    public function setStatusProduit(?string $status_produit): static
+    public function setStatusProduit(string $status_produit): static
     {
-        $this->status_produit = $status_produit !== null ? trim($status_produit) : null;
+        $this->status_produit = trim($status_produit);
         return $this;
     }
 
+    /** @return Collection<int, LigneCommande> */
     public function getLigneCommandes(): Collection
     {
         return $this->ligne_commandes;

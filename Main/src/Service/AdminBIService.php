@@ -8,143 +8,233 @@ class AdminBIService
 {
     public function __construct(private EntityManagerInterface $em) {}
 
+    /**
+     * Dashboard BI Admin (KPI + charts + alertes)
+     *
+     * @return array{
+     *   period: array{
+     *     from: string,
+     *     to: string,
+     *     days: int,
+     *     cat: string|null,
+     *     categories: list<string>
+     *   },
+     *   kpi: array{
+     *     ca: float,
+     *     caPrev: float,
+     *     variationCA: float|null,
+     *     nbCommandes: int,
+     *     variationCommandes: float|null,
+     *     panierMoyen: float,
+     *     variationPanier: float|null,
+     *     nbValidees: int,
+     *     tauxConversion: float,
+     *     nbEnAttente: int,
+     *     tauxRupture: float,
+     *     quantiteTotale: int
+     *   },
+     *   charts: array{
+     *     ventesJour: list<array{jour: string, ca: numeric-string, nb_commandes: numeric-string, quantite: numeric-string}>,
+     *     categories: list<array{categorie: string, quantite: numeric-string, ca: numeric-string}>,
+     *     statuts: list<array{label: string, value: numeric-string}>
+     *   },
+     *   topProduits: list<array{produit: string, categorie: string, quantite: numeric-string, ca: numeric-string, stock_actuel: numeric-string}>,
+     *   stocksBas: list<array{nom_produit: string, categorie_produit: string, quantite_produit: numeric-string, status_produit: string}>,
+     *   alerts: list<array{type: string, title: string, message: string}>,
+     *   tips: list<string>
+     * }
+     */
     public function buildDashboard(
         int $days = 30,
         ?string $from = null,
         ?string $to = null,
         ?string $cat = null
-    ): array
-    {
+    ): array {
         $conn = $this->em->getConnection();
 
-        // Période (TOUJOURS utiliser from/to s'ils sont fournis)
+        // Normaliser cat
+        $cat = (is_string($cat) && trim($cat) !== '') ? trim($cat) : null;
+
+        // =========================
+        // Période DATETIME (index-friendly)
+        // =========================
         if ($from && $to) {
-            $from = (new \DateTimeImmutable($from))->format('Y-m-d');
-            $to   = (new \DateTimeImmutable($to))->format('Y-m-d');
+            $fromDate = (new \DateTimeImmutable($from))->setTime(0, 0, 0);
+            $toDate   = (new \DateTimeImmutable($to))->setTime(23, 59, 59);
         } else {
-            $toObj = new \DateTimeImmutable('today');
-            $fromObj = $toObj->modify("-{$days} days");
-            $from = $fromObj->format('Y-m-d');
-            $to   = $toObj->format('Y-m-d');
+            $toDate   = (new \DateTimeImmutable('today'))->setTime(23, 59, 59);
+            $fromDate = $toDate->modify("-{$days} days")->setTime(0, 0, 0);
         }
 
-        // Catégories
-        $categories = $conn->fetchFirstColumn("
+        $fromStr = $fromDate->format('Y-m-d H:i:s');
+        $toStr   = $toDate->format('Y-m-d H:i:s');
+
+        // =========================
+        // ✅ LIMIT catégories
+        // =========================
+        /** @var list<mixed> $rawCategories */
+        $rawCategories = $conn->fetchFirstColumn("
             SELECT DISTINCT categorie_produit
             FROM produit
             ORDER BY categorie_produit
+            LIMIT 99
         ");
 
+        /** @var list<string> $categories */
+        $categories = [];
+        foreach ($rawCategories as $c) {
+            if (is_string($c) && $c !== '') {
+                $categories[] = $c;
+            }
+        }
+
+        // =========================
         // Période précédente
-        $fromObj = new \DateTimeImmutable($from);
-        $toObj   = new \DateTimeImmutable($to);
-        $diffDays = max(1, (int)$fromObj->diff($toObj)->days);
-        $prevTo   = $fromObj->modify('-1 day');
-        $prevFrom = $prevTo->modify("-{$diffDays} days");
+        // =========================
+        $diffDays = max(1, (int) $fromDate->diff($toDate)->days);
+        $prevToDate   = $fromDate->modify('-1 day')->setTime(23, 59, 59);
+        $prevFromDate = $prevToDate->modify("-{$diffDays} days")->setTime(0, 0, 0);
 
-        // KPI période actuelle
-        $caPeriode = (float) $conn->fetchOne("
-            SELECT COALESCE(SUM(montant_total), 0)
+        $prevFromStr = $prevFromDate->format('Y-m-d H:i:s');
+        $prevToStr   = $prevToDate->format('Y-m-d H:i:s');
+
+        // =========================
+        // ✅ KPI période courante
+        // =========================
+        $statutsValides = ['En cours', 'En livraison', 'Expédiée', 'Livrée'];
+
+        $placeholdersValid = implode(', ', array_map(
+            static fn(int $i): string => ":sv{$i}",
+            array_keys($statutsValides)
+        ));
+
+        $paramsKpi = [
+            'from' => $fromStr,
+            'to' => $toStr,
+            'statut_attente' => 'En attente',
+        ];
+        foreach ($statutsValides as $i => $s) {
+            $paramsKpi["sv{$i}"] = $s;
+        }
+
+        $kpiSql = "
+            SELECT
+                COALESCE(SUM(montant_total_cents), 0) / 100.0 AS ca,
+                COUNT(*) AS nb_commandes,
+                SUM(CASE WHEN statut_commande IN ({$placeholdersValid}) THEN 1 ELSE 0 END) AS nb_validees,
+                SUM(CASE WHEN statut_commande = :statut_attente THEN 1 ELSE 0 END) AS nb_en_attente
             FROM commande
-            WHERE DATE(date_creation_commande) BETWEEN :from AND :to
-        ", ['from' => $from, 'to' => $to]);
+            WHERE date_creation_commande BETWEEN :from AND :to
+        ";
 
-        $nbPeriode = (int) $conn->fetchOne("
-            SELECT COUNT(*)
-            FROM commande
-            WHERE DATE(date_creation_commande) BETWEEN :from AND :to
-        ", ['from' => $from, 'to' => $to]);
+        /** @var array<int, mixed>|false $kpiNum */
+        $kpiNum = $conn->executeQuery($kpiSql, $paramsKpi)->fetchNumeric();
 
-        $nbValidees = (int) $conn->fetchOne("
-            SELECT COUNT(*)
-            FROM commande
-            WHERE DATE(date_creation_commande) BETWEEN :from AND :to
-              AND statut_commande IN ('Validée', 'Livrée', 'En préparation')
-        ", ['from' => $from, 'to' => $to]);
+        $caPeriode   = (float) ($kpiNum[0] ?? 0.0);
+        $nbPeriode   = (int)   ($kpiNum[1] ?? 0);
+        $nbValidees  = (int)   ($kpiNum[2] ?? 0);
+        $nbEnAttente = (int)   ($kpiNum[3] ?? 0);
 
-        $nbEnAttente = (int) $conn->fetchOne("
-            SELECT COUNT(*)
-            FROM commande
-            WHERE statut_commande = 'En attente'
-              AND DATE(date_creation_commande) BETWEEN :from AND :to
-        ", ['from' => $from, 'to' => $to]);
-
+        // Quantité totale (éviter doublons JOIN)
         $quantiteTotale = (int) $conn->fetchOne("
             SELECT COALESCE(SUM(cp.quantite_commandee), 0)
             FROM commande_produit cp
-            INNER JOIN commande c ON c.id_commande = cp.id_commande
-            WHERE DATE(c.date_creation_commande) BETWEEN :from AND :to
-        ", ['from' => $from, 'to' => $to]);
+            WHERE cp.commande_id IN (
+                SELECT id_commande
+                FROM commande
+                WHERE date_creation_commande BETWEEN :from AND :to
+            )
+        ", ['from' => $fromStr, 'to' => $toStr]);
 
-        $panierMoyen = $nbPeriode > 0 ? $caPeriode / $nbPeriode : 0;
-        $tauxConversion = $nbPeriode > 0 ? ($nbValidees / $nbPeriode) * 100 : 0;
+        $panierMoyen    = $nbPeriode > 0 ? $caPeriode / $nbPeriode : 0.0;
+        $tauxConversion = $nbPeriode > 0 ? ($nbValidees / $nbPeriode) * 100.0 : 0.0;
 
+        // =========================
         // KPI période précédente
-        $caPrev = (float) $conn->fetchOne("
-            SELECT COALESCE(SUM(montant_total), 0)
+        // =========================
+        $kpiPrevSql = "
+            SELECT
+                COALESCE(SUM(montant_total_cents), 0) / 100.0 AS ca,
+                COUNT(*) AS nb_commandes
             FROM commande
-            WHERE DATE(date_creation_commande) BETWEEN :from AND :to
-        ", ['from' => $prevFrom->format('Y-m-d'), 'to' => $prevTo->format('Y-m-d')]);
+            WHERE date_creation_commande BETWEEN :from AND :to
+        ";
 
-        $nbPrev = (int) $conn->fetchOne("
-            SELECT COUNT(*)
-            FROM commande
-            WHERE DATE(date_creation_commande) BETWEEN :from AND :to
-        ", ['from' => $prevFrom->format('Y-m-d'), 'to' => $prevTo->format('Y-m-d')]);
+        /** @var array<int, mixed>|false $kpiPrevNum */
+        $kpiPrevNum = $conn->executeQuery($kpiPrevSql, [
+            'from' => $prevFromStr,
+            'to'   => $prevToStr,
+        ])->fetchNumeric();
 
-        $panierMoyenPrev = $nbPrev > 0 ? $caPrev / $nbPrev : 0;
+        $caPrev = (float) ($kpiPrevNum[0] ?? 0.0);
+        $nbPrev = (int)   ($kpiPrevNum[1] ?? 0);
 
-        // Variations
-        $variationCA = $caPrev > 0 ? (($caPeriode - $caPrev) / $caPrev) * 100 : null;
-        $variationCommandes = $nbPrev > 0 ? (($nbPeriode - $nbPrev) / $nbPrev) * 100 : null;
-        $variationPanier = $panierMoyenPrev > 0 ? (($panierMoyen - $panierMoyenPrev) / $panierMoyenPrev) * 100 : null;
+        $panierMoyenPrev = $nbPrev > 0 ? $caPrev / $nbPrev : 0.0;
 
-        // Ventes par jour (CA + quantité + nb commandes)
+        $variationCA        = $caPrev > 0 ? (($caPeriode - $caPrev) / $caPrev) * 100.0 : null;
+        $variationCommandes = $nbPrev > 0 ? (($nbPeriode - $nbPrev) / $nbPrev) * 100.0 : null;
+        $variationPanier    = $panierMoyenPrev > 0 ? (($panierMoyen - $panierMoyenPrev) / $panierMoyenPrev) * 100.0 : null;
+
+        // =========================
+        // ✅ Ventes/jour
+        // =========================
+        $chartDays = min($days, 90);
+        $chartFromDate = $toDate->modify("-{$chartDays} days")->setTime(0, 0, 0);
+        $chartFromStr  = $chartFromDate->format('Y-m-d H:i:s');
+
         $sqlVentesJour = "
-            SELECT 
+            SELECT
                 DATE(c.date_creation_commande) AS jour,
-                SUM(c.montant_total) AS ca,
+                (COALESCE(SUM(c.montant_total_cents), 0) / 100.0) AS ca,
                 COUNT(DISTINCT c.id_commande) AS nb_commandes,
                 COALESCE(SUM(cp.quantite_commandee), 0) AS quantite
             FROM commande c
-            LEFT JOIN commande_produit cp ON cp.id_commande = c.id_commande
+            LEFT JOIN commande_produit cp ON cp.commande_id = c.id_commande
         ";
 
-        if (!empty($cat)) {
+        $paramsVentes = ['from' => $chartFromStr, 'to' => $toStr];
+
+        if ($cat !== null) {
             $sqlVentesJour .= "
-                LEFT JOIN produit p ON p.id_produit = cp.id_produit
-                WHERE DATE(c.date_creation_commande) BETWEEN :from AND :to
+                LEFT JOIN produit p ON p.id_produit = cp.produit_id
+                WHERE c.date_creation_commande BETWEEN :from AND :to
                   AND p.categorie_produit = :cat
             ";
-            $paramsVentes = ['from' => $from, 'to' => $to, 'cat' => $cat];
+            $paramsVentes['cat'] = $cat;
         } else {
             $sqlVentesJour .= "
-                WHERE DATE(c.date_creation_commande) BETWEEN :from AND :to
+                WHERE c.date_creation_commande BETWEEN :from AND :to
             ";
-            $paramsVentes = ['from' => $from, 'to' => $to];
         }
 
         $sqlVentesJour .= "
             GROUP BY DATE(c.date_creation_commande)
             ORDER BY jour ASC
+            LIMIT 90
         ";
 
+        /** @var list<array{jour: string, ca: numeric-string, nb_commandes: numeric-string, quantite: numeric-string}> $ventesParJour */
         $ventesParJour = $conn->fetchAllAssociative($sqlVentesJour, $paramsVentes);
 
-        // Répartition par catégorie
+        // =========================
+        // Répartition catégories
+        // =========================
         $sqlCategories = "
-            SELECT 
+            SELECT
                 p.categorie_produit AS categorie,
-                SUM(cp.quantite_commandee) AS quantite,
-                SUM(cp.quantite_commandee * p.prix_produit) AS ca
+                COALESCE(SUM(cp.quantite_commandee), 0) AS quantite,
+                COALESCE(SUM(cp.quantite_commandee * p.prix_produit), 0) AS ca
             FROM commande_produit cp
-            INNER JOIN produit p ON p.id_produit = cp.id_produit
-            INNER JOIN commande c ON c.id_commande = cp.id_commande
-            WHERE DATE(c.date_creation_commande) BETWEEN :from AND :to
+            INNER JOIN produit p ON p.id_produit = cp.produit_id
+            WHERE cp.commande_id IN (
+                SELECT id_commande
+                FROM commande
+                WHERE date_creation_commande BETWEEN :from AND :to
+            )
         ";
-        $paramsCategories = ['from' => $from, 'to' => $to];
+        $paramsCategories = ['from' => $fromStr, 'to' => $toStr];
 
-        if (!empty($cat)) {
+        if ($cat !== null) {
             $sqlCategories .= " AND p.categorie_produit = :cat ";
             $paramsCategories['cat'] = $cat;
         }
@@ -152,26 +242,33 @@ class AdminBIService
         $sqlCategories .= "
             GROUP BY p.categorie_produit
             ORDER BY ca DESC
+            LIMIT 50
         ";
 
+        /** @var list<array{categorie: string, quantite: numeric-string, ca: numeric-string}> $repartitionCategories */
         $repartitionCategories = $conn->fetchAllAssociative($sqlCategories, $paramsCategories);
 
+        // =========================
         // Top produits
+        // =========================
         $sqlTop = "
-            SELECT 
+            SELECT
                 p.nom_produit AS produit,
                 p.categorie_produit AS categorie,
-                SUM(cp.quantite_commandee) AS quantite,
-                SUM(cp.quantite_commandee * p.prix_produit) AS ca,
+                COALESCE(SUM(cp.quantite_commandee), 0) AS quantite,
+                COALESCE(SUM(cp.quantite_commandee * p.prix_produit), 0) AS ca,
                 p.quantite_produit AS stock_actuel
             FROM commande_produit cp
-            INNER JOIN produit p ON p.id_produit = cp.id_produit
-            INNER JOIN commande c ON c.id_commande = cp.id_commande
-            WHERE DATE(c.date_creation_commande) BETWEEN :from AND :to
+            INNER JOIN produit p ON p.id_produit = cp.produit_id
+            WHERE cp.commande_id IN (
+                SELECT id_commande
+                FROM commande
+                WHERE date_creation_commande BETWEEN :from AND :to
+            )
         ";
-        $paramsTop = ['from' => $from, 'to' => $to];
+        $paramsTop = ['from' => $fromStr, 'to' => $toStr];
 
-        if (!empty($cat)) {
+        if ($cat !== null) {
             $sqlTop .= " AND p.categorie_produit = :cat ";
             $paramsTop['cat'] = $cat;
         }
@@ -182,19 +279,28 @@ class AdminBIService
             LIMIT 10
         ";
 
+        /** @var list<array{produit: string, categorie: string, quantite: numeric-string, ca: numeric-string, stock_actuel: numeric-string}> $topProduits */
         $topProduits = $conn->fetchAllAssociative($sqlTop, $paramsTop);
 
-        // Commandes par statut
+        // =========================
+        // Statuts
+        // =========================
+        /** @var list<array{label: string, value: numeric-string}> $statuts */
         $statuts = $conn->fetchAllAssociative("
             SELECT statut_commande AS label, COUNT(*) AS value
             FROM commande
-            WHERE DATE(date_creation_commande) BETWEEN :from AND :to
+            WHERE date_creation_commande BETWEEN :from AND :to
             GROUP BY statut_commande
             ORDER BY value DESC
-        ", ['from' => $from, 'to' => $to]);
+            LIMIT 20
+        ", ['from' => $fromStr, 'to' => $toStr]);
 
+        // =========================
         // Stock critique
+        // =========================
         $seuilStock = 10;
+
+        /** @var list<array{nom_produit: string, categorie_produit: string, quantite_produit: numeric-string, status_produit: string}> $stocksBas */
         $stocksBas = $conn->fetchAllAssociative("
             SELECT nom_produit, categorie_produit, quantite_produit, status_produit
             FROM produit
@@ -203,12 +309,24 @@ class AdminBIService
             LIMIT 10
         ", ['seuil' => $seuilStock]);
 
-        $nbProduits = (int) $conn->fetchOne("SELECT COUNT(*) FROM produit");
-        $nbRupture = (int) $conn->fetchOne("SELECT COUNT(*) FROM produit WHERE status_produit = 'Rupture'");
-        $tauxRupture = $nbProduits > 0 ? ($nbRupture / $nbProduits) * 100 : 0;
+        /** @var array<string, mixed>|false $stockRow */
+        $stockRow = $conn->fetchAssociative("
+            SELECT
+                COUNT(*) AS nb_produits,
+                SUM(CASE WHEN status_produit = :statut_rupture THEN 1 ELSE 0 END) AS nb_rupture
+            FROM produit
+        ", ['statut_rupture' => 'Rupture']);
 
+        $nbProduits  = (int) ($stockRow['nb_produits'] ?? 0);
+        $nbRupture   = (int) ($stockRow['nb_rupture']  ?? 0);
+        $tauxRupture = $nbProduits > 0 ? ($nbRupture / $nbProduits) * 100.0 : 0.0;
+
+        // =========================
         // Alertes
+        // =========================
+        /** @var list<array{type: string, title: string, message: string}> $alerts */
         $alerts = [];
+
         if ($variationCA !== null && $variationCA <= -15) {
             $alerts[] = [
                 'type' => 'danger',
@@ -247,25 +365,29 @@ class AdminBIService
             ];
         }
 
+        // =========================
         // Conseils
+        // =========================
+        /** @var list<string> $tips */
         $tips = [];
+
         if ($variationCA !== null && $variationCA <= -15) {
-            $tips[] = "Analyser les produits les plus performants et mettre en place des promotions ciblées";
+            $tips[] = "Analyser les produits les plus performants et lancer des promotions ciblées";
         }
         if ($tauxConversion < 70) {
-            $tips[] = "Améliorer le processus de validation pour augmenter le taux de conversion";
+            $tips[] = "Simplifier/accélérer le processus de validation pour augmenter la conversion";
         }
         if ($tauxRupture >= 10) {
-            $tips[] = "Planifier le réapprovisionnement prioritaire des produits en rupture";
+            $tips[] = "Prioriser le réapprovisionnement des produits en rupture";
         }
-        if (empty($tips)) {
+        if ($tips === []) {
             $tips[] = "Les indicateurs sont stables. Continuer le suivi régulier";
         }
 
         return [
             'period' => [
-                'from' => $from,
-                'to' => $to,
+                'from' => $fromDate->format('Y-m-d'),
+                'to' => $toDate->format('Y-m-d'),
                 'days' => $days,
                 'cat' => $cat,
                 'categories' => $categories,

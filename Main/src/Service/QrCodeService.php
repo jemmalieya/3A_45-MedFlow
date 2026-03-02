@@ -16,6 +16,9 @@ final class QrCodeService
         $this->publicDir = rtrim($projectDir, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . 'public';
     }
 
+    /**
+     * @return array{publicPath: string, absolutePath: string, dataUri: string}
+     */
     public function generateSvg(string $data, string $filenameWithoutExt, int $size = 320, int $margin = 10): array
     {
         $this->ensureQrDirExists();
@@ -23,7 +26,6 @@ final class QrCodeService
         $absolutePath = $this->publicDir . DIRECTORY_SEPARATOR . 'qrcodes' . DIRECTORY_SEPARATOR . $filenameWithoutExt . '.svg';
         $publicPath   = '/qrcodes/' . $filenameWithoutExt . '.svg';
 
-        // 👇 Utilise new Builder(...) au lieu de Builder::create()
         $builder = new Builder(
             writer: new SvgWriter(),
             data: $data,
@@ -42,6 +44,9 @@ final class QrCodeService
         ];
     }
 
+    /**
+     * @return array{publicPath: string, absolutePath: string, dataUri: string}
+     */
     public function generatePng(string $data, string $filenameWithoutExt, int $size = 320, int $margin = 10): array
     {
         $this->ensureQrDirExists();
@@ -49,7 +54,6 @@ final class QrCodeService
         $absolutePath = $this->publicDir . DIRECTORY_SEPARATOR . 'qrcodes' . DIRECTORY_SEPARATOR . $filenameWithoutExt . '.png';
         $publicPath   = '/qrcodes/' . $filenameWithoutExt . '.png';
 
-        // 👇 Utilise new Builder(...) au lieu de Builder::create()
         $builder = new Builder(
             writer: new PngWriter(),
             data: $data,

@@ -6,19 +6,20 @@
 namespace App\Service;
 
 use Doctrine\ORM\EntityManagerInterface;
-use Symfony\Contracts\HttpClient\HttpClientInterface;
+use League\Csv\Writer;
 use Symfony\Contracts\Cache\CacheInterface;
 use Symfony\Contracts\Cache\ItemInterface;
-use League\Csv\Writer;
+use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 class EpidemieDetectionService
 {
-    // ─── Seuils de détection ───────────────────────────────────
-    private const SEUIL_MODERE   = 1.25;   // ratio baseline => alerte jaune
-    private const SEUIL_FORT     = 1.60;   // ratio baseline => alerte rouge
-    private const CACHE_TTL      = 3600;   // 1h cache API
+    private const SEUIL_MODERE = 1.25;
+    private const SEUIL_FORT   = 1.60;
+    private const CACHE_TTL    = 3600;
 
-    // ─── Mots-clés par maladie (adaptés à ta pharmacie) ────────
+    /**
+     * @var array<string, array{keywords: list<string>, icon: string, color: string}>
+     */
     private const MALADIES = [
         'Grippe / Rhume' => [
             'keywords' => ['grippe', 'rhinite', 'fièvre', 'fiev', 'anti-gripp', 'nasal', 'sirop', 'décongest'],
@@ -66,37 +67,40 @@ class EpidemieDetectionService
     ) {}
 
     // ============================================================
-    //  API 1 : WHO Disease Outbreaks (données officielles OMS)
-    //  URL : https://www.who.int/api/news/diseaseoutbreaks
+    //  API 1 : WHO Disease Outbreaks
     // ============================================================
+
+    /**
+     * @return array{
+     *   ok: bool,
+     *   source: string,
+     *   outbreaks: array<int, array{titre:string, pays:string, date:string, url:string}>,
+     *   error?: string
+     * }
+     */
     public function getWhoOutbreaks(string $region = 'EMRO'): array
     {
-        return $this->cache->get('who_outbreaks_' . $region, function (ItemInterface $item) use ($region) {
-            $item->expiresAfter(self::CACHE_TTL * 6); // 6h pour l'OMS
-
+        return $this->cache->get('who_outbreaks_' . $region, function (ItemInterface $item) {
+            $item->expiresAfter(self::CACHE_TTL * 6);
             try {
-                $res  = $this->httpClient->request('GET',
-                    'https://www.who.int/api/news/diseaseoutbreaks',
-                    [
-                        'timeout' => 10,
-                        'query' => ['sf_culture' => 'fr'],
-                    ]
-                );
-
+                $res  = $this->httpClient->request('GET', 'https://www.who.int/api/news/diseaseoutbreaks', [
+                    'timeout' => 10,
+                    'query'   => ['sf_culture' => 'fr'],
+                ]);
                 $data = $res->toArray(false);
-                $outbreaks = array_slice($data['value'] ?? [], 0, 8);
-
+                /** @var array<int, array<string, mixed>> $raw */
+                $raw       = array_values((array) ($data['value'] ?? []));
+                $outbreaks = array_slice($raw, 0, 8);
                 return [
                     'ok'        => true,
                     'source'    => 'WHO Official API',
-                    'outbreaks' => array_map(static fn($o) => [
-                        'titre' => $o['Title']       ?? 'Inconnu',
-                        'pays'  => $o['CountryName'] ?? '—',
-                        'date'  => $o['ReportDate']  ?? '',
-                        'url'   => $o['Url']         ?? '#',
+                    'outbreaks' => array_map(static fn(array $o): array => [
+                        'titre' => (string) ($o['Title']       ?? 'Inconnu'),
+                        'pays'  => (string) ($o['CountryName'] ?? '—'),
+                        'date'  => (string) ($o['ReportDate']  ?? ''),
+                        'url'   => (string) ($o['Url']         ?? '#'),
                     ], $outbreaks),
                 ];
-
             } catch (\Throwable $e) {
                 return ['ok' => false, 'source' => 'WHO', 'error' => $e->getMessage(), 'outbreaks' => []];
             }
@@ -104,87 +108,61 @@ class EpidemieDetectionService
     }
 
     // ============================================================
-    //  API 2 : OpenWeatherMap + (optionnel) API Ninjas worldtime
-    //  - OpenWeather : météo actuelle + risque grippal
-    //  - Ninjas : worldtime (optionnel, affichage bonus)
+    //  API 2 : OpenWeatherMap
     // ============================================================
+
+    /**
+     * @return array{
+     *   ok: bool, source: string, error?: string, ville?: string,
+     *   temperature?: float|int|null, humidity?: int|null, description?: string,
+     *   icon?: string, risqueGrippe?: string, timeInfo?: array<string, mixed>|null
+     * }
+     */
     public function getInfluenzaData(string $country = 'Tunisia'): array
     {
         return $this->cache->get('influenza_' . md5($country), function (ItemInterface $item) use ($country) {
             $item->expiresAfter(self::CACHE_TTL * 12);
-
             try {
-                // ==============================
-                // API Ninjas (OPTIONNELLE)
-                // ==============================
                 $timeInfo = null;
-
                 if (!empty($this->apiNinjasKey)) {
-                    // city=... peut être premium chez Ninjas -> on utilise timezone gratuit
-                    $tz = ($country === 'Tunisia') ? 'Africa/Tunis' : 'UTC';
-
+                    $tz      = ($country === 'Tunisia') ? 'Africa/Tunis' : 'UTC';
                     $resTime = $this->httpClient->request('GET', 'https://api.api-ninjas.com/v1/worldtime', [
                         'timeout' => 8,
                         'headers' => ['X-Api-Key' => $this->apiNinjasKey],
                         'query'   => ['timezone' => $tz],
                     ]);
-
+                    /** @var array<string, mixed> $timeInfo */
                     $timeInfo = $resTime->toArray(false);
                 }
-
-                // ==============================
-                // OpenWeatherMap (OBLIGATOIRE pour météo)
-                // ==============================
                 if (empty($this->openWeatherApiKey)) {
-                    return [
-                        'ok'       => false,
-                        'source'   => 'OpenWeatherMap',
-                        'error'    => 'OPENWEATHER_API_KEY manquante',
-                        'timeInfo' => $timeInfo,
-                    ];
+                    return ['ok' => false, 'source' => 'OpenWeatherMap', 'error' => 'OPENWEATHER_API_KEY manquante', 'timeInfo' => $timeInfo];
                 }
-
-                $city = ($country === 'Tunisia') ? 'Tunis' : $country;
-
-                $meteoRes = $this->httpClient->request('GET',
-                    'https://api.openweathermap.org/data/2.5/weather',
-                    [
-                        'timeout' => 8,
-                        'query'   => [
-                            'q'     => $city,
-                            'appid' => $this->openWeatherApiKey,
-                            'units' => 'metric',
-                            'lang'  => 'fr',
-                        ],
-                    ]
-                );
-
-                $meteo = $meteoRes->toArray(false);
-
-                $temp        = $meteo['main']['temp'] ?? null;
-                $humidity    = $meteo['main']['humidity'] ?? null;
-                $description = $meteo['weather'][0]['description'] ?? 'Inconnu';
-                $icon        = $meteo['weather'][0]['icon'] ?? '';
-
-                // Calcul risque grippal selon météo
+                $city     = ($country === 'Tunisia') ? 'Tunis' : $country;
+                $meteoRes = $this->httpClient->request('GET', 'https://api.openweathermap.org/data/2.5/weather', [
+                    'timeout' => 8,
+                    'query'   => ['q' => $city, 'appid' => $this->openWeatherApiKey, 'units' => 'metric', 'lang' => 'fr'],
+                ]);
+                $meteo        = $meteoRes->toArray(false);
+                $temp         = $meteo['main']['temp'] ?? null;
+                $humidity     = $meteo['main']['humidity'] ?? null;
+                $description  = $meteo['weather'][0]['description'] ?? 'Inconnu';
+                $icon         = $meteo['weather'][0]['icon'] ?? '';
                 $risqueGrippe = 'Faible';
                 if ($temp !== null && $humidity !== null) {
-                    if ($temp < 10 && $humidity > 70) $risqueGrippe = 'Élevé';
-                    elseif ($temp < 15 || $humidity > 65) $risqueGrippe = 'Modéré';
+                    if ($temp < 10 && $humidity > 70)      { $risqueGrippe = 'Élevé'; }
+                    elseif ($temp < 15 || $humidity > 65)  { $risqueGrippe = 'Modéré'; }
                 }
-
                 return [
                     'ok'           => true,
                     'source'       => 'OpenWeatherMap',
-                    'ville'        => $meteo['name'] ?? $city,
-                    'temperature'  => $temp,
-                    'humidity'     => $humidity,
-                    'description'  => $description,
+                    'ville'        => (string) ($meteo['name'] ?? $city),
+                    'temperature'  => is_numeric($temp) ? (float) $temp : null,
+                    'humidity'     => is_numeric($humidity) ? (int) $humidity : null,
+                    'description'  => (string) $description,
                     'icon'         => $icon ? "https://openweathermap.org/img/wn/{$icon}@2x.png" : '',
                     'risqueGrippe' => $risqueGrippe,
                     'timeInfo'     => $timeInfo,
                 ];
-
             } catch (\Throwable $e) {
                 return ['ok' => false, 'source' => 'OpenWeatherMap', 'error' => $e->getMessage()];
             }
@@ -192,111 +170,113 @@ class EpidemieDetectionService
     }
 
     // ============================================================
-    //  API 3 : Open Meteo (gratuit, sans clé) — historique 30 jours
-    //  météo pour corrélation maladies saisonnières
+    //  API 3 : Open Meteo — historique 30 jours
     // ============================================================
+
+    /**
+     * @return array{
+     *   ok: bool, source: string, error?: string,
+     *   dates: string[], temperatures: array<int, float|int>,
+     *   precipitations: array<int, float|int>, humidites: array<int, float|int>
+     * }
+     */
     public function getMeteoHistorique(float $lat = 36.8, float $lon = 10.18): array
     {
-        $cacheKey = 'meteo_histo_' . round($lat, 1) . '_' . round($lon, 1);
-
-        return $this->cache->get($cacheKey, function (ItemInterface $item) use ($lat, $lon) {
+        return $this->cache->get('meteo_histo_' . round($lat, 1) . '_' . round($lon, 1), function (ItemInterface $item) use ($lat, $lon) {
             $item->expiresAfter(self::CACHE_TTL * 24);
-
             try {
-                $end   = (new \DateTime())->format('Y-m-d');
-                $start = (new \DateTime('-30 days'))->format('Y-m-d');
-
-                $res  = $this->httpClient->request('GET',
-                    'https://archive-api.open-meteo.com/v1/archive',
-                    [
-                        'timeout' => 12,
-                        'query'   => [
-                            'latitude'   => $lat,
-                            'longitude'  => $lon,
-                            'start_date' => $start,
-                            'end_date'   => $end,
-                            'daily'      => 'temperature_2m_mean,precipitation_sum,relative_humidity_2m_mean',
-                            'timezone'   => 'Africa/Tunis',
-                        ],
-                    ]
-                );
-
-                $data = $res->toArray(false);
-                $daily = $data['daily'] ?? [];
-
+                $res = $this->httpClient->request('GET', 'https://archive-api.open-meteo.com/v1/archive', [
+                    'timeout' => 12,
+                    'query'   => [
+                        'latitude' => $lat, 'longitude' => $lon,
+                        'start_date' => (new \DateTime('-30 days'))->format('Y-m-d'),
+                        'end_date'   => (new \DateTime())->format('Y-m-d'),
+                        'daily'    => 'temperature_2m_mean,precipitation_sum,relative_humidity_2m_mean',
+                        'timezone' => 'Africa/Tunis',
+                    ],
+                ]);
+                $data  = $res->toArray(false);
+                $daily = (isset($data['daily']) && is_array($data['daily'])) ? $data['daily'] : [];
                 return [
                     'ok'             => true,
                     'source'         => 'Open-Meteo (sans clé)',
-                    'dates'          => $daily['time'] ?? [],
-                    'temperatures'   => $daily['temperature_2m_mean'] ?? [],
-                    'precipitations' => $daily['precipitation_sum'] ?? [],
-                    'humidites'      => $daily['relative_humidity_2m_mean'] ?? [],
+                    'dates'          => isset($daily['time']) && is_array($daily['time']) ? array_map('strval', $daily['time']) : [],
+                    'temperatures'   => isset($daily['temperature_2m_mean']) && is_array($daily['temperature_2m_mean']) ? array_map('floatval', $daily['temperature_2m_mean']) : [],
+                    'precipitations' => isset($daily['precipitation_sum']) && is_array($daily['precipitation_sum']) ? array_map('floatval', $daily['precipitation_sum']) : [],
+                    'humidites'      => isset($daily['relative_humidity_2m_mean']) && is_array($daily['relative_humidity_2m_mean']) ? array_map('floatval', $daily['relative_humidity_2m_mean']) : [],
                 ];
-
             } catch (\Throwable $e) {
-                return [
-                    'ok' => false,
-                    'source' => 'Open-Meteo',
-                    'error' => $e->getMessage(),
-                    'dates' => [],
-                    'temperatures' => [],
-                    'precipitations' => [],
-                    'humidites' => [],
-                ];
+                return ['ok' => false, 'source' => 'Open-Meteo', 'error' => $e->getMessage(), 'dates' => [], 'temperatures' => [], 'precipitations' => [], 'humidites' => []];
             }
         });
     }
 
     // ============================================================
-    //  DÉTECTION LOCALE — signaux ventes de ta pharmacie
+    //  DÉTECTION LOCALE — signaux ventes
+    //
+    //  ✅ FIX "8 aggregation queries" :
+    //  Avant : 1 SELECT SUM par maladie × 2 périodes = 14-16 requêtes
+    //  Après : sumAllMaladiesBetween() fait UNE SEULE requête avec
+    //          CASE WHEN par maladie → 2 requêtes total (short + long)
     // ============================================================
+
+    /**
+     * @return array{
+     *   labels: string[], colors: string[],
+     *   series: array<int, array{name:string, data: int[]}>,
+     *   risk: string, score: int, maxScore: int,
+     *   meta: array<int, array{
+     *     label:string, icon:string, color:string, last:int, baseline:int,
+     *     ratio: float, level:string, variation: float|int
+     *   }>
+     * }
+     */
     public function localSignalsChart(int $daysShort = 7, int $daysLong = 30): array
     {
+        $now        = new \DateTimeImmutable();
+        $sinceShort = $now->modify("-{$daysShort} days");
+        $sinceLong  = $now->modify("-{$daysLong} days");
+
+        // ✅ 2 requêtes au lieu de 14+ : une par période, toutes maladies agrégées
+        $shortTotals = $this->sumAllMaladiesBetween($sinceShort, $now);
+        $longTotals  = $this->sumAllMaladiesBetween($sinceLong, $now);
+
         $labels  = [];
         $valeurs = [];
         $meta    = [];
 
         foreach (self::MALADIES as $maladie => $config) {
-            $short    = $this->sumSoldByKeywords($config['keywords'], $daysShort);
-            $long     = $this->sumSoldByKeywords($config['keywords'], $daysLong);
+            $short    = (float) ($shortTotals[$maladie] ?? 0);
+            $long     = (float) ($longTotals[$maladie]  ?? 0);
             $baseline = ($long / max(1, $daysLong)) * $daysShort;
             $ratio    = $baseline > 0 ? ($short / $baseline) : 0;
 
             $level = 'normal';
-            if ($ratio >= self::SEUIL_FORT) $level = 'fort';
-            elseif ($ratio >= self::SEUIL_MODERE) $level = 'modere';
+            if ($ratio >= self::SEUIL_FORT)   { $level = 'fort'; }
+            elseif ($ratio >= self::SEUIL_MODERE) { $level = 'modere'; }
 
             $labels[]  = $maladie;
             $valeurs[] = (int) round($short);
             $meta[]    = [
                 'label'     => $maladie,
-                'icon'      => $config['icon'],
-                'color'     => $config['color'],
+                'icon'      => (string) $config['icon'],
+                'color'     => (string) $config['color'],
                 'last'      => (int) round($short),
                 'baseline'  => (int) round($baseline),
-                'ratio'     => round($ratio, 2),
+                'ratio'     => (float) round($ratio, 2),
                 'level'     => $level,
-                'variation' => $baseline > 0 ? round(($ratio - 1) * 100) : 0,
+                'variation' => $baseline > 0 ? (float) round(($ratio - 1) * 100, 2) : 0,
             ];
         }
 
-        // Score de risque global
-        $score = array_sum(array_map(static fn($m) => match ($m['level']) {
-            'fort'   => 3,
-            'modere' => 1,
-            default  => 0,
-        }, $meta));
-
+        $score    = array_sum(array_map(static fn(array $m): int => match ($m['level']) { 'fort' => 3, 'modere' => 1, default => 0 }, $meta));
         $maxScore = count(self::MALADIES) * 3;
-        $risk = $score >= $maxScore * 0.6 ? 'Élevé'
-             : ($score >= $maxScore * 0.3 ? 'Modéré' : 'Faible');
+        $risk     = $score >= $maxScore * 0.6 ? 'Élevé' : ($score >= $maxScore * 0.3 ? 'Modéré' : 'Faible');
 
         return [
             'labels'   => $labels,
             'colors'   => array_column(array_values(self::MALADIES), 'color'),
-            'series'   => [
-                ['name' => "Ventes ({$daysShort}j)", 'data' => $valeurs],
-            ],
+            'series'   => [['name' => "Ventes ({$daysShort}j)", 'data' => $valeurs]],
             'risk'     => $risk,
             'score'    => $score,
             'maxScore' => $maxScore,
@@ -305,29 +285,44 @@ class EpidemieDetectionService
     }
 
     // ============================================================
-    //  TENDANCES 6 MOIS (pour le chart évolution)
+    //  TENDANCES 6 MOIS
+    //
+    //  ✅ FIX : 6 requêtes (une par mois) au lieu de 42 (7×6)
+    //  Chaque appel sumAllMaladiesBetween() calcule toutes les maladies
+    //  en une seule requête SQL avec CASE WHEN.
     // ============================================================
+
+    /**
+     * @return array{
+     *   categories: string[],
+     *   series: array<int, array{name:string, data:int[], color:string}>
+     * }
+     */
     public function getTendances6Mois(): array
     {
-        $series     = [];
-        $categories = [];
+        $categories     = [];
+        $periodes       = [];
+        $dataParPeriode = [];
 
         for ($i = 5; $i >= 0; $i--) {
-            $d = new \DateTime("first day of -$i month");
-            $categories[] = $d->format('M Y');
+            $debut        = \DateTimeImmutable::createFromMutable((new \DateTime("first day of -$i month"))->setTime(0, 0));
+            $fin          = \DateTimeImmutable::createFromMutable((new \DateTime("last day of -$i month"))->setTime(23, 59, 59));
+            $categories[] = $debut->format('M Y');
+            $periodes[]   = ['debut' => $debut, 'fin' => $fin];
+            // ✅ 1 requête SQL par mois, toutes maladies en même temps
+            $dataParPeriode[] = $this->sumAllMaladiesBetween($debut, $fin);
         }
 
+        $series = [];
         foreach (self::MALADIES as $maladie => $config) {
             $data = [];
-            for ($i = 5; $i >= 0; $i--) {
-                $debut = (new \DateTime("first day of -$i month"))->setTime(0, 0);
-                $fin   = (new \DateTime("last day of -$i month"))->setTime(23, 59, 59);
-                $data[] = (int) $this->sumSoldByKeywordsBetween($config['keywords'], $debut, $fin);
+            foreach ($dataParPeriode as $totaux) {
+                $data[] = (int) ($totaux[$maladie] ?? 0);
             }
             $series[] = [
-                'name'  => $config['icon'] . ' ' . $maladie,
+                'name'  => (string) $config['icon'] . ' ' . $maladie,
                 'data'  => $data,
-                'color' => $config['color'],
+                'color' => (string) $config['color'],
             ];
         }
 
@@ -335,112 +330,129 @@ class EpidemieDetectionService
     }
 
     // ============================================================
-    //  TOP PRODUITS par maladie détectée
+    //  TOP PRODUITS
     // ============================================================
+
+    /**
+     * @return array<int, array{
+     *   maladie: string, icon: string, color: string,
+     *   produits: array<int, array{nom:string, total: string|int|float}>
+     * }>
+     */
     public function getTopProduitsByMaladie(int $days = 30): array
     {
         $result = [];
-
         foreach (self::MALADIES as $maladie => $config) {
             $top = $this->getTopProduitsForKeywords($config['keywords'], $days, 3);
             if (!empty($top)) {
-                $result[] = [
-                    'maladie'  => $maladie,
-                    'icon'     => $config['icon'],
-                    'color'    => $config['color'],
-                    'produits' => $top,
-                ];
+                $result[] = ['maladie' => $maladie, 'icon' => (string) $config['icon'], 'color' => (string) $config['color'], 'produits' => $top];
             }
+        }
+        return $result;
+    }
+
+    // ============================================================
+    //  EXPORT CSV
+    // ============================================================
+
+    /**
+     * @param array<int, array{label:string, last:int, baseline:int, ratio: float, level:string, variation: float|int}> $meta
+     */
+    public function exportSignalsCsv(array $meta): string
+    {
+        $csv = Writer::createFromString();
+        $csv->insertOne(['Maladie', 'Ventes 7j', 'Baseline', 'Ratio', 'Niveau', 'Variation %']);
+        foreach ($meta as $m) {
+            $csv->insertOne([$m['label'], $m['last'], $m['baseline'], (string) $m['ratio'], $m['level'], (string) $m['variation'] . '%']);
+        }
+        return $csv->toString();
+    }
+
+    // ============================================================
+    //  HELPERS BDD
+    // ============================================================
+
+    /**
+     * ✅ UNE SEULE requête SQL pour TOUTES les maladies simultanément.
+     * Utilise CASE WHEN par maladie → élimine les N requêtes séparées.
+     *
+     * @return array<string, float>  clé = nom maladie, valeur = quantité totale
+     */
+    private function sumAllMaladiesBetween(\DateTimeInterface $debut, \DateTimeInterface $fin): array
+    {
+        $conn   = $this->em->getConnection();
+        $params = [
+            'debut' => $debut->format('Y-m-d H:i:s'),
+            'fin'   => $fin->format('Y-m-d H:i:s'),
+        ];
+
+        $selectParts = [];
+        foreach (self::MALADIES as $maladie => $config) {
+            $orParts = [];
+            foreach ($config['keywords'] as $i => $w) {
+                $paramKey         = 'k_' . md5($maladie) . '_' . $i;
+                $params[$paramKey] = '%' . mb_strtolower($w) . '%';
+                $orParts[]         = "(LOWER(p.nom_produit) LIKE :{$paramKey}"
+                                   . " OR LOWER(p.description_produit) LIKE :{$paramKey}"
+                                   . " OR LOWER(p.categorie_produit) LIKE :{$paramKey})";
+            }
+            $alias          = 'm_' . md5($maladie);
+            $selectParts[]  = "COALESCE(SUM(CASE WHEN (" . implode(' OR ', $orParts) . ")"
+                            . " THEN lc.quantite_commandee ELSE 0 END), 0) AS `{$alias}`";
+        }
+
+        $sql = "SELECT " . implode(",\n       ", $selectParts) . "
+            FROM commande_produit lc
+            INNER JOIN commande c ON c.id_commande = lc.commande_id
+            INNER JOIN produit p  ON p.id_produit  = lc.produit_id
+            WHERE c.paid_at IS NOT NULL
+              AND c.date_creation_commande >= :debut
+              AND c.date_creation_commande <= :fin";
+
+        /** @var array<string, mixed>|false $row */
+        $row = $conn->fetchAssociative($sql, $params);
+
+        $result = [];
+        foreach (self::MALADIES as $maladie => $config) {
+            $alias           = 'm_' . md5($maladie);
+            $result[$maladie] = (float) ($row[$alias] ?? 0);
         }
 
         return $result;
     }
 
-    // ============================================================
-    //  EXPORT CSV via league/csv
-    // ============================================================
-    public function exportSignalsCsv(array $meta): string
+    /**
+     * @param list<string> $keywords
+     * @return array<int, array{nom:string, total: string|int|float}>
+     */
+    private function getTopProduitsForKeywords(array $keywords, int $days, int $limit): array
     {
-        $csv = Writer::createFromString();
-        $csv->insertOne(['Maladie', 'Ventes 7j', 'Baseline', 'Ratio', 'Niveau', 'Variation %']);
+        $conn   = $this->em->getConnection();
+        $since  = (new \DateTimeImmutable())->modify("-{$days} days");
+        $or     = [];
+        $params = ['since' => $since->format('Y-m-d H:i:s')];
 
-        foreach ($meta as $m) {
-            $csv->insertOne([
-                $m['label'],
-                $m['last'],
-                $m['baseline'],
-                $m['ratio'],
-                $m['level'],
-                $m['variation'] . '%',
-            ]);
+        foreach ($keywords as $i => $w) {
+            $or[]            = "(LOWER(p.nom_produit) LIKE :k{$i} OR LOWER(p.categorie_produit) LIKE :k{$i})";
+            $params["k{$i}"] = '%' . mb_strtolower($w) . '%';
         }
 
-        return $csv->toString();
+        $sql = "
+            SELECT p.nom_produit AS nom, SUM(lc.quantite_commandee) AS total
+            FROM commande_produit lc
+            INNER JOIN commande c ON c.id_commande = lc.commande_id
+            INNER JOIN produit p  ON p.id_produit  = lc.produit_id
+            WHERE c.paid_at IS NOT NULL
+              AND c.date_creation_commande >= :since
+              AND (" . implode(' OR ', $or) . ")
+            GROUP BY p.id_produit, p.nom_produit
+            ORDER BY total DESC
+            LIMIT {$limit}
+        ";
+
+        /** @var array<int, array{nom:string, total: string|int|float}> $rows */
+        $rows = $conn->fetchAllAssociative($sql, $params);
+
+        return $rows;
     }
-
-    // ============================================================
-    //  HELPERS REQUÊTES BDD
-    // ============================================================
-    private function sumSoldByKeywords(array $keywords, int $days): float
-    {
-        $since = (new \DateTimeImmutable())->modify("-{$days} days");
-        return $this->sumSoldByKeywordsBetween($keywords, $since, new \DateTimeImmutable());
-    }
-
-    private function sumSoldByKeywordsBetween(array $keywords, \DateTimeInterface $debut, \DateTimeInterface $fin): float
-{
-    $or     = [];
-    $params = ['debut' => $debut, 'fin' => $fin];
-
-    foreach ($keywords as $i => $w) {
-        $or[]            = "(LOWER(p.nom_produit) LIKE :k{$i} OR LOWER(p.description_produit) LIKE :k{$i} OR LOWER(p.categorie_produit) LIKE :k{$i})";
-        $params["k{$i}"] = '%' . mb_strtolower($w) . '%';
-    }
-
-    $dql = "
-        SELECT COALESCE(SUM(lc.quantite_commandee), 0)
-        FROM App\Entity\LigneCommande lc
-        JOIN lc.commande c
-        JOIN lc.produit p
-        WHERE c.paid_at IS NOT NULL
-          AND c.date_creation_commande >= :debut
-          AND c.date_creation_commande <= :fin
-          AND (" . implode(' OR ', $or) . ")
-    ";
-
-    return (float) $this->em
-        ->createQuery($dql)
-        ->setParameters($params)
-        ->getSingleScalarResult();
-}
-
-private function getTopProduitsForKeywords(array $keywords, int $days, int $limit): array
-{
-    $since  = (new \DateTimeImmutable())->modify("-{$days} days");
-    $or     = [];
-    $params = ['since' => $since];
-
-    foreach ($keywords as $i => $w) {
-        $or[]            = "(LOWER(p.nom_produit) LIKE :k{$i} OR LOWER(p.categorie_produit) LIKE :k{$i})";
-        $params["k{$i}"] = '%' . mb_strtolower($w) . '%';
-    }
-
-    $dql = "
-        SELECT p.nom_produit AS nom, SUM(lc.quantite_commandee) AS total
-        FROM App\Entity\LigneCommande lc
-        JOIN lc.commande c
-        JOIN lc.produit p
-        WHERE c.paid_at IS NOT NULL
-          AND c.date_creation_commande >= :since
-          AND (" . implode(' OR ', $or) . ")
-        GROUP BY p.nom_produit
-        ORDER BY total DESC
-    ";
-
-    return $this->em
-        ->createQuery($dql)
-        ->setParameters($params)
-        ->setMaxResults($limit)
-        ->getResult();
-}
 }

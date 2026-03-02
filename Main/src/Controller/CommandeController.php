@@ -5,9 +5,13 @@ namespace App\Controller;
 use App\Entity\Commande;
 use App\Entity\LigneCommande;
 use App\Entity\Produit;
+use App\Entity\User;
 use App\Service\AdminBIService;
 use App\Service\TwilioSmsService;
+use App\Service\GeocodingService;
 use Doctrine\ORM\EntityManagerInterface;
+use Doctrine\ORM\QueryBuilder;
+use Doctrine\ORM\Tools\Pagination\Paginator;
 use Dompdf\Dompdf;
 use Dompdf\Options;
 use Stripe\Stripe;
@@ -20,45 +24,106 @@ use Symfony\Component\HttpFoundation\ResponseHeaderBag;
 use Symfony\Component\HttpFoundation\Session\SessionInterface;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
-use App\Service\GeocodingService;
 
 class CommandeController extends AbstractController
 {
+    /**
+     * Pagination Doctrine (compatible PHPStan)
+     *
+     * @return array{
+     *   items: list<Commande>,
+     *   total: int,
+     *   page: int,
+     *   limit: int
+     * }
+     */
+    private function paginateDoctrine(QueryBuilder $qb, int $page, int $limit): array
+    {
+        $page  = max(1, $page);
+        $limit = max(1, $limit);
+
+        // Clone pour compter (sans ORDER BY)
+        $countQb = clone $qb;
+        $countQb->resetDQLPart('orderBy');
+
+        // ⚠️ si ton QB contient des joins, count(DISTINCT c.idCommande) évite les doublons
+        $countQb->select('COUNT(DISTINCT c.id_commande)');
+        $total = (int) $countQb->getQuery()->getSingleScalarResult();
+
+        // Appliquer LIMIT/OFFSET au QB principal
+        $qb->setFirstResult(($page - 1) * $limit)
+           ->setMaxResults($limit);
+
+        // fetchJoinCollection = true parce que tu joins ligne_commandes + produit
+        $paginator = new Paginator($qb, fetchJoinCollection: true);
+
+        /** @var list<Commande> $items */
+        $items = iterator_to_array($paginator->getIterator());
+
+        return [
+            'items' => $items,
+            'total' => $total,
+            'page'  => $page,
+            'limit' => $limit,
+        ];
+    }
+
     /* =========================
-     * ADMIN - GESTION COMMANDES
+     * ADMIN - GESTION COMMANDES (PAGINATION)
      * ========================= */
 
     #[Route('/admin/commandes', name: 'admin_commandes_index', methods: ['GET'])]
-    public function adminIndex(EntityManagerInterface $em): Response
+    public function adminIndex(Request $request, EntityManagerInterface $em): Response
     {
-        // $this->denyAccessUnlessGranted('ROLE_ADMIN'); // ✅ optionnel
+        $qb = $em->getRepository(Commande::class)
+            ->createQueryBuilder('c')
+            ->leftJoin('c.ligne_commandes', 'l')
+            ->addSelect('l')
+            ->leftJoin('l.produit', 'p')
+            ->addSelect('p')
+            ->orderBy('c.date_creation_commande', 'DESC');
 
-        $commandes = $em->getRepository(Commande::class)->findBy([], ['date_creation_commande' => 'DESC']);
+        $page  = $request->query->getInt('page', 1);
+        $limit = 10;
+
+        $pagination = $this->paginateDoctrine($qb, $page, $limit);
 
         return $this->render('admin/commande.html.twig', [
-            'commandes' => $commandes
+            'commandes'  => $pagination['items'],
+            'pagination' => $pagination,
+            'commande'   => null,
         ]);
     }
 
     #[Route('/admin/commandes/{id}', name: 'admin_commande_show', methods: ['GET'])]
-    public function adminShow(Commande $commande, EntityManagerInterface $em): Response
+    public function adminShow(Request $request, Commande $commande, EntityManagerInterface $em): Response
     {
-        // $this->denyAccessUnlessGranted('ROLE_ADMIN'); // ✅ optionnel
+        $qb = $em->getRepository(Commande::class)
+            ->createQueryBuilder('c')
+            ->leftJoin('c.ligne_commandes', 'l')
+            ->addSelect('l')
+            ->leftJoin('l.produit', 'p')
+            ->addSelect('p')
+            ->orderBy('c.date_creation_commande', 'DESC');
 
-        // ✅ IMPORTANT : renvoyer aussi la liste des commandes (comme l’ancien)
-        $commandes = $em->getRepository(Commande::class)->findBy([], ['date_creation_commande' => 'DESC']);
+        $page  = $request->query->getInt('page', 1);
+        $limit = 10;
+
+        $pagination = $this->paginateDoctrine($qb, $page, $limit);
 
         return $this->render('admin/commande.html.twig', [
-            'commande'  => $commande,
-            'commandes' => $commandes,
+            'commande'   => $commande,
+            'commandes'  => $pagination['items'],
+            'pagination' => $pagination,
         ]);
     }
 
     #[Route('/admin/commandes/{id}/statut', name: 'admin_commande_statut', methods: ['POST'])]
-    public function adminChangerStatut(Request $request, Commande $commande, EntityManagerInterface $em): Response
-    {
-        // $this->denyAccessUnlessGranted('ROLE_ADMIN'); // ✅ optionnel
-
+    public function adminChangerStatut(
+        Request $request,
+        Commande $commande,
+        EntityManagerInterface $em
+    ): Response {
         $nouveauStatut = (string) $request->request->get('statut');
         $statutsAutorises = ['En attente', 'En cours', 'En livraison', 'Expédiée', 'Livrée', 'Annulée'];
 
@@ -71,20 +136,15 @@ class CommandeController extends AbstractController
         }
 
         return $this->redirectToRoute('admin_commande_show', [
-            'id' => $commande->getIdCommande()
+            'id' => $commande->getIdCommande(),
         ]);
     }
 
-    /**
-     * ✅ ADMIN/STAFF : démarrer livraison (En cours -> En livraison)
-     */
     #[Route('/admin/commandes/{id}/start-livraison', name: 'admin_commande_start_livraison', methods: ['POST'])]
     public function adminStartLivraison(Commande $commande, EntityManagerInterface $em): Response
     {
-        // $this->denyAccessUnlessGranted('ROLE_ADMIN'); // ✅ optionnel
-
         if ($commande->getStatutCommande() !== 'En cours') {
-            $this->addFlash('error', 'Impossible de démarrer : statut actuel = ' . $commande->getStatutCommande());
+            $this->addFlash('error', 'Impossible de démarrer : statut actuel = ' . (string) $commande->getStatutCommande());
             return $this->redirectToRoute('admin_commande_show', ['id' => $commande->getIdCommande()]);
         }
 
@@ -98,8 +158,6 @@ class CommandeController extends AbstractController
     #[Route('/admin/commandes/{id}/delete', name: 'admin_commande_delete', methods: ['POST'])]
     public function adminDelete(Commande $commande, EntityManagerInterface $em): Response
     {
-        // $this->denyAccessUnlessGranted('ROLE_ADMIN'); // ✅ optionnel
-
         foreach ($commande->getLigneCommandes() as $ligne) {
             $em->remove($ligne);
         }
@@ -110,14 +168,9 @@ class CommandeController extends AbstractController
         return $this->redirectToRoute('admin_commandes_index');
     }
 
-    /**
-     * ✅ ADMIN - Télécharger facture de n'importe quelle commande
-     */
     #[Route('/admin/commandes/{id}/facture', name: 'admin_commande_facture_pdf', methods: ['GET'])]
     public function adminFacturePdf(Commande $commande): Response
     {
-        // $this->denyAccessUnlessGranted('ROLE_ADMIN'); // ✅ optionnel
-
         $html = $this->renderView('commande/facture_pdf.html.twig', ['commande' => $commande]);
 
         $options = new Options();
@@ -153,6 +206,7 @@ class CommandeController extends AbstractController
     {
         $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
 
+        /** @var array<int|string, array{quantite?:int, prix?:float}> $panier */
         $panier = $session->get('panier', []);
         if (empty($panier)) {
             $this->addFlash('error', 'Votre panier est vide');
@@ -164,29 +218,36 @@ class CommandeController extends AbstractController
 
         foreach ($panier as $id => $item) {
             $produit = $em->getRepository(Produit::class)->find($id);
-            if (!$produit) continue;
+            if (!$produit) {
+                continue;
+            }
 
-            $qty = (int)($item['quantite'] ?? 0);
-            if ($qty <= 0) continue;
+            $qty = (int) ($item['quantite'] ?? 0);
+            if ($qty <= 0) {
+                continue;
+            }
 
             if ($produit->getStatusProduit() !== 'Disponible') {
                 $this->addFlash('error', $produit->getNomProduit() . ' n\'est plus disponible');
                 return $this->redirectToRoute('front_produit_index');
             }
 
-            if ((int)$produit->getQuantiteProduit() < $qty) {
+            if ($produit->getQuantiteProduit() < $qty) {
                 $this->addFlash('error', 'Stock insuffisant pour ' . $produit->getNomProduit());
                 return $this->redirectToRoute('front_produit_index');
             }
 
-            $produit->quantite_panier = $qty;
-            $produitsPanier[] = $produit;
-            $total += (float)$produit->getPrixProduit() * $qty;
+            $produitsPanier[] = [
+                'produit' => $produit,
+                'quantite' => $qty,
+            ];
+
+            $total += (float) $produit->getPrixProduit() * $qty;
         }
 
         return $this->render('commande/valider.html.twig', [
             'produits' => $produitsPanier,
-            'total' => $total
+            'total' => $total,
         ]);
     }
 
@@ -200,18 +261,14 @@ class CommandeController extends AbstractController
         $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
 
         $stripeSecret = $_ENV['STRIPE_SECRET_KEY'] ?? null;
-        if (!$stripeSecret) {
-            $this->addFlash('error', 'STRIPE_SECRET_KEY introuvable.');
-            return $this->redirectToRoute('commande_valider');
-        }
-    
-        // ✅ URL exacte du serveur qui tourne (avec le bon port)
-        $appUrl = $request->getSchemeAndHttpHost();   // ex: http://127.0.0.1:8000
-        if (!$stripeSecret) {
+        if (!is_string($stripeSecret) || $stripeSecret === '') {
             $this->addFlash('error', 'STRIPE_SECRET_KEY introuvable.');
             return $this->redirectToRoute('commande_valider');
         }
 
+        $appUrl = $request->getSchemeAndHttpHost();
+
+        /** @var array<int|string, array{quantite?:int, prix?:float}> $panier */
         $panier = $session->get('panier', []);
         if (empty($panier)) {
             $this->addFlash('error', 'Votre panier est vide');
@@ -220,26 +277,40 @@ class CommandeController extends AbstractController
 
         $stripeCurrency = 'eur';
         $dtToEurRate = 0.30;
+
+        /** @var list<array{price_data: array{currency: string, product_data: array{name: string}, unit_amount: int}, quantity: int}> $lineItems */
         $lineItems = [];
+
         $totalDt = 0.0;
 
         $commande = new Commande();
         $commande->setDateCreationCommande(new \DateTimeImmutable());
         $commande->setStatutCommande('En attente');
-        $commande->setUser($this->getUser());
+
+        $u = $this->getUser();
+        if (!$u instanceof User) {
+            $this->addFlash('error', 'Utilisateur invalide.');
+            return $this->redirectToRoute('commande_valider');
+        }
+        $commande->setUser($u);
 
         $em->persist($commande);
 
         foreach ($panier as $id => $item) {
             $produit = $em->getRepository(Produit::class)->find($id);
-            if (!$produit) continue;
+            if (!$produit) {
+                continue;
+            }
 
-            $qty = (int)($item['quantite'] ?? 0);
-            $prixDt = (float)$produit->getPrixProduit();
+            $qty = (int) ($item['quantite'] ?? 0);
+            $prixDt = (float) $produit->getPrixProduit();
 
-            if ($qty <= 0 || $prixDt <= 0) continue;
+            if ($qty <= 0 || $prixDt <= 0) {
+                continue;
+            }
 
-            if ($produit->getStatusProduit() !== 'Disponible' || (int)$produit->getQuantiteProduit() < $qty) {
+            $stock = $produit->getQuantiteProduit();
+            if ($produit->getStatusProduit() !== 'Disponible' || $stock < $qty) {
                 $this->addFlash('error', 'Problème stock/disponibilité : ' . $produit->getNomProduit());
                 return $this->redirectToRoute('front_produit_index');
             }
@@ -253,12 +324,19 @@ class CommandeController extends AbstractController
             $em->persist($ligne);
 
             $unitAmount = (int) round(($prixDt * $dtToEurRate) * 100);
-            if ($unitAmount < 1) $unitAmount = 1;
+            if ($unitAmount < 1) {
+                $unitAmount = 1;
+            }
+
+            $productName = trim($produit->getNomProduit());
+            if ($productName === '') {
+                $productName = 'Produit';
+            }
 
             $lineItems[] = [
                 'price_data' => [
                     'currency' => $stripeCurrency,
-                    'product_data' => ['name' => $produit->getNomProduit()],
+                    'product_data' => ['name' => $productName],
                     'unit_amount' => $unitAmount,
                 ],
                 'quantity' => $qty,
@@ -286,11 +364,17 @@ class CommandeController extends AbstractController
             'cancel_url'  => $appUrl . '/commande/paiement/cancel?commande_id=' . $commande->getIdCommande(),
         ]);
 
-        $commande->setStripeSessionId($checkout->id);
+        $commande->setStripeSessionId((string) $checkout->id);
         $commande->setPaidAt(null);
         $em->flush();
 
-        return $this->redirect($checkout->url);
+        $redirectUrl = $checkout->url;
+        if (!is_string($redirectUrl) || $redirectUrl === '') {
+            $this->addFlash('error', 'Erreur Stripe: URL de redirection manquante.');
+            return $this->redirectToRoute('commande_valider');
+        }
+
+        return $this->redirect($redirectUrl);
     }
 
     /* =========================
@@ -307,13 +391,13 @@ class CommandeController extends AbstractController
         $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
 
         $stripeSecret = $_ENV['STRIPE_SECRET_KEY'] ?? null;
-        if (!$stripeSecret) {
+        if (!is_string($stripeSecret) || $stripeSecret === '') {
             $this->addFlash('error', 'STRIPE_SECRET_KEY introuvable.');
             return $this->redirectToRoute('commande_valider');
         }
 
-        $sessionId = (string) $request->query->get('session_id');
-        if (!$sessionId) {
+        $sessionId = (string) $request->query->get('session_id', '');
+        if ($sessionId === '') {
             $this->addFlash('error', 'Session manquante.');
             return $this->redirectToRoute('commande_valider');
         }
@@ -326,7 +410,7 @@ class CommandeController extends AbstractController
             return $this->redirectToRoute('commande_valider');
         }
 
-        $commandeId = (int)($stripeSession->metadata->commande_id ?? 0);
+        $commandeId = (int) ($stripeSession->metadata->commande_id ?? 0);
         if ($commandeId <= 0) {
             $this->addFlash('error', 'Commande introuvable (metadata manquante).');
             return $this->redirectToRoute('front_produit_index');
@@ -350,15 +434,18 @@ class CommandeController extends AbstractController
 
         foreach ($commande->getLigneCommandes() as $ligne) {
             $produit = $ligne->getProduit();
-            $qty = (int)$ligne->getQuantite_commandee();
-            if (!$produit) continue;
+            $qty = (int) $ligne->getQuantite_commandee();
+            if (!$produit) {
+                continue;
+            }
 
-            if ($produit->getStatusProduit() !== 'Disponible' || (int)$produit->getQuantiteProduit() < $qty) {
+            $stock = $produit->getQuantiteProduit();
+            if ($produit->getStatusProduit() !== 'Disponible' || $stock < $qty) {
                 $this->addFlash('error', 'Stock devenu insuffisant pour ' . $produit->getNomProduit());
                 return $this->redirectToRoute('front_produit_index');
             }
 
-            $nouveauStock = (int)$produit->getQuantiteProduit() - $qty;
+            $nouveauStock = $stock - $qty;
             $produit->setQuantiteProduit($nouveauStock);
 
             if ($nouveauStock <= 0) {
@@ -371,23 +458,26 @@ class CommandeController extends AbstractController
         $commande->setPaidAt(new \DateTimeImmutable());
         $em->flush();
 
-        // SMS (optionnel)
         try {
             $to = $_ENV['TWILIO_TO'] ?? '+21623257464';
             $items = [];
             foreach ($commande->getLigneCommandes() as $ligne) {
                 $p = $ligne->getProduit();
-                if ($p) $items[] = $p->getNomProduit() . ' x' . (int)$ligne->getQuantite_commandee();
+                if ($p) {
+                    $items[] = $p->getNomProduit() . ' x' . (int) $ligne->getQuantite_commandee();
+                }
             }
 
             $message = "✅ Merci pour votre commande MedFlow !\n" .
                 "Commande #" . $commande->getIdCommande() . "\n" .
-                "Payé: " . number_format((float)$commande->getMontantTotal(), 2, ',', ' ') . " DT\n" .
+                "Payé: " . number_format((float) $commande->getMontantTotal(), 2, ',', ' ') . " DT\n" .
                 "Articles: " . implode(', ', $items) . "\n" .
-                "Statut: " . $commande->getStatutCommande();
+                "Statut: " . (string) $commande->getStatutCommande();
 
             // $sms->send($to, $message);
-        } catch (\Throwable $e) {}
+        } catch (\Throwable $e) {
+            // silence
+        }
 
         $session->remove('panier');
         $this->addFlash('success', 'Paiement réussi ✅ Votre commande est confirmée.');
@@ -399,12 +489,14 @@ class CommandeController extends AbstractController
     {
         $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
 
-        $commandeId = (int)$request->query->get('commande_id');
+        $commandeId = (int) $request->query->get('commande_id', 0);
         if ($commandeId > 0) {
             $commande = $em->getRepository(Commande::class)->find($commandeId);
 
             if ($commande && $commande->getUser() === $this->getUser() && $commande->getStatutCommande() === 'En attente') {
-                foreach ($commande->getLigneCommandes() as $ligne) $em->remove($ligne);
+                foreach ($commande->getLigneCommandes() as $ligne) {
+                    $em->remove($ligne);
+                }
                 $em->remove($commande);
                 $em->flush();
             }
@@ -415,7 +507,7 @@ class CommandeController extends AbstractController
     }
 
     /* =========================
-     * USER - DETAILS / MES COMMANDES
+     * USER - DETAILS / MES COMMANDES (PAGINATION)
      * ========================= */
 
     #[Route('/commande/details/{id}', name: 'commande_details', methods: ['GET'])]
@@ -432,16 +524,35 @@ class CommandeController extends AbstractController
     }
 
     #[Route('/commande/mes-commandes', name: 'mes_commandes', methods: ['GET'])]
-    public function mesCommandes(EntityManagerInterface $em): Response
+    public function mesCommandes(Request $request, EntityManagerInterface $em): Response
     {
         $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
 
-        $commandes = $em->getRepository(Commande::class)->findBy(
-            ['user' => $this->getUser()],
-            ['date_creation_commande' => 'DESC']
-        );
+        $u = $this->getUser();
+        if (!$u instanceof User) {
+            $this->addFlash('error', 'Utilisateur invalide.');
+            return $this->redirectToRoute('front_produit_index');
+        }
 
-        return $this->render('commande/mes_commandes.html.twig', ['commandes' => $commandes]);
+        $qb = $em->getRepository(Commande::class)
+            ->createQueryBuilder('c')
+            ->leftJoin('c.ligne_commandes', 'l')
+            ->addSelect('l')
+            ->leftJoin('l.produit', 'p')
+            ->addSelect('p')
+            ->andWhere('c.user = :u')
+            ->setParameter('u', $u)
+            ->orderBy('c.date_creation_commande', 'DESC');
+
+        $page  = $request->query->getInt('page', 1);
+        $limit = 8;
+
+        $pagination = $this->paginateDoctrine($qb, $page, $limit);
+
+        return $this->render('commande/mes_commandes.html.twig', [
+            'commandes'  => $pagination['items'],
+            'pagination' => $pagination,
+        ]);
     }
 
     #[Route('/commande/{id}/facture', name: 'commande_facture_pdf', methods: ['GET'])]
@@ -487,12 +598,15 @@ class CommandeController extends AbstractController
     #[Route('/admin/bi', name: 'admin_bi_dashboard')]
     public function dashboard(Request $request, AdminBIService $bi): Response
     {
-        // $this->denyAccessUnlessGranted('ROLE_ADMIN'); // ✅ optionnel
-
         $days = (int) $request->query->get('days', 30);
-        $from = $request->query->get('from');
-        $to   = $request->query->get('to');
-        $cat  = $request->query->get('cat');
+
+        $fromRaw = $request->query->get('from');
+        $toRaw   = $request->query->get('to');
+        $catRaw  = $request->query->get('cat');
+
+        $from = is_string($fromRaw) ? $fromRaw : null;
+        $to   = is_string($toRaw) ? $toRaw : null;
+        $cat  = is_string($catRaw) ? $catRaw : null;
 
         $data = $bi->buildDashboard($days, $from, $to, $cat);
 
@@ -515,47 +629,43 @@ class CommandeController extends AbstractController
      * SUIVI LIVRAISON (MAP)
      * ========================= */
 
-     #[Route('/commande/{id}/livraison-demo', name: 'commande_livraison_demo', methods: ['GET'])]
-     public function livraisonDemoPage(Commande $commande, GeocodingService $geo): Response
-     {
-         $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
-         if ($commande->getUser() !== $this->getUser()) {
-             $this->addFlash('error', 'Accès non autorisé.');
-             return $this->redirectToRoute('mes_commandes');
-         }
-     
-         // ✅ Départ pharmacie (fixe)
-         $startLat = 36.8065;
-         $startLng = 10.1815;
-     
-         // ✅ Adresse du user (depuis ta table user)
-         $user = $commande->getUser();
-         $adresseUser = trim((string) ($user?->getAdresseUser() ?? ''));
-     
-         if ($adresseUser === '') {
-             $adresseFull = 'Tunis, Tunisie';
-             $adresseAffiche = 'Adresse non renseignée (Tunis par défaut)';
-         } else {
-             $adresseFull = $adresseUser . ', Tunisie';
-             $adresseAffiche = $adresseUser;
-         }
-     
-         // ✅ Geocoding externe (Nominatim) mais robuste : peut retourner null
-         $geoResult = $geo->geocode($adresseFull);
-     
-         // ✅ fallback si pas trouvé
-         $destLat = $geoResult['lat'] ?? 36.8665;
-         $destLng = $geoResult['lng'] ?? 10.1647;
-     
-         return $this->render('commande/livraison_demo.html.twig', [
-             'commande' => $commande,
-             'adresse'  => $adresseAffiche,
-             'startLat' => $startLat,
-             'startLng' => $startLng,
-             'destLat'  => $destLat,
-             'destLng'  => $destLng,
-         ]);
-     }
+    #[Route('/commande/{id}/livraison-demo', name: 'commande_livraison_demo', methods: ['GET'])]
+    public function livraisonDemoPage(Commande $commande, GeocodingService $geo): Response
+    {
+        $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
+        if ($commande->getUser() !== $this->getUser()) {
+            $this->addFlash('error', 'Accès non autorisé.');
+            return $this->redirectToRoute('mes_commandes');
+        }
+
+        $startLat = 36.8065;
+        $startLng = 10.1815;
+
+        $user = $commande->getUser();
+        $adresseUser = trim((string) $user->getAdresseUser());
+
+        if ($adresseUser === '') {
+            $adresseFull = 'Tunis, Tunisie';
+            $adresseAffiche = 'Adresse non renseignée (Tunis par défaut)';
+        } else {
+            $adresseFull = $adresseUser . ', Tunisie';
+            $adresseAffiche = $adresseUser;
+        }
+
+        $geoResult = $geo->geocode($adresseFull);
+
+        $destLat = $geoResult['lat'] ?? 36.8665;
+        $destLng = $geoResult['lng'] ?? 10.1647;
+
+        return $this->render('commande/livraison_demo.html.twig', [
+            'commande' => $commande,
+            'adresse'  => $adresseAffiche,
+            'startLat' => $startLat,
+            'startLng' => $startLng,
+            'destLat'  => $destLat,
+            'destLng'  => $destLng,
+        ]);
+    }
 
     #[Route('/api/commande/{id}/statut', name: 'api_commande_statut', methods: ['GET'])]
     public function apiCommandeStatut(Commande $commande): JsonResponse
@@ -571,33 +681,39 @@ class CommandeController extends AbstractController
     {
         $startLat = 36.8065;
         $startLng = 10.1815;
-    
+
         $user = $commande->getUser();
-        $adresseUser = trim((string) ($user?->getAdresseUser() ?? ''));
-    
+        $adresseUser = trim((string) $user->getAdresseUser());
+
         $adresseFull = $adresseUser !== '' ? ($adresseUser . ', Tunisie') : 'Tunis, Tunisie';
-    
+
         $geoResult = $geo->geocode($adresseFull);
-    
+
         $destLat = $geoResult['lat'] ?? 36.8665;
         $destLng = $geoResult['lng'] ?? 10.1647;
-    
+
         $url = sprintf(
             'https://router.project-osrm.org/route/v1/driving/%f,%f;%f,%f?overview=full&geometries=geojson',
-            $startLng, $startLat,
-            $destLng, $destLat
+            $startLng,
+            $startLat,
+            $destLng,
+            $destLat
         );
-    
+
         try {
             $res = $http->request('GET', $url);
             $data = $res->toArray(false);
-    
+
             if (!isset($data['routes'][0]['geometry']['coordinates'])) {
                 return new JsonResponse(['success' => false, 'message' => 'Route introuvable'], 500);
             }
-    
-            $coords = array_map(fn($c) => [$c[1], $c[0]], $data['routes'][0]['geometry']['coordinates']);
-    
+
+            /** @var array<int, array{0: float, 1: float}> $rawCoords */
+            $rawCoords = $data['routes'][0]['geometry']['coordinates'];
+
+            /** @var list<array{0: float, 1: float}> $coords */
+            $coords = array_map(static fn(array $c): array => [$c[1], $c[0]], $rawCoords);
+
             return new JsonResponse([
                 'success' => true,
                 'coords' => $coords,
