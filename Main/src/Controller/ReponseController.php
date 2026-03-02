@@ -115,6 +115,10 @@ public function edit(
     $form->handleRequest($request);
 
     $reclamation = $reponse->getReclamation();
+if (!$reclamation) {
+    $this->addFlash('admin_danger', 'Réclamation introuvable.');
+    return $this->redirectToRoute('admin_reponses');
+}
 
     if ($form->isSubmitted() && $form->isValid()) {
 
@@ -145,15 +149,22 @@ public function delete(
     EntityManagerInterface $em,
     ReponseReclamationRepository $repo
 ): Response {
-    if (!$this->isCsrfTokenValid(
-        'delete_reponse_' . $reponse->getIdReponse(),
-        $request->request->get('_token')
-    )) {
+   $token = $request->request->get('_token');
+$token = is_string($token) ? $token : null;
+
+if (!$this->isCsrfTokenValid(
+    'delete_reponse_' . $reponse->getIdReponse(),
+    $token
+)) {
         $this->addFlash('admin_danger', 'Token CSRF invalide.');
         return $this->redirectToRoute('admin_reponses');
     }
 
     $reclamation = $reponse->getReclamation();
+    if (!$reclamation) {
+    $this->addFlash('admin_danger', 'Réclamation introuvable.');
+    return $this->redirectToRoute('admin_reponses');
+}
 
     // 🔥 suppression
     $em->remove($reponse);

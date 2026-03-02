@@ -57,7 +57,7 @@ final class SecurityController extends AbstractController
 
                 // Save token to DB
                 $user->setResetToken($resetToken);
-                $user->setResetTokenExpiresAt($resetTokenExpiresAt);
+                $user->updateResetTokenExpiresAt($resetTokenExpiresAt);
                 $em->flush();
 
                 // Send reset email via Brevo API (direct, like verification)
@@ -114,7 +114,7 @@ final class SecurityController extends AbstractController
 
             // ✅ Clear reset token
             $user->setResetToken(null);
-            $user->setResetTokenExpiresAt(null);
+            $user->updateResetTokenExpiresAt(null);
 
             $em->flush();
 
@@ -167,6 +167,8 @@ final class SecurityController extends AbstractController
             ",
         ];
 
+        $body = json_encode($payload, JSON_THROW_ON_ERROR);
+
         $ch = curl_init('https://api.brevo.com/v3/smtp/email');
         curl_setopt_array($ch, [
             CURLOPT_HTTPHEADER => [
@@ -175,7 +177,7 @@ final class SecurityController extends AbstractController
                 'Accept: application/json',
             ],
             CURLOPT_POST => true,
-            CURLOPT_POSTFIELDS => json_encode($payload),
+            CURLOPT_POSTFIELDS => $body,
             CURLOPT_RETURNTRANSFER => true,
         ]);
 

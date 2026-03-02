@@ -5,25 +5,23 @@ namespace App\Controller;
 use App\Entity\User;
 use App\Form\RegisterUserType;
 use App\Repository\UserRepository;
-use App\Service\UserService;  // Importation du service UserService
 use App\Service\GeminiService;
-use App\Service\TesseractOcrService;
 use App\Service\RecaptchaService;
+use App\Service\TesseractOcrService;
+use App\Service\UserService;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
-use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use Symfony\Component\Routing\Annotation\Route;
-use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
-
 
 class RegistrationController extends AbstractController
 {
-    private $userService;
+    public function __construct(private UserService $userService) {}
 
     private function normalizePhoneNumber(string $raw): string
     {
@@ -33,26 +31,25 @@ class RegistrationController extends AbstractController
         }
 
         if (str_starts_with($raw, '+')) {
-            return '+' . preg_replace('/\D+/', '', $raw);
+            $digits = preg_replace('/\D+/', '', $raw);
+            return is_string($digits) ? '+' . $digits : '';
         }
+
         if (str_starts_with($raw, '00')) {
             $digits = preg_replace('/\D+/', '', substr($raw, 2));
-            return $digits !== '' ? ('+' . $digits) : '';
+            if (!is_string($digits) || $digits === '') {
+                return '';
+            }
+            return '+' . $digits;
         }
 
-        return preg_replace('/\D+/', '', $raw);
+        $digits = preg_replace('/\D+/', '', $raw);
+        return is_string($digits) ? $digits : '';
     }
 
-    // Injection du service UserService dans le constructeur
-    public function __construct(UserService $userService)
-    {
-        $this->userService = $userService;
-    }
-
-#[Route('/register', name: 'app_register')]
+    #[Route('/register', name: 'app_register', methods: ['GET', 'POST'])]
     public function register(
         Request $request,
-        EntityManagerInterface $em,
         UserPasswordHasherInterface $hasher,
         LoggerInterface $logger,
         UserRepository $userRepo,
@@ -63,76 +60,88 @@ class RegistrationController extends AbstractController
         $session = $request->getSession();
         $session->start();
 
+        /** @var mixed $google */
         $google = $session->get('google_oauth');
-        $googlePicture = null;
-        $isGoogleSignup = ($google && !empty($google['email']));
+
+        // ✅ bool strict + PHPStan friendly
+        $isGoogleSignup = is_array($google)
+            && isset($google['email'])
+            && is_string($google['email'])
+            && trim($google['email']) !== '';
+
         $isSocialSignup = $isGoogleSignup;
 
+        /** @var mixed $oauthData */
         $oauthData = $isGoogleSignup ? $google : null;
+
         $signupProvider = $isGoogleSignup ? 'google' : null;
+        $googlePicture = null;
 
         if ($isSocialSignup && is_array($oauthData)) {
-            $user = $userRepo->findOneBy(['emailUser' => $oauthData['email']]) ?? new User();
+            $email = (string) ($oauthData['email'] ?? '');
+            $email = trim($email);
 
-            // Pré-remplir email/nom/prénom (sans casser ce que l’utilisateur a déjà)
-            if (method_exists($user, 'setEmailUser') && !$user->getEmailUser()) {
-                $user->setEmailUser($oauthData['email']);
+            $user = $email !== ''
+                ? ($userRepo->findOneBy(['emailUser' => $email]) ?? new User())
+                : new User();
+
+            // ✅ method_exists() supprimé (PHPStan disait "toujours true")
+            if (!$user->getEmailUser() && $email !== '') {
+                $user->setEmailUser($email);
             }
 
-            $givenName = trim((string) ($oauthData['given_name'] ?? ''));
+            $givenName  = trim((string) ($oauthData['given_name'] ?? ''));
             $familyName = trim((string) ($oauthData['family_name'] ?? ''));
-            $fullName = trim((string) ($oauthData['name'] ?? ''));
+            $fullName   = trim((string) ($oauthData['name'] ?? ''));
 
             if (!$user->getPrenom()) {
                 if ($givenName !== '') {
                     $user->setPrenom($givenName);
                 } elseif ($fullName !== '') {
-                    $parts = preg_split('/\s+/', $fullName);
+                    $parts = preg_split('/\s+/', $fullName) ?: [];
                     $prenom = $parts[0] ?? '';
                     if ($prenom !== '') {
                         $user->setPrenom($prenom);
                     }
                 }
             }
+
             if (!$user->getNom()) {
                 if ($familyName !== '') {
                     $user->setNom($familyName);
                 } elseif ($fullName !== '') {
-                    $parts = preg_split('/\s+/', $fullName);
-                    $nom = $parts[count($parts) - 1] ?? '';
+                    $parts = preg_split('/\s+/', $fullName) ?: [];
+                    $nom = $parts !== [] ? ($parts[count($parts) - 1] ?? '') : '';
                     if ($nom !== '') {
                         $user->setNom($nom);
                     }
                 }
             }
 
-            // Si tu as googleId dans ton entity (optionnel)
+            // googleId (optionnel)
             if ($signupProvider === 'google' && !empty($oauthData['googleId'])) {
-                $user->setGoogleId($oauthData['googleId']);
+                $user->setGoogleId((string) $oauthData['googleId']);
             }
 
             $googlePicture = $oauthData['picture'] ?? null;
-
-            // If we have a Google picture URL and nothing stored yet, keep URL as a fallback.
-            if ($googlePicture && !$user->getProfilePicture()) {
-                $user->setProfilePicture((string) $googlePicture);
+            if (is_string($googlePicture) && $googlePicture !== '' && !$user->getProfilePicture()) {
+                $user->setProfilePicture($googlePicture); // URL fallback
             }
 
-            // People API prefill (optional)
+            // Prefill téléphone / naissance si présents
             if ($signupProvider === 'google') {
-                $googlePhoneRaw = isset($oauthData['phone']) && is_string($oauthData['phone']) ? $oauthData['phone'] : '';
-                $googlePhone = $this->normalizePhoneNumber((string) $googlePhoneRaw);
+                $googlePhone = $this->normalizePhoneNumber((string) ($oauthData['phone'] ?? ''));
                 if ($googlePhone !== '' && !$user->getTelephoneUser()) {
                     $user->setTelephoneUser($googlePhone);
                 }
 
-                $googleBirth = isset($oauthData['birthdate']) && is_string($oauthData['birthdate']) ? trim($oauthData['birthdate']) : '';
+                $googleBirth = trim((string) ($oauthData['birthdate'] ?? ''));
                 if ($googleBirth !== '' && !$user->getDateNaissance()) {
                     try {
                         $dt = new \DateTimeImmutable($googleBirth);
                         $user->setDateNaissance($dt);
-                    } catch (\Throwable $e) {
-                        // Ignore; user will fill it manually.
+                    } catch (\Throwable) {
+                        // ignore
                     }
                 }
             }
@@ -144,25 +153,18 @@ class RegistrationController extends AbstractController
 
         $readonlyFields = [];
         $hideFields = [];
-        if ($isSocialSignup) {
-            if ($user->getEmailUser()) {
-                $readonlyFields[] = 'emailUser';
-            }
-            if ($user->getNom()) {
-                $readonlyFields[] = 'nom';
-            }
-            if ($user->getPrenom()) {
-                $readonlyFields[] = 'prenom';
-            }
 
-            // Keep password field visible (optional) for Google signup
+        if ($isSocialSignup) {
+            if ($user->getEmailUser()) $readonlyFields[] = 'emailUser';
+            if ($user->getNom())       $readonlyFields[] = 'nom';
+            if ($user->getPrenom())    $readonlyFields[] = 'prenom';
         }
 
-        if ($isGoogleSignup && (trim((string) ($user->getTelephoneUser() ?? '')) === '')) {
+        if ($isGoogleSignup && trim((string) ($user->getTelephoneUser() ?? '')) === '') {
             $this->addFlash('info', "Google n'a pas fourni de numéro de téléphone. Merci de le saisir.");
         }
 
-        // Do not show profile picture upload during registration
+        // ✅ On cache l'upload profil pendant registration si tu veux
         $hideFields[] = 'profilePictureFile';
 
         $form = $this->createForm(RegisterUserType::class, $user, [
@@ -172,6 +174,7 @@ class RegistrationController extends AbstractController
         ]);
         $form->handleRequest($request);
 
+        // ✅ reCAPTCHA seulement après submit
         if ($form->isSubmitted() && $form->isValid()) {
             if ($recaptcha->isEnabled() && !$recaptcha->verifyRequest($request)) {
                 $this->addFlash('error', 'Veuillez valider le reCAPTCHA.');
@@ -179,29 +182,25 @@ class RegistrationController extends AbstractController
             }
 
             $cin = $form->get('cin')->getData();
-        $telephoneUser = $form->get('telephoneUser')->getData();
-        $adresseUser = $form->get('adresseUser')->getData();
-        $dateNaissance = $form->get('dateNaissance')->getData();
-        $user->setDateNaissance($dateNaissance);
+            $dateNaissance = $form->get('dateNaissance')->getData();
+            $user->setDateNaissance($dateNaissance);
 
-
-            if (!$telephoneUser) {
+            $telephoneUser = $this->normalizePhoneNumber((string) $form->get('telephoneUser')->getData());
+            if ($telephoneUser === '') {
                 $this->addFlash('error', 'Le téléphone est requis.');
                 return $this->redirectToRoute('app_register');
             }
+            $user->setTelephoneUser($telephoneUser);
 
-
-            if (!$cin || !$telephoneUser || !$dateNaissance) {
-            $this->addFlash('error', 'Le CIN, le téléphone et la date de naissance sont requis.');
-            return $this->redirectToRoute('app_register');
-        }
-            // Mot de passe: requis pour inscription classique, auto-généré pour Google
-            $plainPassword = null;
-            if ($form->has('plainPassword')) {
-                $plainPassword = $form->get('plainPassword')->getData();
+            if (!$cin || !$dateNaissance) {
+                $this->addFlash('error', 'Le CIN, le téléphone et la date de naissance sont requis.');
+                return $this->redirectToRoute('app_register');
             }
 
-            if ($plainPassword) {
+            // Password
+            $plainPassword = $form->has('plainPassword') ? $form->get('plainPassword')->getData() : null;
+
+            if (is_string($plainPassword) && $plainPassword !== '') {
                 $user->setPassword($hasher->hashPassword($user, $plainPassword));
             } elseif ($isSocialSignup) {
                 $generated = bin2hex(random_bytes(24));
@@ -211,107 +210,103 @@ class RegistrationController extends AbstractController
                 return $this->redirectToRoute('app_register');
             }
 
-            // Photo de profil: priorité à l'upload, sinon récupération depuis Google
-            $uploadedProfilePicture = null;
-            if ($form->has('profilePictureFile')) {
-                $uploadedProfilePicture = $form->get('profilePictureFile')->getData();
-            }
+            // Photo profil upload (si field existe dans le form)
+            $uploadedProfilePicture = $form->has('profilePictureFile') ? $form->get('profilePictureFile')->getData() : null;
+
             if ($uploadedProfilePicture) {
                 try {
                     $ext = $uploadedProfilePicture->guessExtension() ?: 'jpg';
                     $newFilename = uniqid('pp_', true) . '.' . $ext;
-                    $dir = $this->getParameter('profile_pictures_directory');
+                    $dirParam = $this->getParameter('profile_pictures_directory');
+                    if (!is_string($dirParam)) {
+                        throw new \RuntimeException('profile_pictures_directory doit être une chaîne.');
+                    }
+                    $dir = $dirParam;
+
                     if (!is_dir($dir)) {
                         @mkdir($dir, 0777, true);
                     }
+
                     $uploadedProfilePicture->move($dir, $newFilename);
                     $user->setProfilePicture($newFilename);
                 } catch (\Throwable $e) {
                     $logger->warning('Profile picture upload failed', ['error' => $e->getMessage()]);
                 }
-            } elseif ($googlePicture) {
+            } elseif (is_string($googlePicture) && $googlePicture !== '') {
+                // téléchargement optionnel de la photo Google en local
                 try {
                     $currentPic = (string) ($user->getProfilePicture() ?? '');
                     $shouldAttemptDownload = ($currentPic === '' || str_starts_with($currentPic, 'http://') || str_starts_with($currentPic, 'https://'));
-                    if (!$shouldAttemptDownload) {
-                        // Already a local filename
-                        $shouldAttemptDownload = false;
-                    }
 
-                    if (!$shouldAttemptDownload) {
-                        // Nothing to do
-                    } else {
-                    $resp = $httpClient->request('GET', (string) $googlePicture, [
-                        'max_redirects' => 10,
-                        'headers' => [
-                            'Accept' => 'image/*',
-                            'User-Agent' => 'Mozilla/5.0 (MedFlow; Symfony HttpClient)',
-                        ],
-                    ]);
+                    if ($shouldAttemptDownload) {
+                        $resp = $httpClient->request('GET', $googlePicture, [
+                            'max_redirects' => 10,
+                            'headers' => [
+                                'Accept' => 'image/*',
+                                'User-Agent' => 'Mozilla/5.0 (MedFlow; Symfony HttpClient)',
+                            ],
+                        ]);
 
-                    if ($resp->getStatusCode() >= 200 && $resp->getStatusCode() < 300) {
-                        $headers = $resp->getHeaders(false);
-                        $contentType = $headers['content-type'][0] ?? '';
-                        if (is_string($contentType)) {
+                        $code = $resp->getStatusCode();
+                        if ($code >= 200 && $code < 300) {
+                            $headers = $resp->getHeaders(false);
+                            $contentType = (string) ($headers['content-type'][0] ?? '');
                             $contentType = trim(explode(';', $contentType, 2)[0]);
-                        }
-                        if (is_string($contentType) && str_starts_with($contentType, 'image/')) {
-                            $ext = match ($contentType) {
-                                'image/png' => 'png',
-                                'image/webp' => 'webp',
-                                'image/gif' => 'gif',
-                                default => 'jpg',
-                            };
 
-                            $dir = $this->getParameter('profile_pictures_directory');
-                            if (!is_dir($dir)) {
-                                @mkdir($dir, 0777, true);
-                            }
-                            if (is_dir($dir)) {
-                                $newFilename = uniqid('pp_', true) . '.' . $ext;
-                                file_put_contents(rtrim($dir, '/\\') . DIRECTORY_SEPARATOR . $newFilename, $resp->getContent(false));
-                                $user->setProfilePicture($newFilename);
+                            if ($contentType !== '' && str_starts_with($contentType, 'image/')) {
+                                $ext = match ($contentType) {
+                                    'image/png' => 'png',
+                                    'image/webp' => 'webp',
+                                    'image/gif' => 'gif',
+                                    default => 'jpg',
+                                };
+
+                                $dirParam = $this->getParameter('profile_pictures_directory');
+                                if (!is_string($dirParam)) {
+                                    throw new \RuntimeException('profile_pictures_directory doit être une chaîne.');
+                                }
+                                $dir = $dirParam;
+                                if (!is_dir($dir)) {
+                                    @mkdir($dir, 0777, true);
+                                }
+
+                                if (is_dir($dir)) {
+                                    $newFilename = uniqid('pp_', true) . '.' . $ext;
+                                    file_put_contents(rtrim($dir, '/\\') . DIRECTORY_SEPARATOR . $newFilename, $resp->getContent(false));
+                                    $user->setProfilePicture($newFilename);
+                                }
                             }
                         }
-                    }
                     }
                 } catch (\Throwable $e) {
                     $logger->warning('Google profile picture download failed', ['error' => $e->getMessage()]);
                 }
             }
 
-            // Définir rôle et token si nécessaire
+            // Rôle / vérif
             if ($isNew) {
                 $user->setRoleSysteme('PATIENT');
                 $user->setIsVerified(false);
             }
 
-            // Social signup: trust provider identity and skip email verification
             if ($isSocialSignup) {
                 $user->setIsVerified(true);
                 $user->setVerificationToken(null);
-                $user->setTokenExpiresAt(null);
+                $user->updateTokenExpiresAt(null);
             } else {
-                // Verification token for classic signup (24h)
-                $user->setTokenExpiresAt((new \DateTime())->modify('+24 hours'));
-                if ($isNew || $user->IsVerified() === false) {
+                // token email (24h)
+                if ($isNew || $user->isVerified() === false) {
                     $token = bin2hex(random_bytes(32));
                     $user->setVerificationToken($token);
-                    $user->setTokenExpiresAt((new \DateTime())->modify('+24 hours'));
+                    $user->updateTokenExpiresAt((new \DateTime())->modify('+24 hours'));
                 }
             }
 
-            // Utiliser UserService pour créer l'utilisateur
             $this->userService->saveUser($user);
 
             if (!$isSocialSignup) {
-                // Envoi d'email de vérification via Brevo
                 try {
-                    $brevoResponse = $this->sendVerificationEmail($user);
-                    $logger->info('Brevo email sent', [
-                        'user' => $user->getEmailUser(),
-                        'response' => $brevoResponse,
-                    ]);
+                    $this->sendVerificationEmail($user);
                     $this->addFlash('success', 'Compte créé ! Vérifiez votre email pour activer votre compte.');
                 } catch (\Throwable $e) {
                     $logger->error('Brevo email failed', [
@@ -325,9 +320,10 @@ class RegistrationController extends AbstractController
                 return $this->redirectToRoute('app_login');
             }
 
-            // Social: auto-login and go to home (or success handler)
+            // Social: auto login
             $session->remove('google_oauth');
             $loginResponse = $security->login($user, 'form_login', 'main');
+
             return $loginResponse ?? $this->redirectToRoute('app_home');
         }
 
@@ -362,7 +358,7 @@ class RegistrationController extends AbstractController
                 return $this->redirectToRoute('app_register_staff');
             }
 
-            // Prevent duplicates
+            // duplicates
             if ($user->getEmailUser() && $userRepo->findOneBy(['emailUser' => $user->getEmailUser()])) {
                 $this->addFlash('error', "Cet email est déjà utilisé.");
                 return $this->redirectToRoute('app_register_staff');
@@ -372,29 +368,26 @@ class RegistrationController extends AbstractController
                 return $this->redirectToRoute('app_register_staff');
             }
 
-            // Password
             $plainPassword = $form->get('plainPassword')->getData();
-            if (!$plainPassword) {
+            if (!is_string($plainPassword) || trim($plainPassword) === '') {
                 $this->addFlash('error', 'Le mot de passe est requis.');
                 return $this->redirectToRoute('app_register_staff');
             }
             $user->setPassword($hasher->hashPassword($user, $plainPassword));
 
-            // Staff request fields (same names/logic as the modal)
-            $type = strtoupper((string) $request->request->get('type_staff', ''));
+            // staff fields
+            $type = strtoupper(trim((string) $request->request->get('type_staff', '')));
             $message = trim((string) $request->request->get('message', ''));
             $docSpecialite = trim((string) $request->request->get('doc_specialite', ''));
             $docExperience = (int) $request->request->get('doc_experience', 0);
             $docEtablissement = trim((string) $request->request->get('doc_etablissement', ''));
             $docNumero = trim((string) $request->request->get('doc_numero', ''));
 
-            if ($type === '') {
-                // Infer type from speciality as fallback
-                if ($docSpecialite !== '') {
-                    $s = mb_strtolower($docSpecialite);
-                    $type = str_contains($s, 'pharm') ? 'PHARMACIEN' : 'MEDECIN';
-                }
+            if ($type === '' && $docSpecialite !== '') {
+                $s = mb_strtolower($docSpecialite);
+                $type = str_contains($s, 'pharm') ? 'PHARMACIEN' : 'MEDECIN';
             }
+
             if ($type === '') {
                 $this->addFlash('error', 'Veuillez choisir une spécialité Staff.');
                 return $this->redirectToRoute('app_register_staff');
@@ -404,9 +397,14 @@ class RegistrationController extends AbstractController
                 return $this->redirectToRoute('app_register_staff');
             }
 
-            // Upload documents (same constraints as modal)
+            // Storage
             $docs = [];
-            $baseDir = $this->getParameter('kernel.project_dir') . '/var/staff_requests';
+            $projectDir = $this->getParameter('kernel.project_dir');
+            if (!is_string($projectDir)) {
+                $this->addFlash('error', 'Configuration kernel.project_dir invalide.');
+                return $this->redirectToRoute('app_register_staff');
+            }
+            $baseDir = $projectDir . '/var/staff_requests';
             if (!is_dir($baseDir)) {
                 @mkdir($baseDir, 0775, true);
             }
@@ -417,10 +415,11 @@ class RegistrationController extends AbstractController
 
             $allowed = ['application/pdf', 'image/jpeg', 'image/png'];
             $max = 5 * 1024 * 1024;
+
             $requiredFiles = [
-                'id_doc' => 'Carte d\'identité',
+                'id_doc' => "Carte d'identité",
                 'diploma' => 'Diplôme médical',
-                'attestation' => 'Attestation d\'ordre professionnel',
+                'attestation' => "Attestation d'ordre professionnel",
                 'pro_photo' => 'Photo professionnelle',
             ];
 
@@ -428,23 +427,27 @@ class RegistrationController extends AbstractController
             foreach ($requiredFiles as $field => $label) {
                 /** @var \Symfony\Component\HttpFoundation\File\UploadedFile|null $file */
                 $file = $request->files->get($field);
+
                 if (!$file) {
-                    $this->addFlash('error', $label.' manquant.');
-                    return $this->redirectToRoute('app_register_staff');
-                }
-                $size = $file->getSize();
-                $mime = $file->getMimeType();
-                $fieldAllowed = $field === 'pro_photo' ? ['image/jpeg', 'image/png'] : $allowed;
-                if ($size > $max) {
-                    $this->addFlash('error', $label.' trop volumineux (max 5MB).');
-                    return $this->redirectToRoute('app_register_staff');
-                }
-                if (!in_array($mime, $fieldAllowed, true)) {
-                    $this->addFlash('error', $label.' : type non autorisé.');
+                    $this->addFlash('error', $label . ' manquant.');
                     return $this->redirectToRoute('app_register_staff');
                 }
 
-                $safeName = uniqid($field . '_') . '.' . ($file->guessExtension() ?: 'bin');
+                $size = (int) $file->getSize();
+                $mime = (string) $file->getMimeType();
+
+                $fieldAllowed = $field === 'pro_photo' ? ['image/jpeg', 'image/png'] : $allowed;
+
+                if ($size > $max) {
+                    $this->addFlash('error', $label . ' trop volumineux (max 5MB).');
+                    return $this->redirectToRoute('app_register_staff');
+                }
+                if (!in_array($mime, $fieldAllowed, true)) {
+                    $this->addFlash('error', $label . ' : type non autorisé.');
+                    return $this->redirectToRoute('app_register_staff');
+                }
+
+                $safeName = uniqid($field . '_', true) . '.' . ($file->guessExtension() ?: 'bin');
                 try {
                     $file->move($baseDir, $safeName);
                 } catch (\Throwable) {
@@ -453,16 +456,25 @@ class RegistrationController extends AbstractController
                 }
 
                 $storedRel = 'staff_requests/' . $safeName;
-                $fullPath = $this->getParameter('kernel.project_dir') . '/var/' . $storedRel;
+                $projectDir2 = $this->getParameter('kernel.project_dir');
+                if (!is_string($projectDir2)) {
+                    $this->addFlash('error', 'Configuration kernel.project_dir invalide.');
+                    return $this->redirectToRoute('app_register_staff');
+                }
+                $fullPath = $projectDir2 . '/var/' . $storedRel;
 
                 $ocrText = null;
-                if ($mime && str_starts_with($mime, 'image/')) {
-                    $res = $ocr->extractText($fullPath);
-                    $ocrText = is_string($res['text'] ?? null) ? trim((string) $res['text']) : null;
-                    if (is_string($ocrText) && $ocrText !== '') {
-                        $ocrCombined[] = $label . "\n" . $ocrText;
-                    }
-                }
+               $ocrText = null;
+
+// OCR seulement sur images (après validation du mime)
+if (in_array($mime, ['image/jpeg', 'image/png'], true)) {
+    $res = $ocr->extractText($fullPath);
+    $ocrText = is_string($res['text'] ?? null) ? trim((string) $res['text']) : null;
+
+    if ($ocrText !== null && $ocrText !== '') {
+        $ocrCombined[] = $label . "\n" . $ocrText;
+    }
+}
 
                 $docs[] = [
                     'original' => $file->getClientOriginalName(),
@@ -475,34 +487,43 @@ class RegistrationController extends AbstractController
             }
 
             /** @var \Symfony\Component\HttpFoundation\File\UploadedFile[] $files */
-            $files = $request->files->all('proofs');
-            foreach ($files as $file) {
-                if (!$file) { continue; }
-                $size = $file->getSize();
-                $mime = $file->getMimeType();
-                if ($size > $max) {
-                    $this->addFlash('error', 'Un document est trop volumineux (max 5MB).');
-                    return $this->redirectToRoute('app_register_staff');
-                }
-                if (!in_array($mime, $allowed, true)) {
-                    $this->addFlash('error', 'Un document a un type non autorisé (PDF/JPG/PNG).');
-                    return $this->redirectToRoute('app_register_staff');
-                }
-                $safeName = uniqid('doc_') . '.' . ($file->guessExtension() ?: 'bin');
-                try {
-                    $file->move($baseDir, $safeName);
-                } catch (\Throwable) {
-                    $this->addFlash('error', "Erreur lors du stockage d'un document optionnel.");
-                    return $this->redirectToRoute('app_register_staff');
-                }
-                $docs[] = [
-                    'original' => $file->getClientOriginalName(),
-                    'stored' => 'staff_requests/' . $safeName,
-                    'mime' => $mime,
-                    'size' => $size,
-                    'kind' => 'optional',
-                ];
-            }
+           $files = $request->files->all('proofs');
+
+/** @var array<int, \Symfony\Component\HttpFoundation\File\UploadedFile|null> $files */
+foreach ($files as $file) {
+    if ($file === null) {
+        continue;
+    }
+
+    $size = $file->getSize();
+    $mime = $file->getMimeType();
+
+    if ($size > $max) {
+        $this->addFlash('error', 'Un document est trop volumineux (max 5MB).');
+        return $this->redirectToRoute('app_register_staff');
+    }
+    if ($mime === null || !in_array($mime, $allowed, true)) {
+        $this->addFlash('error', 'Un document a un type non autorisé (PDF/JPG/PNG).');
+        return $this->redirectToRoute('app_register_staff');
+    }
+
+    $safeName = uniqid('doc_') . '.' . ($file->guessExtension() ?: 'bin');
+
+    try {
+        $file->move($baseDir, $safeName);
+    } catch (\Throwable) {
+        $this->addFlash('error', "Erreur lors du stockage d'un document optionnel.");
+        return $this->redirectToRoute('app_register_staff');
+    }
+
+    $docs[] = [
+        'original' => $file->getClientOriginalName(),
+        'stored' => 'staff_requests/' . $safeName,
+        'mime' => $mime,
+        'size' => $size,
+        'kind' => 'optional',
+    ];
+}
 
             $meta = [
                 'specialite' => $docSpecialite,
@@ -514,18 +535,18 @@ class RegistrationController extends AbstractController
             ];
 
             $aiSuggestion = null;
-            if (count($ocrCombined) > 0) {
-                $prompt = "Tu es un assistant pour un administrateur MedFlow. "
-                    ."Objectif: aider à décider d'approuver/refuser une demande de création de compte Staff Medical. "
+            if ($ocrCombined !== []) {
+                $prompt = "Tu es un assistant pour un administrateur MedFlow.\n"
+                    ."Objectif: aider à décider d'approuver/refuser une demande de création de compte Staff.\n"
                     ."Réponds en français, très court, format:\n"
-                    ."- Décision: APPROUVER/REFUSER\n- Motif: ...\n- Vérifications: ...\n";
-                $prompt .= "\nInformations demandeur:\n".
-                    "Spécialité: {$docSpecialite}\n".
-                    "Type staff demandé: {$type}\n".
-                    "Établissement: {$docEtablissement}\n".
-                    "N° autorisation: {$docNumero}\n".
-                    "Message: {$message}\n";
-                $prompt .= "\nOCR (documents):\n" . implode("\n\n---\n\n", $ocrCombined);
+                    ."- Décision: APPROUVER/REFUSER\n- Motif: ...\n- Vérifications: ...\n\n"
+                    ."Informations demandeur:\n"
+                    ."Spécialité: {$docSpecialite}\n"
+                    ."Type staff demandé: {$type}\n"
+                    ."Établissement: {$docEtablissement}\n"
+                    ."N° autorisation: {$docNumero}\n"
+                    ."Message: {$message}\n\n"
+                    ."OCR:\n" . implode("\n\n---\n\n", $ocrCombined);
 
                 try {
                     $aiSuggestion = trim($gemini->generate($prompt));
@@ -537,7 +558,6 @@ class RegistrationController extends AbstractController
                 }
             }
 
-            // Create as PATIENT but blocked; admin will promote to STAFF on approval
             $user->setRoleSysteme('PATIENT');
             $user->setTypeStaff(null);
             $user->setIsVerified(false);
@@ -546,20 +566,19 @@ class RegistrationController extends AbstractController
             $user->setStaffRequestStatus('PENDING');
             $user->setStaffRequestType($type);
             $user->setStaffRequestMessage($message ?: null);
-            $user->setStaffRequestedAt(new \DateTime());
+            $user->markStaffRequestedAt();
             $user->setStaffDocuments([
                 'meta' => $meta,
                 'files' => $docs,
                 'ocrEnabled' => true,
                 'aiSuggestion' => $aiSuggestion,
             ]);
-            $user->setStaffReviewedAt(null);
+            $user->clearStaffReviewedAt();
             $user->setStaffReviewedBy(null);
 
-            // Email verification token (same as patient)
-            $user->setTokenExpiresAt((new \DateTime())->modify('+24 hours'));
             $token = bin2hex(random_bytes(32));
             $user->setVerificationToken($token);
+            $user->updateTokenExpiresAt((new \DateTime())->modify('+24 hours'));
 
             $this->userService->saveUser($user);
 
@@ -581,7 +600,9 @@ class RegistrationController extends AbstractController
         ]);
     }
 
-
+    /**
+     * @return array<string, mixed>
+     */
     private function sendVerificationEmail(User $user): array
     {
         $apiKey = $_ENV['BREVO_API_KEY'] ?? null;
@@ -590,20 +611,17 @@ class RegistrationController extends AbstractController
         $senderName  = $_ENV['BREVO_SENDER_NAME'] ?? 'MedFlow';
 
         if (!$apiKey || !$senderEmail) {
-            throw new \Exception("Config Brevo manquante: BREVO_API_KEY ou BREVO_SENDER_EMAIL.");
+            throw new \RuntimeException("Config Brevo manquante: BREVO_API_KEY ou BREVO_SENDER_EMAIL.");
         }
 
         $verifyLink = rtrim($appUrl, '/') . '/verify-email?token=' . urlencode((string) $user->getVerificationToken());
 
         $payload = [
-            'sender' => [
-                'name' => $senderName,
-                'email' => $senderEmail,
-            ],
+            'sender' => ['name' => $senderName, 'email' => $senderEmail],
             'to' => [[
                 'email' => $user->getEmailUser(),
-                'name' => trim(($user->getPrenom() ?? '') . ' ' . ($user->getNom() ?? ''))],
-            ],
+                'name' => trim((string) ($user->getPrenom() ?? '') . ' ' . (string) ($user->getNom() ?? '')),
+            ]],
             'subject' => 'Activez votre compte MedFlow',
             'htmlContent' => "
                 <div style='font-family:Arial,sans-serif'>
@@ -619,6 +637,8 @@ class RegistrationController extends AbstractController
             ",
         ];
 
+        $body = json_encode($payload, JSON_THROW_ON_ERROR);
+
         $ch = curl_init('https://api.brevo.com/v3/smtp/email');
         curl_setopt_array($ch, [
             CURLOPT_HTTPHEADER => [
@@ -627,27 +647,26 @@ class RegistrationController extends AbstractController
                 'Accept: application/json',
             ],
             CURLOPT_POST => true,
-            CURLOPT_POSTFIELDS => json_encode($payload),
+            CURLOPT_POSTFIELDS => $body,
             CURLOPT_RETURNTRANSFER => true,
         ]);
 
         $response = curl_exec($ch);
-        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $httpCode = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
 
         if ($response === false) {
             $err = curl_error($ch);
             curl_close($ch);
-            throw new \Exception('Erreur CURL: ' . $err);
+            throw new \RuntimeException('Erreur CURL: ' . $err);
         }
 
         curl_close($ch);
 
         if ($httpCode >= 400) {
-            throw new \Exception("Brevo error ($httpCode): " . $response);
+            throw new \RuntimeException("Brevo error ($httpCode): " . $response);
         }
 
-        $decoded = json_decode($response, true);
+        $decoded = is_string($response) ? json_decode($response, true) : null;
         return is_array($decoded) ? $decoded : ['raw' => $response, 'httpCode' => $httpCode];
     }
-    
 }

@@ -17,7 +17,7 @@ class FicheMedicale
     private ?int $id = null;
 
     #[ORM\OneToOne(cascade: ['persist', 'remove'])]
-    private RendezVous $rendezVous;
+    private ?RendezVous $rendezVous = null;
 
     #[ORM\Column(type: Types::TEXT)]
     private ?string $diagnostic = null;
@@ -31,24 +31,25 @@ class FicheMedicale
     #[ORM\Column(type: Types::TEXT, nullable: true)]
     private ?string $signature = null;
 
-    #[ORM\Column]
-    private ?\DateTime $startTime = null;
+    #[ORM\Column(type: Types::DATETIME_IMMUTABLE)]
+    private ?\DateTimeImmutable $startTime = null;
 
-    #[ORM\Column(nullable: true)]
-    private ?\DateTime $endTime = null;
+    #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
+    private ?\DateTimeImmutable $endTime = null;
 
     #[ORM\Column(nullable: true)]
     private ?int $dureeMinutes = null;
 
-    #[ORM\Column]
-    private ?\DateTime $createdAt = null;
+    #[ORM\Column(type: Types::DATETIME_IMMUTABLE)]
+    private ?\DateTimeImmutable $createdAt = null;
 
-   #[ORM\OneToMany(mappedBy: 'ficheMedicale', targetEntity: Prescription::class, orphanRemoval: true)]
+    /** @var Collection<int, Prescription> */
+    #[ORM\OneToMany(mappedBy: 'ficheMedicale', targetEntity: Prescription::class, orphanRemoval: true, fetch: 'EXTRA_LAZY')]
     private Collection $prescriptions;
 
     public function __construct()
     {
-        $this->createdAt = new \DateTime();
+        $this->createdAt = new \DateTimeImmutable();
         $this->prescriptions = new ArrayCollection();
     }
 
@@ -92,6 +93,11 @@ class FicheMedicale
 
         return $this;
     }
+    public function setStartTime(?\DateTimeImmutable $startTime): static
+    {
+        $this->startTime = $startTime;
+        return $this;
+    }
 
     public function getResultatsExamens(): ?string
     {
@@ -115,27 +121,22 @@ class FicheMedicale
         return $this;
     }
 
-    public function getStartTime(): ?\DateTime
+    public function getStartTime(): ?\DateTimeImmutable
     {
         return $this->startTime;
     }
 
-    public function setStartTime(\DateTime $startTime): static
-    {
-        $this->startTime = $startTime;
+    
+    
 
-        return $this;
-    }
-
-    public function getEndTime(): ?\DateTime
+    public function getEndTime(): ?\DateTimeImmutable
     {
         return $this->endTime;
     }
 
-    public function setEndTime(?\DateTime $endTime): static
+    public function setEndTime(?\DateTimeImmutable $endTime): static
     {
         $this->endTime = $endTime;
-
         return $this;
     }
 
@@ -151,15 +152,14 @@ class FicheMedicale
         return $this;
     }
 
-    public function getCreatedAt(): ?\DateTime
+    public function getCreatedAt(): ?\DateTimeImmutable
     {
         return $this->createdAt;
     }
 
-    public function setCreatedAt(\DateTime $createdAt): static
+    public function setCreatedAt(?\DateTimeImmutable $createdAt): static
     {
         $this->createdAt = $createdAt;
-
         return $this;
     }
 

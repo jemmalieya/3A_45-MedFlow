@@ -13,7 +13,7 @@ use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Form\FormError;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use App\Service\AiCommentModerationService;
-
+use App\Entity\User;
 
 #[Route('/blog/commentaire')]
 class CommentaireController extends AbstractController
@@ -33,37 +33,45 @@ public function add(Post $post, Request $request, EntityManagerInterface $em, Ai
         return $this->redirectToRoute('app_login'); // Redirige vers la page de connexion si l'utilisateur n'est pas connecté
     }
 
-    // Associer l'utilisateur au commentaire
-    $commentaire->setUser($user);
 
-    // Créer et traiter le formulaire
-    $form = $this->createForm(CommentaireType::class, $commentaire);
-    $form->handleRequest($request);
+    
 
-    if ($form->isSubmitted() && $form->isValid()) {
+$user = $this->getUser();
 
-        $contenu = trim((string) $commentaire->getContenu());
+if (!$user instanceof User) {
+    throw $this->createAccessDeniedException();
+}
 
-        // ✅ Validation PHP uniquement (les 3 règles)
-        if ($contenu === '') {
-            $form->get('contenu')->addError(new \Symfony\Component\Form\FormError("Le commentaire ne peut pas être vide."));
-        } elseif (!preg_match('/^\p{L}/u', $contenu)) {
-            $form->get('contenu')->addError(new \Symfony\Component\Form\FormError("Le commentaire doit commencer par une lettre."));
-        } else {
-            preg_match_all('/\p{L}/u', $contenu, $matches);
-            if (count($matches[0]) < 2) {
-                $form->get('contenu')->addError(new \Symfony\Component\Form\FormError("Le commentaire doit contenir au moins 2 lettres."));
-            }
+$commentaire->setUser($user);
+
+   $form = $this->createForm(CommentaireType::class, $commentaire);
+   $form->handleRequest($request);
+
+if ($form->isSubmitted()) {
+
+    // Récupérer depuis le formulaire (pas l'entité)
+    $contenu = trim((string) $form->get('contenu')->getData());
+
+    // ✅ Tes 3 règles PHP
+    if (empty($contenu)) {
+        $form->get('contenu')->addError(new FormError("Le commentaire ne peut pas être vide."));
+    } elseif (!preg_match('/^\p{L}/u', $contenu)) {
+        $form->get('contenu')->addError(new FormError("Le commentaire doit commencer par une lettre."));
+    } else {
+        preg_match_all('/\p{L}/u', $contenu, $matches);
+        if (count($matches[0]) < 2) {
+            $form->get('contenu')->addError(new FormError("Le commentaire doit contenir au moins 2 lettres."));
         }
+    }
 
-        // ✅ Si pas d’erreur => save
-        if ($form->isValid()) {
-            // Pas besoin de manipuler manuellement la date, elle est automatiquement définie dans le constructeur de l'entité
-            $commentaire->setContenu($contenu);
-            $commentaire->setDateCreation(new \DateTimeImmutable());
-// ======================
+    // ✅ Maintenant seulement, on vérifie isValid()
+    if ($form->isValid()) {
+        $commentaire->setContenu($contenu);
+        $commentaire->setDateCreation(new \DateTimeImmutable());
+
 // ✅ MODERATION IA
 // ======================
+/** @var array{allow: bool, score: float, label: string} $decision */
 $decision = $moderation->moderate($contenu);
 
 $commentaire->setModerationScore($decision['score']);
@@ -71,17 +79,27 @@ $commentaire->setModerationLabel($decision['label']);
 $commentaire->setModeratedAt(new \DateTimeImmutable());
 
 if (!$decision['allow']) {
+
     $commentaire->setStatus('blocked');
-    $this->addFlash('error', "Commentaire bloqué automatiquement (IA: {$decision['label']} / score {$decision['score']}).");
+
+    $this->addFlash(
+        'error',
+        sprintf(
+            'Commentaire bloqué automatiquement (IA: %s / score %.2f).',
+            $decision['label'],
+            $decision['score']
+        )
+    );
+
 } else {
+
     $commentaire->setStatus('published');
 }
             // Persister le commentaire dans la base de données
             $em->persist($commentaire);
 
             // Si tu utilises le champ nbrCommentaires
-            $post->setNbrCommentaires(($post->getNbrCommentaires() ?? 0) + 1);
-
+            $post->setNbrCommentaires(((int) $post->getNbrCommentaires()) + 1);
             // Sauvegarder les modifications en base de données
             $em->flush();
 
@@ -107,9 +125,19 @@ public function edit(Commentaire $commentaire, Request $request, EntityManagerIn
 {
 
 $user = $this->getUser();
-if (!$user || $commentaire->getUser() !== $user) {
+$post = $commentaire->getPost();
+
+if (!$user instanceof User || $commentaire->getUser() !== $user) {
+
     $this->addFlash('error', 'Accès refusé.');
-    return $this->redirectToRoute('post_show', ['id' => $commentaire->getPost()->getId()]);
+
+    if ($post === null) {
+        throw $this->createNotFoundException('Post introuvable.');
+    }
+
+    return $this->redirectToRoute('post_show', [
+        'id' => $post->getId()
+    ]);
 }
 
     $form = $this->createForm(CommentaireType::class, $commentaire, [
@@ -120,8 +148,8 @@ if (!$user || $commentaire->getUser() !== $user) {
     if ($form->isSubmitted()) {
 
         // ✅ éviter null -> string
-        $commentaire->setContenu(trim((string) $commentaire->getContenu()));
-        $contenu = $commentaire->getContenu();
+        $contenu = trim((string) $commentaire->getContenu());
+$commentaire->setContenu($contenu);
 
         // ✅ Validation PHP uniquement
         if ($contenu === '') {
@@ -153,9 +181,14 @@ if (!$decision['allow']) {
             $em->flush();
             $this->addFlash('success', 'Commentaire modifié ✅');
 
-            return $this->redirectToRoute('post_show', [
-                'id' => $commentaire->getPost()->getId(),
-            ]);
+            $post = $commentaire->getPost();
+if ($post === null) {
+    throw $this->createNotFoundException('Post introuvable.');
+}
+
+return $this->redirectToRoute('post_show', [
+    'id' => $post->getId(),
+]);
         }
     }
 
@@ -172,15 +205,24 @@ if (!$decision['allow']) {
 #[Route('/commentaires/{id}/delete', name: 'commentaire_delete', methods: ['POST'])]
 public function delete(Request $request, Commentaire $commentaire, EntityManagerInterface $em): Response
 {
-    if (!$this->isCsrfTokenValid(
-        'del_commentaire_' . $commentaire->getId(),
-        $request->request->get('_token')
-    )) {
-        $this->addFlash('error', 'CSRF invalide');
-        return $this->redirectToRoute('post_show', [
-            'id' => $commentaire->getPost()->getId()
-        ]);
+$token = $request->request->get('_token');
+
+if (!$this->isCsrfTokenValid(
+    'del_commentaire_' . $commentaire->getId(),
+    is_string($token) ? $token : null
+)) {
+    $this->addFlash('error', 'CSRF invalide');
+
+    $post = $commentaire->getPost();
+
+    if ($post === null) {
+        throw $this->createNotFoundException('Post introuvable.');
     }
+
+    return $this->redirectToRoute('post_show', [
+        'id' => $post->getId()
+    ]);
+}
 
     $post = $commentaire->getPost();
  $commentId = $commentaire->getId();
@@ -190,9 +232,9 @@ public function delete(Request $request, Commentaire $commentaire, EntityManager
 
     // décrémenter compteur
     if ($post) {
-        $post->setNbrCommentaires(
-            max(0, ($post->getNbrCommentaires() ?? 0) - 1)
-        );
+       $post->setNbrCommentaires(
+    max(0, ((int) $post->getNbrCommentaires()) - 1)
+);
     }
 
     $em->flush();
@@ -258,11 +300,17 @@ public function addInline(
 
     // Assigner l'utilisateur connecté (required)
     $user = $this->getUser();
-    if (!$user) {
-        $this->addFlash('comment_error', $postId.'|Vous devez être connecté pour ajouter un commentaire.');
-        return $this->redirectToRoute('app_login');
-    }
-    $commentaire->setUser($user);
+
+if (!$user instanceof User) {
+    $this->addFlash(
+        'comment_error',
+        $postId . '|Vous devez être connecté pour ajouter un commentaire.'
+    );
+
+    return $this->redirectToRoute('app_login');
+}
+
+$commentaire->setUser($user);
 
     $decision = $moderation->moderate($contenu);
 
@@ -281,7 +329,7 @@ public function addInline(
     $em->persist($commentaire);
 
     if ($commentaire->getStatus() === 'published') {
-        $post->setNbrCommentaires(($post->getNbrCommentaires() ?? 0) + 1);
+        $post->setNbrCommentaires(((int) $post->getNbrCommentaires()) + 1);
     }
 
    $em->flush();

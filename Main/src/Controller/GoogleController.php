@@ -23,14 +23,19 @@ class GoogleController extends AbstractController
 
         // Keep only digits, and optionally a leading +.
         if (str_starts_with($raw, '+')) {
-            return '+' . preg_replace('/\D+/', '', $raw);
+            $digits = preg_replace('/\D+/', '', $raw);
+            return is_string($digits) ? '+' . $digits : '';
         }
         if (str_starts_with($raw, '00')) {
             $digits = preg_replace('/\D+/', '', substr($raw, 2));
-            return $digits !== '' ? ('+' . $digits) : '';
+            if (!is_string($digits) || $digits === '') {
+                return '';
+            }
+            return '+' . $digits;
         }
 
-        return preg_replace('/\D+/', '', $raw);
+        $digits = preg_replace('/\D+/', '', $raw);
+        return is_string($digits) ? $digits : '';
     }
 
     #[Route('/login/google', name: 'google_login', methods: ['GET'])]
@@ -53,8 +58,13 @@ class GoogleController extends AbstractController
     }
 
     #[Route('/login/google/callback', name: 'google_callback', methods: ['GET'])]
-    public function callback(ClientRegistry $clientRegistry, Request $request, UserRepository $userRepo, HttpClientInterface $httpClient, LoggerInterface $logger): Response
-    {
+    public function callback(
+        ClientRegistry $clientRegistry,
+        Request $request,
+        UserRepository $userRepo,
+        HttpClientInterface $httpClient,
+        LoggerInterface $logger
+    ): Response {
         if ($request->query->get('error')) {
             return new Response('Google OAuth error: ' . $request->query->get('error'), 400);
         }
@@ -79,9 +89,12 @@ class GoogleController extends AbstractController
         // People API (phone numbers + birthdays). Might be unavailable if user denied scopes.
         $phoneNumber = null;
         $birthDateIso = null; // YYYY-MM-DD when year is present
+
         try {
-            $tokenValue = method_exists($accessToken, 'getToken') ? $accessToken->getToken() : null;
-            if (is_string($tokenValue) && $tokenValue !== '') {
+            // ✅ method_exists inutile, AccessToken a déjà getToken()
+           $tokenValue = $accessToken->getToken();
+
+if ($tokenValue !== '') {
                 $peopleResp = $httpClient->request('GET', 'https://people.googleapis.com/v1/people/me', [
                     'headers' => [
                         'Authorization' => 'Bearer ' . $tokenValue,
@@ -92,62 +105,64 @@ class GoogleController extends AbstractController
                 ]);
 
                 if ($peopleResp->getStatusCode() === 200) {
+                    // ✅ toArray() retourne déjà un array => pas besoin de is_array($people)
                     $people = $peopleResp->toArray(false);
-                    if (is_array($people)) {
-                        $phones = $people['phoneNumbers'] ?? null;
-                        if (is_array($phones)) {
-                            foreach ($phones as $p) {
-                                if (!is_array($p)) {
-                                    continue;
-                                }
 
-                                $candidate = null;
-                                if (isset($p['canonicalForm']) && is_string($p['canonicalForm']) && trim($p['canonicalForm']) !== '') {
-                                    $candidate = $p['canonicalForm'];
-                                } elseif (isset($p['value']) && is_string($p['value']) && trim($p['value']) !== '') {
-                                    $candidate = $p['value'];
-                                }
-
-                                if (is_string($candidate)) {
-                                    $normalized = $this->normalizePhoneNumber($candidate);
-                                    if ($normalized !== '') {
-                                        $phoneNumber = $normalized;
-                                        break;
-                                    }
-                                }
+                    $phones = $people['phoneNumbers'] ?? null;
+                    if (is_array($phones)) {
+                        foreach ($phones as $p) {
+                            if (!is_array($p)) {
+                                continue;
                             }
-                        }
 
-                        $birthdays = $people['birthdays'] ?? null;
-                        if (is_array($birthdays)) {
-                            foreach ($birthdays as $b) {
-                                if (!is_array($b)) {
-                                    continue;
-                                }
-                                $date = $b['date'] ?? null;
-                                if (!is_array($date)) {
-                                    continue;
-                                }
-                                $y = $date['year'] ?? null;
-                                $m = $date['month'] ?? null;
-                                $d = $date['day'] ?? null;
+                            $candidate = null;
+                            if (isset($p['canonicalForm']) && is_string($p['canonicalForm']) && trim($p['canonicalForm']) !== '') {
+                                $candidate = $p['canonicalForm'];
+                            } elseif (isset($p['value']) && is_string($p['value']) && trim($p['value']) !== '') {
+                                $candidate = $p['value'];
+                            }
 
-                                // Only use birthdate when year is present (your DB field is a full date).
-                                if (is_int($y) && is_int($m) && is_int($d) && $y > 1900 && $m >= 1 && $m <= 12 && $d >= 1 && $d <= 31) {
-                                    $birthDateIso = sprintf('%04d-%02d-%02d', $y, $m, $d);
+                            if (is_string($candidate)) {
+                                $normalized = $this->normalizePhoneNumber($candidate);
+                                if ($normalized !== '') {
+                                    $phoneNumber = $normalized;
                                     break;
                                 }
                             }
                         }
-
-                        $logger->info('Google People API parsed', [
-                            'has_phoneNumbers' => array_key_exists('phoneNumbers', $people),
-                            'phone_count' => is_array($phones) ? count($phones) : 0,
-                            'phone_found' => (bool) $phoneNumber,
-                            'has_birthdays' => array_key_exists('birthdays', $people),
-                            'birthday_found' => (bool) $birthDateIso,
-                        ]);
                     }
+
+                    $birthdays = $people['birthdays'] ?? null;
+                    if (is_array($birthdays)) {
+                        foreach ($birthdays as $b) {
+                            if (!is_array($b)) {
+                                continue;
+                            }
+
+                            $date = $b['date'] ?? null;
+                            if (!is_array($date)) {
+                                continue;
+                            }
+
+                            $y = $date['year'] ?? null;
+                            $m = $date['month'] ?? null;
+                            $d = $date['day'] ?? null;
+
+                            // Only use birthdate when year is present (your DB field is a full date).
+                            if (is_int($y) && is_int($m) && is_int($d) && $y > 1900 && $m >= 1 && $m <= 12 && $d >= 1 && $d <= 31) {
+                                $birthDateIso = sprintf('%04d-%02d-%02d', $y, $m, $d);
+                                break;
+                            }
+                        }
+                    }
+
+                    $logger->info('Google People API parsed', [
+                        'has_phoneNumbers' => array_key_exists('phoneNumbers', $people),
+                        'phone_count' => is_array($phones) ? count($phones) : 0,
+                        'phone_found' => (bool) $phoneNumber,
+                        'has_birthdays' => array_key_exists('birthdays', $people),
+                        'birthday_found' => (bool) $birthDateIso,
+                    ]);
                 } else {
                     $logger->warning('Google People API request failed', [
                         'status' => $peopleResp->getStatusCode(),
@@ -164,9 +179,6 @@ class GoogleController extends AbstractController
             return new Response('Google did not return an email', 400);
         }
 
-        // ✅ Si user existe déjà: on peut décider de le rediriger direct login
-        // MAIS ton objectif = compléter infos + validation email
-        // => on passe toujours par register si info manquante OU user inexistant.
         $existingUser = $userRepo->findOneBy(['emailUser' => $email]);
 
         // ✅ Stocker en session pour pré-remplir /register
@@ -185,7 +197,6 @@ class GoogleController extends AbstractController
         ]);
         $session->save();
 
-        // ✅ Rediriger vers ton formulaire register pour compléter les champs
         return $this->redirectToRoute('app_register');
     }
 }

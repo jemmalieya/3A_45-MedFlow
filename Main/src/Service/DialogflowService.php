@@ -9,8 +9,8 @@ use Google\Cloud\Dialogflow\V2\DetectIntentRequest;
 
 class DialogflowService
 {
-    private $projectId;
-    private $credentialsPath;
+    private string $projectId;
+    private string $credentialsPath;
 
     public function __construct(string $projectId, string $credentialsPath)
     {
@@ -18,7 +18,10 @@ class DialogflowService
         $this->credentialsPath = $credentialsPath;
     }
 
-    public function detectIntent(string $text, string $sessionId = null, string $languageCode = null)
+    /**
+     * @return array<string, mixed>
+     */
+    public function detectIntent(string $text, string $sessionId = null, string $languageCode = null): array
     {
         putenv('GOOGLE_APPLICATION_CREDENTIALS=' . $this->credentialsPath);
         $sessionId = $sessionId ?: uniqid();

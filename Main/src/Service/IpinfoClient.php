@@ -47,11 +47,20 @@ class IpinfoClient
 
         $data = $response->toArray(false);
 
-        return [
+        $result = [
             'ip' => isset($data['ip']) ? (string) $data['ip'] : $ip,
-            'country' => isset($data['country']) ? (string) $data['country'] : null,
-            'region' => isset($data['region']) ? (string) $data['region'] : null,
-            'city' => isset($data['city']) ? (string) $data['city'] : null,
         ];
+
+        if (isset($data['country']) && $data['country'] !== '') {
+            $result['country'] = (string) $data['country'];
+        }
+        if (isset($data['region']) && $data['region'] !== '') {
+            $result['region'] = (string) $data['region'];
+        }
+        if (isset($data['city']) && $data['city'] !== '') {
+            $result['city'] = (string) $data['city'];
+        }
+
+        return $result;
     }
 }

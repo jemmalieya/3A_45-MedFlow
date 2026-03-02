@@ -177,6 +177,7 @@ public function produits(Request $request, ProduitRepository $produitRepo, Entit
             ->andWhere('u.staffRequestStatus = :p')
             ->setParameter('p', 'PENDING')
             ->orderBy('u.staffRequestedAt', 'DESC')
+            ->setMaxResults(50)
             ->getQuery()->getResult();
 
         return $this->render('dashboard_ad/staff_requests/index.html.twig', [
@@ -192,10 +193,16 @@ public function produits(Request $request, ProduitRepository $produitRepo, Entit
             throw $this->createNotFoundException('Document introuvable.');
         }
         $rel = $docs['files'][$i]['stored'] ?? null;
-        if (!$rel) {
+        if (!is_string($rel) || $rel === '') {
             throw $this->createNotFoundException('Chemin introuvable.');
         }
-        $full = $this->getParameter('kernel.project_dir') . '/var/' . $rel;
+
+        $projectDir = $this->getParameter('kernel.project_dir');
+        if (!is_string($projectDir)) {
+            throw new \RuntimeException('kernel.project_dir doit être une chaîne.');
+        }
+
+        $full = $projectDir . '/var/' . $rel;
         if (!is_file($full)) {
             throw $this->createNotFoundException('Fichier manquant.');
         }
@@ -203,107 +210,117 @@ public function produits(Request $request, ProduitRepository $produitRepo, Entit
         return $this->file($full, $docs['files'][$i]['original'] ?? basename($full));
     }
 
-    #[Route('/ad/staff-requests/{id}/analyze/{i}', name: 'admin_staff_request_analyze', requirements: ['id' => '\\d+', 'i' => '\\d+'], methods: ['POST'])]
-    public function staffRequestAnalyze(
-        User $user,
-        int $i,
-        EntityManagerInterface $em,
-        TesseractOcrService $ocr,
-        GeminiService $gemini
-    ): JsonResponse {
-        $docs = $user->getStaffDocuments();
-        if (!is_array($docs) || !isset($docs['files']) || !is_array($docs['files']) || !isset($docs['files'][$i]) || !is_array($docs['files'][$i])) {
-            return $this->json(['success' => false, 'error' => 'Document introuvable.'], 404);
+#[Route(
+    '/ad/staff-requests/{id}/analyze/{i}',
+    name: 'admin_staff_request_analyze',
+    requirements: ['id' => '\\d+', 'i' => '\\d+'],
+    methods: ['POST']
+)]
+public function staffRequestAnalyze(
+    User $user,
+    int $i,
+    EntityManagerInterface $em,
+    TesseractOcrService $ocr,
+    GeminiService $gemini
+): JsonResponse {
+    $docs = $user->getStaffDocuments();
+
+    // ✅ $docs est déjà un array → on sécurise juste la structure attendue
+    $files = $docs['files'] ?? null;
+    if (!is_array($files) || !isset($files[$i]) || !is_array($files[$i])) {
+        return $this->json(['success' => false, 'error' => 'Document introuvable.'], 404);
+    }
+
+    $rel = $files[$i]['stored'] ?? null;
+    if (!is_string($rel) || $rel === '') {
+        return $this->json(['success' => false, 'error' => 'Chemin introuvable.'], 404);
+    }
+
+    $projectDir = $this->getParameter('kernel.project_dir');
+    if (!is_string($projectDir)) {
+        return $this->json(['success' => false, 'error' => 'Config kernel.project_dir invalide.'], 500);
+    }
+    $baseDir = realpath($projectDir . '/var/staff_requests');
+    $full = realpath($projectDir . '/var/' . $rel);
+
+    $baseNorm = $baseDir === false ? '' : str_replace('\\', '/', $baseDir);
+    $fullNorm = $full === false ? '' : str_replace('\\', '/', $full);
+    $baseNorm = rtrim(strtolower($baseNorm), '/') . '/';
+    $fullNorm = strtolower($fullNorm);
+
+    if ($baseDir === false || $full === false || !str_starts_with($fullNorm, $baseNorm)) {
+        return $this->json(['success' => false, 'error' => 'Chemin interdit.'], 404);
+    }
+    if (!is_file($full)) {
+        return $this->json(['success' => false, 'error' => 'Fichier manquant.'], 404);
+    }
+
+    $mime = (string) ($files[$i]['mime'] ?? '');
+    $ocrText = null;
+    $ocrError = null;
+
+    if (str_starts_with($mime, 'image/')) {
+        try {
+            // ✅ On considère extractText() retourne un array (PHPStan)
+            $res = $ocr->extractText($full);
+        } catch (\Throwable $e) {
+            return $this->json(['success' => false, 'error' => 'OCR failed: ' . $e->getMessage()], 500);
         }
 
-        $rel = $docs['files'][$i]['stored'] ?? null;
-        if (!is_string($rel) || $rel === '') {
-            return $this->json(['success' => false, 'error' => 'Chemin introuvable.'], 404);
+        // ✅ lecture safe
+        $ocrText  = isset($res['text']) && is_string($res['text']) ? trim($res['text']) : null;
+        $ocrError = isset($res['error']) && is_string($res['error']) ? $res['error'] : null;
+
+        if (is_string($ocrText) && $ocrText !== '') {
+            $files[$i]['ocrText'] = mb_substr($ocrText, 0, 4000);
         }
+    }
 
-        $projectDir = (string) $this->getParameter('kernel.project_dir');
-        $baseDir = realpath($projectDir . '/var/staff_requests');
-        $full = realpath($projectDir . '/var/' . $rel);
+    // Build (optional) AI suggestion for THIS document if not already stored
+    $aiSuggestion = is_string($files[$i]['aiSuggestion'] ?? null) ? trim((string) $files[$i]['aiSuggestion']) : '';
+    if ($aiSuggestion === '' && is_string($ocrText) && trim($ocrText) !== '') {
+        $meta = is_array($docs['meta'] ?? null) ? $docs['meta'] : [];
+        $metaText = sprintf(
+            "specialite=%s; etablissement=%s; numero=%s; role=%s; type=%s",
+            (string) ($meta['specialite'] ?? ''),
+            (string) ($meta['etablissement'] ?? ''),
+            (string) ($meta['numero'] ?? ''),
+            (string) ($meta['roleWanted'] ?? ''),
+            (string) ($meta['typeStaffWanted'] ?? '')
+        );
 
-        $baseNorm = $baseDir === false ? '' : str_replace('\\', '/', $baseDir);
-        $fullNorm = $full === false ? '' : str_replace('\\', '/', $full);
-        $baseNorm = rtrim(strtolower($baseNorm), '/') . '/';
-        $fullNorm = strtolower($fullNorm);
+        $prompt = "Tu es un assistant pour un admin MedFlow.\n"
+            . "On a un document (photo) soumis pour une demande de rôle.\n"
+            . "Méta: {$metaText}\n\n"
+            . "Texte OCR (peut contenir des erreurs):\n" . mb_substr($ocrText, 0, 3500) . "\n\n"
+            . "Donne une courte synthèse (4 à 7 puces) et signale si tu vois: nom/prénom, numéros (CIN, ordre, etc.), spécialité, incohérences évidentes.\n"
+            . "Ne pas inventer si ce n'est pas clairement présent.";
 
-        if ($baseDir === false || $full === false || !str_starts_with($fullNorm, $baseNorm)) {
-            return $this->json(['success' => false, 'error' => 'Chemin interdit.'], 404);
-        }
-        if (!is_file($full)) {
-            return $this->json(['success' => false, 'error' => 'Fichier manquant.'], 404);
-        }
-
-        $mime = (string) ($docs['files'][$i]['mime'] ?? '');
-        $ocrText = null;
-        $ocrError = null;
-
-        if (str_starts_with($mime, 'image/')) {
-            try {
-                $res = $ocr->extractText($full);
-            } catch (\Throwable $e) {
-                return $this->json(['success' => false, 'error' => 'OCR failed: ' . $e->getMessage()], 500);
-            }
-
-            if (is_array($res)) {
-                $ocrText = is_string($res['text'] ?? null) ? trim((string) $res['text']) : null;
-                $ocrError = is_string($res['error'] ?? null) ? (string) $res['error'] : null;
+        try {
+            $aiSuggestion = trim($gemini->generate($prompt));
+            if ($aiSuggestion !== '') {
+                $files[$i]['aiSuggestion'] = mb_substr($aiSuggestion, 0, 3000);
             } else {
-                // legacy: service returned string
-                $ocrText = is_string($res) ? trim((string) $res) : null;
-                $ocrError = null;
-            }
-
-            if (is_string($ocrText) && $ocrText !== '') {
-                $docs['files'][$i]['ocrText'] = mb_substr($ocrText, 0, 4000);
-            }
-        }
-
-        // Build (optional) AI suggestion for THIS document if not already stored
-        $aiSuggestion = is_string($docs['files'][$i]['aiSuggestion'] ?? null) ? trim((string) $docs['files'][$i]['aiSuggestion']) : '';
-        if ($aiSuggestion === '' && is_string($ocrText) && trim($ocrText) !== '') {
-            $meta = is_array($docs['meta'] ?? null) ? $docs['meta'] : [];
-            $metaText = sprintf(
-                "specialite=%s; etablissement=%s; numero=%s; role=%s; type=%s",
-                (string) ($meta['specialite'] ?? ''),
-                (string) ($meta['etablissement'] ?? ''),
-                (string) ($meta['numero'] ?? ''),
-                (string) ($meta['roleWanted'] ?? ''),
-                (string) ($meta['typeStaffWanted'] ?? '')
-            );
-
-            $prompt = "Tu es un assistant pour un admin MedFlow.\n"
-                ."On a un document (photo) soumis pour une demande de rôle.\n"
-                ."Méta: {$metaText}\n\n"
-                ."Texte OCR (peut contenir des erreurs):\n".mb_substr($ocrText, 0, 3500)."\n\n"
-                ."Donne une courte synthèse (4 à 7 puces) et signale si tu vois: nom/prénom, numéros (CIN, ordre, etc.), spécialité, incohérences évidentes.\n"
-                ."Ne pas inventer si ce n'est pas clairement présent.";
-
-            try {
-                $aiSuggestion = trim($gemini->generate($prompt));
-                if ($aiSuggestion !== '') {
-                    $docs['files'][$i]['aiSuggestion'] = mb_substr($aiSuggestion, 0, 3000);
-                } else {
-                    $aiSuggestion = '';
-                }
-            } catch (\Throwable $e) {
                 $aiSuggestion = '';
             }
+        } catch (\Throwable $e) {
+            $aiSuggestion = '';
         }
-
-        $user->setStaffDocuments($docs);
-        $em->flush();
-
-        return $this->json([
-            'success' => true,
-            'ocrText' => $docs['files'][$i]['ocrText'] ?? null,
-            'aiSuggestion' => $docs['files'][$i]['aiSuggestion'] ?? null,
-            'ocrError' => $ocrError,
-        ]);
     }
+
+    // ✅ Réinjecter les fichiers modifiés dans docs avant sauvegarde
+    $docs['files'] = $files;
+
+    $user->setStaffDocuments($docs);
+    $em->flush();
+
+    return $this->json([
+        'success' => true,
+        'ocrText' => $docs['files'][$i]['ocrText'] ?? null,
+        'aiSuggestion' => $docs['files'][$i]['aiSuggestion'] ?? null,
+        'ocrError' => $ocrError,
+    ]);
+}
 
     #[Route('/ad/staff-requests/{id}/approve', name: 'admin_staff_request_approve', methods: ['POST'])]
     public function staffRequestApprove(User $user, Request $request, EntityManagerInterface $em): Response
@@ -328,7 +345,7 @@ public function produits(Request $request, ProduitRepository $produitRepo, Entit
         }
 
         $user->setStaffRequestStatus('APPROVED');
-        $user->setStaffReviewedAt(new \DateTime());
+        $user->markStaffReviewedAt();
         $me = $this->getUser();
         $user->setStaffReviewedBy($me instanceof User ? $me->getId() : null);
         $user->setStaffRequestReason(null);
@@ -367,7 +384,7 @@ public function produits(Request $request, ProduitRepository $produitRepo, Entit
         $user->setStaffRequestStatus('REJECTED');
         $reason = trim((string) $request->request->get('reason', ''));
         $user->setStaffRequestReason($reason ?: null);
-        $user->setStaffReviewedAt(new \DateTime());
+        $user->markStaffReviewedAt();
         $me = $this->getUser();
         $user->setStaffReviewedBy($me instanceof User ? $me->getId() : null);
         $em->flush();
@@ -389,6 +406,9 @@ public function produits(Request $request, ProduitRepository $produitRepo, Entit
         return $this->redirectToRoute('admin_staff_requests_index');
     }
 
+    /**
+     * @return array<string, mixed>
+     */
     private function sendBrevoEmail(string $toEmail, string $toName, string $subject, string $html): array
     {
         $apiKey = $_ENV['BREVO_API_KEY'] ?? null;
@@ -412,6 +432,8 @@ public function produits(Request $request, ProduitRepository $produitRepo, Entit
             'htmlContent' => $html,
         ];
 
+        $body = json_encode($payload, JSON_THROW_ON_ERROR);
+
         $ch = curl_init('https://api.brevo.com/v3/smtp/email');
         curl_setopt_array($ch, [
             CURLOPT_HTTPHEADER => [
@@ -420,14 +442,14 @@ public function produits(Request $request, ProduitRepository $produitRepo, Entit
                 'Accept: application/json',
             ],
             CURLOPT_POST => true,
-            CURLOPT_POSTFIELDS => json_encode($payload),
+            CURLOPT_POSTFIELDS => $body,
             CURLOPT_RETURNTRANSFER => true,
         ]);
 
         $response = curl_exec($ch);
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
 
-        if ($response === false) {
+        if (!is_string($response)) {
             $err = curl_error($ch);
             curl_close($ch);
             throw new \Exception('Erreur CURL: ' . $err);
@@ -449,11 +471,20 @@ public function produits(Request $request, ProduitRepository $produitRepo, Entit
     #[Route('/ad/patients', name: 'admin_patients_index', methods: ['GET'])]
     public function patientsIndex(Request $request, UserRepository $repo): Response
     {
-        $q = trim((string) $request->query->get('q', ''));
-        $verified = (string) $request->query->get('verified', ''); // '' | '1' | '0'
-        $sort = (string) $request->query->get('sort', 'recent');
-        $triageFilter = (string) $request->query->get('triage', '');
-        $alertFilter = (string) $request->query->get('alert', '');
+        $qRaw = $request->query->get('q', '');
+        $q = is_scalar($qRaw) ? trim((string) $qRaw) : '';
+
+        $verifiedRaw = $request->query->get('verified', ''); // '' | '1' | '0'
+        $verified = is_scalar($verifiedRaw) ? (string) $verifiedRaw : '';
+
+        $sortRaw = $request->query->get('sort', 'recent');
+        $sort = is_scalar($sortRaw) ? (string) $sortRaw : 'recent';
+
+        $triageRaw = $request->query->get('triage', '');
+        $triageFilter = is_scalar($triageRaw) ? (string) $triageRaw : '';
+
+        $alertRaw = $request->query->get('alert', '');
+        $alertFilter = is_scalar($alertRaw) ? (string) $alertRaw : '';
 
         $patients = $repo->findPatientsWithFilters([
             'q' => $q,
@@ -478,7 +509,12 @@ public function produits(Request $request, ProduitRepository $produitRepo, Entit
 
             $stats['total']++;
             $p->isVerified() ? $stats['verified']++ : $stats['unverified']++;
-            $t['phoneOk'] ? $stats['phone_valid']++ : ($t['phoneOk'] === false ? $stats['phone_invalid']++ : $stats['phone_pending']++);
+
+            if ($t['phoneOk']) {
+                $stats['phone_valid']++;
+            } else {
+                $stats['phone_invalid']++;
+            }
             if ($t['blocked']) $stats['blocked']++;
             if ($t['expired']) $stats['expired_links']++;
             $stats['priorities'][$t['priority']['level']]++;
@@ -550,7 +586,7 @@ public function produits(Request $request, ProduitRepository $produitRepo, Entit
         }
 
         $patient->setVerificationToken(bin2hex(random_bytes(32)));
-        $patient->setTokenExpiresAt((new \DateTime())->modify('+24 hours'));
+        $patient->updateTokenExpiresAt((new \DateTime())->modify('+24 hours'));
         $em->flush();
 
         $this->sendVerificationEmail($patient, $logger);
@@ -831,7 +867,7 @@ public function produits(Request $request, ProduitRepository $produitRepo, Entit
 
         $patient->setStatutCompte('BLOQUE');
         $patient->setBanReason($reason);
-        $patient->setBannedAt(new \DateTimeImmutable());
+        $patient->markBannedAt();
         $em->flush();
 
         $this->addFlash('success', 'Patient bloqué: '.$reason);
@@ -856,7 +892,7 @@ public function produits(Request $request, ProduitRepository $produitRepo, Entit
 
         $patient->setStatutCompte('ACTIF');
         $patient->setBanReason(null);
-        $patient->setBannedAt(null);
+        $patient->clearBannedAt();
         $em->flush();
 
         $this->addFlash('success', 'Patient débloqué.');
@@ -881,11 +917,13 @@ public function produits(Request $request, ProduitRepository $produitRepo, Entit
             'htmlContent' => "<p><a href='$link'>Vérifier mon email</a></p>",
         ];
 
+        $body = json_encode($payload, JSON_THROW_ON_ERROR);
+
         $ch = curl_init('https://api.brevo.com/v3/smtp/email');
         curl_setopt_array($ch, [
             CURLOPT_HTTPHEADER => ['api-key: '.$apiKey, 'Content-Type: application/json'],
             CURLOPT_POST => true,
-            CURLOPT_POSTFIELDS => json_encode($payload),
+            CURLOPT_POSTFIELDS => $body,
             CURLOPT_RETURNTRANSFER => true,
         ]);
 
@@ -900,8 +938,15 @@ public function produits(Request $request, ProduitRepository $produitRepo, Entit
 
     private function isPhoneValid(?string $phone): bool
     {
-        if (!$phone) return false;
+        if ($phone === null || $phone === '') {
+            return false;
+        }
+
         $p = preg_replace('/\s+/', '', $phone);
+        if (!is_string($p)) {
+            return false;
+        }
+
         if (preg_match('/^\d{8}$/', $p)) return true;
         if (preg_match('/^\+216\d{8}$/', $p)) return true;
         return false;
@@ -913,6 +958,16 @@ public function produits(Request $request, ProduitRepository $produitRepo, Entit
         return strtoupper($statutCompte) === 'BLOQUE';
     }
 
+    /**
+     * @return array{
+     *   alerts: array<int, array{key:string,label:string}>,
+     *   priority: array{level:string,badge:string},
+     *   score: int,
+     *   phoneOk: bool,
+     *   blocked: bool,
+     *   expired: bool
+     * }
+     */
     private function buildTriage(User $p): array
     {
         $alerts = [];
@@ -1075,10 +1130,10 @@ public function statsEvenements(EvenementRepository $repo): Response
 #[Route('/stats-ressources', name: 'ad_stats_ressources', methods: ['GET'])]
 public function statsRessources(RessourceRepository $repo): Response
 {
-    $kpi = method_exists($repo, 'getKpiStats') ? $repo->getKpiStats() : [];
-    $byType = method_exists($repo, 'countByType') ? $repo->countByType() : [];
-    $byCategorie = method_exists($repo, 'countByCategorie') ? $repo->countByCategorie() : [];
-    $topEvents = method_exists($repo, 'topEvenementsByRessources') ? $repo->topEvenementsByRessources(5) : [];
+    $kpi = $repo->getKpiStats();
+    $byType = $repo->countByType();
+    $byCategorie = $repo->countByCategorie();
+    $topEvents = $repo->topEvenementsByRessources(5);
 
     return $this->render('dashboard_ad/indexevent.html.twig', [
         'section' => 'stats_ressources',
@@ -1101,25 +1156,40 @@ public function statsRessources(RessourceRepository $repo): Response
         \App\Repository\PrescriptionRepository $prescRepo
     ): Response {
         // Get all doctors (STAFF, RESP_PATIENTS)
-        $doctors = $userRepo->findDoctorsRespPatients();
+        // Limit doctor list to 100 for performance (adjust as needed)
+        $doctors = $userRepo->createQueryBuilder('u')
+            ->where('u.roleSysteme IN (:roles)')
+            ->setParameter('roles', ['STAFF', 'RESP_PATIENTS'])
+            ->orderBy('u.nom', 'ASC')
+            ->setMaxResults(100)
+            ->getQuery()
+            ->getResult(\Doctrine\ORM\Query::HYDRATE_ARRAY);
         $doctorsData = [];
         foreach ($doctors as $doctor) {
-            $rendezvous = $rendezVousRepo->findBy(['staff' => $doctor], ['datetime' => 'DESC']);
-            $fiches = $ficheRepo->findFichesByStaffId($doctor->getId());
-            // Get all prescriptions for this doctor's fiches
+            // $doctor is now an array due to HYDRATE_ARRAY
+            $doctorId = $doctor['id'] ?? $doctor['id_user'] ?? null;
+            $rendezvous = $rendezVousRepo->findBy(['staff' => $doctorId], ['datetime' => 'DESC']);
+            $fiches = $ficheRepo->findFichesByStaffId($doctorId);
+
+            // Eager load all prescriptions for these fiches in one query
+            $ficheIds = array_map(fn($fiche) => $fiche->getId(), $fiches);
             $prescriptions = [];
-            foreach ($fiches as $fiche) {
-                foreach ($fiche->getPrescriptions() as $presc) {
-                    $prescriptions[] = $presc;
-                }
+            if (count($ficheIds) > 0) {
+                $qb = $prescRepo->createQueryBuilder('p')
+                    ->leftJoin('p.ficheMedicale', 'f')
+                    ->addSelect('f')
+                    ->where('f.id IN (:ficheIds)')
+                    ->setParameter('ficheIds', $ficheIds);
+                $prescriptions = $qb->getQuery()->getResult();
             }
+
             $doctorsData[] = [
-                'id' => $doctor->getId(),
-                'nom' => $doctor->getNom(),
-                'prenom' => $doctor->getPrenom(),
-                'typeStaff' => $doctor->getTypeStaff(),
-                'telephoneUser' => $doctor->getTelephoneUser(),
-                'emailUser' => $doctor->getEmailUser(),
+                'id' => $doctorId,
+                'nom' => $doctor['nom'] ?? null,
+                'prenom' => $doctor['prenom'] ?? null,
+                'typeStaff' => $doctor['typeStaff'] ?? $doctor['type_staff'] ?? null,
+                'telephoneUser' => $doctor['telephoneUser'] ?? $doctor['telephone_user'] ?? null,
+                'emailUser' => $doctor['emailUser'] ?? $doctor['email_user'] ?? null,
                 'rendezvous' => $rendezvous,
                 'fiches' => $fiches,
                 'prescriptions' => $prescriptions,
@@ -1149,7 +1219,15 @@ public function statsRessources(RessourceRepository $repo): Response
         \App\Repository\PrescriptionRepository $prescRepo
     ): Response {
         // Total counts
-        $totalDoctors = count($userRepo->findDoctorsRespPatients());
+        // Limit doctor list to 100 for performance (adjust as needed)
+        $doctorList = $userRepo->createQueryBuilder('u')
+            ->where('u.roleSysteme IN (:roles)')
+            ->setParameter('roles', ['STAFF', 'RESP_PATIENTS'])
+            ->orderBy('u.nom', 'ASC')
+            ->setMaxResults(100)
+            ->getQuery()
+            ->getResult(\Doctrine\ORM\Query::HYDRATE_ARRAY);
+        $totalDoctors = count($doctorList);
         $totalRendezVous = $rendezVousRepo->count([]);
         $totalFiches = $ficheRepo->count([]);
 
@@ -1160,28 +1238,46 @@ public function statsRessources(RessourceRepository $repo): Response
             $rdvStatutCounts[] = $rendezVousRepo->count(['statut' => $statut]);
         }
 
-        // Fiche diagnostics distribution
-        $diagnostics = $ficheRepo->createQueryBuilder('f')
-            ->select('f.diagnostic, COUNT(f.id) as count')
-            ->groupBy('f.diagnostic')
-            ->getQuery()
-            ->getResult();
+        // Fiche diagnostics distribution using DTO hydration
+        // Create DTO: src/DTO/FicheDiagnosticCount.php
+        // namespace App\DTO;
+        // class FicheDiagnosticCount {
+        //     public function __construct(
+        //         public readonly ?string $diagnostic,
+        //         public readonly int $count
+        //     ) {}
+        // }
+
+        $diagnostics = $ficheRepo->getEntityManager()->createQuery('
+            SELECT NEW App\\DTO\\FicheDiagnosticCount(f.diagnostic, COUNT(f.id))
+            FROM App\\Entity\\FicheMedicale f
+            GROUP BY f.diagnostic
+        ')->getResult();
         $ficheDiagnosticLabels = [];
         $ficheDiagnosticCounts = [];
         foreach ($diagnostics as $diag) {
-            $ficheDiagnosticLabels[] = $diag['diagnostic'] ?: 'Non spécifié';
-            $ficheDiagnosticCounts[] = $diag['count'];
+            $ficheDiagnosticLabels[] = $diag->diagnostic ?: 'Non spécifié';
+            $ficheDiagnosticCounts[] = $diag->count;
         }
 
         // Consultations per doctor (bar chart)
-        $doctors = $userRepo->findDoctorsRespPatients();
-        $doctorsConsultationsLabels = [];
-        $doctorsConsultationsCounts = [];
-        foreach ($doctors as $doctor) {
-            $doctorsConsultationsLabels[] = $doctor->getNom() . ' ' . $doctor->getPrenom();
-            $count = $rendezVousRepo->count(['staff' => $doctor]);
-            $doctorsConsultationsCounts[] = $count;
-        }
+            $doctors = $doctorList;
+            $doctorsConsultationsLabels = [];
+            $doctorsConsultationsCounts = [];
+            // Fetch all counts in one query to avoid N+1
+            $conn = $rendezVousRepo->getEntityManager()->getConnection();
+            $sql = 'SELECT idStaff, COUNT(*) AS cnt FROM rendez_vous GROUP BY idStaff';
+            $stmt = $conn->prepare($sql);
+            $result = $stmt->executeQuery()->fetchAllAssociative();
+            $countsByStaff = [];
+            foreach ($result as $row) {
+                $countsByStaff[$row['idStaff']] = (int)$row['cnt'];
+            }
+            foreach ($doctors as $doctor) {
+                $doctorsConsultationsLabels[] = ($doctor['nom'] ?? '') . ' ' . ($doctor['prenom'] ?? '');
+                $doctorId = $doctor['id'] ?? $doctor['id_user'] ?? null;
+                $doctorsConsultationsCounts[] = $countsByStaff[$doctorId] ?? 0;
+            }
 
 
         // Rendez-vous per day (line chart)
@@ -1235,10 +1331,10 @@ public function statsRessources(RessourceRepository $repo): Response
             'ficheDiagnosticCounts' => $ficheDiagnosticCounts,
             'doctorsConsultationsLabels' => $doctorsConsultationsLabels,
             'doctorsConsultationsCounts' => $doctorsConsultationsCounts,
-            'rdvMonthLabels' => $rdvMonthLabels ?? [],
-            'rdvMonthCounts' => $rdvMonthCounts ?? [],
-            'ficheMonthLabels' => $ficheMonthLabels ?? [],
-            'ficheMonthCounts' => $ficheMonthCounts ?? [],
+            'rdvMonthLabels' => isset($rdvMonthLabels) ? $rdvMonthLabels : [],
+            'rdvMonthCounts' => isset($rdvMonthCounts) ? $rdvMonthCounts : [],
+            'ficheMonthLabels' => isset($ficheMonthLabels) ? $ficheMonthLabels : [],
+            'ficheMonthCounts' => isset($ficheMonthCounts) ? $ficheMonthCounts : [],
             'rdvDayLabels' => $rdvDayLabels,
             'rdvDayCounts' => $rdvDayCounts,
             'ficheDayLabels' => $ficheDayLabels,
@@ -1292,7 +1388,7 @@ public function statsRessources(RessourceRepository $repo): Response
                 'message' => $rep->getMessage(),
                 'type' => $rep->getTypeReponse(),
                 'createdAt' => $rep->getDateCreationRep() ? $rep->getDateCreationRep()->format('d/m/Y H:i') : null,
-                'isRead' => method_exists($rep, 'isRead') ? $rep->isRead() : null,
+                'isRead' => $rep->isRead(),
             ];
         }
     

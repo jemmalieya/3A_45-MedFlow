@@ -30,7 +30,7 @@ final class PrescriptionController extends AbstractController
         }
 
         $token = $request->request->get('_token');
-        if (!$this->isCsrfTokenValid('edit_prescription' . $presc->getId(), $token)) {
+        if (!$this->isCsrfTokenValid('edit_prescription' . $presc->getId(), is_string($token) ? $token : (string)$token)) {
             $this->addFlash('error', 'Invalid CSRF token.');
             return $this->redirectToRoute('app_fiche_by_staff', ['idStaff' => $presc->getFicheMedicale()?->getRendezVous()?->getStaff()?->getId()]);
         }
@@ -51,7 +51,7 @@ final class PrescriptionController extends AbstractController
 
         if (!empty($errors)) {
             foreach ($errors as $e) $this->addFlash('error', $e);
-            return $this->redirectToRoute('app_fiche_by_staff', ['idStaff' => $presc->getFicheMedicale()?->getRendezVous()?->getIdStaff()]);
+            return $this->redirectToRoute('app_fiche_by_staff', ['idStaff' => $presc->getFicheMedicale()?->getRendezVous()?->getStaff()?->getId()]);
         }
 
         $presc->setNomMedicament($nom);
@@ -77,9 +77,9 @@ final class PrescriptionController extends AbstractController
         }
 
         $token = $request->request->get('_token');
-        if (!$this->isCsrfTokenValid('delete_prescription' . $presc->getId(), $token)) {
+        if (!$this->isCsrfTokenValid('delete_prescription' . $presc->getId(), is_string($token) ? $token : (string)$token)) {
             $this->addFlash('error', 'Invalid CSRF token.');
-            return $this->redirectToRoute('app_fiche_by_staff', ['idStaff' => $presc->getFicheMedicale()?->getRendezVous()?->getIdStaff()]);
+            return $this->redirectToRoute('app_fiche_by_staff', ['idStaff' => $presc->getFicheMedicale()?->getRendezVous()?->getStaff()?->getId()]);
         }
 
         $staffId = $presc->getFicheMedicale()?->getRendezVous()?->getStaff()?->getId();

@@ -4,11 +4,11 @@ namespace App\Entity;
 
 use App\Repository\ReactionRepository;
 use Doctrine\ORM\Mapping as ORM;
-
 #[ORM\Entity(repositoryClass: ReactionRepository::class)]
 #[ORM\Table(name: 'reaction', uniqueConstraints: [new ORM\UniqueConstraint(name: 'uniq_post_user', columns: ['post_id', 'user_id'])])]
 class Reaction
 {
+    
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
@@ -26,7 +26,7 @@ class Reaction
     private string $type = '';
 
     #[ORM\Column]
-    private ?\DateTimeImmutable $created_at = null;
+    private \DateTimeImmutable $created_at;
 
     public function __construct()
     {
@@ -76,9 +76,9 @@ class Reaction
         return $this->created_at;
     }
 
-    public function setCreatedAt(?\DateTimeImmutable $dt): static
-    {
-        $this->created_at = $dt;
-        return $this;
-    }
+public function setCreatedAt(\DateTimeImmutable $dt): static
+{
+    $this->created_at = $dt;
+    return $this;
+}
 }

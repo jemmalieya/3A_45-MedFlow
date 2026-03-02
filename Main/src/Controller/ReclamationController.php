@@ -120,28 +120,27 @@ public function index(
          * On récupère ce que le front (JS) a calculé : langue + original + sentiment + score
          * puis on calcule priorite automatiquement via ta méthode existante.
          */
-        $langOrig  = $request->request->get('langueOriginale');      // ex: "en" / "ar" / "fr"
-        $contOrig  = $request->request->get('contenuOriginal');      // texte original avant traduction
-        $descOrig  = $request->request->get('descriptionOriginal');  // texte original avant traduction
-        $sentiment = $request->request->get('sentiment');            // NEGATIVE/NEUTRAL/POSITIVE
-        $urgence   = $request->request->get('urgenceScore');         // 0..100
+       $langOrig  = $this->reqString($request, 'langueOriginale');
+$contOrig  = $this->reqString($request, 'contenuOriginal');
+$descOrig  = $this->reqString($request, 'descriptionOriginal');
+$sentiment = $this->reqString($request, 'sentiment');
+$urgence   = $this->reqInt($request, 'urgenceScore');
 
-        // On applique seulement si les champs existent (sinon ton code continue normal)
-        if ($langOrig !== null) {
-            $reclamation->setLangueOriginale($langOrig);
-        }
-        if ($contOrig !== null) {
-            $reclamation->setContenuOriginal($contOrig);
-        }
-        if ($descOrig !== null) {
-            $reclamation->setDescriptionOriginal($descOrig);
-        }
-        if ($sentiment !== null) {
-            $reclamation->setSentiment($sentiment);
-        }
-        if ($urgence !== null && $urgence !== '') {
-            $reclamation->setUrgenceScore((int) $urgence);
-        }
+if ($langOrig !== null) {
+    $reclamation->setLangueOriginale($langOrig);
+}
+if ($contOrig !== null) {
+    $reclamation->setContenuOriginal($contOrig);
+}
+if ($descOrig !== null) {
+    $reclamation->setDescriptionOriginal($descOrig);
+}
+if ($sentiment !== null) {
+    $reclamation->setSentiment($sentiment);
+}
+if ($urgence !== null) {
+    $reclamation->setUrgenceScore($urgence);
+}
 
         // timestamps IA (optionnel mais pro)
         if ($langOrig !== null || $sentiment !== null || $urgence !== null) {
@@ -368,21 +367,16 @@ public function edit(
     if ($form->isSubmitted() && $form->isValid()) {
 
         $reclamation->setDateModificationR(new \DateTimeImmutable());
-        /** @var UploadedFile $file */
-$file = $form->get('pieceJointePath')->getData();
-
-if ($file) {
-   /** @var UploadedFile|null $file */
+      /** @var UploadedFile|null $file */
 $file = $form->get('pieceJointePath')->getData();
 
 if ($file instanceof UploadedFile) {
+    $validExtensions = ['jpg', 'jpeg', 'png', 'pdf'];
+    $extension = $file->guessExtension();
 
-    // ✅ Supprimer ancien fichier cloud si on remplace
-    if ($reclamation->getPieceJointePath()) {
-        $cloud->delete(
-            $reclamation->getPieceJointePath(),
-            $reclamation->getPieceJointeResourceType() ?? 'image'
-        );
+    if (!in_array($extension, $validExtensions, true)) {
+        $this->addFlash('error', 'Le fichier n\'est pas valide. Formats autorisés: JPG, PNG, PDF.');
+        return $this->redirectToRoute('reclamation_index');
     }
 
     $result = $cloud->uploadProof($file);
@@ -391,9 +385,7 @@ if ($file instanceof UploadedFile) {
     $reclamation->setPieceJointeResourceType($result['resource_type'] ?? null);
     $reclamation->setPieceJointeFormat($result['format'] ?? null);
     $reclamation->setPieceJointeBytes($result['bytes'] ?? null);
-    $reclamation->setPieceJointeOriginalName($result['original_filename'] ?? $file->getClientOriginalName());
-}
-
+    $reclamation->setPieceJointeOriginalName($file->getClientOriginalName());
 }
 
 
@@ -403,12 +395,6 @@ if ($file instanceof UploadedFile) {
 
         return $this->redirectToRoute('my_reclamations');
     }
-
-    return $this->render('reclamation/edit.html.twig', [
-        'form' => $form,
-        'reclamation' => $reclamation,
-    ]);
-
     $reponsesNonLues = $em->getRepository(ReponseReclamation::class)
     ->createQueryBuilder('rep')
     ->join('rep.reclamation', 'r')
@@ -423,6 +409,12 @@ foreach ($reponsesNonLues as $rep) {
 }
 
 $em->flush();
+    return $this->render('reclamation/edit.html.twig', [
+        'form' => $form,
+        'reclamation' => $reclamation,
+    ]);
+
+
 
 }
 
@@ -440,7 +432,10 @@ public function delete(
         return $this->redirectToRoute('my_reclamations');
     }
 
-    if ($this->isCsrfTokenValid('delete' . $reclamation->getIdReclamation(), $request->request->get('_token'))) {
+    $token = $request->request->get('_token');
+$token = is_string($token) ? $token : null;
+
+if ($this->isCsrfTokenValid('delete' . $reclamation->getIdReclamation(), $token)) {
 
         // 1) Supprimer la pièce jointe Cloudinary si existe
         if ($reclamation->getPieceJointePath()) {
@@ -567,10 +562,14 @@ public function repondreAReclamation(Request $request, Reclamation $reclamation,
     if ($form->isSubmitted() && $form->isValid()) {
 
         // 🔍 vérifier s’il existe au moins une REPONSE
-        $hasReponse = $repo->count([
-            'reclamation' => $reclamation,
-            'typeReponse' => 'REPONSE'
-        ]) > 0 || $reponse->getTypeReponse() === 'REPONSE';
+ $type = $reponse->getTypeReponse(); // pas de cast
+
+$hasReponseDb = $repo->count([
+    'reclamation' => $reclamation,
+    'typeReponse' => 'REPONSE',
+]) > 0;
+
+$hasReponse = $hasReponseDb || ($type === 'REPONSE');
 
         $reclamation->setStatutReclamation($hasReponse ? 'TRAITEE' : 'En attente');
 
@@ -704,18 +703,27 @@ private function sendReclamationCreatedEmail(Reclamation $reclamation, User $use
         ",
     ];
 
-    $ch = curl_init('https://api.brevo.com/v3/smtp/email');
-    curl_setopt_array($ch, [
-        CURLOPT_HTTPHEADER => [
-            'api-key: ' . $apiKey,
-            'Content-Type: application/json',
-            'Accept: application/json',
-        ],
-        CURLOPT_POST => true,
-        CURLOPT_POSTFIELDS => json_encode($payload),
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_TIMEOUT => 15,
+ $ch = curl_init('https://api.brevo.com/v3/smtp/email');
+
+$jsonPayload = json_encode($payload);
+if ($jsonPayload === false) {
+    $logger->error('Brevo payload json_encode failed', [
+        'error' => json_last_error_msg(),
     ]);
+    return; // ✅ stop propre (évite CURLOPT_POSTFIELDS = false)
+}
+
+curl_setopt_array($ch, [
+    CURLOPT_HTTPHEADER => [
+        'api-key: ' . $apiKey,
+        'Content-Type: application/json',
+        'Accept: application/json',
+    ],
+    CURLOPT_POST => true,
+    CURLOPT_POSTFIELDS => $jsonPayload, // ✅ string garanti
+    CURLOPT_RETURNTRANSFER => true,
+    CURLOPT_TIMEOUT => 15,
+]);
 
     $response = curl_exec($ch);
     $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
@@ -752,9 +760,8 @@ private function canSeePiece(?User $user, Reclamation $reclamation): bool
     $isOwner = ($ownerId !== null && (int)$ownerId === (int)$userId);
 
     // ✅ Tes colonnes BD
-    $roleSysteme = method_exists($user, 'getRoleSysteme') ? $user->getRoleSysteme() : null;
-    $typeStaff   = method_exists($user, 'getTypeStaff') ? $user->getTypeStaff() : null;
-
+   $roleSysteme = $user->getRoleSysteme();
+$typeStaff   = $user->getTypeStaff();
     $isRespBlog = ($roleSysteme === 'STAFF' && $typeStaff === 'RESP_BLOG');
     $isAdmin    = ($roleSysteme === 'ADMIN');
 
@@ -774,8 +781,7 @@ public function downloadPiece(Reclamation $reclamation, Cloudinary $cloudinary):
 
     // ✅ Compare par ID (évite proxy Doctrine)
     $ownerId = $reclamation->getUser()?->getId();
-    $userId  = method_exists($user, 'getId') ? $user->getId() : null;
-
+   $userId = $user->getId();
     $isOwner    = ($ownerId !== null && $userId !== null && (int)$ownerId === (int)$userId);
     $isRespBlog = $this->isGranted('STAFF');
     
@@ -825,5 +831,40 @@ public function previewPiece(Reclamation $reclamation, Cloudinary $cloudinary): 
 
 
 
+private function reqString(Request $request, string $key): ?string
+{
+    $all = $request->request->all();       // mixed[]
+    $v = $all[$key] ?? null;               // mixed
 
+    if ($v === null) {
+        return null;
+    }
+
+    if (!is_scalar($v)) {                  // couvre array + object
+        return null;
+    }
+
+    $s = trim((string) $v);
+    return $s === '' ? null : $s;
+}
+
+private function reqInt(Request $request, string $key): ?int
+{
+    $all = $request->request->all();       // mixed[]
+    $v = $all[$key] ?? null;               // mixed
+
+    if ($v === null || $v === '') {
+        return null;
+    }
+
+    if (is_int($v)) {
+        return $v;
+    }
+
+    if (is_scalar($v) && is_numeric((string) $v)) {
+        return (int) $v;
+    }
+
+    return null;
+}
 }

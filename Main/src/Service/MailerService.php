@@ -79,9 +79,9 @@ class MailerService
 
     public function sendRendezVousConfirmed(string $to, string $patientName, \DateTime $dateTime)
     {
-        $apiKey = $_ENV['BREVO_API_KEY1'] ?? null;
+        $apiKey = $_ENV['BREVO_API_KEY'] ?? null;
         $appUrl = $_ENV['APP_URL'] ?? 'http://127.0.0.1:8000';
-        $senderEmail = $_ENV['BREVO_SENDER_EMAIL1'] ?? null;
+        $senderEmail = $_ENV['BREVO_SENDER_EMAIL'] ?? null;
         $senderName = $_ENV['BREVO_SENDER_NAME'] ?? 'MedFlow';
 
         if (!$apiKey || !$senderEmail) {

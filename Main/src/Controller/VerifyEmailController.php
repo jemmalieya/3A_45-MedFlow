@@ -45,7 +45,7 @@ class VerifyEmailController extends AbstractController
 
         $user->setIsVerified(true);
         $user->setVerificationToken(null);
-        $user->setTokenExpiresAt(null);
+        $user->updateTokenExpiresAt(null);
         $em->flush();
 
         $this->addFlash('success', 'Email vérifié ✅');
@@ -80,7 +80,7 @@ class VerifyEmailController extends AbstractController
 
     // 🔁 Nouveau token
     $user->setVerificationToken(bin2hex(random_bytes(32)));
-    $user->setTokenExpiresAt((new \DateTime())->modify('+24 hours'));
+    $user->updateTokenExpiresAt((new \DateTime())->modify('+24 hours'));
     $em->flush();
 
     $this->sendVerificationEmail($user, $logger);
@@ -113,6 +113,8 @@ class VerifyEmailController extends AbstractController
             'htmlContent' => "<p><a href='$link'>Vérifier mon email</a></p>",
         ];
 
+        $body = json_encode($payload, JSON_THROW_ON_ERROR);
+
         $ch = curl_init('https://api.brevo.com/v3/smtp/email');
         curl_setopt_array($ch, [
             CURLOPT_HTTPHEADER => [
@@ -120,7 +122,7 @@ class VerifyEmailController extends AbstractController
                 'Content-Type: application/json',
             ],
             CURLOPT_POST => true,
-            CURLOPT_POSTFIELDS => json_encode($payload),
+            CURLOPT_POSTFIELDS => $body,
             CURLOPT_RETURNTRANSFER => true,
         ]);
 
