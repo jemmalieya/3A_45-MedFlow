@@ -13,7 +13,15 @@ class AiCommentModerationService
         private float $threshold = 0.70
     ) {}
 
-    public function moderate(string $text): array
+    /**
+ * @return array{
+ *   allow: bool,
+ *   score: float,
+ *   label: string,
+ *   raw: array<string, mixed>|list<mixed>
+ * }
+ */
+public function moderate(string $text): array
     {
         $text = trim($text);
 
@@ -47,7 +55,7 @@ class AiCommentModerationService
             $raw = $response->toArray(false);
 
             // ✅ HF peut renvoyer {error: "..."} même en 200
-            if ($status >= 400 || (is_array($raw) && isset($raw['error']))) {
+           if ($status >= 400 || isset($raw['error'])) {
                 return [
                     'allow' => true,         // (tu peux mettre false si tu veux bloquer en cas d'erreur)
                     'score' => 0.0,
@@ -60,8 +68,8 @@ class AiCommentModerationService
             // Exemple: [[{"label":"toxic","score":0.9},{"label":"non-toxic","score":0.1}]]
             $best = $this->extractBestLabelScore($raw);
 
-            $label = $best['label'] ?? 'unknown';
-            $score = (float) ($best['score'] ?? 0.0);
+           $label = isset($best['label']) ? $best['label'] : 'unknown';
+$score = isset($best['score']) ? (float) $best['score'] : 0.0;
 
             // ✅ décision
             $allow = true;
@@ -88,7 +96,11 @@ class AiCommentModerationService
         }
     }
 
-    private function extractBestLabelScore(array $raw): array
+/**
+ * @param array<string, mixed>|list<mixed> $raw
+ * @return array{label?: string, score?: float}
+ */
+private function extractBestLabelScore(array $raw): array
     {
         // Cas attendu: [[{label,score}, {label,score}]]
         if (isset($raw[0]) && is_array($raw[0])) {
@@ -97,7 +109,7 @@ class AiCommentModerationService
             if (isset($list[0]) && is_array($list[0]) && isset($list[0]['label'])) {
                 // choisir le plus grand score
                 usort($list, fn($a, $b) => ($b['score'] ?? 0) <=> ($a['score'] ?? 0));
-                return $list[0] ?? [];
+                return $list[0];
             }
         }
 

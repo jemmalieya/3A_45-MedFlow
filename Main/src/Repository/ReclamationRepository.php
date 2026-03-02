@@ -15,7 +15,10 @@ class ReclamationRepository extends ServiceEntityRepository
     {
         parent::__construct($registry, Reclamation::class);
     }
-    public function searchFront(
+ /**
+ * @return Reclamation[]
+ */
+public function searchFront(
     int $userId,
     ?string $q,
     ?string $type,
@@ -43,8 +46,8 @@ class ReclamationRepository extends ServiceEntityRepository
 
     // ✅ Filtre statut
     if ($statut && trim($statut) !== '') {
-        $qb->andWhere('r.statut = :statut')
-           ->setParameter('statut', trim($statut));
+        $qb->andWhere('r.statutReclamation = :statut')
+   ->setParameter('statut', trim($statut));
     }
 
     // ✅ Tri sécurisé (whitelist)
@@ -58,6 +61,9 @@ class ReclamationRepository extends ServiceEntityRepository
               ->getQuery()
               ->getResult();
 }
+/**
+ * @return array{total:int, traitees:int, enAttente:int}
+ */
 public function getReclamKpis(\DateTimeInterface $from, \DateTimeInterface $to): array
 {
     $row = $this->createQueryBuilder('r')
@@ -77,6 +83,9 @@ public function getReclamKpis(\DateTimeInterface $from, \DateTimeInterface $to):
     ];
 }
 
+/**
+ * @return array<int, array{label: string, total: int|string}>
+ */
 public function countReclamByType(\DateTimeInterface $from, \DateTimeInterface $to): array
 {
     return $this->createQueryBuilder('r')
@@ -90,6 +99,9 @@ public function countReclamByType(\DateTimeInterface $from, \DateTimeInterface $
         ->getArrayResult();
 }
 
+/**
+ * @return array<int, array{label: string, total: int|string}>
+ */
 public function countReclamByStatut(\DateTimeInterface $from, \DateTimeInterface $to): array
 {
     return $this->createQueryBuilder('r')
@@ -103,6 +115,9 @@ public function countReclamByStatut(\DateTimeInterface $from, \DateTimeInterface
         ->getArrayResult();
 }
 
+/**
+ * @return array<int, array{label: string, total: int|string}>
+ */
 public function countReclamByPriorite(\DateTimeInterface $from, \DateTimeInterface $to): array
 {
     return $this->createQueryBuilder('r')
@@ -115,6 +130,9 @@ public function countReclamByPriorite(\DateTimeInterface $from, \DateTimeInterfa
         ->getQuery()
         ->getArrayResult();
 }
+/**
+ * @return array<int, array{day: string, total: int}>
+ */
 public function countReclamByDay(\DateTimeInterface $from, \DateTimeInterface $to): array
 {
     $rows = $this->createQueryBuilder('r')
@@ -143,6 +161,10 @@ public function countReclamByDay(\DateTimeInterface $from, \DateTimeInterface $t
     }
     return $result;
 }
+/**
+ * @param array{q?:string, sort?:string, dir?:string} $filters
+ * @return Reclamation[]
+ */
 public function findFiltered(array $filters = []): array
 {
     $q    = trim((string)($filters['q'] ?? ''));

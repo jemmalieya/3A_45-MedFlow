@@ -20,7 +20,7 @@ class Reclamation
     private ?int $id_reclamation = null;
 
     #[ORM\Column(length: 30)]
-    private ?string $referenceReclamation = null;
+    private string $referenceReclamation= '';
 
     // ✅ CONTROLE SAISIE (PHP) : contenu
     #[ORM\Column(length: 150)]
@@ -31,7 +31,7 @@ class Reclamation
         max: 150,
         maxMessage: "Le contenu ne doit pas dépasser {{ limit }} caractères."
     )]
-    private ?string $contenu = null;
+    private string $contenu;
 
     // ✅ CONTROLE SAISIE (PHP) : description
     #[ORM\Column(type: Types::TEXT)]
@@ -40,7 +40,7 @@ class Reclamation
         min: 10,
         minMessage: "La description doit contenir au moins {{ limit }} caractères."
     )]
-    private ?string $description = null;
+    private string $description;
 
     // ✅ CONTROLE SAISIE (PHP) : type
     #[ORM\Column(length: 50)]
@@ -55,7 +55,7 @@ class Reclamation
         pattern: "/^[a-zA-ZÀ-ÿ0-9\s'_-]+$/u",
         message: "Le type contient des caractères non autorisés."
     )]
-    private ?string $type = null;
+    private string $type;
 
     #[ORM\Column(length: 255, nullable: true)]
     private ?string $pieceJointePath = null;
@@ -145,6 +145,15 @@ private ?\DateTimeImmutable $translatedAt = null;
 #[ORM\Column(type: 'datetime_immutable', nullable: true)]
 private ?\DateTimeImmutable $analysisAt = null;
 
+public function markAsTranslated(): void
+{
+    $this->translatedAt = new \DateTimeImmutable();
+}
+
+public function markAsAnalyzed(): void
+{
+    $this->analysisAt = new \DateTimeImmutable();
+}
 // ====== contenuOriginal ======
 public function getContenuOriginal(): ?string
 {
@@ -235,11 +244,7 @@ public function getTranslatedAt(): ?\DateTimeImmutable
     return $this->translatedAt;
 }
 
-public function setTranslatedAt(?\DateTimeImmutable $translatedAt): self
-{
-    $this->translatedAt = $translatedAt;
-    return $this;
-}
+
 
 // ====== analysisAt ======
 public function getAnalysisAt(): ?\DateTimeImmutable
@@ -247,23 +252,18 @@ public function getAnalysisAt(): ?\DateTimeImmutable
     return $this->analysisAt;
 }
 
-public function setAnalysisAt(?\DateTimeImmutable $analysisAt): self
-{
-    $this->analysisAt = $analysisAt;
-    return $this;
-}
 
     #[ORM\Column(length: 50)]
-    private ?string $statutReclamation = null;
+    private string $statutReclamation;
 
     #[ORM\Column(length: 50)]
-    private ?string $priorite = null;
+    private string $priorite;
 
     #[ORM\Column(nullable: true)]
     private ?\DateTimeImmutable $date_limite = null;
 
     #[ORM\Column]
-    private ?\DateTimeImmutable $date_creation_r = null;
+    private \DateTimeImmutable $date_creation_r;
 
     #[ORM\Column(nullable: true)]
     private ?\DateTimeImmutable $date_modification_r = null;
@@ -294,7 +294,7 @@ public function setNotificationEnvoyee(bool $notificationEnvoyee): static
     /**
      * @var Collection<int, ReponseReclamation>
      */
-    #[ORM\OneToMany(targetEntity: ReponseReclamation::class, mappedBy: 'reclamation', orphanRemoval: true)]
+    #[ORM\OneToMany(targetEntity: ReponseReclamation::class, mappedBy: 'reclamation',cascade:["persist", "remove"], orphanRemoval: true)]
     private Collection $reponses;
 
     public function __construct()
@@ -479,21 +479,18 @@ public function setNotificationEnvoyee(bool $notificationEnvoyee): static
 #[ORM\PrePersist]
 public function setDatesAutomatiquement(): void
 {
-    // Date de création
-    if ($this->date_creation_r === null) {
-        $this->date_creation_r = new \DateTimeImmutable();
-    }
-     if (
+    if (
         $this->statutReclamation === 'TRAITEE'
         && $this->date_cloture_r === null
     ) {
         $this->date_cloture_r = new \DateTimeImmutable();
     }
-    // ✅ Date limite = +48h (2 jours)
+
     if ($this->date_limite === null) {
         $this->date_limite = $this->date_creation_r->modify('+48 hours');
     }
-}
+  }
+
 
 public function isUrgente(): bool
 {

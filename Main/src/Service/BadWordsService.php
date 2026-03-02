@@ -8,11 +8,14 @@ class BadWordsService
 {
     public function __construct(private HttpClientInterface $client) {}
 
-    /**
-     * Retourne: ['hasBadWords' => bool, 'badWords' => string[]]
-     */
-    public function check(string $text): array
-    {
+   /**
+ * @return array{
+ *   hasBadWords: bool,
+ *   badWords: list<string>
+ * }
+ */
+public function check(string $text): array
+{
         $text = trim($text);
         if ($text === '') {
             return ['hasBadWords' => false, 'badWords' => []];

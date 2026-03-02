@@ -190,16 +190,13 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\OneToMany(mappedBy: 'user', targetEntity: Post::class)]
     private Collection $posts;
 
-    /**
-     * @var Collection<int, Commentaire>
-     */
-    #[ORM\OneToMany(mappedBy: 'user', targetEntity: Commentaire::class, cascade: ['persist', 'remove'])]
-    private Collection $commentaires;
+#[ORM\OneToMany(mappedBy: 'user', targetEntity: Post::class, cascade: ['persist'])]
+private Collection $posts;
 
-    /**
-     * @var Collection<int, Reclamation>
-     */
-    #[ORM\OneToMany(mappedBy: 'user', targetEntity: Reclamation::class, cascade: ['persist', 'remove'])]
+   #[ORM\OneToMany(mappedBy: 'user', targetEntity: Commentaire::class, orphanRemoval: true, cascade: ['persist', 'remove'])]
+private Collection $commentaires;
+
+    #[ORM\OneToMany(mappedBy: 'user', targetEntity: Reclamation::class, cascade: ['persist'])]
     private Collection $reclamations;
 
 
