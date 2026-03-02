@@ -18,6 +18,9 @@ class FicheMedicaleRepository extends ServiceEntityRepository
     /**
      * Find all FicheMedicales related to RendezVous of a specific staff member
      */
+    /**
+     * @return FicheMedicale[]
+     */
     public function findFichesByStaffId(int $idStaff): array
     {
         // Fetch User entity for staff

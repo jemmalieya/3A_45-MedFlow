@@ -220,14 +220,9 @@ final class AdController extends AbstractController
                 return $this->json(['success' => false, 'error' => 'OCR failed: ' . $e->getMessage()], 500);
             }
 
-            if (is_array($res)) {
-                $ocrText = is_string($res['text'] ?? null) ? trim((string) $res['text']) : null;
-                $ocrError = is_string($res['error'] ?? null) ? (string) $res['error'] : null;
-            } else {
-                // legacy: service returned string
-                $ocrText = is_string($res) ? trim((string) $res) : null;
-                $ocrError = null;
-            }
+            // $res is always array here, so no need for is_array
+            $ocrText = isset($res['text']) ? trim((string) $res['text']) : null;
+            $ocrError = isset($res['error']) ? (string) $res['error'] : null;
 
             if (is_string($ocrText) && $ocrText !== '') {
                 $docs['files'][$i]['ocrText'] = mb_substr($ocrText, 0, 4000);
@@ -235,9 +230,9 @@ final class AdController extends AbstractController
         }
 
         // Build (optional) AI suggestion for THIS document if not already stored
-        $aiSuggestion = is_string($docs['files'][$i]['aiSuggestion'] ?? null) ? trim((string) $docs['files'][$i]['aiSuggestion']) : '';
-        if ($aiSuggestion === '' && is_string($ocrText) && trim($ocrText) !== '') {
-            $meta = is_array($docs['meta'] ?? null) ? $docs['meta'] : [];
+        $aiSuggestion = isset($docs['files'][$i]['aiSuggestion']) ? trim((string) $docs['files'][$i]['aiSuggestion']) : '';
+        if ($aiSuggestion === '' && !empty($ocrText)) {
+            $meta = isset($docs['meta']) && is_array($docs['meta']) ? $docs['meta'] : [];
             $metaText = sprintf(
                 "specialite=%s; etablissement=%s; numero=%s; role=%s; type=%s",
                 (string) ($meta['specialite'] ?? ''),
@@ -1047,10 +1042,10 @@ public function statsEvenements(EvenementRepository $repo): Response
 #[Route('/stats-ressources', name: 'ad_stats_ressources', methods: ['GET'])]
 public function statsRessources(RessourceRepository $repo): Response
 {
-    $kpi = method_exists($repo, 'getKpiStats') ? $repo->getKpiStats() : [];
-    $byType = method_exists($repo, 'countByType') ? $repo->countByType() : [];
-    $byCategorie = method_exists($repo, 'countByCategorie') ? $repo->countByCategorie() : [];
-    $topEvents = method_exists($repo, 'topEvenementsByRessources') ? $repo->topEvenementsByRessources(5) : [];
+    $kpi = $repo->getKpiStats();
+    $byType = $repo->countByType();
+    $byCategorie = $repo->countByCategorie();
+    $topEvents = $repo->topEvenementsByRessources(5);
 
     return $this->render('dashboard_ad/indexevent.html.twig', [
         'section' => 'stats_ressources',
@@ -1073,25 +1068,40 @@ public function statsRessources(RessourceRepository $repo): Response
         \App\Repository\PrescriptionRepository $prescRepo
     ): Response {
         // Get all doctors (STAFF, RESP_PATIENTS)
-        $doctors = $userRepo->findDoctorsRespPatients();
+        // Limit doctor list to 100 for performance (adjust as needed)
+        $doctors = $userRepo->createQueryBuilder('u')
+            ->where('u.roleSysteme IN (:roles)')
+            ->setParameter('roles', ['STAFF', 'RESP_PATIENTS'])
+            ->orderBy('u.nom', 'ASC')
+            ->setMaxResults(100)
+            ->getQuery()
+            ->getResult(\Doctrine\ORM\Query::HYDRATE_ARRAY);
         $doctorsData = [];
         foreach ($doctors as $doctor) {
-            $rendezvous = $rendezVousRepo->findBy(['staff' => $doctor], ['datetime' => 'DESC']);
-            $fiches = $ficheRepo->findFichesByStaffId($doctor->getId());
-            // Get all prescriptions for this doctor's fiches
+            // $doctor is now an array due to HYDRATE_ARRAY
+            $doctorId = $doctor['id'] ?? $doctor['id_user'] ?? null;
+            $rendezvous = $rendezVousRepo->findBy(['staff' => $doctorId], ['datetime' => 'DESC']);
+            $fiches = $ficheRepo->findFichesByStaffId($doctorId);
+
+            // Eager load all prescriptions for these fiches in one query
+            $ficheIds = array_map(fn($fiche) => $fiche->getId(), $fiches);
             $prescriptions = [];
-            foreach ($fiches as $fiche) {
-                foreach ($fiche->getPrescriptions() as $presc) {
-                    $prescriptions[] = $presc;
-                }
+            if (count($ficheIds) > 0) {
+                $qb = $prescRepo->createQueryBuilder('p')
+                    ->leftJoin('p.ficheMedicale', 'f')
+                    ->addSelect('f')
+                    ->where('f.id IN (:ficheIds)')
+                    ->setParameter('ficheIds', $ficheIds);
+                $prescriptions = $qb->getQuery()->getResult();
             }
+
             $doctorsData[] = [
-                'id' => $doctor->getId(),
-                'nom' => $doctor->getNom(),
-                'prenom' => $doctor->getPrenom(),
-                'typeStaff' => $doctor->getTypeStaff(),
-                'telephoneUser' => $doctor->getTelephoneUser(),
-                'emailUser' => $doctor->getEmailUser(),
+                'id' => $doctorId,
+                'nom' => $doctor['nom'] ?? null,
+                'prenom' => $doctor['prenom'] ?? null,
+                'typeStaff' => $doctor['typeStaff'] ?? $doctor['type_staff'] ?? null,
+                'telephoneUser' => $doctor['telephoneUser'] ?? $doctor['telephone_user'] ?? null,
+                'emailUser' => $doctor['emailUser'] ?? $doctor['email_user'] ?? null,
                 'rendezvous' => $rendezvous,
                 'fiches' => $fiches,
                 'prescriptions' => $prescriptions,
@@ -1121,7 +1131,15 @@ public function statsRessources(RessourceRepository $repo): Response
         \App\Repository\PrescriptionRepository $prescRepo
     ): Response {
         // Total counts
-        $totalDoctors = count($userRepo->findDoctorsRespPatients());
+        // Limit doctor list to 100 for performance (adjust as needed)
+        $doctorList = $userRepo->createQueryBuilder('u')
+            ->where('u.roleSysteme IN (:roles)')
+            ->setParameter('roles', ['STAFF', 'RESP_PATIENTS'])
+            ->orderBy('u.nom', 'ASC')
+            ->setMaxResults(100)
+            ->getQuery()
+            ->getResult(\Doctrine\ORM\Query::HYDRATE_ARRAY);
+        $totalDoctors = count($doctorList);
         $totalRendezVous = $rendezVousRepo->count([]);
         $totalFiches = $ficheRepo->count([]);
 
@@ -1132,28 +1150,46 @@ public function statsRessources(RessourceRepository $repo): Response
             $rdvStatutCounts[] = $rendezVousRepo->count(['statut' => $statut]);
         }
 
-        // Fiche diagnostics distribution
-        $diagnostics = $ficheRepo->createQueryBuilder('f')
-            ->select('f.diagnostic, COUNT(f.id) as count')
-            ->groupBy('f.diagnostic')
-            ->getQuery()
-            ->getResult();
+        // Fiche diagnostics distribution using DTO hydration
+        // Create DTO: src/DTO/FicheDiagnosticCount.php
+        // namespace App\DTO;
+        // class FicheDiagnosticCount {
+        //     public function __construct(
+        //         public readonly ?string $diagnostic,
+        //         public readonly int $count
+        //     ) {}
+        // }
+
+        $diagnostics = $ficheRepo->getEntityManager()->createQuery('
+            SELECT NEW App\\DTO\\FicheDiagnosticCount(f.diagnostic, COUNT(f.id))
+            FROM App\\Entity\\FicheMedicale f
+            GROUP BY f.diagnostic
+        ')->getResult();
         $ficheDiagnosticLabels = [];
         $ficheDiagnosticCounts = [];
         foreach ($diagnostics as $diag) {
-            $ficheDiagnosticLabels[] = $diag['diagnostic'] ?: 'Non spécifié';
-            $ficheDiagnosticCounts[] = $diag['count'];
+            $ficheDiagnosticLabels[] = $diag->diagnostic ?: 'Non spécifié';
+            $ficheDiagnosticCounts[] = $diag->count;
         }
 
         // Consultations per doctor (bar chart)
-        $doctors = $userRepo->findDoctorsRespPatients();
-        $doctorsConsultationsLabels = [];
-        $doctorsConsultationsCounts = [];
-        foreach ($doctors as $doctor) {
-            $doctorsConsultationsLabels[] = $doctor->getNom() . ' ' . $doctor->getPrenom();
-            $count = $rendezVousRepo->count(['staff' => $doctor]);
-            $doctorsConsultationsCounts[] = $count;
-        }
+            $doctors = $doctorList;
+            $doctorsConsultationsLabels = [];
+            $doctorsConsultationsCounts = [];
+            // Fetch all counts in one query to avoid N+1
+            $conn = $rendezVousRepo->getEntityManager()->getConnection();
+            $sql = 'SELECT idStaff, COUNT(*) AS cnt FROM rendez_vous GROUP BY idStaff';
+            $stmt = $conn->prepare($sql);
+            $result = $stmt->executeQuery()->fetchAllAssociative();
+            $countsByStaff = [];
+            foreach ($result as $row) {
+                $countsByStaff[$row['idStaff']] = (int)$row['cnt'];
+            }
+            foreach ($doctors as $doctor) {
+                $doctorsConsultationsLabels[] = ($doctor['nom'] ?? '') . ' ' . ($doctor['prenom'] ?? '');
+                $doctorId = $doctor['id'] ?? $doctor['id_user'] ?? null;
+                $doctorsConsultationsCounts[] = $countsByStaff[$doctorId] ?? 0;
+            }
 
 
         // Rendez-vous per day (line chart)
@@ -1207,10 +1243,10 @@ public function statsRessources(RessourceRepository $repo): Response
             'ficheDiagnosticCounts' => $ficheDiagnosticCounts,
             'doctorsConsultationsLabels' => $doctorsConsultationsLabels,
             'doctorsConsultationsCounts' => $doctorsConsultationsCounts,
-            'rdvMonthLabels' => $rdvMonthLabels ?? [],
-            'rdvMonthCounts' => $rdvMonthCounts ?? [],
-            'ficheMonthLabels' => $ficheMonthLabels ?? [],
-            'ficheMonthCounts' => $ficheMonthCounts ?? [],
+            'rdvMonthLabels' => isset($rdvMonthLabels) ? $rdvMonthLabels : [],
+            'rdvMonthCounts' => isset($rdvMonthCounts) ? $rdvMonthCounts : [],
+            'ficheMonthLabels' => isset($ficheMonthLabels) ? $ficheMonthLabels : [],
+            'ficheMonthCounts' => isset($ficheMonthCounts) ? $ficheMonthCounts : [],
             'rdvDayLabels' => $rdvDayLabels,
             'rdvDayCounts' => $rdvDayCounts,
             'ficheDayLabels' => $ficheDayLabels,
@@ -1264,7 +1300,7 @@ public function statsRessources(RessourceRepository $repo): Response
                 'message' => $rep->getMessage(),
                 'type' => $rep->getTypeReponse(),
                 'createdAt' => $rep->getDateCreationRep() ? $rep->getDateCreationRep()->format('d/m/Y H:i') : null,
-                'isRead' => method_exists($rep, 'isRead') ? $rep->isRead() : null,
+                'isRead' => $rep->isRead(),
             ];
         }
     

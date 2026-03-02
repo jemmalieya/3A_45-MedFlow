@@ -18,7 +18,8 @@ class RendezVousController extends AbstractController
     #[Route('/rendezvous/{id}/confirm', name: 'confirm_appointment', methods: ['POST'])]
     public function confirmAppointment(Request $request, EntityManagerInterface $em, int $id, MailerService $mailerService): Response
     {
-        if (!$this->isCsrfTokenValid('confirm_appointment' . $id, $request->request->get('_token'))) {
+        $token = $request->request->get('_token');
+        if (!$this->isCsrfTokenValid('confirm_appointment' . $id, is_string($token) ? $token : (string)$token)) {
             // Invalid CSRF, just redirect back to staff fiche list (no message)
             return $this->redirectToRoute('app_fiche_by_staff', ['idStaff' => $request->query->get('idStaff')]);
         }
@@ -34,11 +35,14 @@ class RendezVousController extends AbstractController
         // Send confirmation email to patient
         $patient = $appointment->getPatient();
         if ($patient && $patient->getEmailUser()) {
-            $mailerService->sendRendezVousConfirmed(
-                $patient->getEmailUser(),
-                $patient->getNom() . ' ' . $patient->getPrenom(),
-                $appointment->getDatetime()
-            );
+            $dateTime = $appointment->getDatetime();
+            if ($dateTime instanceof \DateTime) {
+                $mailerService->sendRendezVousConfirmed(
+                    $patient->getEmailUser(),
+                    $patient->getNom() . ' ' . $patient->getPrenom(),
+                    $dateTime
+                );
+            }
         }
         // Redirect back to staff fiche list for the appointment's staff
         $staff = $appointment->getStaff();
@@ -59,6 +63,7 @@ class RendezVousController extends AbstractController
             ->andWhere('u.roleSysteme IN (:roles)')
             ->setParameter('roles', ['STAFF', 'ADMIN'])
             ->orderBy('u.nom', 'ASC')
+            ->setMaxResults(50)
             ->getQuery()
             ->getResult();
 
@@ -90,11 +95,12 @@ class RendezVousController extends AbstractController
         if ($form->isSubmitted()) {
             if ($form->isValid()) {
                 try {
-                    $rendezVous->setCreatedAt(new \DateTime());
+                    $rendezVous->createdAt = new \DateTimeImmutable();
                     // AI urgency detection
                     $urgency = 'Normal';
                     try {
-                        $urgency = $urgencyService->detectUrgency($rendezVous->getMotif());
+                        $motif = $rendezVous->getMotif();
+                        $urgency = $motif !== null ? $urgencyService->detectUrgency($motif) : 'Normal';
                     } catch (\Exception $e) {
                         $urgency = 'Normal';
                     }
@@ -132,7 +138,7 @@ class RendezVousController extends AbstractController
         $repo = $em->getRepository(RendezVous::class);
         $ficheRepo = $em->getRepository(\App\Entity\FicheMedicale::class);
         $prescRepo = $em->getRepository(\App\Entity\Prescription::class);
-        $rendezvous = $patient ? $repo->findBy(['patient' => $patient], ['createdAt' => 'DESC']) : [];
+        $rendezvous = $patient ? $repo->findBy(['patient' => $patient], ['createdAt' => 'DESC'], 50) : [];
 
         // Inline edit form for the open row
         $editForm = null;
@@ -146,22 +152,29 @@ class RendezVousController extends AbstractController
 
         // Get all fiche médicales related to the user's rendezvous
         if ($rendezvous) {
-            $fiche_med_ids = [];
-            foreach ($rendezvous as $rdv) {
-                $fiche = $ficheRepo->findOneBy(['rendezVous' => $rdv]);
-                if ($fiche) {
-                    $fiches_medicales[] = $fiche;
-                }
+            $rdvIds = array_map(fn($rdv) => $rdv->getId(), $rendezvous);
+            if ($rdvIds) {
+                $qb = $em->createQueryBuilder();
+                $qb->select('f, r')
+                    ->from('App\\Entity\\FicheMedicale', 'f')
+                    ->leftJoin('f.rendezVous', 'r')
+                    ->where($qb->expr()->in('r.id', ':rdvIds'))
+                    ->setParameter('rdvIds', $rdvIds);
+                $fiches_medicales = $qb->getQuery()->getResult();
             }
         }
 
-        // Get all prescriptions related to the user's fiche médicales
+        // Get all prescriptions related to the user's fiche médicales (optimized with JOIN)
         if ($fiches_medicales) {
-            foreach ($fiches_medicales as $fiche) {
-                $fichePrescriptions = $prescRepo->findBy(['ficheMedicale' => $fiche]);
-                foreach ($fichePrescriptions as $presc) {
-                    $prescriptions[] = $presc;
-                }
+            $ficheIds = array_map(fn($fiche) => $fiche->getId(), $fiches_medicales);
+            if ($ficheIds) {
+                $qb = $em->createQueryBuilder();
+                $qb->select('p')
+                    ->from('App\\Entity\\Prescription', 'p')
+                    ->leftJoin('p.ficheMedicale', 'f')
+                    ->where($qb->expr()->in('f.id', ':ficheIds'))
+                    ->setParameter('ficheIds', $ficheIds);
+                $prescriptions = $qb->getQuery()->getResult();
             }
         }
 
@@ -170,7 +183,7 @@ class RendezVousController extends AbstractController
             'patientId' => $patientId,
             'fiches_medicales' => $fiches_medicales,
             'prescriptions' => $prescriptions,
-            'editForm' => isset($editForm) && $editForm ? $editForm->createView() : null,
+            'editForm' => $editForm ? $editForm->createView() : null,
             'openEdit' => $openEdit,
         ]);
     }
@@ -178,7 +191,8 @@ class RendezVousController extends AbstractController
     #[Route('/rendezvous/{id}/delete', name: 'rendezvous_delete', methods: ['POST'])]
     public function delete(Request $request, EntityManagerInterface $em, int $id): Response
     {
-        if (!$this->isCsrfTokenValid('delete'.$id, $request->request->get('_token'))) {
+        $token = $request->request->get('_token');
+        if (!$this->isCsrfTokenValid('delete'.$id, is_string($token) ? $token : (string)$token)) {
             $this->addFlash('error', 'Jeton CSRF invalide.');
             return $this->redirectToRoute('rendezvous_list');
         }
@@ -229,49 +243,6 @@ class RendezVousController extends AbstractController
         ]);
     }
 
-    // Helper to render list page with edit form and errors
-    private function renderListWithEditForm(EntityManagerInterface $em, Request $request, $editRdv, $editForm, $openEditModal = false)
-    {
-        $requestStack = $this->container->get('request_stack');
-        $session = $requestStack->getCurrentRequest()->getSession();
-        $patientId = $session->get('patient_id');
-        $patient = null;
-        $fiches_medicales = [];
-        $prescriptions = [];
-        if ($patientId) {
-            $patient = $em->getRepository(\App\Entity\User::class)->find($patientId);
-        }
-        $repo = $em->getRepository(RendezVous::class);
-        $ficheRepo = $em->getRepository(\App\Entity\FicheMedicale::class);
-        $prescRepo = $em->getRepository(\App\Entity\Prescription::class);
-        $rendezvous = $patient ? $repo->findBy(['patient' => $patient], ['createdAt' => 'DESC']) : [];
-        if ($rendezvous) {
-            foreach ($rendezvous as $rdv) {
-                $fiche = $ficheRepo->findOneBy(['rendezVous' => $rdv]);
-                if ($fiche) {
-                    $fiches_medicales[] = $fiche;
-                }
-            }
-        }
-        if ($fiches_medicales) {
-            foreach ($fiches_medicales as $fiche) {
-                $fichePrescriptions = $prescRepo->findBy(['ficheMedicale' => $fiche]);
-                foreach ($fichePrescriptions as $presc) {
-                    $prescriptions[] = $presc;
-                }
-            }
-        }
-        $args = [
-            'rendezvous' => $rendezvous,
-            'patientId' => $patientId,
-            'fiches_medicales' => $fiches_medicales,
-            'prescriptions' => $prescriptions,
-            'editForm' => $editForm->createView(),
-            'openEdit' => $editRdv->getId(),
-            'openEditModal' => $openEditModal,
-        ];
-        return $this->render('rendez_vous/rendezvous_list.html.twig', $args);
-    }
     #[Route('/iaasssistante', name: 'app_ia_assistante')]
     public function iaAssistante(UserRepository $userRepo): Response
     {
