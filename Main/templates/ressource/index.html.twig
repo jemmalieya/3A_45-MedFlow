@@ -207,6 +207,17 @@
 
         </tbody>
       </table>
+     {% if pages > 1 %}
+  <div class="mt-3 d-flex gap-2 flex-wrap">
+    {% for p in 1..pages %}
+      <a class="btn btn-sm {{ p == page ? 'btn-primary' : 'btn-outline-primary' }}"
+         href="{{ path('admin_ressource_index', app.request.query.all|merge({'page': p})) }}">
+        {{ p }}
+      </a>
+    {% endfor %}
+  </div>
+{% endif %}
+ 
     </div>
   </div>
 </div>

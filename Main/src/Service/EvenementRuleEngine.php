@@ -15,12 +15,27 @@ class EvenementRuleEngine
         $this->exp = new ExpressionLanguage();
     }
 
+    /**
+     * @return array{
+     *   context: array{
+     *     type:string,
+     *     ville:string,
+     *     statut:string,
+     *     max:int
+     *   },
+     *   matched: array<int, array{
+     *     label:string,
+     *     expr:string,
+     *     badge:string
+     *   }>
+     * }
+     */
     public function evaluate(Evenement $ev, ?User $user = null): array
     {
         $ctx = [
-            'type'   => (string) ($ev->getTypeEvent() ?? ''),
-            'ville'  => (string) ($ev->getVilleEvent() ?? ''),
-            'statut' => strtolower((string) ($ev->getStatutEvent() ?? '')),
+            'type'   => (string) $ev->getTypeEvent(),
+            'ville'  => (string) $ev->getVilleEvent(),
+            'statut' => strtolower((string) $ev->getStatutEvent()),
             'max'    => (int) ($ev->getNbParticipantsMaxEvent() ?? 0),
         ];
 

@@ -975,13 +975,12 @@ public function participants(EvenementRepository $repo): Response
         'totalRefused' => $totalRefused,
     ]);
 }
-
 // ✅ READ-ONLY: Ressources (liste + tri + search)
 #[Route('/ressources', name: 'ad_ressources', methods: ['GET'])]
 public function ressources(Request $request, RessourceRepository $repo): Response
 {
     $search = trim((string) $request->query->get('search', ''));
-    $sort = (string) $request->query->get('sort', 'date_desc');
+    $sort   = (string) $request->query->get('sort', 'date_desc');
 
     $orderBy = ['date_creation_ressource' => 'DESC'];
     switch ($sort) {
@@ -992,21 +991,18 @@ public function ressources(Request $request, RessourceRepository $repo): Respons
         case 'type_asc': $orderBy = ['type_ressource' => 'ASC']; break;
     }
 
-    // si tu as searchAdmin() dans repo
-    if ($search !== '' && method_exists($repo, 'searchAdmin')) {
-        $ressources = $repo->searchAdmin($search, $orderBy);
-    } else {
-        $ressources = $repo->findBy([], $orderBy);
-    }
+    // ✅ search
+    $ressources = ($search !== '')
+        ? $repo->searchAdmin($search, $orderBy)
+        : $repo->findBy([], $orderBy);
 
     return $this->render('dashboard_ad/indexevent.html.twig', [
-        'section' => 'ressources',
+        'section'    => 'ressources',
         'ressources' => $ressources,
-        'search' => $search,
-        'sort' => $sort,
+        'search'     => $search,
+        'sort'       => $sort,
     ]);
 }
-
 // ✅ READ-ONLY: Stats événements (tu peux garder tes stats JS/AJAX si tu veux après)
 #[Route('/stats-evenements', name: 'ad_stats_evenements', methods: ['GET'])]
 public function statsEvenements(EvenementRepository $repo): Response
@@ -1047,17 +1043,18 @@ public function statsEvenements(EvenementRepository $repo): Response
 #[Route('/stats-ressources', name: 'ad_stats_ressources', methods: ['GET'])]
 public function statsRessources(RessourceRepository $repo): Response
 {
-    $kpi = method_exists($repo, 'getKpiStats') ? $repo->getKpiStats() : [];
-    $byType = method_exists($repo, 'countByType') ? $repo->countByType() : [];
-    $byCategorie = method_exists($repo, 'countByCategorie') ? $repo->countByCategorie() : [];
-    $topEvents = method_exists($repo, 'topEvenementsByRessources') ? $repo->topEvenementsByRessources(5) : [];
+    // ✅ Appels directs : phpstan sera content
+    $kpi        = $repo->getKpiStats();
+    $byType     = $repo->countByType();
+    $byCategorie= $repo->countByCategorie();
+    $topEvents  = $repo->topEvenementsByRessources(5);
 
     return $this->render('dashboard_ad/indexevent.html.twig', [
-        'section' => 'stats_ressources',
-        'kpi' => $kpi,
-        'byTypeR' => $byType,
+        'section'      => 'stats_ressources',
+        'kpi'          => $kpi,
+        'byTypeR'      => $byType,
         'byCategorieR' => $byCategorie,
-        'topEventsR' => $topEvents,
+        'topEventsR'   => $topEvents,
     ]);
 }
 

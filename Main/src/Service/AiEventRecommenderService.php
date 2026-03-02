@@ -13,11 +13,37 @@ class AiEventRecommenderService
     ) {}
 
     /**
-     * @param array $current   infos event courant
-     * @param array $user      infos user/session
-     * @param array $cands     liste candidats
-     * @param int   $limit     top N
-     */
+ * @param array{
+ *   id:int|null,
+ *   titre:string,
+ *   ville:string,
+ *   type:string,
+ *   date_debut:string|null,
+ *   date_fin:string|null
+ * } $current
+ *
+ * @param array{
+ *   is_logged:bool,
+ *   session_preferences?:array<string, array<int,string>>,
+ *   id?:int,
+ *   nom?:string
+ * } $user
+ *
+ * @param array<int, array{
+ *   id:int,
+ *   titre:string,
+ *   ville:string,
+ *   type:string,
+ *   date_debut:string|null,
+ *   popularite:int
+ * }> $cands
+ *
+ * @return array<int, array{
+ *   id:int,
+ *   score:float,
+ *   reasons:array<int,string>
+ * }>
+ */
     public function recommend(array $current, array $user, array $cands, int $limit = 6): array
     {
         if (count($cands) === 0) return [];

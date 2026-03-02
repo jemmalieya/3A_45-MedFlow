@@ -40,11 +40,14 @@ class EvenementRepository extends ServiceEntityRepository
     //            ->getOneOrNullResult()
     //        ;
     //    }
-
-    public function findAllSortedByStatutCustom(): array
+/**
+ * @return list<Evenement>
+ */
+public function findAllSortedByStatutCustom(): array
 {
     // ordre métier: Publié -> En cours -> Brouillon -> Annulé
-    return $this->createQueryBuilder('e')
+    /** @var list<Evenement> $res */
+    $res = $this->createQueryBuilder('e')
         ->addSelect("
             CASE
                 WHEN e.statutEvent = 'Publié' THEN 1
@@ -58,11 +61,16 @@ class EvenementRepository extends ServiceEntityRepository
         ->addOrderBy('e.dateDebutEvent', 'DESC')
         ->getQuery()
         ->getResult();
-}
 
-public function findRecommended(Evenement $evenement)
+    return $res;
+}
+/**
+ * @return list<Evenement>
+ */
+public function findRecommended(Evenement $evenement): array
 {
-    return $this->createQueryBuilder('e')
+    /** @var list<Evenement> $res */
+    $res = $this->createQueryBuilder('e')
         ->where('e.id != :id')
         ->andWhere('e.type_event = :type OR e.ville_event = :ville')
         ->setParameter('id', $evenement->getId())
@@ -72,8 +80,13 @@ public function findRecommended(Evenement $evenement)
         ->setMaxResults(3)
         ->getQuery()
         ->getResult();
+
+    return $res;
 }
 
+/**
+ * @return list<Evenement>
+ */
 
 public function findRecommendedForUser(Evenement $current, ?User $user, int $limit = 6): array
 {
@@ -108,42 +121,39 @@ public function findRecommendedForUser(Evenement $current, ?User $user, int $lim
     $userPrefTypes = [];
     $userCity = null;
 
-    if ($user) {
-        // adapte si ton User a ville/adresse (sinon laisse null)
-       $userCity = null;
+   // 2) Historique user : types préférés (basé sur demandes envoyées)
+$userPrefTypes = [];
+$userCity = null;
+$userEmail = null;
 
-// Essaie ville_user si un jour tu l'ajoutes
-//if (method_exists($user, 'getVilleUser')) {
-  //  $userCity = $user->getVilleUser();
-//}
+if ($user) {
+    $userCity = $user->getAdresseUser();   // si tu stockes la ville dans l’adresse
+    $userEmail = $user->getEmailUser();    // getter de ton User
 
-// Sinon on utilise adresse_user (existe chez toi)
-if (!$userCity && method_exists($user, 'getAdresseUser')) {
-    $userCity = $user->getAdresseUser();
-}
+    $typeCounts = [];
 
+    if ($userEmail) {
+      $allEvents = $this->createQueryBuilder('x')
+    ->orderBy('x.date_debut_event', 'DESC')
+    ->setMaxResults(99)
+    ->getQuery()
+    ->getResult();
 
-        $userEmail = method_exists($user, 'getEmailUser') ? $user->getEmailUser() : null;
-        $typeCounts = [];
-
-        if ($userEmail) {
-            // On scanne tous les events pour détecter où ce user a demandé (JSON)
-            // (simple, pas ultra performant mais OK pour un projet étudiant)
-            $allEvents = $this->createQueryBuilder('x')->getQuery()->getResult();
-
-            foreach ($allEvents as $ev) {
-                foreach ($ev->getDemandesJson() as $d) {
-                    if (($d['email'] ?? null) && strtolower($d['email']) === strtolower($userEmail)) {
-                        $t = $ev->getTypeEvent() ?? null;
-                        if ($t) $typeCounts[$t] = ($typeCounts[$t] ?? 0) + 1;
+        foreach ($allEvents as $ev) {
+            foreach ($ev->getDemandesJson() as $d) {
+                if (!empty($d['email']) && strtolower($d['email']) === strtolower($userEmail)) {
+                    $t = $ev->getTypeEvent();
+                    if ($t) {
+                        $typeCounts[$t] = ($typeCounts[$t] ?? 0) + 1;
                     }
                 }
             }
         }
-
-        arsort($typeCounts);
-        $userPrefTypes = array_slice(array_keys($typeCounts), 0, 2); // top 2 types
     }
+
+    arsort($typeCounts);
+    $userPrefTypes = array_slice(array_keys($typeCounts), 0, 2);
+}
 
     // 3) Scoring
     $now = new \DateTime();
@@ -172,12 +182,10 @@ if (!$userCity && method_exists($user, 'getAdresseUser')) {
         }
 
         // Beaucoup de demandes acceptées +2 (si >= 3)
-        if (method_exists($ev, 'countDemandesByStatus')) {
-            $accepted = (int) $ev->countDemandesByStatus('accepted');
-            if ($accepted >= 3) {
-                $score += 2;
-            }
-        }
+       $accepted = (int) $ev->countDemandesByStatus('accepted');
+       if ($accepted >= 3) {
+         $score += 2;
+         }
 
         // ===== BONUS ULTIME USER =====
         // Ville user +2
@@ -220,6 +228,9 @@ if (!$userCity && method_exists($user, 'getAdresseUser')) {
 
     return $result;
 }
+/**
+ * @return list<Evenement>
+ */
 public function findCandidatesForAiRecommendation(Evenement $current, int $limit = 25): array
 {
     $qb = $this->createQueryBuilder('e');
@@ -237,6 +248,32 @@ public function findCandidatesForAiRecommendation(Evenement $current, int $limit
         ->getQuery()
         ->getResult();
 }
+public function findOneWithRessources(int $id): ?Evenement
+{
+    return $this->createQueryBuilder('e')
+        ->leftJoin('e.ressources', 'r')   // <-- adapte le nom exact de ta relation
+        ->addSelect('r')
+        ->andWhere('e.id = :id')
+        ->setParameter('id', $id)
+        ->getQuery()
+        ->getOneOrNullResult();
+}
+/**
+ * @return list<Evenement>
+ */
+public function findWithDemandes(int $limit, int $offset): array
+{
+    /** @var list<Evenement> $res */
+    $res = $this->createQueryBuilder('e')
+        ->where('e.demandes_json IS NOT NULL')
+        ->andWhere("e.demandes_json <> '[]'")
+        ->orderBy('e.date_debut_event', 'DESC')
+        ->setFirstResult($offset)
+        ->setMaxResults($limit)
+        ->getQuery()
+        ->getResult();
 
+    return $res;
+}
 
 }

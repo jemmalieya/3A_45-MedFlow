@@ -11,6 +11,27 @@ class AiRiskService
         private string $groqKey,
         private string $groqModel, // ✅ injecté depuis .env
     ) {}
+    /**
+ * @param array{
+ *   titre:string,
+ *   ville:string,
+ *   type:string,
+ *   statut:string,
+ *   date_debut:string|null,
+ *   date_fin:string|null,
+ *   accepted:int,
+ *   pending:int,
+ *   refused:int
+ * } $eventData
+ *
+ * @return array{
+ *   riskScore:int,
+ *   reasons:array<int,string>,
+ *   suggestions:array<int,string>,
+ *   raw?:string,
+ *   debug?:mixed
+ * }
+ */
 
     public function analyzeEventRisk(array $eventData): array
     {
@@ -58,14 +79,17 @@ Données :
             // ✅ extraction JSON même si le modèle ajoute du texte
             if (preg_match('/\{.*\}/s', $content, $matches)) {
                 $json = json_decode($matches[0], true);
-                if (is_array($json) && isset($json['riskScore'])) {
-                    return [
-                        'riskScore' => max(0, min(100, (int) ($json['riskScore'] ?? 0))),
-                        'reasons' => is_array($json['reasons'] ?? null) ? $json['reasons'] : [],
-                        'suggestions' => is_array($json['suggestions'] ?? null) ? $json['suggestions'] : [],
-                        'raw' => $content,
-                    ];
-                }
+               if (is_array($json) && array_key_exists('riskScore', $json)) {
+
+    $risk = is_numeric($json['riskScore']) ? (int) $json['riskScore'] : 0;
+
+    return [
+        'riskScore'   => max(0, min(100, $risk)),
+        'reasons'     => is_array($json['reasons'] ?? null) ? $json['reasons'] : [],
+        'suggestions' => is_array($json['suggestions'] ?? null) ? $json['suggestions'] : [],
+        'raw'         => $content,
+    ];
+}
             }
 
             return [
