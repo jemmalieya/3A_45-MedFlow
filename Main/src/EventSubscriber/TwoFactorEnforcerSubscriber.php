@@ -74,10 +74,11 @@ final class TwoFactorEnforcerSubscriber implements EventSubscriberInterface
             return;
         }
 
-        $session = $request->getSession();
-        if (!$session instanceof SessionInterface) {
-            return;
-        }
+        if (!$request->hasSession()) {
+    return;
+}
+
+$session = $request->getSession();
 
         if ($session->get('2fa_passed') === true) {
             return;
@@ -108,8 +109,10 @@ final class TwoFactorEnforcerSubscriber implements EventSubscriberInterface
             return true;
         }
 
-        $accept = $request->headers->get('Accept', '');
-        return str_contains($accept, 'application/json');
+        $acceptRaw = $request->headers->get('Accept');
+        $accept = is_string($acceptRaw) ? $acceptRaw : '';
+
+        return $accept !== '' && str_contains($accept, 'application/json');
     }
 
     private function rememberTargetPath(Request $request, SessionInterface $session): void
