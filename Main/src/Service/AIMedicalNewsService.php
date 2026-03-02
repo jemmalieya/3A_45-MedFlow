@@ -19,6 +19,9 @@ class AIMedicalNewsService
         $this->apiKey = $_ENV['OPENAI_API_KEYW']; // or HF token
     }
 
+    /**
+     * @return array<array<string, string>>
+     */
     public function getHourlyInsights(): array
     {
         return $this->cache->get('hourly_medical_news', function (ItemInterface $item) {

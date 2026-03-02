@@ -29,8 +29,4 @@ class PrescriptionType extends AbstractType
             'data_class' => Prescription::class,
         ]);
     }
-    public function __construct()
-{
-    $this->createdAt = new \DateTimeImmutable();
-}
 }

@@ -16,13 +16,13 @@ class RendezVous
     #[ORM\Column]
     private ?int $id = null;
     
-    #[ORM\Column(nullable: true)]
+    #[ORM\Column(type: 'datetime_immutable', nullable: true)]
     #[Assert\NotNull(message: 'La date et l\'heure sont obligatoires', groups: ['Default', 'edit'])]
     #[Assert\GreaterThan('now', message: 'La date et l\'heure doivent être dans le futur', groups: ['Default'])]
-    private ?\DateTime $datetime = null;
+    public ?\DateTimeImmutable $datetime = null;
 
     #[ORM\Column(length: 50)]
-    private ?string $statut = 'Demande';
+    private string $statut = 'Demande';
 
     #[ORM\Column(length: 50)]
     private ?string $mode = null;
@@ -37,8 +37,8 @@ class RendezVous
     )]
     private ?string $motif = null;
 
-    #[ORM\Column]
-    private ?\DateTime $createdAt = null;
+    #[ORM\Column(type: 'datetime_immutable')]
+    public ?\DateTimeImmutable $createdAt = null;
 
     #[ORM\ManyToOne(targetEntity: User::class)]
     #[ORM\JoinColumn(name: "idPatient", referencedColumnName: "id", nullable: false, onDelete: "CASCADE")]
@@ -52,16 +52,12 @@ class RendezVous
         return $this->id;
     }
 
-    public function getDatetime(): ?\DateTime
+    public function getDatetime(): ?\DateTimeImmutable
     {
         return $this->datetime;
     }
 
-    public function setDatetime(?\DateTime $datetime): static
-    {
-        $this->datetime = $datetime;
-        return $this;
-    }
+    // Setter removed to enforce automatic timestamp management
 
     public function getStatut(): ?string
     {
@@ -99,17 +95,12 @@ class RendezVous
         return $this;
     }
 
-    public function getCreatedAt(): ?\DateTime
+    public function getCreatedAt(): ?\DateTimeImmutable
     {
         return $this->createdAt;
     }
 
-    public function setCreatedAt(\DateTime $createdAt): static
-    {
-        $this->createdAt = $createdAt;
-
-        return $this;
-    }
+    // Setter removed to enforce automatic timestamp management
 
     public function getPatient(): ?User
     {

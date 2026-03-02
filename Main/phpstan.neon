@@ -5,3 +5,5 @@ parameters:
         - src
 
     treatPhpDocTypesAsCertain: false
+  ignoreErrors:
+    - '#Call to an undefined method#'

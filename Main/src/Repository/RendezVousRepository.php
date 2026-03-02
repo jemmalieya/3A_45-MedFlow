@@ -35,6 +35,9 @@
         /**
          * Find all RendezVous for a given patient id
          */
+        /**
+         * @return RendezVous[]
+         */
         public function findByPatient(int $patientId): array
         {
             return $this->createQueryBuilder('r')
@@ -48,6 +51,9 @@
     /**
      * Find all active RendezVous for a given staff (doctor) id
      */
+    /**
+     * @return RendezVous[]
+     */
     public function findActiveByStaff(int $idStaff): array
     {
         return $this->createQueryBuilder('r')
@@ -59,6 +65,10 @@
             ->getQuery()
             ->getResult();
     }
+    /**
+     * @param int|User $doctor
+     * @return RendezVous[]
+     */
     public function findTodayAppointmentsForDoctor($doctor, \DateTimeInterface $start, \DateTimeInterface $end): array
     {
         return $this->createQueryBuilder('r')
