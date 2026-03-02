@@ -56,29 +56,57 @@ final class AdController extends AbstractController
     }
 
     // ========== PAGE LISTE PRODUITS ==========
-    #[Route('/produits', name: 'ad_produits_liste')]
-    public function produits(ProduitRepository $produitRepo): Response
-    {
-        $produits = $produitRepo->findBy([], ['id_produit' => 'DESC']);
+// ========== PAGE LISTE PRODUITS ==========
+#[Route('/produits', name: 'ad_produits_liste')]
+public function produits(Request $request, ProduitRepository $produitRepo, EntityManagerInterface $em): Response
+{
+    $page = max(1, (int) $request->query->get('page', 1));
+    $pageSize = 20;
 
-        $totalProduits = count($produits);
-        $produitsDisponibles = $produitRepo->count(['status_produit' => 'Disponible']);
-        $produitsRupture = $produitRepo->count(['status_produit' => 'Rupture']);
+    $produits = $produitRepo->createQueryBuilder('p')
+        ->orderBy('p.id_produit', 'DESC')
+        ->setFirstResult(($page - 1) * $pageSize)
+        ->setMaxResults($pageSize)
+        ->getQuery()
+        ->getResult();
 
-        $stockTotal = 0;
-        foreach ($produits as $p) {
-            $stockTotal += (int) $p->getQuantiteProduit();
-        }
+    $conn = $em->getConnection();
+    $totalProduits = (int) $conn->fetchOne("SELECT COUNT(*) FROM produit LIMIT 1");
 
-        return $this->render('dashboard_ad/produits_liste.html.twig', [
-            'produits' => $produits,
-            'totalProduits' => $totalProduits,
-            'produitsDisponibles' => $produitsDisponibles,
-            'produitsRupture' => $produitsRupture,
-            'stockTotal' => $stockTotal,
-        ]);
+    $stockTotal = (int) $conn->fetchOne("
+        SELECT COALESCE(SUM(quantite_produit), 0)
+        FROM produit
+        LIMIT 1
+    ");
+
+    $rows = $conn->fetchAllAssociative("
+        SELECT status_produit AS status, COUNT(*) AS total
+        FROM produit
+        GROUP BY status_produit
+    ");
+
+    $produitsDisponibles = 0;
+    $produitsRupture = 0;
+
+    foreach ($rows as $r) {
+        $status = (string) ($r['status'] ?? '');
+        $total  = (int) ($r['total'] ?? 0);
+
+        if ($status === 'Disponible') $produitsDisponibles = $total;
+        if ($status === 'Rupture')    $produitsRupture = $total;
     }
 
+    return $this->render('dashboard_ad/produits_liste.html.twig', [
+        'produits' => $produits,
+        'totalProduits' => $totalProduits,
+        'produitsDisponibles' => $produitsDisponibles,
+        'produitsRupture' => $produitsRupture,
+        'stockTotal' => $stockTotal,
+        'page' => $page,
+        'pageSize' => $pageSize,
+        'totalPages' => (int) ceil($totalProduits / $pageSize),
+    ]);
+}
     // ========== PAGE LISTE COMMANDES ==========
     #[Route('/commandes', name: 'ad_commandes_liste')]
     public function commandes(CommandeRepository $commandeRepo, EntityManagerInterface $em): Response
@@ -149,6 +177,7 @@ final class AdController extends AbstractController
             ->andWhere('u.staffRequestStatus = :p')
             ->setParameter('p', 'PENDING')
             ->orderBy('u.staffRequestedAt', 'DESC')
+            ->setMaxResults(50)
             ->getQuery()->getResult();
 
         return $this->render('dashboard_ad/staff_requests/index.html.twig', [
@@ -164,10 +193,16 @@ final class AdController extends AbstractController
             throw $this->createNotFoundException('Document introuvable.');
         }
         $rel = $docs['files'][$i]['stored'] ?? null;
-        if (!$rel) {
+        if (!is_string($rel) || $rel === '') {
             throw $this->createNotFoundException('Chemin introuvable.');
         }
-        $full = $this->getParameter('kernel.project_dir') . '/var/' . $rel;
+
+        $projectDir = $this->getParameter('kernel.project_dir');
+        if (!is_string($projectDir)) {
+            throw new \RuntimeException('kernel.project_dir doit être une chaîne.');
+        }
+
+        $full = $projectDir . '/var/' . $rel;
         if (!is_file($full)) {
             throw $this->createNotFoundException('Fichier manquant.');
         }
@@ -175,107 +210,117 @@ final class AdController extends AbstractController
         return $this->file($full, $docs['files'][$i]['original'] ?? basename($full));
     }
 
-    #[Route('/ad/staff-requests/{id}/analyze/{i}', name: 'admin_staff_request_analyze', requirements: ['id' => '\\d+', 'i' => '\\d+'], methods: ['POST'])]
-    public function staffRequestAnalyze(
-        User $user,
-        int $i,
-        EntityManagerInterface $em,
-        TesseractOcrService $ocr,
-        GeminiService $gemini
-    ): JsonResponse {
-        $docs = $user->getStaffDocuments();
-        if (!is_array($docs) || !isset($docs['files']) || !is_array($docs['files']) || !isset($docs['files'][$i]) || !is_array($docs['files'][$i])) {
-            return $this->json(['success' => false, 'error' => 'Document introuvable.'], 404);
+#[Route(
+    '/ad/staff-requests/{id}/analyze/{i}',
+    name: 'admin_staff_request_analyze',
+    requirements: ['id' => '\\d+', 'i' => '\\d+'],
+    methods: ['POST']
+)]
+public function staffRequestAnalyze(
+    User $user,
+    int $i,
+    EntityManagerInterface $em,
+    TesseractOcrService $ocr,
+    GeminiService $gemini
+): JsonResponse {
+    $docs = $user->getStaffDocuments();
+
+    // ✅ $docs est déjà un array → on sécurise juste la structure attendue
+    $files = $docs['files'] ?? null;
+    if (!is_array($files) || !isset($files[$i]) || !is_array($files[$i])) {
+        return $this->json(['success' => false, 'error' => 'Document introuvable.'], 404);
+    }
+
+    $rel = $files[$i]['stored'] ?? null;
+    if (!is_string($rel) || $rel === '') {
+        return $this->json(['success' => false, 'error' => 'Chemin introuvable.'], 404);
+    }
+
+    $projectDir = $this->getParameter('kernel.project_dir');
+    if (!is_string($projectDir)) {
+        return $this->json(['success' => false, 'error' => 'Config kernel.project_dir invalide.'], 500);
+    }
+    $baseDir = realpath($projectDir . '/var/staff_requests');
+    $full = realpath($projectDir . '/var/' . $rel);
+
+    $baseNorm = $baseDir === false ? '' : str_replace('\\', '/', $baseDir);
+    $fullNorm = $full === false ? '' : str_replace('\\', '/', $full);
+    $baseNorm = rtrim(strtolower($baseNorm), '/') . '/';
+    $fullNorm = strtolower($fullNorm);
+
+    if ($baseDir === false || $full === false || !str_starts_with($fullNorm, $baseNorm)) {
+        return $this->json(['success' => false, 'error' => 'Chemin interdit.'], 404);
+    }
+    if (!is_file($full)) {
+        return $this->json(['success' => false, 'error' => 'Fichier manquant.'], 404);
+    }
+
+    $mime = (string) ($files[$i]['mime'] ?? '');
+    $ocrText = null;
+    $ocrError = null;
+
+    if (str_starts_with($mime, 'image/')) {
+        try {
+            // ✅ On considère extractText() retourne un array (PHPStan)
+            $res = $ocr->extractText($full);
+        } catch (\Throwable $e) {
+            return $this->json(['success' => false, 'error' => 'OCR failed: ' . $e->getMessage()], 500);
         }
 
-        $rel = $docs['files'][$i]['stored'] ?? null;
-        if (!is_string($rel) || $rel === '') {
-            return $this->json(['success' => false, 'error' => 'Chemin introuvable.'], 404);
+        // ✅ lecture safe
+        $ocrText  = isset($res['text']) && is_string($res['text']) ? trim($res['text']) : null;
+        $ocrError = isset($res['error']) && is_string($res['error']) ? $res['error'] : null;
+
+        if (is_string($ocrText) && $ocrText !== '') {
+            $files[$i]['ocrText'] = mb_substr($ocrText, 0, 4000);
         }
+    }
 
-        $projectDir = (string) $this->getParameter('kernel.project_dir');
-        $baseDir = realpath($projectDir . '/var/staff_requests');
-        $full = realpath($projectDir . '/var/' . $rel);
+    // Build (optional) AI suggestion for THIS document if not already stored
+    $aiSuggestion = is_string($files[$i]['aiSuggestion'] ?? null) ? trim((string) $files[$i]['aiSuggestion']) : '';
+    if ($aiSuggestion === '' && is_string($ocrText) && trim($ocrText) !== '') {
+        $meta = is_array($docs['meta'] ?? null) ? $docs['meta'] : [];
+        $metaText = sprintf(
+            "specialite=%s; etablissement=%s; numero=%s; role=%s; type=%s",
+            (string) ($meta['specialite'] ?? ''),
+            (string) ($meta['etablissement'] ?? ''),
+            (string) ($meta['numero'] ?? ''),
+            (string) ($meta['roleWanted'] ?? ''),
+            (string) ($meta['typeStaffWanted'] ?? '')
+        );
 
-        $baseNorm = $baseDir === false ? '' : str_replace('\\', '/', $baseDir);
-        $fullNorm = $full === false ? '' : str_replace('\\', '/', $full);
-        $baseNorm = rtrim(strtolower($baseNorm), '/') . '/';
-        $fullNorm = strtolower($fullNorm);
+        $prompt = "Tu es un assistant pour un admin MedFlow.\n"
+            . "On a un document (photo) soumis pour une demande de rôle.\n"
+            . "Méta: {$metaText}\n\n"
+            . "Texte OCR (peut contenir des erreurs):\n" . mb_substr($ocrText, 0, 3500) . "\n\n"
+            . "Donne une courte synthèse (4 à 7 puces) et signale si tu vois: nom/prénom, numéros (CIN, ordre, etc.), spécialité, incohérences évidentes.\n"
+            . "Ne pas inventer si ce n'est pas clairement présent.";
 
-        if ($baseDir === false || $full === false || !str_starts_with($fullNorm, $baseNorm)) {
-            return $this->json(['success' => false, 'error' => 'Chemin interdit.'], 404);
-        }
-        if (!is_file($full)) {
-            return $this->json(['success' => false, 'error' => 'Fichier manquant.'], 404);
-        }
-
-        $mime = (string) ($docs['files'][$i]['mime'] ?? '');
-        $ocrText = null;
-        $ocrError = null;
-
-        if (str_starts_with($mime, 'image/')) {
-            try {
-                $res = $ocr->extractText($full);
-            } catch (\Throwable $e) {
-                return $this->json(['success' => false, 'error' => 'OCR failed: ' . $e->getMessage()], 500);
-            }
-
-            if (is_array($res)) {
-                $ocrText = is_string($res['text'] ?? null) ? trim((string) $res['text']) : null;
-                $ocrError = is_string($res['error'] ?? null) ? (string) $res['error'] : null;
+        try {
+            $aiSuggestion = trim($gemini->generate($prompt));
+            if ($aiSuggestion !== '') {
+                $files[$i]['aiSuggestion'] = mb_substr($aiSuggestion, 0, 3000);
             } else {
-                // legacy: service returned string
-                $ocrText = is_string($res) ? trim((string) $res) : null;
-                $ocrError = null;
-            }
-
-            if (is_string($ocrText) && $ocrText !== '') {
-                $docs['files'][$i]['ocrText'] = mb_substr($ocrText, 0, 4000);
-            }
-        }
-
-        // Build (optional) AI suggestion for THIS document if not already stored
-        $aiSuggestion = is_string($docs['files'][$i]['aiSuggestion'] ?? null) ? trim((string) $docs['files'][$i]['aiSuggestion']) : '';
-        if ($aiSuggestion === '' && is_string($ocrText) && trim($ocrText) !== '') {
-            $meta = is_array($docs['meta'] ?? null) ? $docs['meta'] : [];
-            $metaText = sprintf(
-                "specialite=%s; etablissement=%s; numero=%s; role=%s; type=%s",
-                (string) ($meta['specialite'] ?? ''),
-                (string) ($meta['etablissement'] ?? ''),
-                (string) ($meta['numero'] ?? ''),
-                (string) ($meta['roleWanted'] ?? ''),
-                (string) ($meta['typeStaffWanted'] ?? '')
-            );
-
-            $prompt = "Tu es un assistant pour un admin MedFlow.\n"
-                ."On a un document (photo) soumis pour une demande de rôle.\n"
-                ."Méta: {$metaText}\n\n"
-                ."Texte OCR (peut contenir des erreurs):\n".mb_substr($ocrText, 0, 3500)."\n\n"
-                ."Donne une courte synthèse (4 à 7 puces) et signale si tu vois: nom/prénom, numéros (CIN, ordre, etc.), spécialité, incohérences évidentes.\n"
-                ."Ne pas inventer si ce n'est pas clairement présent.";
-
-            try {
-                $aiSuggestion = trim($gemini->generate($prompt));
-                if ($aiSuggestion !== '') {
-                    $docs['files'][$i]['aiSuggestion'] = mb_substr($aiSuggestion, 0, 3000);
-                } else {
-                    $aiSuggestion = '';
-                }
-            } catch (\Throwable $e) {
                 $aiSuggestion = '';
             }
+        } catch (\Throwable $e) {
+            $aiSuggestion = '';
         }
-
-        $user->setStaffDocuments($docs);
-        $em->flush();
-
-        return $this->json([
-            'success' => true,
-            'ocrText' => $docs['files'][$i]['ocrText'] ?? null,
-            'aiSuggestion' => $docs['files'][$i]['aiSuggestion'] ?? null,
-            'ocrError' => $ocrError,
-        ]);
     }
+
+    // ✅ Réinjecter les fichiers modifiés dans docs avant sauvegarde
+    $docs['files'] = $files;
+
+    $user->setStaffDocuments($docs);
+    $em->flush();
+
+    return $this->json([
+        'success' => true,
+        'ocrText' => $docs['files'][$i]['ocrText'] ?? null,
+        'aiSuggestion' => $docs['files'][$i]['aiSuggestion'] ?? null,
+        'ocrError' => $ocrError,
+    ]);
+}
 
     #[Route('/ad/staff-requests/{id}/approve', name: 'admin_staff_request_approve', methods: ['POST'])]
     public function staffRequestApprove(User $user, Request $request, EntityManagerInterface $em): Response
@@ -300,7 +345,7 @@ final class AdController extends AbstractController
         }
 
         $user->setStaffRequestStatus('APPROVED');
-        $user->setStaffReviewedAt(new \DateTime());
+        $user->markStaffReviewedAt();
         $me = $this->getUser();
         $user->setStaffReviewedBy($me instanceof User ? $me->getId() : null);
         $user->setStaffRequestReason(null);
@@ -339,7 +384,7 @@ final class AdController extends AbstractController
         $user->setStaffRequestStatus('REJECTED');
         $reason = trim((string) $request->request->get('reason', ''));
         $user->setStaffRequestReason($reason ?: null);
-        $user->setStaffReviewedAt(new \DateTime());
+        $user->markStaffReviewedAt();
         $me = $this->getUser();
         $user->setStaffReviewedBy($me instanceof User ? $me->getId() : null);
         $em->flush();
@@ -361,6 +406,9 @@ final class AdController extends AbstractController
         return $this->redirectToRoute('admin_staff_requests_index');
     }
 
+    /**
+     * @return array<string, mixed>
+     */
     private function sendBrevoEmail(string $toEmail, string $toName, string $subject, string $html): array
     {
         $apiKey = $_ENV['BREVO_API_KEY'] ?? null;
@@ -384,6 +432,8 @@ final class AdController extends AbstractController
             'htmlContent' => $html,
         ];
 
+        $body = json_encode($payload, JSON_THROW_ON_ERROR);
+
         $ch = curl_init('https://api.brevo.com/v3/smtp/email');
         curl_setopt_array($ch, [
             CURLOPT_HTTPHEADER => [
@@ -392,14 +442,14 @@ final class AdController extends AbstractController
                 'Accept: application/json',
             ],
             CURLOPT_POST => true,
-            CURLOPT_POSTFIELDS => json_encode($payload),
+            CURLOPT_POSTFIELDS => $body,
             CURLOPT_RETURNTRANSFER => true,
         ]);
 
         $response = curl_exec($ch);
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
 
-        if ($response === false) {
+        if (!is_string($response)) {
             $err = curl_error($ch);
             curl_close($ch);
             throw new \Exception('Erreur CURL: ' . $err);
@@ -421,11 +471,20 @@ final class AdController extends AbstractController
     #[Route('/ad/patients', name: 'admin_patients_index', methods: ['GET'])]
     public function patientsIndex(Request $request, UserRepository $repo): Response
     {
-        $q = trim((string) $request->query->get('q', ''));
-        $verified = (string) $request->query->get('verified', ''); // '' | '1' | '0'
-        $sort = (string) $request->query->get('sort', 'recent');
-        $triageFilter = (string) $request->query->get('triage', '');
-        $alertFilter = (string) $request->query->get('alert', '');
+        $qRaw = $request->query->get('q', '');
+        $q = is_scalar($qRaw) ? trim((string) $qRaw) : '';
+
+        $verifiedRaw = $request->query->get('verified', ''); // '' | '1' | '0'
+        $verified = is_scalar($verifiedRaw) ? (string) $verifiedRaw : '';
+
+        $sortRaw = $request->query->get('sort', 'recent');
+        $sort = is_scalar($sortRaw) ? (string) $sortRaw : 'recent';
+
+        $triageRaw = $request->query->get('triage', '');
+        $triageFilter = is_scalar($triageRaw) ? (string) $triageRaw : '';
+
+        $alertRaw = $request->query->get('alert', '');
+        $alertFilter = is_scalar($alertRaw) ? (string) $alertRaw : '';
 
         $patients = $repo->findPatientsWithFilters([
             'q' => $q,
@@ -450,7 +509,12 @@ final class AdController extends AbstractController
 
             $stats['total']++;
             $p->isVerified() ? $stats['verified']++ : $stats['unverified']++;
-            $t['phoneOk'] ? $stats['phone_valid']++ : ($t['phoneOk'] === false ? $stats['phone_invalid']++ : $stats['phone_pending']++);
+
+            if ($t['phoneOk']) {
+                $stats['phone_valid']++;
+            } else {
+                $stats['phone_invalid']++;
+            }
             if ($t['blocked']) $stats['blocked']++;
             if ($t['expired']) $stats['expired_links']++;
             $stats['priorities'][$t['priority']['level']]++;
@@ -522,7 +586,7 @@ final class AdController extends AbstractController
         }
 
         $patient->setVerificationToken(bin2hex(random_bytes(32)));
-        $patient->setTokenExpiresAt((new \DateTime())->modify('+24 hours'));
+        $patient->updateTokenExpiresAt((new \DateTime())->modify('+24 hours'));
         $em->flush();
 
         $this->sendVerificationEmail($patient, $logger);
@@ -803,7 +867,7 @@ final class AdController extends AbstractController
 
         $patient->setStatutCompte('BLOQUE');
         $patient->setBanReason($reason);
-        $patient->setBannedAt(new \DateTimeImmutable());
+        $patient->markBannedAt();
         $em->flush();
 
         $this->addFlash('success', 'Patient bloqué: '.$reason);
@@ -828,7 +892,7 @@ final class AdController extends AbstractController
 
         $patient->setStatutCompte('ACTIF');
         $patient->setBanReason(null);
-        $patient->setBannedAt(null);
+        $patient->clearBannedAt();
         $em->flush();
 
         $this->addFlash('success', 'Patient débloqué.');
@@ -853,11 +917,13 @@ final class AdController extends AbstractController
             'htmlContent' => "<p><a href='$link'>Vérifier mon email</a></p>",
         ];
 
+        $body = json_encode($payload, JSON_THROW_ON_ERROR);
+
         $ch = curl_init('https://api.brevo.com/v3/smtp/email');
         curl_setopt_array($ch, [
             CURLOPT_HTTPHEADER => ['api-key: '.$apiKey, 'Content-Type: application/json'],
             CURLOPT_POST => true,
-            CURLOPT_POSTFIELDS => json_encode($payload),
+            CURLOPT_POSTFIELDS => $body,
             CURLOPT_RETURNTRANSFER => true,
         ]);
 
@@ -872,8 +938,15 @@ final class AdController extends AbstractController
 
     private function isPhoneValid(?string $phone): bool
     {
-        if (!$phone) return false;
+        if ($phone === null || $phone === '') {
+            return false;
+        }
+
         $p = preg_replace('/\s+/', '', $phone);
+        if (!is_string($p)) {
+            return false;
+        }
+
         if (preg_match('/^\d{8}$/', $p)) return true;
         if (preg_match('/^\+216\d{8}$/', $p)) return true;
         return false;
@@ -885,6 +958,16 @@ final class AdController extends AbstractController
         return strtoupper($statutCompte) === 'BLOQUE';
     }
 
+    /**
+     * @return array{
+     *   alerts: array<int, array{key:string,label:string}>,
+     *   priority: array{level:string,badge:string},
+     *   score: int,
+     *   phoneOk: bool,
+     *   blocked: bool,
+     *   expired: bool
+     * }
+     */
     private function buildTriage(User $p): array
     {
         $alerts = [];
@@ -1070,25 +1153,40 @@ public function statsRessources(RessourceRepository $repo): Response
         \App\Repository\PrescriptionRepository $prescRepo
     ): Response {
         // Get all doctors (STAFF, RESP_PATIENTS)
-        $doctors = $userRepo->findDoctorsRespPatients();
+        // Limit doctor list to 100 for performance (adjust as needed)
+        $doctors = $userRepo->createQueryBuilder('u')
+            ->where('u.roleSysteme IN (:roles)')
+            ->setParameter('roles', ['STAFF', 'RESP_PATIENTS'])
+            ->orderBy('u.nom', 'ASC')
+            ->setMaxResults(100)
+            ->getQuery()
+            ->getResult(\Doctrine\ORM\Query::HYDRATE_ARRAY);
         $doctorsData = [];
         foreach ($doctors as $doctor) {
-            $rendezvous = $rendezVousRepo->findBy(['staff' => $doctor], ['datetime' => 'DESC']);
-            $fiches = $ficheRepo->findFichesByStaffId($doctor->getId());
-            // Get all prescriptions for this doctor's fiches
+            // $doctor is now an array due to HYDRATE_ARRAY
+            $doctorId = $doctor['id'] ?? $doctor['id_user'] ?? null;
+            $rendezvous = $rendezVousRepo->findBy(['staff' => $doctorId], ['datetime' => 'DESC']);
+            $fiches = $ficheRepo->findFichesByStaffId($doctorId);
+
+            // Eager load all prescriptions for these fiches in one query
+            $ficheIds = array_map(fn($fiche) => $fiche->getId(), $fiches);
             $prescriptions = [];
-            foreach ($fiches as $fiche) {
-                foreach ($fiche->getPrescriptions() as $presc) {
-                    $prescriptions[] = $presc;
-                }
+            if (count($ficheIds) > 0) {
+                $qb = $prescRepo->createQueryBuilder('p')
+                    ->leftJoin('p.ficheMedicale', 'f')
+                    ->addSelect('f')
+                    ->where('f.id IN (:ficheIds)')
+                    ->setParameter('ficheIds', $ficheIds);
+                $prescriptions = $qb->getQuery()->getResult();
             }
+
             $doctorsData[] = [
-                'id' => $doctor->getId(),
-                'nom' => $doctor->getNom(),
-                'prenom' => $doctor->getPrenom(),
-                'typeStaff' => $doctor->getTypeStaff(),
-                'telephoneUser' => $doctor->getTelephoneUser(),
-                'emailUser' => $doctor->getEmailUser(),
+                'id' => $doctorId,
+                'nom' => $doctor['nom'] ?? null,
+                'prenom' => $doctor['prenom'] ?? null,
+                'typeStaff' => $doctor['typeStaff'] ?? $doctor['type_staff'] ?? null,
+                'telephoneUser' => $doctor['telephoneUser'] ?? $doctor['telephone_user'] ?? null,
+                'emailUser' => $doctor['emailUser'] ?? $doctor['email_user'] ?? null,
                 'rendezvous' => $rendezvous,
                 'fiches' => $fiches,
                 'prescriptions' => $prescriptions,
@@ -1118,7 +1216,15 @@ public function statsRessources(RessourceRepository $repo): Response
         \App\Repository\PrescriptionRepository $prescRepo
     ): Response {
         // Total counts
-        $totalDoctors = count($userRepo->findDoctorsRespPatients());
+        // Limit doctor list to 100 for performance (adjust as needed)
+        $doctorList = $userRepo->createQueryBuilder('u')
+            ->where('u.roleSysteme IN (:roles)')
+            ->setParameter('roles', ['STAFF', 'RESP_PATIENTS'])
+            ->orderBy('u.nom', 'ASC')
+            ->setMaxResults(100)
+            ->getQuery()
+            ->getResult(\Doctrine\ORM\Query::HYDRATE_ARRAY);
+        $totalDoctors = count($doctorList);
         $totalRendezVous = $rendezVousRepo->count([]);
         $totalFiches = $ficheRepo->count([]);
 
@@ -1129,28 +1235,46 @@ public function statsRessources(RessourceRepository $repo): Response
             $rdvStatutCounts[] = $rendezVousRepo->count(['statut' => $statut]);
         }
 
-        // Fiche diagnostics distribution
-        $diagnostics = $ficheRepo->createQueryBuilder('f')
-            ->select('f.diagnostic, COUNT(f.id) as count')
-            ->groupBy('f.diagnostic')
-            ->getQuery()
-            ->getResult();
+        // Fiche diagnostics distribution using DTO hydration
+        // Create DTO: src/DTO/FicheDiagnosticCount.php
+        // namespace App\DTO;
+        // class FicheDiagnosticCount {
+        //     public function __construct(
+        //         public readonly ?string $diagnostic,
+        //         public readonly int $count
+        //     ) {}
+        // }
+
+        $diagnostics = $ficheRepo->getEntityManager()->createQuery('
+            SELECT NEW App\\DTO\\FicheDiagnosticCount(f.diagnostic, COUNT(f.id))
+            FROM App\\Entity\\FicheMedicale f
+            GROUP BY f.diagnostic
+        ')->getResult();
         $ficheDiagnosticLabels = [];
         $ficheDiagnosticCounts = [];
         foreach ($diagnostics as $diag) {
-            $ficheDiagnosticLabels[] = $diag['diagnostic'] ?: 'Non spécifié';
-            $ficheDiagnosticCounts[] = $diag['count'];
+            $ficheDiagnosticLabels[] = $diag->diagnostic ?: 'Non spécifié';
+            $ficheDiagnosticCounts[] = $diag->count;
         }
 
         // Consultations per doctor (bar chart)
-        $doctors = $userRepo->findDoctorsRespPatients();
-        $doctorsConsultationsLabels = [];
-        $doctorsConsultationsCounts = [];
-        foreach ($doctors as $doctor) {
-            $doctorsConsultationsLabels[] = $doctor->getNom() . ' ' . $doctor->getPrenom();
-            $count = $rendezVousRepo->count(['staff' => $doctor]);
-            $doctorsConsultationsCounts[] = $count;
-        }
+            $doctors = $doctorList;
+            $doctorsConsultationsLabels = [];
+            $doctorsConsultationsCounts = [];
+            // Fetch all counts in one query to avoid N+1
+            $conn = $rendezVousRepo->getEntityManager()->getConnection();
+            $sql = 'SELECT idStaff, COUNT(*) AS cnt FROM rendez_vous GROUP BY idStaff';
+            $stmt = $conn->prepare($sql);
+            $result = $stmt->executeQuery()->fetchAllAssociative();
+            $countsByStaff = [];
+            foreach ($result as $row) {
+                $countsByStaff[$row['idStaff']] = (int)$row['cnt'];
+            }
+            foreach ($doctors as $doctor) {
+                $doctorsConsultationsLabels[] = ($doctor['nom'] ?? '') . ' ' . ($doctor['prenom'] ?? '');
+                $doctorId = $doctor['id'] ?? $doctor['id_user'] ?? null;
+                $doctorsConsultationsCounts[] = $countsByStaff[$doctorId] ?? 0;
+            }
 
 
         // Rendez-vous per day (line chart)
@@ -1204,10 +1328,10 @@ public function statsRessources(RessourceRepository $repo): Response
             'ficheDiagnosticCounts' => $ficheDiagnosticCounts,
             'doctorsConsultationsLabels' => $doctorsConsultationsLabels,
             'doctorsConsultationsCounts' => $doctorsConsultationsCounts,
-            'rdvMonthLabels' => $rdvMonthLabels ?? [],
-            'rdvMonthCounts' => $rdvMonthCounts ?? [],
-            'ficheMonthLabels' => $ficheMonthLabels ?? [],
-            'ficheMonthCounts' => $ficheMonthCounts ?? [],
+            'rdvMonthLabels' => isset($rdvMonthLabels) ? $rdvMonthLabels : [],
+            'rdvMonthCounts' => isset($rdvMonthCounts) ? $rdvMonthCounts : [],
+            'ficheMonthLabels' => isset($ficheMonthLabels) ? $ficheMonthLabels : [],
+            'ficheMonthCounts' => isset($ficheMonthCounts) ? $ficheMonthCounts : [],
             'rdvDayLabels' => $rdvDayLabels,
             'rdvDayCounts' => $rdvDayCounts,
             'ficheDayLabels' => $ficheDayLabels,
@@ -1261,7 +1385,7 @@ public function statsRessources(RessourceRepository $repo): Response
                 'message' => $rep->getMessage(),
                 'type' => $rep->getTypeReponse(),
                 'createdAt' => $rep->getDateCreationRep() ? $rep->getDateCreationRep()->format('d/m/Y H:i') : null,
-                'isRead' => method_exists($rep, 'isRead') ? $rep->isRead() : null,
+                'isRead' => $rep->isRead(),
             ];
         }
     
@@ -1479,132 +1603,203 @@ public function epidemieApiJson(EpidemieDetectionService $epi): Response
         'topParMaladie' => $epi->getTopProduitsByMaladie(30),
     ]);
 }
+
+
+
 // ========== PAGE STATISTIQUES ==========
-    #[Route('/statistiques', name: 'ad_statistiques')]
-    public function statistiques(
-        UserRepository $userRepo,
-        ProduitRepository $produitRepo,
-        CommandeRepository $commandeRepo,
-        EntityManagerInterface $em
-    ): Response {
-        $totalUsers = $userRepo->count([]);
-        $totalProduits = $produitRepo->count([]);
-        $totalCommandes = $commandeRepo->count([]);
+#[Route('/statistiques', name: 'ad_statistiques')]
+public function statistiques(
+    UserRepository $userRepo,
+    ProduitRepository $produitRepo,
+    CommandeRepository $commandeRepo,
+    EntityManagerInterface $em
+): Response {
 
-        // CA total (payées uniquement)
+    // =========================
+    // KPIs (count) - OK
+    // =========================
+    $totalUsers     = $userRepo->count([]);
+    $totalProduits  = $produitRepo->count([]);
+    $totalCommandes = $commandeRepo->count([]);
+
+    // =========================
+    // CA total (commandes payées) - DQL
+    // =========================
+    $caTotal = 0.0;
+    try {
+        $caTotal = (float) $em->createQuery(
+            "SELECT COALESCE(SUM(c.montant_total), 0)
+             FROM App\Entity\Commande c
+             WHERE c.paid_at IS NOT NULL"
+        )->getSingleScalarResult();
+    } catch (\Throwable $e) {
         $caTotal = 0.0;
-        try {
-            $caTotal = (float) ($em->createQuery(
-                'SELECT COALESCE(SUM(c.montant_total), 0) FROM App\Entity\Commande c WHERE c.paid_at IS NOT NULL'
-            )->getSingleScalarResult() ?? 0);
-        } catch (\Exception $e) {}
-
-        // CA ce mois (optionnel)
-        $caMois = 0.0;
-        $nowY = (int) date('Y');
-        $nowM = (int) date('m');
-
-        try {
-            $commandesPayees = $em->createQuery(
-                'SELECT c FROM App\Entity\Commande c WHERE c.paid_at IS NOT NULL'
-            )->getResult();
-
-            foreach ($commandesPayees as $c) {
-                $y = (int) $c->getPaidAt()->format('Y');
-                $m = (int) $c->getPaidAt()->format('m');
-                if ($y === $nowY && $m === $nowM) {
-                    $caMois += (float) $c->getMontantTotal();
-                }
-            }
-        } catch (\Exception $e) {}
-
-        // ✅ CA par mois (12 derniers mois) — MySQL/MariaDB
-        // Retour: [ ['month' => 'Jan', 'total' => 1200], ... ]
-        $caParMois = [];
-        try {
-            // 12 derniers mois (YYYY-MM)
-            $months = [];
-            $cursor = new \DateTimeImmutable('first day of this month');
-            for ($i = 11; $i >= 0; $i--) {
-                $d = $cursor->modify("-{$i} months");
-                $months[] = $d->format('Y-m');
-            }
-
-            // Query DB (group by YYYY-MM)
-            $rows = $em->getConnection()->fetchAllAssociative("
-                SELECT DATE_FORMAT(paid_at, '%Y-%m') AS ym, COALESCE(SUM(montant_total), 0) AS total
-                FROM commande
-                WHERE paid_at IS NOT NULL
-                GROUP BY ym
-                ORDER BY ym ASC
-            ");
-
-            $map = [];
-            foreach ($rows as $r) {
-                $map[$r['ym']] = (float) $r['total'];
-            }
-
-            // Format final (labels courts)
-            $moisLabel = ['Jan','Fév','Mar','Avr','Mai','Juin','Juil','Aoû','Sep','Oct','Nov','Déc'];
-            foreach ($months as $ym) {
-                [$y, $m] = explode('-', $ym);
-                $mInt = (int) $m;
-                $caParMois[] = [
-                    'month' => $moisLabel[$mInt - 1],
-                    'total' => $map[$ym] ?? 0.0,
-                ];
-            }
-        } catch (\Exception $e) {
-            // si erreur => chart vide
-            $caParMois = [];
-        }
-
-        // ✅ Top 5 produits les plus vendus (uniquement commandes payées)
-        $topProduits = [];
-        try {
-            $topProduits = $em->createQuery(
-                'SELECT p.nom_produit AS nom_produit, SUM(lc.quantite_commandee) as total_vendu
-                 FROM App\Entity\LigneCommande lc
-                 JOIN lc.produit p
-                 JOIN lc.commande c
-                 WHERE c.paid_at IS NOT NULL
-                 GROUP BY p.id_produit, p.nom_produit
-                 ORDER BY total_vendu DESC'
-            )->setMaxResults(5)->getResult();
-        } catch (\Exception $e) {}
-
-        // Produits en stock faible
-        $produitsRupture = $produitRepo->createQueryBuilder('p')
-            ->where('p.quantite_produit <= 5')
-            ->orderBy('p.quantite_produit', 'ASC')
-            ->setMaxResults(10)
-            ->getQuery()
-            ->getResult();
-
-        // Commandes par statut
-        $commandesParStatut = [
-            'En attente' => $commandeRepo->count(['statut_commande' => 'En attente']),
-            'En cours' => $commandeRepo->count(['statut_commande' => 'En cours']),
-            'En livraison' => $commandeRepo->count(['statut_commande' => 'En livraison']),
-            'Livrée' => $commandeRepo->count(['statut_commande' => 'Livrée']),
-            'Annulée' => $commandeRepo->count(['statut_commande' => 'Annulée']),
-        ];
-
-        // Dernières commandes
-        $dernieresCommandes = $commandeRepo->findBy([], ['date_creation_commande' => 'DESC'], 5);
-
-        return $this->render('dashboard_ad/statistiques.html.twig', [
-            'totalUsers' => $totalUsers,
-            'totalProduits' => $totalProduits,
-            'totalCommandes' => $totalCommandes,
-            'caTotal' => $caTotal,
-            'caMois' => $caMois,
-            'caParMois' => $caParMois,
-            'topProduits' => $topProduits,
-            'produitsRupture' => $produitsRupture,
-            'commandesParStatut' => $commandesParStatut,
-            'dernieresCommandes' => $dernieresCommandes,
-        ]);
     }
 
+    // =========================
+    // CA du mois courant - DQL
+    // =========================
+    $caMois = 0.0;
+    try {
+        $start = new \DateTimeImmutable('first day of this month 00:00:00');
+        $end   = $start->modify('+1 month');
+
+        $caMois = (float) $em->createQuery(
+            "SELECT COALESCE(SUM(c.montant_total), 0)
+             FROM App\Entity\Commande c
+             WHERE c.paid_at >= :start
+               AND c.paid_at <  :end"
+        )
+            ->setParameter('start', $start)
+            ->setParameter('end', $end)
+            ->getSingleScalarResult();
+    } catch (\Throwable $e) {
+        $caMois = 0.0;
+    }
+
+    // =========================================
+    // CA par mois (12 derniers mois) - SQL MySQL/MariaDB
+    // ✅ FIX: filtre de période (>= start et < end) pour éviter SELECT illimité
+    // Retour: [ ['month' => 'Jan', 'total' => 1200], ... ]
+    // =========================================
+    $caParMois = [];
+    try {
+        $cursor = new \DateTimeImmutable('first day of this month 00:00:00');
+        $start12 = $cursor->modify('-11 months');   // début fenêtre 12 mois
+        $end12   = $cursor->modify('+1 month');     // fin fenêtre (début mois prochain)
+
+        // Liste des 12 mois dans l’ordre (YYYY-MM)
+        $months = [];
+        for ($i = 0; $i < 12; $i++) {
+            $months[] = $start12->modify("+{$i} months")->format('Y-m');
+        }
+
+        // Query DB : group by YYYY-MM, mais limitée à 12 mois ✅
+        $rows = $em->getConnection()->fetchAllAssociative("
+        SELECT DATE_FORMAT(paid_at, '%Y-%m') AS ym,
+               COALESCE(SUM(montant_total), 0) AS total
+        FROM commande
+        WHERE paid_at IS NOT NULL
+          AND paid_at >= :start
+          AND paid_at <  :end
+        GROUP BY ym
+        ORDER BY ym ASC
+        LIMIT 12
+    ", [
+        'start' => $start12->format('Y-m-d H:i:s'),
+        'end'   => $end12->format('Y-m-d H:i:s'),
+    ]);
+        $map = [];
+        foreach ($rows as $r) {
+            $map[(string) $r['ym']] = (float) $r['total'];
+        }
+
+        $moisLabel = ['Jan','Fév','Mar','Avr','Mai','Juin','Juil','Aoû','Sep','Oct','Nov','Déc'];
+
+        foreach ($months as $ym) {
+            [, $m] = explode('-', $ym);
+            $mInt = (int) $m;
+
+            $caParMois[] = [
+                'month' => $moisLabel[$mInt - 1],
+                'total' => $map[$ym] ?? 0.0,
+            ];
+        }
+    } catch (\Throwable $e) {
+        $caParMois = [];
+    }
+
+    // =========================================
+    // Top 5 produits les plus vendus (commandes payées)
+    // =========================================
+    $topProduits = [];
+    try {
+        $topProduits = $em->getConnection()->fetchAllAssociative("
+            SELECT
+                p.nom_produit AS nom_produit,
+                SUM(lc.quantite_commandee) AS total_vendu
+            FROM commande_produit lc
+            INNER JOIN produit p ON lc.produit_id = p.id_produit
+            INNER JOIN commande c ON lc.commande_id = c.id_commande
+            WHERE c.paid_at IS NOT NULL
+            GROUP BY p.id_produit, p.nom_produit
+            ORDER BY total_vendu DESC
+            LIMIT 5
+        ");
+    } catch (\Throwable $e) {
+        $topProduits = [];
+    }
+
+    // =========================================
+    // Produits en stock faible (limit 10) - OK
+    // =========================================
+    $produitsRupture = $produitRepo->createQueryBuilder('p')
+        ->where('p.quantite_produit <= :seuil')
+        ->setParameter('seuil', 5)
+        ->orderBy('p.quantite_produit', 'ASC')
+        ->setMaxResults(10)
+        ->getQuery()
+        ->getResult();
+
+// =========================================
+// Commandes par statut (12 derniers mois) ✅
+// =========================================
+$commandesParStatut = [
+    'En attente'   => 0,
+    'En cours'     => 0,
+    'En livraison' => 0,
+    'Livrée'       => 0,
+    'Annulée'      => 0,
+];
+
+try {
+    $end   = new \DateTimeImmutable('first day of this month 00:00:00');
+    $start = $end->modify('-11 months');      // fenêtre 12 mois
+    $end2  = $end->modify('+1 month');        // inclus mois courant
+
+    $rows = $em->getConnection()->fetchAllAssociative("
+        SELECT statut_commande AS statut, COUNT(*) AS total
+        FROM commande
+        WHERE date_creation_commande >= :start
+          AND date_creation_commande <  :end
+        GROUP BY statut_commande
+    ", [
+        'start' => $start->format('Y-m-d H:i:s'),
+        'end'   => $end2->format('Y-m-d H:i:s'),
+    ]);
+
+    foreach ($rows as $r) {
+        $statut = (string) $r['statut'];
+        $total  = (int) $r['total'];
+
+        if (array_key_exists($statut, $commandesParStatut)) {
+            $commandesParStatut[$statut] = $total;
+        }
+    }
+} catch (\Throwable $e) {
+    // garde les zéros
 }
+
+    // =========================================
+    // Dernières commandes (limit 5) - OK
+    // =========================================
+    $dernieresCommandes = $commandeRepo->findBy([], ['date_creation_commande' => 'DESC'], 5);
+
+    return $this->render('dashboard_ad/statistiques.html.twig', [
+        'totalUsers' => $totalUsers,
+        'totalProduits' => $totalProduits,
+        'totalCommandes' => $totalCommandes,
+
+        'caTotal' => $caTotal,
+        'caMois' => $caMois,
+        'caParMois' => $caParMois,
+
+        'topProduits' => $topProduits,
+        'produitsRupture' => $produitsRupture,
+        'commandesParStatut' => $commandesParStatut,
+        'dernieresCommandes' => $dernieresCommandes,
+    ]);
+}
+
+}
+

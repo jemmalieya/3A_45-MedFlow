@@ -34,18 +34,23 @@ final class FaceLoginService
      */
     public function getSimilarityThreshold(): int
     {
-        $value = (int) $this->params->get('face_login_similarity');
+        $raw = $this->params->get('face_login_similarity');
+        $value = is_numeric($raw) ? (int) $raw : 90;
         return max(0, min(100, $value));
     }
 
     public function getLockMaxFails(): int
     {
-        return max(1, (int) $this->params->get('face_login_lock_max_fail'));
+        $raw = $this->params->get('face_login_lock_max_fail');
+        $value = is_numeric($raw) ? (int) $raw : 5;
+        return max(1, $value);
     }
 
     public function getLockMinutes(): int
     {
-        return max(1, (int) $this->params->get('face_login_lock_minutes'));
+        $raw = $this->params->get('face_login_lock_minutes');
+        $value = is_numeric($raw) ? (int) $raw : 15;
+        return max(1, $value);
     }
 
     /**
@@ -65,10 +70,10 @@ final class FaceLoginService
 
         $user
             ->setFaceReferenceEmbedding($stored)
-            ->setFaceEnrolledAt(new \DateTime())
+            ->markFaceEnrolledAt()
             ->setFaceLoginEnabled(true)
             ->setFaceFailedAttempts(0)
-            ->setFaceLockedUntil(null);
+            ->clearFaceLock();
     }
 
     public function disable(User $user): void
@@ -76,10 +81,10 @@ final class FaceLoginService
         $user
             ->setFaceLoginEnabled(false)
             ->setFaceReferenceEmbedding(null)
-            ->setFaceEnrolledAt(null)
-            ->setFaceLastVerifiedAt(null)
+            ->clearFaceEnrolledAt()
+            ->clearFaceLastVerifiedAt()
             ->setFaceFailedAttempts(0)
-            ->setFaceLockedUntil(null);
+            ->clearFaceLock();
     }
 
     /**
@@ -188,27 +193,25 @@ final class FaceLoginService
     private function sanitizeAndNormalizeVector(array $embedding, int $version): array
     {
         $out = [];
+
         foreach ($embedding as $v) {
             if (is_string($v)) {
                 $v = trim($v);
                 if ($v === '') {
                     continue;
                 }
-                if (!is_numeric($v)) {
-                    throw new \RuntimeException('Embedding invalide.');
-                }
-                $v = (float) $v;
-            } elseif (is_int($v) || is_float($v)) {
-                $v = (float) $v;
-            } else {
+            }
+
+            if (!is_numeric($v)) {
                 throw new \RuntimeException('Embedding invalide.');
             }
+
+            $v = (float) $v;
 
             if (!is_finite($v)) {
                 throw new \RuntimeException('Embedding invalide.');
             }
 
-            // Avoid crazy values / obvious garbage.
             if ($v < -10_000.0 || $v > 10_000.0) {
                 throw new \RuntimeException('Embedding invalide.');
             }
@@ -217,6 +220,7 @@ final class FaceLoginService
         }
 
         $dim = count($out);
+
         if ($version >= self::EMBEDDING_VERSION) {
             // ImageEmbedder vectors are typically a few hundred to a few thousand floats.
             if ($dim < 128) {
@@ -236,16 +240,16 @@ final class FaceLoginService
         }
 
         $norm = 0.0;
-        foreach ($out as $v) {
-            $norm += $v * $v;
+        foreach ($out as $vv) {
+            $norm += $vv * $vv;
         }
         if ($norm <= 0.0) {
             throw new \RuntimeException('Embedding invalide.');
         }
 
         $norm = sqrt($norm);
-        foreach ($out as $i => $v) {
-            $out[$i] = $v / $norm;
+        foreach ($out as $i => $vv) {
+            $out[$i] = $vv / $norm;
         }
 
         return $out;

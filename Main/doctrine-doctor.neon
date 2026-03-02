@@ -1,0 +1,3 @@
+parameters:
+    ignoreRules:
+        - Aggregation Query Without DTO Hydration

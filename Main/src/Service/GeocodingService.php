@@ -15,6 +15,8 @@ class GeocodingService
 
     /**
      * Retourne ['lat' => float, 'lng' => float] ou null.
+     *
+     * @return array{lat: float, lng: float}|null
      */
     public function geocode(string $address): ?array
     {
@@ -26,7 +28,8 @@ class GeocodingService
         // ✅ Cache 24h (évite rate-limit si tu refresh / ping)
         $cacheKey = 'geo_' . sha1(mb_strtolower($address));
 
-        return $this->cache->get($cacheKey, function (ItemInterface $item) use ($address) {
+        /** @var array{lat: float, lng: float}|null $result */
+        $result = $this->cache->get($cacheKey, function (ItemInterface $item) use ($address): ?array {
             $item->expiresAfter(86400); // 24h
 
             try {
@@ -45,32 +48,35 @@ class GeocodingService
                     'timeout' => 10,
                 ]);
 
-                $status = $response->getStatusCode();
-
-                // ✅ Nominatim renvoie parfois HTML en cas de blocage -> on ne parse pas JSON
-                if ($status !== 200) {
-                    // (option debug) :
-                    // $raw = $response->getContent(false);
-                    // dump('Nominatim status='.$status, $raw);
+                if ($response->getStatusCode() !== 200) {
                     return null;
                 }
 
-                // ✅ Si JSON invalide, toArray(false) peut lever une exception => catch
+                // toArray(false) => array (mais contenu "mixed")
+                /** @var array<int, array<string, mixed>> $data */
                 $data = $response->toArray(false);
 
-                if (!is_array($data) || empty($data) || !isset($data[0]['lat'], $data[0]['lon'])) {
+                if ($data === [] || !isset($data[0]['lat'], $data[0]['lon'])) {
+                    return null;
+                }
+
+                $latRaw = $data[0]['lat'];
+                $lonRaw = $data[0]['lon'];
+
+                // On sécurise : Nominatim renvoie souvent des strings numériques
+                if (!is_scalar($latRaw) || !is_scalar($lonRaw)) {
                     return null;
                 }
 
                 return [
-                    'lat' => (float) $data[0]['lat'],
-                    'lng' => (float) $data[0]['lon'],
+                    'lat' => (float) $latRaw,
+                    'lng' => (float) $lonRaw,
                 ];
             } catch (\Throwable $e) {
-                // (option debug) :
-                // dump('Geocoding error: '.$e->getMessage());
                 return null;
             }
         });
+
+        return $result;
     }
 }

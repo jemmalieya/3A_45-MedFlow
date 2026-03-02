@@ -112,7 +112,15 @@ private function trainSentiment(): void
         $this->classifier->train($vectorSamples, $labels);
     }
 
-    public function analyze(string $contenu, string $description, ?string $type = null): array
+/**
+ * @return array{
+ *     lang: string,
+ *     priority: string,
+ *     urgenceScore: int,
+ *     sentiment: string
+ * }
+ */
+public function analyze(string $contenu, string $description, ?string $type = null): array
     {
         $text = trim($contenu . " " . $description);
 

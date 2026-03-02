@@ -7,8 +7,8 @@ use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 class UserService
 {
-    private $em;
-    private $hasher;
+    private EntityManagerInterface $em;
+    private UserPasswordHasherInterface $hasher;
 
     public function __construct(EntityManagerInterface $em, UserPasswordHasherInterface $hasher)
     {
@@ -18,8 +18,8 @@ class UserService
 
     /**
      * Créer un utilisateur
-     * 
-     * @param array $data Les données pour créer un utilisateur
+     *
+     * @param User $user Utilisateur à persister
      * @return User
      */
     public function saveUser(User $user): User
@@ -33,8 +33,8 @@ class UserService
     /**
      * Mettre à jour un utilisateur
      * 
-     * @param User $user
-     * @param array $data
+     * @param User                 $user
+     * @param array<string, mixed> $data
      * @return User
      */
     public function updateUser(User $user, array $data): User
@@ -62,30 +62,34 @@ class UserService
         $this->em->remove($user);
         $this->em->flush();
     }
+    /**
+     * @return User[]
+     */
+    public function getFilteredUsers(string $q, string $sort, string $role = 'PATIENT'): array
+    {
+        $qb = $this->em->getRepository(User::class)->createQueryBuilder('u')
+            ->andWhere('u.roleSysteme = :role')
+            ->setParameter('role', $role);
 
+        // Filter by search query
+        if ($q !== '') {
+            $qb->andWhere('u.cin LIKE :q OR u.nom LIKE :q OR u.prenom LIKE :q OR u.emailUser LIKE :q')
+               ->setParameter('q', '%'.$q.'%');
+        }
 
-public function getFilteredUsers(string $q, string $sort, string $role = 'PATIENT'): array
-{
-    $qb = $this->em->getRepository(User::class)->createQueryBuilder('u')
-        ->andWhere('u.roleSysteme = :role')
-        ->setParameter('role', $role);
+        // Sorting logic
+        if ($sort === 'name') {
+            $qb->orderBy('u.nom', 'ASC')->addOrderBy('u.prenom', 'ASC');
+        } elseif ($sort === 'cin') {
+            $qb->orderBy('u.cin', 'ASC');
+        } else {
+            $qb->orderBy('u.id', 'DESC');
+        }
 
-    // Filter by search query
-    if ($q !== '') {
-        $qb->andWhere('u.cin LIKE :q OR u.nom LIKE :q OR u.prenom LIKE :q OR u.emailUser LIKE :q')
-           ->setParameter('q', '%'.$q.'%');
+        /** @var User[] $result */
+        $result = $qb->getQuery()->getResult();
+
+        return $result;
     }
-
-    // Sorting logic
-    if ($sort === 'name') {
-        $qb->orderBy('u.nom', 'ASC')->addOrderBy('u.prenom', 'ASC');
-    } elseif ($sort === 'cin') {
-        $qb->orderBy('u.cin', 'ASC');
-    } else {
-        $qb->orderBy('u.id', 'DESC');
-    }
-
-    return $qb->getQuery()->getResult();
-}
 
 }

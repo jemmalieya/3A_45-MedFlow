@@ -476,7 +476,7 @@
       currentRecId = btn.dataset.id;
       currentRecRef = btn.dataset.ref;
 
-      recModalSub.textContent = Réclamation ${btn.dataset.ref} (#${btn.dataset.id});
+      recModalSub.textContent = `Réclamation ${btn.dataset.ref} (#${btn.dataset.id})`;
 
       mId.textContent = '#' + (btn.dataset.id || '—');
       mRef.textContent = btn.dataset.ref || '—';
@@ -528,24 +528,24 @@
         return;
       }
 
-      repliesHint.textContent = ${data.reponses.length} réponse(s) trouvée(s).;
+      repliesHint.textContent = `${data.reponses.length} réponse(s) trouvée(s).`;
 
       data.reponses.forEach((r, idx) => {
         const card = document.createElement('div');
         card.className = 'border rounded-4 p-3 bg-white';
 
         const typeBadge = r.type
-          ? <span class="badge bg-dark me-2">${escapeHtml(r.type)}</span>
+          ? `<span class="badge bg-dark me-2">${escapeHtml(r.type)}</span>`
           : '';
 
         const readBadge = (r.isRead === true)
-          ? <span class="badge bg-success"><i class="bi bi-check2 me-1"></i>Lu</span>
+          ? `<span class="badge bg-success"><i class="bi bi-check2 me-1"></i>Lu</span>`
           : (r.isRead === false)
-            ? <span class="badge bg-warning text-dark"><i class="bi bi-dot me-1"></i>Non lu</span>
+            ? `<span class="badge bg-warning text-dark"><i class="bi bi-dot me-1"></i>Non lu</span>`
             : '';
 
         const dateLine = r.createdAt
-          ? <div class="text-muted small"><i class="bi bi-clock me-1"></i>${escapeHtml(r.createdAt)}</div>
+          ? `<div class="text-muted small"><i class="bi bi-clock me-1"></i>${escapeHtml(r.createdAt)}</div>`
           : '';
 
         card.innerHTML = `

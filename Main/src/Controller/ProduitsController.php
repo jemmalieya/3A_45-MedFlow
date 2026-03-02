@@ -7,42 +7,127 @@ use App\Entity\User;
 use App\Form\ProduitType;
 use App\Repository\ProduitRepository;
 use App\Repository\CommandeRepository;
-
 use App\Service\AiPharmacyRecommender;
 use App\Service\GroqService;
 use App\Service\QrCodeService;
 use App\Service\VCardService;
-
 use Doctrine\ORM\EntityManagerInterface;
+use Doctrine\ORM\QueryBuilder;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
-
 use Symfony\Component\HttpFoundation\File\UploadedFile;
 use Symfony\Component\String\Slugger\SluggerInterface;
-
 use Symfony\Component\Notifier\NotifierInterface;
 use Symfony\Component\Notifier\Notification\Notification;
 
-use Knp\Component\Pager\PaginatorInterface;
-
 final class ProduitsController extends AbstractController
 {
+    private function getParameterString(string $name): string
+    {
+        $value = $this->getParameter($name);
+
+        if (!is_string($value) || $value === '') {
+            throw new \RuntimeException(sprintf('Parameter "%s" must be a non-empty string.', $name));
+        }
+
+        return $value;
+    }
+
+    /**
+     * Pagination Doctrine native (évite les warnings Doctrine Doctor liés à KNP)
+     *
+     * @return array{
+     *   items: list<Produit>,
+     *   total: int,
+     *   pages: int,
+     *   page: int,
+     *   limit: int
+     * }
+     */
+    private function paginateDoctrine(QueryBuilder $qb, int $page, int $limit): array
+    {
+        $page  = max(1, $page);
+        $limit = max(1, $limit);
+
+        $countQb = clone $qb;
+        $countQb->select('COUNT(p.id_produit)');
+        $countQb->resetDQLPart('orderBy');
+
+        $total = (int) $countQb->getQuery()->getSingleScalarResult();
+        $pages = (int) max(1, (int) ceil($total / $limit));
+
+        if ($page > $pages) {
+            $page = $pages;
+        }
+
+        /** @var list<Produit> $items */
+        $items = $qb
+            ->setFirstResult(($page - 1) * $limit)
+            ->setMaxResults($limit)
+            ->getQuery()
+            ->getResult();
+
+        return [
+            'items' => $items,
+            'total' => $total,
+            'pages' => $pages,
+            'page'  => $page,
+            'limit' => $limit,
+        ];
+    }
+
+    // =========================================================
+    // FRONT : liste produits (pagination native)
+    // =========================================================
     #[Route('/produits', name: 'front_produit_index', methods: ['GET'])]
     public function frontIndex(Request $request, ProduitRepository $repo): Response
     {
-        $search    = (string) $request->query->get('search', '');
-        $category  = (string) $request->query->get('category', '');
+        $search    = trim((string) $request->query->get('search', ''));
+        $category  = trim((string) $request->query->get('category', ''));
         $sortPrice = (string) $request->query->get('sort', '');
         $sortStock = (string) $request->query->get('sortStock', '');
 
-        $produits   = $repo->findFiltered($search, $category, $sortPrice, $sortStock);
+        $qb = $repo->createQueryBuilder('p');
+
+        if ($search !== '') {
+            $qb->andWhere('LOWER(p.nom_produit) LIKE :s OR LOWER(p.categorie_produit) LIKE :s')
+                ->setParameter('s', '%' . mb_strtolower($search) . '%');
+        }
+
+        if ($category !== '') {
+            $qb->andWhere('p.categorie_produit = :c')
+                ->setParameter('c', $category);
+        }
+
+        // tri prix
+        if ($sortPrice === 'price_asc') {
+            $qb->orderBy('p.prix_produit', 'ASC');
+        } elseif ($sortPrice === 'price_desc') {
+            $qb->orderBy('p.prix_produit', 'DESC');
+        } else {
+            $qb->orderBy('p.id_produit', 'DESC');
+        }
+
+        // tri stock (optionnel)
+        if ($sortStock === 'stock_asc') {
+            $qb->addOrderBy('p.quantite_produit', 'ASC');
+        } elseif ($sortStock === 'stock_desc') {
+            $qb->addOrderBy('p.quantite_produit', 'DESC');
+        }
+
+        $page  = $request->query->getInt('page', 1);
+        $limit = 12;
+
+        $pagination = $this->paginateDoctrine($qb, $page, $limit);
+
         $categories = $repo->findAllCategories();
 
         return $this->render('produits/index.html.twig', [
-            'produits'         => $produits,
+            'produits'         => $pagination['items'],
+            'pagination'       => $pagination, // meta (page/total/pages)
             'categories'       => $categories,
             'currentSearch'    => $search,
             'currentCategory'  => $category,
@@ -51,6 +136,9 @@ final class ProduitsController extends AbstractController
         ]);
     }
 
+    // =========================================================
+    // API IA
+    // =========================================================
     #[Route('/api/pharmacie/ai', name: 'api_pharmacie_ai', methods: ['POST'])]
     public function pharmacieAi(Request $request, GroqService $groq): JsonResponse
     {
@@ -68,136 +156,165 @@ final class ProduitsController extends AbstractController
         }
     }
 
+    // =========================================================
+    // ADMIN : liste + alertes (NO KNP => plus de order_by_without_limit)
+    // =========================================================
     #[Route('/admin/produits', name: 'admin_produits_index', methods: ['GET'])]
     public function adminIndex(
         Request $request,
         ProduitRepository $repo,
-        PaginatorInterface $paginator,
         NotifierInterface $notifier
     ): Response {
-        $search   = (string) $request->query->get('search', '');
-        $category = (string) $request->query->get('category', '');
+        $search   = trim((string) $request->query->get('search', ''));
+        $category = trim((string) $request->query->get('category', ''));
 
-        $qb = $repo->createQueryBuilder('p')->orderBy('p.id_produit', 'DESC');
+        $qb = $repo->createQueryBuilder('p');
 
         if ($search !== '') {
             $qb->andWhere('LOWER(p.nom_produit) LIKE :s OR LOWER(p.categorie_produit) LIKE :s')
-               ->setParameter('s', '%' . mb_strtolower($search) . '%');
+                ->setParameter('s', '%' . mb_strtolower($search) . '%');
         }
+
         if ($category !== '') {
             $qb->andWhere('p.categorie_produit = :c')
-               ->setParameter('c', $category);
+                ->setParameter('c', $category);
         }
 
-        $pagination = $paginator->paginate(
-            $qb,
-            $request->query->getInt('page', 1),
-            5
-        );
+        $qb->orderBy('p.id_produit', 'DESC');
 
-        // ✅ ALERTES INVENTAIRE
+        $page  = $request->query->getInt('page', 1);
+        $limit = 5;
+
+        $pagination = $this->paginateDoctrine($qb, $page, $limit);
+
+        // ✅ ALERTES INVENTAIRE : COUNT (pas de gros getResult)
         $seuilFaible = 10;
-        $allProduits = $repo->findAll();
 
-        $rupture = array_values(array_filter($allProduits, fn($p) =>
-            strtolower(trim((string) $p->getStatusProduit())) === 'rupture'
-        ));
+        $nbRupture = (int) $repo->createQueryBuilder('p')
+            ->select('COUNT(p.id_produit)')
+            ->andWhere('LOWER(p.status_produit) = :st')
+            ->setParameter('st', 'rupture')
+            ->getQuery()
+            ->getSingleScalarResult();
 
-        $stockFaible = array_values(array_filter($allProduits, fn($p) =>
-            $p->getQuantiteProduit() !== null && (int) $p->getQuantiteProduit() <= $seuilFaible
-        ));
+        $nbStockFaible = (int) $repo->createQueryBuilder('p')
+            ->select('COUNT(p.id_produit)')
+            ->andWhere('p.quantite_produit <= :seuil')
+            ->setParameter('seuil', $seuilFaible)
+            ->getQuery()
+            ->getSingleScalarResult();
 
-        if (count($rupture) > 0) {
-            $msg = count($rupture) . " produit(s) en rupture. Réapprovisionnement recommandé.";
+        // ✅ listes limitées (TOP 10)
+        /** @var list<Produit> $ruptureList */
+        $ruptureList = $repo->createQueryBuilder('p')
+            ->andWhere('LOWER(p.status_produit) = :st')
+            ->setParameter('st', 'rupture')
+            ->orderBy('p.id_produit', 'DESC')
+            ->setMaxResults(10)
+            ->getQuery()
+            ->getResult();
+
+        /** @var list<Produit> $lowStockList */
+        $lowStockList = $repo->createQueryBuilder('p')
+            ->andWhere('p.quantite_produit <= :seuil')
+            ->setParameter('seuil', $seuilFaible)
+            ->orderBy('p.quantite_produit', 'ASC')
+            ->setMaxResults(10)
+            ->getQuery()
+            ->getResult();
+
+        if ($nbRupture > 0) {
+            $msg = $nbRupture . " produit(s) en rupture. Réapprovisionnement recommandé.";
             $this->addFlash('error', $msg);
             $notifier->send(new Notification($msg, ['browser']));
         }
 
-        if (count($stockFaible) > 0) {
-            $msg = count($stockFaible) . " produit(s) en stock faible (≤ $seuilFaible).";
+        if ($nbStockFaible > 0) {
+            $msg = $nbStockFaible . " produit(s) en stock faible (≤ $seuilFaible).";
             $this->addFlash('warning', $msg);
             $notifier->send(new Notification($msg, ['browser']));
         }
 
         return $this->render('admin/index_produit.html.twig', [
-            'pagination'   => $pagination,
-            'search'       => $search,
-            'category'     => $category,
-            'ruptureList'  => $rupture,
-            'lowStockList' => $stockFaible,
-            'seuilFaible'  => $seuilFaible,
+            'produits'      => $pagination['items'],
+            'pagination'    => $pagination,
+            'search'        => $search,
+            'category'      => $category,
+            'seuilFaible'   => $seuilFaible,
+            'nbRupture'     => $nbRupture,
+            'nbStockFaible' => $nbStockFaible,
+            'ruptureList'   => $ruptureList,
+            'lowStockList'  => $lowStockList,
         ]);
     }
 
+    // =========================================================
+    // CRUD
+    // =========================================================
     #[Route('/admin/produits/new', name: 'admin_produit_new', methods: ['GET', 'POST'])]
-public function new(Request $request, EntityManagerInterface $em, SluggerInterface $slugger): Response
-{
-    $produit = new Produit();
+    public function new(Request $request, EntityManagerInterface $em, SluggerInterface $slugger): Response
+    {
+        $produit = new Produit();
 
-    // ✅ PAS DE image_input
-    $form = $this->createForm(ProduitType::class, $produit, [
-        'mode' => 'create',
-    ]);
-    $form->handleRequest($request);
+        $form = $this->createForm(ProduitType::class, $produit, ['mode' => 'create']);
+        $form->handleRequest($request);
 
-    if ($form->isSubmitted() && $form->isValid()) {
+        if ($form->isSubmitted() && $form->isValid()) {
+            /** @var UploadedFile|null $imageFile */
+            $imageFile = $form->get('imageFile')->getData();
 
-        /** @var UploadedFile|null $imageFile */
-        $imageFile = $form->get('imageFile')->getData();
+            if (!$imageFile) {
+                $this->addFlash('error', "Veuillez choisir une image (upload).");
+                return $this->render('admin/newProduit.html.twig', [
+                    'form' => $form->createView(),
+                ]);
+            }
 
-        // ✅ Forcer image obligatoire (create)
-        if (!$imageFile) {
-            $this->addFlash('error', "Veuillez choisir une image (upload).");
-            return $this->render('admin/newProduit.html.twig', [
-                'form' => $form->createView(),
-            ]);
+            $original = pathinfo($imageFile->getClientOriginalName(), PATHINFO_FILENAME);
+            $safeName = $slugger->slug($original)->toString();
+            $newFilename = $safeName . '-' . uniqid('', true) . '.' . ($imageFile->guessExtension() ?: 'jpg');
+
+            $uploadDir = $this->getParameterString('produits_images_dir');
+            $imageFile->move($uploadDir, $newFilename);
+
+            $produit->setImageProduit($newFilename);
+
+            $em->persist($produit);
+            $em->flush();
+
+            $this->addFlash('success', 'Produit ajouté avec succès !');
+            return $this->redirectToRoute('admin_produits_index');
         }
 
-        $original = pathinfo($imageFile->getClientOriginalName(), PATHINFO_FILENAME);
-        $safeName = $slugger->slug($original);
-        $newFilename = $safeName . '-' . uniqid() . '.' . ($imageFile->guessExtension() ?: 'jpg');
-
-        $imageFile->move($this->getParameter('produits_images_dir'), $newFilename);
-
-        // ✅ Sauver juste le nom du fichier
-        $produit->setImageProduit($newFilename);
-
-        $em->persist($produit);
-        $em->flush();
-
-        $this->addFlash('success', 'Produit ajouté avec succès !');
-        return $this->redirectToRoute('admin_produits_index');
+        return $this->render('admin/newProduit.html.twig', [
+            'form' => $form->createView(),
+        ]);
     }
 
-    return $this->render('admin/newProduit.html.twig', [
-        'form' => $form->createView(),
-    ]);
-}
     #[Route('/admin/produits/{id}/edit', name: 'admin_produit_edit', methods: ['GET', 'POST'])]
     public function edit(Produit $produit, Request $request, EntityManagerInterface $em, SluggerInterface $slugger): Response
     {
         $oldImage = $produit->getImageProduit();
 
-        $form = $this->createForm(ProduitType::class, $produit, [
-            'mode' => 'edit',
-        ]);
+        $form = $this->createForm(ProduitType::class, $produit, ['mode' => 'edit']);
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
-
             /** @var UploadedFile|null $imageFile */
             $imageFile = $form->has('imageFile') ? $form->get('imageFile')->getData() : null;
 
-            if ($imageFile) {
-                $original = pathinfo($imageFile->getClientOriginalName(), PATHINFO_FILENAME);
-                $safeName = $slugger->slug($original);
-                $newFilename = $safeName . '-' . uniqid() . '.' . ($imageFile->guessExtension() ?: 'jpg');
+            $uploadDir = $this->getParameterString('produits_images_dir');
 
-                $imageFile->move($this->getParameter('produits_images_dir'), $newFilename);
+            if ($imageFile instanceof UploadedFile) {
+                $original = pathinfo($imageFile->getClientOriginalName(), PATHINFO_FILENAME);
+                $safeName = $slugger->slug($original)->toString();
+                $newFilename = $safeName . '-' . uniqid('', true) . '.' . ($imageFile->guessExtension() ?: 'jpg');
+
+                $imageFile->move($uploadDir, $newFilename);
                 $produit->setImageProduit($newFilename);
 
                 if ($oldImage && !str_starts_with($oldImage, 'http')) {
-                    $oldPath = $this->getParameter('produits_images_dir') . '/' . $oldImage;
+                    $oldPath = $uploadDir . '/' . $oldImage;
                     if (is_file($oldPath)) {
                         @unlink($oldPath);
                     }
@@ -232,7 +349,8 @@ public function new(Request $request, EntityManagerInterface $em, SluggerInterfa
             $em->flush();
 
             if ($img && !str_starts_with($img, 'http')) {
-                $path = $this->getParameter('produits_images_dir') . '/' . $img;
+                $uploadDir = $this->getParameterString('produits_images_dir');
+                $path = $uploadDir . '/' . $img;
                 if (is_file($path)) {
                     @unlink($path);
                 }
@@ -244,6 +362,9 @@ public function new(Request $request, EntityManagerInterface $em, SluggerInterfa
         return $this->redirectToRoute('admin_produits_index');
     }
 
+    // =========================================================
+    // API BEST SELLERS
+    // =========================================================
     #[Route('/produits/api/best-sellers', name: 'produits_api_best_sellers', methods: ['GET'])]
     public function apiBestSellers(CommandeRepository $cr): JsonResponse
     {
@@ -255,7 +376,7 @@ public function new(Request $request, EntityManagerInterface $em, SluggerInterfa
             $fallback = 'global';
         }
 
-        $items = array_map(fn($p) => [
+        $items = array_map(static fn($p) => [
             'id' => $p->getId_produit(),
             'nom' => $p->getNomProduit(),
             'prix' => (float) $p->getPrixProduit(),
@@ -272,6 +393,9 @@ public function new(Request $request, EntityManagerInterface $em, SluggerInterfa
         ]);
     }
 
+    // =========================================================
+    // API RECO AI
+    // =========================================================
     #[Route('/produits/api/reco-ai', name: 'produits_api_reco_ai', methods: ['GET'])]
     public function apiRecoAi(
         Request $request,
@@ -279,26 +403,23 @@ public function new(Request $request, EntityManagerInterface $em, SluggerInterfa
         CommandeRepository $cr,
         ProduitRepository $pr
     ): JsonResponse {
-        // ✅ Toujours initialiser
         $user = $this->getUser();
         $userId = $user instanceof User ? (int) $user->getId() : null;
-    
-        // Session (visiteur)
+
         $session = $request->getSession();
         if (!$session->has('reco_session_id')) {
             $session->set('reco_session_id', bin2hex(random_bytes(8)));
         }
         $sessionId = (string) $session->get('reco_session_id');
-    
+
         $basedOn = null;
         $mode = 'personalized';
         $explainText = "Basé sur votre historique d'achat (hors médicaments).";
-    
         $items = [];
-    
+
         if ($userId) {
             $items = $reco->recommendFromHistory($userId, 12);
-    
+
             $topId = $cr->getUserTopProductId($userId);
             if ($topId) {
                 $p = $pr->find($topId);
@@ -316,14 +437,13 @@ public function new(Request $request, EntityManagerInterface $em, SluggerInterfa
             $mode = 'session';
             $explainText = "Suggestions adaptées à votre session (visiteur) — connectez-vous pour des recommandations basées sur vos achats.";
         }
-    
+
         if (empty($items)) {
             $trending = $cr->getBestSellersNonMedicaments(12);
-    
+
             if (!empty($trending)) {
                 if ($userId) {
-                    // ordre personnalisé par user connecté
-                    usort($trending, function($a, $b) use ($userId) {
+                    usort($trending, static function ($a, $b) use ($userId) {
                         $ha = crc32($userId . '-' . $a->getId_produit());
                         $hb = crc32($userId . '-' . $b->getId_produit());
                         return $ha <=> $hb;
@@ -331,43 +451,44 @@ public function new(Request $request, EntityManagerInterface $em, SluggerInterfa
                     $mode = 'trending_user';
                     $explainText = "Tendances du moment (hors médicaments) — ordre personnalisé pour vous.";
                 } else {
-                    // ordre personnalisé par session (visiteur)
-                    usort($trending, function($a, $b) use ($sessionId) {
+                    usort($trending, static function ($a, $b) use ($sessionId) {
                         $ha = crc32($sessionId . '-' . $a->getId_produit());
-                        $hb = crc32($sessionId . '-' . $b->getId_produit());
+                        $hb = crc32($sessionId . '-' . $a->getId_produit());
                         return $ha <=> $hb;
                     });
                     $mode = 'session_trending';
                     $explainText = "Tendances du moment (hors médicaments) — ordre adapté à votre session.";
                 }
-    
+
                 $items = array_slice($trending, 0, 12);
             }
         }
-    
-        // 🔒 Fallback final pour ne jamais renvoyer vide
+
         if (empty($items)) {
+            /** @var list<Produit> $items */
             $items = $pr->createQueryBuilder('p')
                 ->andWhere('LOWER(p.status_produit) = :st')->setParameter('st', 'disponible')
                 ->orderBy('p.id_produit', 'DESC')
                 ->setMaxResults(12)
                 ->getQuery()
                 ->getResult();
-    
+
             $mode = 'fallback_final';
             $explainText = "Suggestions disponibles.";
         }
-    
-        $payloadItems = array_map(function($p) use ($userId, $basedOn, $mode) {
+
+        $payloadItems = array_map(static function ($p) use ($userId, $basedOn, $mode) {
             $badges = [];
-    
-            if ($mode !== 'fallback_final') $badges[] = '✨ Recommandé';
+
+            if ($mode !== 'fallback_final') {
+                $badges[] = '✨ Recommandé';
+            }
             if ($userId && $basedOn && $p->getCategorieProduit() === $basedOn['category']) {
                 $badges[] = '🏷️ Même catégorie';
             }
-    
+
             $img = $p->getImageProduit();
-    
+
             return [
                 'id' => $p->getId_produit(),
                 'nom' => $p->getNomProduit(),
@@ -377,7 +498,7 @@ public function new(Request $request, EntityManagerInterface $em, SluggerInterfa
                 'badges' => $badges,
             ];
         }, $items);
-    
+
         return new JsonResponse([
             'success' => true,
             'mode' => $mode,
@@ -388,42 +509,40 @@ public function new(Request $request, EntityManagerInterface $em, SluggerInterfa
         ]);
     }
 
-   // ProduitsController.php
-   #[Route('/contact-pharmacie/qr.json', name: 'front_contact_pharmacie_qr_json', methods: ['GET'])]
-   public function contactQr(QrCodeService $qr, VCardService $vcard): JsonResponse
-   {
-       try {
-           $vcardText = $vcard->buildPharmacyVCard([
-               'name' => 'Pharmacie MedFlow',
-               'org' => 'MedFlow',
-               'phone' => '+216 22 222 222',
-               'email' => 'pharmacie@medflow.tn',
-               'address' => 'Rue Exemple 12',
-               'city' => 'Tunis',
-               'zip' => '1000',
-               'country' => 'TN',
-           ]);
-   
-           // ✅ IMPORTANT: PAS d'extension ici
-           $baseName = 'contact_pharmacie_' . date('Ymd_His');
+    // =========================================================
+    // QR
+    // =========================================================
+    #[Route('/contact-pharmacie/qr.json', name: 'front_contact_pharmacie_qr_json', methods: ['GET'])]
+    public function contactQr(QrCodeService $qr, VCardService $vcard): JsonResponse
+    {
+        try {
+            $vcardText = $vcard->buildPharmacyVCard([
+                'name' => 'Pharmacie MedFlow',
+                'org' => 'MedFlow',
+                'phone' => '+216 22 222 222',
+                'email' => 'pharmacie@medflow.tn',
+                'address' => 'Rue Exemple 12',
+                'city' => 'Tunis',
+                'zip' => '1000',
+                'country' => 'TN',
+            ]);
 
-           // PNG nécessite ext-gd. Fallback SVG si GD n'est pas dispo.
-           if (extension_loaded('gd')) {
-               $qrData = $qr->generatePng($vcardText, $baseName);
-           } else {
-               $qrData = $qr->generateSvg($vcardText, $baseName);
-           }
-   
-           return $this->json([
-               'ok' => true,
-               // ✅ on renvoie une string (pas un objet)
-               'qrPath' => $qrData['publicPath'],
-           ]);
-       } catch (\Throwable $e) {
-           return $this->json([
-               'ok' => false,
-               'error' => $e->getMessage(),
-           ], 500);
-       }
-   }
+            $baseName = 'contact_pharmacie_' . date('Ymd_His');
+
+            $qrData = extension_loaded('gd')
+                ? $qr->generatePng($vcardText, $baseName)
+                : $qr->generateSvg($vcardText, $baseName);
+
+            return $this->json([
+                'ok' => true,
+                // ✅ FIX PHPStan: offset toujours présent, donc pas de ?? ici
+                'qrPath' => $qrData['publicPath'],
+            ]);
+        } catch (\Throwable $e) {
+            return $this->json([
+                'ok' => false,
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
 }

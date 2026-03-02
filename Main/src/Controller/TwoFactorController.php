@@ -33,7 +33,7 @@ final class TwoFactorController extends AbstractController
 
         return $this->render('security/two_factor_standalone.html.twig', [
             'account' => $account,
-            'remember_days' => (int) $this->getParameter('two_factor_remember_days'),
+            'remember_days' => (int) (is_numeric($this->getParameter('two_factor_remember_days')) ? $this->getParameter('two_factor_remember_days') : 0),
         ]);
     }
 
@@ -65,7 +65,8 @@ final class TwoFactorController extends AbstractController
 
         $secure = $request->isSecure();
         if ($request->request->getBoolean('remember_device')) {
-            $days = (int) $this->getParameter('two_factor_remember_days');
+            $daysRaw = $this->getParameter('two_factor_remember_days');
+            $days = is_numeric($daysRaw) ? (int) $daysRaw : 0;
             $cookie = $rememberDevice->createCookie($user, $days, $secure);
         } else {
             $cookie = null;
@@ -318,9 +319,9 @@ final class TwoFactorController extends AbstractController
         $parsed = parse_url($uri);
         if (is_array($parsed) && isset($parsed['query'])) {
             parse_str((string) $parsed['query'], $params);
-            if (is_array($params) && isset($params['secret']) && is_string($params['secret'])) {
-                $secret = $params['secret'];
-            }
+            if (isset($params['secret']) && is_string($params['secret'])) {
+    $secret = $params['secret'];
+}
         }
 
         $safeUri = htmlspecialchars($uri, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');

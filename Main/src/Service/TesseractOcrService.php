@@ -12,7 +12,13 @@ class TesseractOcrService
     ) {}
 
     /**
-     * Extract text using local Tesseract if available. Returns array: ['text'=>?string,'raw'=>?array,'error'=>?string]
+     * Extract text using local Tesseract if available.
+     *
+     * @return array{
+     *   text: string|null,
+     *   raw: array<string, mixed>|null,
+     *   error: string|null
+     * }
      */
     public function extractText(string $absoluteFilePath, string $lang = 'eng'): array
     {

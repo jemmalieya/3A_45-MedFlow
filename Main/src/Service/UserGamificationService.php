@@ -50,7 +50,7 @@ final class UserGamificationService
         );
 
         // 4) Profile picture
-        $hasProfilePicture = (string) ($user->getProfilePicture() ?? '');
+        $hasProfilePicture = (string) $user->getProfilePicture();
         $add(
             $badges,
             'profile_picture',
@@ -60,7 +60,7 @@ final class UserGamificationService
         );
 
         // 5) Google linked (optional)
-        $googleId = (string) ($user->getGoogleId() ?? '');
+        $googleId = (string) $user->getGoogleId();
         $add(
             $badges,
             'google',
@@ -70,7 +70,7 @@ final class UserGamificationService
         );
 
         // 6) Role badge (always present)
-        $role = strtoupper((string) ($user->getRoleSysteme() ?? 'PATIENT'));
+        $role = strtoupper((string) $user->getRoleSysteme());
         $roleLabel = match ($role) {
             'ADMIN' => 'Rôle: Admin',
             'STAFF_MEDICAL' => 'Rôle: Staff',
@@ -84,7 +84,7 @@ final class UserGamificationService
         $add($badges, 'role', $roleLabel, $roleVariant, false);
 
         // 7) Staff request status (always present)
-        $sr = strtoupper((string) ($user->getStaffRequestStatus() ?? ''));
+        $sr = strtoupper((string) $user->getStaffRequestStatus());
         [$srLabel, $srVariant] = match ($sr) {
             'PENDING' => ['Demande: en attente', 'warning'],
             'APPROVED' => ['Demande: approuvée', 'success'],

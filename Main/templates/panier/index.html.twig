@@ -5,12 +5,30 @@
 
 {% block body %}
 
+{# ======================================================
+   ✅ IMPORTANT (FIX ID)
+   Tu as 2 formats possibles pour "produits":
+
+   ✅ Format A (RECOMMANDÉ) : chaque item = { produit, quantite }
+      - item.produit.id
+      - item.quantite
+
+   ✅ Format B : chaque item = "Produit" avec un champ quantite_panier
+      - produit.id
+      - produit.quantite_panier
+
+   Ton erreur :
+   Key "id_produit" for sequence/mapping with keys "produit, quantite" does not exist
+   => donc chez toi, c'est Format A.
+   => On doit écrire: item.produit.id  (PAS produit.id_produit)
+   ====================================================== #}
+
 <style>
 /* ======================================================
    ✅ PANIER — TEAL ONLY (#0097B2) — CLEAN & PRO
    ====================================================== */
 :root{
-  --teal:#0097B2;              /* ✅ UNIQUE TEAL */
+  --teal:#0097B2;
   --danger:#ef4444;
   --ok:#10b981;
   --warn:#f59e0b;
@@ -25,9 +43,7 @@
   --shadow-sm:0 6px 16px rgba(15,23,42,.06);
   --shadow-md:0 16px 40px rgba(15,23,42,.12);
 
-  /* ✅ Résumé ne touche jamais la navbar */
   --navbar-offset: 130px;
-
   --ring: 0 0 0 .24rem rgba(0,151,178,.28);
 }
 
@@ -41,7 +57,7 @@ body{ background: var(--bg) !important; }
   padding: 28px 18px;
   color:#fff;
   box-shadow: 0 18px 50px rgba(0,151,178,.22);
-  background: var(--teal);     /* ✅ teal only */
+  background: var(--teal);
   position:relative;
   overflow:hidden;
   margin-bottom: 18px;
@@ -85,7 +101,7 @@ body{ background: var(--bg) !important; }
 /* ================= BUTTONS (TEAL ONLY) ================= */
 .btn-primary,
 .btn-success{
-  background: var(--teal) !important;     /* ✅ teal only */
+  background: var(--teal) !important;
   border:none !important;
   font-weight: 900;
   color:#fff !important;
@@ -107,8 +123,6 @@ body{ background: var(--bg) !important; }
   background: rgba(0,151,178,.08) !important;
   transform: translateY(-1px);
 }
-
-/* btn bloqué */
 .btn-validate-blocked{ opacity:.65; cursor:not-allowed !important; }
 
 /* ================= CART LIST ================= */
@@ -167,7 +181,7 @@ body{ background: var(--bg) !important; }
   cursor:pointer;
   font-weight: 900;
   color:#fff;
-  background: var(--teal);     /* ✅ teal only */
+  background: var(--teal);
   box-shadow: 0 10px 18px rgba(0,151,178,.22);
   transition: .15s ease;
 }
@@ -175,7 +189,13 @@ body{ background: var(--bg) !important; }
   transform: translateY(-1px) scale(1.04);
   filter: brightness(.95);
 }
-.qty-btn:disabled{ opacity:.6; cursor:not-allowed; transform:none; }
+
+/* ✅ NE PAS DISABLE (anti "bloqué") */
+.qty-btn:disabled{ opacity:1; cursor:pointer; transform:none; }
+
+/* ✅ feedback busy */
+.qty-btn[data-busy="1"]{ opacity:.85; filter: grayscale(.08); }
+
 .qty-input{
   width: 58px;
   text-align:center;
@@ -213,7 +233,7 @@ body{ background: var(--bg) !important; }
   z-index: 3;
 }
 .summary-card .card-header{
-  background: var(--teal) !important;  /* ✅ teal only */
+  background: var(--teal) !important;
   color:#fff !important;
   border-bottom: none !important;
 }
@@ -258,7 +278,7 @@ body{ background: var(--bg) !important; }
 .ai-check-head{
   padding: 14px 18px;
   display:flex; align-items:center; justify-content:space-between; gap:12px;
-  background: rgba(0,151,178,.08);  /* ✅ teal light */
+  background: rgba(0,151,178,.08);
 }
 .ai-check-left{ display:flex; align-items:center; gap:10px; font-weight:1000; color: var(--t); }
 .ai-pill{
@@ -290,7 +310,6 @@ body{ background: var(--bg) !important; }
   border: 1px solid rgba(15,23,42,.06);
   box-shadow: 0 12px 24px rgba(15,23,42,.06);
 }
-
 .ai-accordion-btn{
   margin-top: 10px;
   display:inline-flex;
@@ -320,7 +339,7 @@ body{ background: var(--bg) !important; }
   background:#fff;
 }
 
-/* ================= CONFIRM POP-OUT (CLEAN) ================= */
+/* ================= CONFIRM POP-OUT ================= */
 .confirm-overlay{
   position:fixed; inset:0;
   background: rgba(15,23,42,.60);
@@ -329,7 +348,6 @@ body{ background: var(--bg) !important; }
   padding:16px;
 }
 .confirm-overlay.d-none{ display:none !important; }
-
 .confirm-box{
   width:min(520px, 96vw);
   border-radius:22px;
@@ -340,9 +358,8 @@ body{ background: var(--bg) !important; }
   animation: popIn .18s ease forwards;
 }
 @keyframes popIn{ from{ transform:scale(.98); opacity:.6 } to{ transform:scale(1); opacity:1 } }
-
 .confirm-head{
-  background: var(--teal);          /* ✅ teal only */
+  background: var(--teal);
   color:#fff;
   padding:16px 18px;
   display:flex;
@@ -366,7 +383,6 @@ body{ background: var(--bg) !important; }
 }
 .confirm-body{ padding:18px; }
 .confirm-body p{ margin:0; color: var(--muted); font-weight:650; }
-
 .confirm-buttons{
   padding: 0 18px 18px 18px;
   display:flex;
@@ -382,7 +398,6 @@ body{ background: var(--bg) !important; }
   padding:10px 16px;
 }
 .btn-cancel:hover{ background: rgba(15,23,42,.04) !important; }
-
 .btn-confirm-danger{
   background: var(--danger) !important;
   border:none !important;
@@ -401,7 +416,6 @@ body{ background: var(--bg) !important; }
   .qty-input{ width: 70px; }
   .sticky-summary{ position: static; top:auto; }
 }
-
 
 /* ===== DARK MODE (PANIER SEULEMENT) ===== */
 body.dark{
@@ -465,14 +479,19 @@ body.dark select{ background:#020617 !important; color:#e5e7eb !important; borde
 
   <div class="container py-5">
 
+    {# ✅ totalItems = somme des quantités (Format A) #}
+    {% set totalItems = 0 %}
+    {% for item in produits %}
+      {% set totalItems = totalItems + (item.quantite ?? 0) %}
+    {% endfor %}
+
     {# Header #}
     <div class="panier-header text-center">
-
       <div class="panier-icon mb-3"><i class="bi bi-cart3"></i></div>
       <h1 class="display-5 fw-bold mb-2">Mon Panier</h1>
       <p class="text-muted" id="cart-items-text">
         {% if produits|length > 0 %}
-          {{ produits|length }} article(s) dans votre panier
+          {{ totalItems }} article(s) dans votre panier
         {% else %}
           Votre panier est vide
         {% endif %}
@@ -480,14 +499,14 @@ body.dark select{ background:#020617 !important; color:#e5e7eb !important; borde
     </div>
 
     {# ✅ ORDONNANCE STATUS (AUTO-HIDE 5s) #}
-    {% if ordonnanceStatus %}
+    {% if ordonnanceStatus is defined and ordonnanceStatus %}
       {% if ordonnanceStatus == 'approved' %}
         <div class="alert alert-success border-0 shadow-sm mb-4 alert-ordonnance" id="ordonnanceAlert" style="border-left:5px solid #10b981 !important;">
           <div class="d-flex align-items-center gap-3">
             <div style="font-size:3rem;"><i class="bi bi-check-circle-fill"></i></div>
             <div class="flex-grow-1">
               <h5 class="mb-1 fw-bold">Ordonnance Validée ✅</h5>
-              {% if ordonnanceDrugs is not empty %}
+              {% if ordonnanceDrugs is defined and ordonnanceDrugs is not empty %}
                 <p class="mb-1">Médicaments trouvés : <strong>{{ ordonnanceDrugs|join(', ') }}</strong></p>
               {% endif %}
               <small class="text-muted">Vous pouvez maintenant valider votre commande</small>
@@ -501,7 +520,7 @@ body.dark select{ background:#020617 !important; color:#e5e7eb !important; borde
             <div class="flex-grow-1">
               <h5 class="mb-1 fw-bold">Ordonnance Refusée ❌</h5>
               <p class="mb-1">Les médicaments n'ont pas été détectés.</p>
-              {% if ordonnanceOcrText %}
+              {% if ordonnanceOcrText is defined and ordonnanceOcrText %}
                 <details class="mt-2">
                   <summary style="cursor:pointer;font-weight:600;">Voir texte OCR</summary>
                   <pre class="mt-2 p-2 bg-light rounded" style="font-size:0.85rem;max-height:200px;overflow:auto;">{{ ordonnanceOcrText }}</pre>
@@ -513,8 +532,8 @@ body.dark select{ background:#020617 !important; color:#e5e7eb !important; borde
       {% endif %}
     {% endif %}
 
-    {# ✅ OpenFDA BLOCK #}
-    {% if produits is not empty and interactionResult is defined and interactionResult.checked %}
+    {# ✅ OpenFDA BLOCK (safe guards) #}
+    {% if produits is not empty and interactionResult is defined and interactionResult.checked is defined and interactionResult.checked %}
       <div class="ai-check-wrap" id="openfda-block">
         <div class="ai-check-head">
           <div class="ai-check-left"><i class="bi bi-cpu-fill"></i> Vérification OpenFDA</div>
@@ -527,10 +546,10 @@ body.dark select{ background:#020617 !important; color:#e5e7eb !important; borde
 
         <div class="ai-body">
           {% if interactionResult.interactions is defined and interactionResult.interactions is not empty %}
-            {% set mode = (interactionResult.severity == 'danger') ? 'danger' : 'warning' %}
+            {% set mode = (interactionResult.severity is defined and interactionResult.severity == 'danger') ? 'danger' : 'warning' %}
 
             <div class="ai-alert {{ mode }}">
-              <h5>
+              <h5 class="mb-1">
                 {% if mode == 'danger' %}
                   <i class="bi bi-exclamation-octagon-fill"></i>
                   {{ interactionResult.message ?? 'Alerte danger' }}
@@ -539,39 +558,13 @@ body.dark select{ background:#020617 !important; color:#e5e7eb !important; borde
                   {{ interactionResult.message ?? 'Attention' }}
                 {% endif %}
               </h5>
-              <p>{{ interactionResult.interactions|length }} interaction(s) trouvée(s)</p>
+              <p class="mb-0">{{ interactionResult.interactions|length }} interaction(s) trouvée(s)</p>
             </div>
 
             {% for interaction in interactionResult.interactions %}
               {% set accId = 'acc-' ~ loop.index %}
               <div class="ai-item">
-                <div class="ai-badges">
-                  {% if interaction.severity == 'high' %}
-                    <span class="ai-badge high">DANGER</span>
-                  {% elseif interaction.severity == 'medium' %}
-                    <span class="ai-badge medium">ATTENTION</span>
-                  {% else %}
-                    <span class="ai-badge low">INFO</span>
-                  {% endif %}
-                  <span class="ai-badge">OpenFDA</span>
-                </div>
-
-                <div class="ai-pair">{{ interaction.drug1 }} <span class="text-muted">×</span> {{ interaction.drug2 }}</div>
-
-                <div class="ai-summary">
-                  <div class="d-flex justify-content-between flex-wrap gap-2">
-                    <div>
-                      <div class="k">Niveau</div>
-                      <div class="v">
-                        {% if interaction.severity == 'high' %}Danger élevé{% elseif interaction.severity == 'medium' %}Attention{% else %}Info{% endif %}
-                      </div>
-                    </div>
-                    <div>
-                      <div class="k">Source</div>
-                      <div class="v">OpenFDA</div>
-                    </div>
-                  </div>
-                </div>
+                <div class="fw-bold mb-1">{{ interaction.drug1 }} <span class="text-muted">×</span> {{ interaction.drug2 }}</div>
 
                 <div class="mt-2 text-muted">
                   {{ interaction.description|slice(0,220) }}{% if interaction.description|length > 220 %}...{% endif %}
@@ -589,14 +582,16 @@ body.dark select{ background:#020617 !important; color:#e5e7eb !important; borde
                   <div class="ai-block">{{ interaction.description }}</div>
                 </div>
 
-                <div class="ai-rec"><strong>Recommandation :</strong> {{ interaction.recommendation }}</div>
+                {% if interaction.recommendation is defined %}
+                  <div class="mt-3"><strong>Recommandation :</strong> {{ interaction.recommendation }}</div>
+                {% endif %}
               </div>
             {% endfor %}
 
             {# ✅ Scanner ordonnance visible quand DANGER + blocage #}
-            {% if interactionResult.severity == 'danger' and not canValidate %}
-              <div class="ai-block lock mt-3" id="ordonnance-scan-block">
-                <div class="title"><i class="bi bi-lock-fill"></i> Validation bloquée</div>
+            {% if interactionResult.severity is defined and interactionResult.severity == 'danger' and (canValidate is defined and not canValidate) %}
+              <div class="ai-block mt-3" id="ordonnance-scan-block" style="border-left:6px solid var(--danger);">
+                <div class="fw-bold mb-2"><i class="bi bi-lock-fill"></i> Validation bloquée</div>
                 <div class="small mb-3">Pour débloquer, scannez votre ordonnance (OCR).</div>
 
                 <form method="post" enctype="multipart/form-data" action="{{ path('panier_ordonnance_scan') }}" id="ordonnanceForm">
@@ -614,13 +609,13 @@ body.dark select{ background:#020617 !important; color:#e5e7eb !important; borde
 
           {% elseif interactionResult.api_available %}
             <div class="ai-alert safe">
-              <h5><i class="bi bi-shield-check-fill"></i> Aucun risque majeur détecté</h5>
-              <p>Les produits ont été vérifiés via OpenFDA</p>
+              <h5 class="mb-1"><i class="bi bi-shield-check-fill"></i> Aucun risque majeur détecté</h5>
+              <p class="mb-0">Les produits ont été vérifiés via OpenFDA</p>
             </div>
           {% else %}
             <div class="ai-alert warning">
-              <h5><i class="bi bi-wifi-off"></i> Vérification indisponible</h5>
-              <p>API hors ligne ou données non disponibles.</p>
+              <h5 class="mb-1"><i class="bi bi-wifi-off"></i> Vérification indisponible</h5>
+              <p class="mb-0">API hors ligne ou données non disponibles.</p>
             </div>
           {% endif %}
         </div>
@@ -646,7 +641,9 @@ body.dark select{ background:#020617 !important; color:#e5e7eb !important; borde
           <div class="card border-0 shadow-sm">
             <div class="card-header bg-white border-0 py-3">
               <div class="d-flex justify-content-between align-items-center">
-                <h5 class="mb-0 fw-bold">Articles (<span id="cart-count-products">{{ produits|length }}</span>)</h5>
+                <h5 class="mb-0 fw-bold">
+                  Articles (<span id="cart-count-products">{{ totalItems }}</span>)
+                </h5>
                 <button class="btn btn-outline-danger btn-sm" id="btnViderPanier" type="button">
                   <i class="bi bi-trash me-1"></i>Vider le panier
                 </button>
@@ -654,72 +651,77 @@ body.dark select{ background:#020617 !important; color:#e5e7eb !important; borde
             </div>
 
             <div class="card-body p-0" id="cart-items-list">
-              {% for produit in produits %}
-                <div class="cart-item produit-row" id="cart-row-{{ produit.id_produit }}"
-                     data-id="{{ produit.id_produit }}"
-                     data-price="{{ produit.prixProduit }}"
-                     data-qty="{{ produit.quantite_panier }}">
 
-                  <div class="row g-3 align-items-center">
-                    <div class="col-md-2 col-3">
-                      <div class="product-image">
-                        <img src="{{ asset('uploads/produits/' ~ produit.imageProduit) }}" alt="{{ produit.nomProduit }}">
-                      </div>
-                    </div>
+              {# ✅ FIX ID + FIX KEYS : item.produit.id #}
+{% for item in produits %}
+  {% set p = item.produit %}
+  {% set q = item.quantite %}
+  {% set pid = p.id_produit %} {# ✅ appelle getId_produit() #}
 
-                    <div class="col-md-4 col-9">
-                      <h6 class="mb-1 fw-bold">{{ produit.nomProduit }}</h6>
-                      <p class="text-muted small mb-0">{{ produit.categorieProduit }}</p>
-                    </div>
+  <div class="cart-item produit-row" id="cart-row-{{ pid }}"
+       data-id="{{ pid }}"
+       data-price="{{ p.prixProduit }}"
+       data-qty="{{ q }}">
 
-                    <div class="col-md-2 col-6 text-center">
-                      <small class="text-muted d-block mb-1">Prix unitaire</small>
-                      <span class="fw-bold">{{ produit.prixProduit }} DT</span>
-                    </div>
+    <div class="row g-3 align-items-center">
+      <div class="col-md-2 col-3">
+        <div class="product-image">
+          <img src="{{ asset('uploads/produits/' ~ p.imageProduit) }}" alt="{{ p.nomProduit }}">
+        </div>
+      </div>
 
-                    <div class="col-md-2 col-6">
-                      <small class="text-muted d-block mb-2 text-center">Quantité</small>
-                      <div class="qty-control">
-                        <button class="qty-btn btn-minus" type="button"
-                                data-id="{{ produit.id_produit }}" data-nom="{{ produit.nomProduit }}"
-                                aria-label="Diminuer">
-                          <i class="bi bi-dash"></i>
-                        </button>
+      <div class="col-md-4 col-9">
+        <h6 class="mb-1 fw-bold">{{ p.nomProduit }}</h6>
+        <p class="text-muted small mb-0">{{ p.categorieProduit }}</p>
+      </div>
 
-                        <input type="text" class="qty-input" id="qty-{{ produit.id_produit }}"
-                               value="{{ produit.quantite_panier }}" readonly>
+      <div class="col-md-2 col-6 text-center">
+        <small class="text-muted d-block mb-1">Prix unitaire</small>
+        <span class="fw-bold">{{ p.prixProduit }} DT</span>
+      </div>
 
-                        <button class="qty-btn btn-plus" type="button"
-                                data-id="{{ produit.id_produit }}" data-nom="{{ produit.nomProduit }}"
-                                aria-label="Augmenter">
-                          <i class="bi bi-plus"></i>
-                        </button>
-                      </div>
-                    </div>
+      <div class="col-md-2 col-6">
+        <small class="text-muted d-block mb-2 text-center">Quantité</small>
+        <div class="qty-control">
+          <button class="qty-btn btn-minus" type="button"
+                  data-id="{{ pid }}" data-nom="{{ p.nomProduit }}"
+                  aria-label="Diminuer">
+            <i class="bi bi-dash"></i>
+          </button>
 
-                    <div class="col-md-2 col-12">
-                      <div class="text-center text-md-end">
-                        <small class="text-muted d-block mb-1">Total</small>
-                        <span class="fw-bold fs-5 text-primary" id="line-{{ produit.id_produit }}">
-                          {{ (produit.prixProduit * produit.quantite_panier)|number_format(2, '.', '') }}
-                        </span>
-                        <span class="text-muted">DT</span>
-                      </div>
+          <input type="text" class="qty-input" id="qty-{{ pid }}"
+                 value="{{ q }}" readonly>
 
-                      <div class="text-center text-md-end mt-2">
-                        <button class="btn-supprimer"
-                                type="button"
-                                data-id="{{ produit.id_produit }}"
-                                data-nom="{{ produit.nomProduit }}"
-                                title="Supprimer">
-                          <i class="bi bi-trash"></i>
-                        </button>
-                      </div>
-                    </div>
+          <button class="qty-btn btn-plus" type="button"
+                  data-id="{{ pid }}" data-nom="{{ p.nomProduit }}"
+                  aria-label="Augmenter">
+            <i class="bi bi-plus"></i>
+          </button>
+        </div>
+      </div>
 
-                  </div>
-                </div>
-              {% endfor %}
+      <div class="col-md-2 col-12">
+        <div class="text-center text-md-end">
+          <small class="text-muted d-block mb-1">Total</small>
+          <span class="fw-bold fs-5 text-primary" id="line-{{ pid }}">
+            {{ (p.prixProduit * q)|number_format(2, '.', '') }}
+          </span>
+          <span class="text-muted">DT</span>
+        </div>
+
+        <div class="text-center text-md-end mt-2">
+          <button class="btn-supprimer"
+                  type="button"
+                  data-id="{{ pid }}"
+                  data-nom="{{ p.nomProduit }}"
+                  title="Supprimer">
+            <i class="bi bi-trash"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+{% endfor %}
             </div>
           </div>
 
@@ -730,7 +732,7 @@ body.dark select{ background:#020617 !important; color:#e5e7eb !important; borde
           </div>
         </div>
 
-        {# Résumé (RIGHT) — sticky + offset navbar #}
+        {# Résumé #}
         <div class="col-lg-4">
           <div class="sticky-summary">
             <div class="card border-0 shadow-sm summary-card">
@@ -751,7 +753,8 @@ body.dark select{ background:#020617 !important; color:#e5e7eb !important; borde
                   <span class="fs-4 fw-bold text-primary"><span id="cart-total">{{ total|number_format(2, '.', '') }}</span> DT</span>
                 </div>
 
-                {% if not canValidate %}
+                {# ✅ bouton valider (bloqué si besoin) #}
+                {% if canValidate is defined and not canValidate %}
                   <button class="btn btn-success w-100 btn-lg mt-4 shadow-sm btn-validate-blocked"
                           id="btnCheckout" type="button" disabled>
                     <i class="bi bi-lock-fill me-2"></i>Validation bloquée
@@ -764,11 +767,11 @@ body.dark select{ background:#020617 !important; color:#e5e7eb !important; borde
                      class="btn btn-success w-100 btn-lg mt-4 shadow-sm" id="btnCheckout">
                     <i class="bi bi-check-circle me-2"></i>Valider la commande
                   </a>
-
                 {% endif %}
-                    <button id="themeToggle" class="btn btn-outline-primary btn-sm mt-3">
-  <i class="bi bi-moon-stars"></i> Mode sombre
-</button>
+
+                <button id="themeToggle" class="btn btn-outline-primary btn-sm mt-3" type="button">
+                  <i class="bi bi-moon-stars"></i> Mode sombre
+                </button>
               </div>
             </div>
           </div>
@@ -776,7 +779,6 @@ body.dark select{ background:#020617 !important; color:#e5e7eb !important; borde
 
       </div>
     {% endif %}
-
   </div>
 </div>
 
@@ -810,13 +812,16 @@ document.addEventListener('DOMContentLoaded', () => {
   let currentAction = null;
   let lastSeverity = null;
 
+  // ✅ Anti double-click GLOBAL (évite 2 requêtes en même temps)
+  let busyGlobal = false;
+  const BUSY_RELEASE_MS = 650;
+
   // ============ TOAST ============
   function showToast(message, color = 'success') {
     if (!message || message.trim() === '') {
       message = color === 'success' ? 'Succès ✅' : 'Une erreur est survenue ❌';
     }
 
-    // bootstrap toast si dispo
     if (toastContainer && window.bootstrap && bootstrap.Toast) {
       const icon = color === 'success' ? 'check-circle' : 'x-circle';
       const toastEl = document.createElement('div');
@@ -837,7 +842,6 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
-    // fallback simple
     const simple = document.createElement('div');
     simple.style.position = 'fixed';
     simple.style.top = '110px';
@@ -868,24 +872,14 @@ document.addEventListener('DOMContentLoaded', () => {
   (function(){
     const a=document.getElementById('ordonnanceAlert');
     if(!a) return;
-    setTimeout(()=>{
-      a.classList.add('hiding');
-      setTimeout(()=>a.remove(), 350);
-    }, 5000);
+    setTimeout(()=>{ a.remove(); }, 5000);
   })();
 
   // ============ CONFIRM POPUP ============
-  function openConfirm(message, actionObj, yesLabel = 'Supprimer', yesIsDanger = true){
+  function openConfirm(message, actionObj, yesLabel = 'Supprimer'){
     currentAction = actionObj || null;
     if (confirmMessage) confirmMessage.textContent = message || 'Confirmer ?';
-
-    if (confirmYes) {
-      confirmYes.className = yesIsDanger ? 'btn btn-confirm-danger' : 'btn btn-success';
-      confirmYes.innerHTML = yesIsDanger
-        ? `<i class="bi bi-trash3 me-1"></i> ${yesLabel}`
-        : `<i class="bi bi-check-circle me-1"></i> ${yesLabel}`;
-    }
-
+    if (confirmYes) confirmYes.innerHTML = `<i class="bi bi-trash3 me-1"></i> ${yesLabel}`;
     confirmOverlay?.classList.remove('d-none');
     confirmOverlay?.setAttribute('aria-hidden','false');
   }
@@ -899,12 +893,10 @@ document.addEventListener('DOMContentLoaded', () => {
   confirmClose?.addEventListener('click', closeConfirm);
   confirmNo?.addEventListener('click', closeConfirm);
 
-  // click dehors
   confirmOverlay?.addEventListener('click', (e) => {
     if (e.target === confirmOverlay) closeConfirm();
   });
 
-  // ESC
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && confirmOverlay && !confirmOverlay.classList.contains('d-none')) {
       closeConfirm();
@@ -938,18 +930,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function refreshHeaderCounts() {
     const rows = document.querySelectorAll('.cart-item.produit-row');
-    const countProducts = rows.length;
+    let items = 0;
+    rows.forEach(r => { items += parseInt(r.dataset.qty || '0', 10); });
 
     const countProductsEl = document.getElementById('cart-count-products');
-    if (countProductsEl) countProductsEl.textContent = countProducts;
+    if (countProductsEl) countProductsEl.textContent = items;
 
     const textEl = document.getElementById('cart-items-text');
-    if (textEl) {
-      textEl.textContent =
-        countProducts > 0
-          ? `${countProducts} article(s) dans votre panier`
-          : `Votre panier est vide`;
-    }
+    if (textEl) textEl.textContent = items > 0 ? `${items} article(s) dans votre panier` : `Votre panier est vide`;
   }
 
   function getQtyFromUI(id) {
@@ -970,10 +958,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function updateQtyUI(id, newQty) {
     const row = document.getElementById(`cart-row-${id}`);
-
     const qtyInput = document.getElementById(`qty-${id}`);
     if (qtyInput) qtyInput.value = newQty;
-
     if (row) row.dataset.qty = newQty;
 
     const price = row ? parseFloat(row.dataset.price || '0') : 0;
@@ -1004,23 +990,20 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // ============ CHECKOUT BLOCK ============
-  function setCheckoutBlocked(blocked, msg) {
+  function setCheckoutBlocked(blocked) {
     if (!checkoutBtn) return;
-
-    checkoutBtn.classList.toggle('btn-validate-blocked', blocked);
-
     if (blocked) {
-      checkoutBtn.setAttribute('aria-disabled', 'true');
-      checkoutBtn.setAttribute('title', msg || '🚨 Interaction dangereuse');
-      checkoutBtn.onclick = (e) => {
-        e.preventDefault();
-        showToast('🚨 Validation bloquée : interaction dangereuse détectée.', 'danger');
-      };
+      checkoutBtn.classList.add('btn-validate-blocked');
+      checkoutBtn.setAttribute('aria-disabled','true');
+      checkoutBtn.addEventListener('click', preventCheckoutOnce, { once: true });
     } else {
+      checkoutBtn.classList.remove('btn-validate-blocked');
       checkoutBtn.removeAttribute('aria-disabled');
-      checkoutBtn.removeAttribute('title');
-      checkoutBtn.onclick = null;
     }
+  }
+  function preventCheckoutOnce(e){
+    e.preventDefault();
+    showToast('🚨 Validation bloquée : interaction dangereuse détectée.', 'danger');
   }
 
   // ============ REFRESH OpenFDA ============
@@ -1037,7 +1020,7 @@ document.addEventListener('DOMContentLoaded', () => {
       lastSeverity = sev;
 
       if (sev === 'danger' && !canValidate) {
-        setCheckoutBlocked(true, data.message);
+        setCheckoutBlocked(true);
         if (showToastOnDanger && severityChanged) showToast(data.message || '🚨 Interaction dangereuse détectée !', 'danger');
       } else {
         setCheckoutBlocked(false);
@@ -1067,16 +1050,16 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
+    // ✅ anti double click global (évite double requête)
+
     // ---- Supprimer ----
     const delBtn = e.target.closest('.btn-supprimer');
     if (delBtn) {
       const id = delBtn.dataset.id;
       const nom = delBtn.dataset.nom || 'Produit';
-      openConfirm(
-        `Voulez-vous vraiment supprimer "${nom}" de votre panier ?`,
+      openConfirm(`Voulez-vous vraiment supprimer "${nom}" de votre panier ?`,
         { url: `/panier/supprimer/${id}`, type: 'delete', id, nom },
-        'Supprimer',
-        true
+        'Supprimer'
       );
       return;
     }
@@ -1084,47 +1067,59 @@ document.addEventListener('DOMContentLoaded', () => {
     // ---- Vider ----
     const clearBtn = e.target.closest('#btnViderPanier');
     if (clearBtn) {
-      openConfirm(
-        'Êtes-vous sûr de vouloir vider votre panier ?',
+      openConfirm('Êtes-vous sûr de vouloir vider votre panier ?',
         { url: `/panier/vider`, type: 'clear' },
-        'Vider',
-        true
+        'Vider'
       );
       return;
     }
 
-    // ---- Plus ----
+    // ---- Plus (NO DISABLE) ----
     const plusBtn = e.target.closest('.btn-plus');
     if (plusBtn) {
       const id = plusBtn.dataset.id;
       const nom = plusBtn.dataset.nom || 'Produit';
+
+      if (plusBtn.dataset.busy === '1') return;
+      plusBtn.dataset.busy = '1';
+
+
+      setTimeout(() => { busyGlobal = false; }, BUSY_RELEASE_MS);
+
       try {
-        plusBtn.disabled = true;
         const data = await postJson(`/panier/augmenter/${id}`);
+
         const newQty = (typeof data.quantite !== 'undefined')
           ? parseInt(data.quantite, 10)
           : (getQtyFromUI(id) + 1);
 
         updateQtyUI(id, newQty);
         showToast(`Quantité de "${nom}" augmentée ✅`, 'success');
+
         if (typeof data.count !== 'undefined') updateCartBadge(parseInt(data.count, 10));
         await refreshOpenFdaUI(true);
+
       } catch (err) {
         showToast(err.message || 'Erreur', 'danger');
       } finally {
-        plusBtn.disabled = false;
+        plusBtn.dataset.busy = '0';
       }
       return;
     }
 
-    // ---- Minus ----
+    // ---- Minus (NO DISABLE) ----
     const minusBtn = e.target.closest('.btn-minus');
     if (minusBtn) {
       const id = minusBtn.dataset.id;
       const nom = minusBtn.dataset.nom || 'Produit';
+
+      if (minusBtn.dataset.busy === '1') return;
+      minusBtn.dataset.busy = '1';
+
+
       try {
-        minusBtn.disabled = true;
         const data = await postJson(`/panier/diminuer/${id}`);
+
         let newQty = (typeof data.quantite !== 'undefined')
           ? parseInt(data.quantite, 10)
           : (getQtyFromUI(id) - 1);
@@ -1141,10 +1136,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (typeof data.count !== 'undefined') updateCartBadge(parseInt(data.count, 10));
         await refreshOpenFdaUI(false);
+
       } catch (err) {
         showToast(err.message || 'Erreur', 'danger');
       } finally {
-        minusBtn.disabled = false;
+        minusBtn.dataset.busy = '0';
       }
       return;
     }
@@ -1152,9 +1148,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // ============ CONFIRM YES ============
   confirmYes?.addEventListener('click', async () => {
-    if (!currentAction) { closeConfirm(); return; }
+    if (!currentAction || busyGlobal) { closeConfirm(); return; }
     const action = currentAction;
     closeConfirm();
+
+    busyGlobal = true;
 
     try {
       const data = await postJson(action.url);
@@ -1193,22 +1191,17 @@ document.addEventListener('DOMContentLoaded', () => {
   recalcTotals();
   refreshHeaderCounts();
   refreshOpenFdaUI(false);
-});
 
-
+  // dark mode
   const btn = document.getElementById("themeToggle");
-
-  if (localStorage.getItem("theme") === "dark") {
-    document.body.classList.add("dark");
-  }
-
+  if (localStorage.getItem("theme") === "dark") document.body.classList.add("dark");
   if (btn) {
     btn.addEventListener("click", () => {
       document.body.classList.toggle("dark");
       localStorage.setItem("theme", document.body.classList.contains("dark") ? "dark" : "light");
     });
   }
-
+});
 </script>
 
 {% endblock %}

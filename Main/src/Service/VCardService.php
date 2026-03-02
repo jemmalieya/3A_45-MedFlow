@@ -4,6 +4,9 @@ namespace App\Service;
 
 final class VCardService
 {
+    /**
+     * @param array<string, string> $data
+     */
     public function buildPharmacyVCard(array $data): string
     {
         $name    = $this->esc($data['name'] ?? 'Pharmacie MedFlow');

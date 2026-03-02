@@ -34,7 +34,7 @@ final class TotpService
     public function verifyCode(string $secret, string $code, int $window = 2, int $digits = 6, int $period = 30, ?int $time = null): bool
     {
         // Accept codes like "123 456" or "123-456" by keeping digits only.
-        $normalized = preg_replace('/\D+/', '', $code ?? '');
+        $normalized = preg_replace('/\D+/', '', $code);
         if ($normalized === null) {
             $normalized = '';
         }
@@ -94,7 +94,7 @@ final class TotpService
             if (strlen($chunk) < 5) {
                 $chunk = str_pad($chunk, 5, '0', STR_PAD_RIGHT);
             }
-            $index = bindec($chunk);
+            $index = (int) bindec($chunk);
             $out .= $alphabet[$index];
         }
 
@@ -125,7 +125,7 @@ final class TotpService
             if (strlen($byte) < 8) {
                 continue;
             }
-            $out .= chr(bindec($byte));
+            $out .= chr((int) bindec($byte));
         }
 
         return $out;
