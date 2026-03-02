@@ -18,33 +18,35 @@ class ReponseReclamation
     #[ORM\Column(type: "text")]
     #[Assert\NotBlank(message: "Le message de la réponse est obligatoire.")]
     #[Assert\Length(min: 10, minMessage: "Le message doit contenir au moins {{ limit }} caractères.", max: 1000, maxMessage: "Le message ne doit pas dépasser {{ limit }} caractères.")]
-    private ?string $message = null;
+    private string $message;
 
     #[ORM\Column(length: 50)]
     #[Assert\NotBlank(message: "Le type de réponse est obligatoire.")]
     #[Assert\Choice(choices: ["REPONSE", "DEMANDE_INFO", "REFUS"], message: "Type de réponse invalide.")]
-    private ?string $typeReponse = null;
+    private string $typeReponse;
 
     #[ORM\Column]
-    private ?\DateTimeImmutable $date_creation_rep = null;
+    private \DateTimeImmutable $date_creation_rep;
 
     #[ORM\Column]
-    private ?\DateTimeImmutable $date_modification_rep = null;
-
+    private \DateTimeImmutable $date_modification_rep;
+public function __construct()
+{
+    $now = new \DateTimeImmutable();
+    $this->date_creation_rep = $now;
+    $this->date_modification_rep = $now;
+}
     #[ORM\ManyToOne(inversedBy: 'reponses')]
     #[ORM\JoinColumn(name: "id_reclamation", referencedColumnName: "id_reclamation", nullable: false, onDelete: "CASCADE")]
     private ?Reclamation $reclamation = null;
 
     // ✅ lifecycle create
-    #[ORM\PrePersist]
-    public function onCreate(): void
-    {
-        $now = new \DateTimeImmutable();
-        if ($this->date_creation_rep === null) {
-            $this->date_creation_rep = $now;
-        }
-        $this->date_modification_rep = $now;
-    }
+ #[ORM\PrePersist]
+public function onCreate(): void
+{
+    $now = new \DateTimeImmutable();
+    $this->date_modification_rep = $now;
+}
     #[ORM\Column(type: 'boolean')]
 private bool $isRead = false;
 

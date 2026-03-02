@@ -15,25 +15,25 @@ class Commentaire
     private ?int $id = null;
 
     #[ORM\Column(type: Types::TEXT)]
-    private ?string $contenu = null;
+    private string $contenu;
 
     #[ORM\Column]
-    private ?\DateTimeImmutable $date_creation = null;
+    private \DateTimeImmutable $date_creation;
 
     #[ORM\ManyToOne(inversedBy: 'commentaires')]
     #[ORM\JoinColumn(nullable: false, onDelete: 'CASCADE')]
     private ?Post $post = null;
 
     #[ORM\Column]
-    private ?bool $est_anonyme = null;
+    private bool $est_anonyme;
 
     // ex: PUBLIC | PRIVE | AMIS
     #[ORM\Column(length: 60)]
-    private ?string $parametres_confidentialite = null;
+    private string $parametres_confidentialite;
 
-    #[ORM\ManyToOne(targetEntity: User::class, inversedBy: 'commentaires')]
-    #[ORM\JoinColumn(nullable: false)]
-    private ?User $user = null;
+    #[ORM\ManyToOne(inversedBy: 'commentaires')]
+#[ORM\JoinColumn(nullable: false, onDelete: 'CASCADE')]
+private User $user;
  
     // src/Entity/Commentaire.php
 
@@ -48,7 +48,10 @@ private ?string $moderationLabel = null;
 
 #[ORM\Column(nullable: true)]
 private ?\DateTimeImmutable $moderatedAt = null;
-
+public function markAsModerated(): void
+{
+    $this->moderatedAt = new \DateTimeImmutable();
+}
 public function getStatus(): string
 {
     return $this->status;
@@ -87,11 +90,7 @@ public function getModeratedAt(): ?\DateTimeImmutable
     return $this->moderatedAt;
 }
 
-public function setModeratedAt(?\DateTimeImmutable $moderatedAt): self
-{
-    $this->moderatedAt = $moderatedAt;
-    return $this;
-}
+
 
     public function __construct()
     {
@@ -105,11 +104,11 @@ public function setModeratedAt(?\DateTimeImmutable $moderatedAt): self
         return $this->user;
     }
 
-    public function setUser(?User $user): self
-    {
-        $this->user = $user;
-        return $this;
-    }
+public function setUser(User $user): self
+{
+    $this->user = $user;
+    return $this;
+}
 
     public function getId(): ?int
     {

@@ -5,104 +5,336 @@
 
 {% block body %}
 <link rel="stylesheet" href="{{ asset('assets_ad/css/medflow-admin.css') }}">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 
-<div class="container-fluid py-3">
+<style>
+  :root{
+    --mf-blue:#003399;
+    --mf-main:#0097B2;
+    --mf-turq:#00BFA6;
+    --mf-bg:#f6f8fb;
+    --mf-text:#0f172a;
+    --mf-muted:rgba(15,23,42,.65);
+    --mf-border:rgba(15,23,42,.10);
+  }
 
-  <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
-    <div>
-      <h4 class="mb-1">Tableau des posts</h4>
-      <div class="text-muted">Total : <strong>{{ total }}</strong></div>
-    </div>
+  .mf-wrap{background:var(--mf-bg)}
+  .mf-hero{
+    border:1px solid rgba(0,151,178,.18);
+    background:
+      radial-gradient(1200px 300px at 10% 0%, rgba(0,191,166,.18), transparent 60%),
+      radial-gradient(900px 280px at 90% 0%, rgba(103,151,255,.18), transparent 55%),
+      linear-gradient(135deg, rgba(255,255,255,.9), rgba(255,255,255,.75));
+    border-radius:18px;
+    padding:18px 18px;
+    box-shadow:0 16px 40px rgba(16,24,40,.08);
+  }
+  .mf-hero h4{color:var(--mf-blue); font-weight:900; letter-spacing:.2px}
+  .mf-chip{
+    display:inline-flex; align-items:center; gap:.5rem;
+    padding:.55rem .85rem;
+    border-radius:999px;
+    border:1px solid var(--mf-border);
+    background:rgba(255,255,255,.85);
+    box-shadow:0 10px 26px rgba(16,24,40,.06);
+    color:var(--mf-text);
+    font-weight:700;
+  }
 
-    <div class="d-flex gap-2 flex-wrap">
-      <span class="badge rounded-pill bg-light text-dark border px-3 py-2">
-        <i class="bi bi-hourglass-split me-1"></i> En attente : <strong>{{ pending }}</strong>
-      </span>
-      <span class="badge rounded-pill bg-light text-dark border px-3 py-2">
-        <i class="bi bi-check2-circle me-1"></i> Approuvés : <strong>{{ approved }}</strong>
-      </span>
-      <span class="badge rounded-pill bg-light text-dark border px-3 py-2">
-        <i class="bi bi-x-circle me-1"></i> Rejetés : <strong>{{ rejected }}</strong>
-      </span>
+  .mf-card{
+    border:1px solid var(--mf-border);
+    border-radius:18px;
+    overflow:hidden;
+    box-shadow:0 16px 40px rgba(16,24,40,.06);
+    background:#fff;
+  }
+  .mf-table thead th{
+    font-size:.78rem;
+    letter-spacing:.08em;
+    text-transform:uppercase;
+    color:rgba(15,23,42,.70);
+    background:linear-gradient(180deg, rgba(246,248,251,1), rgba(246,248,251,.65));
+    border-bottom:1px solid var(--mf-border) !important;
+    padding:14px 14px;
+    white-space:nowrap;
+  }
+  .mf-table tbody td{
+    padding:14px 14px;
+    border-top:1px solid rgba(15,23,42,.06);
+    vertical-align:middle;
+  }
+
+  .mf-title{
+    font-weight:900;
+    color:var(--mf-text);
+    line-height:1.15;
+    max-width:620px;
+  }
+
+  .mf-badge{
+    border-radius:999px;
+    padding:.45rem .7rem;
+    border:1px solid rgba(15,23,42,.10);
+    background:#fff;
+    font-weight:800;
+    font-size:.78rem;
+    white-space:nowrap;
+  }
+  .mf-badge.soft-success{background:rgba(25,135,84,.10); border-color:rgba(25,135,84,.18); color:#13795b}
+  .mf-badge.soft-warning{background:rgba(255,193,7,.16); border-color:rgba(255,193,7,.22); color:#7a5a00}
+  .mf-badge.soft-danger{background:rgba(220,53,69,.10); border-color:rgba(220,53,69,.18); color:#b02a37}
+  .mf-badge.soft-info{background:rgba(13,202,240,.14); border-color:rgba(13,202,240,.22); color:#0a6a7e}
+  .mf-badge.soft-secondary{background:rgba(108,117,125,.12); border-color:rgba(108,117,125,.20); color:#495057}
+
+  .mf-btn{
+    border-radius:12px;
+    font-weight:900;
+    padding:.55rem .85rem;
+    border:1px solid rgba(0,151,178,.25);
+    background:linear-gradient(135deg, rgba(0,151,178,.08), rgba(0,191,166,.08));
+    color:var(--mf-blue);
+  }
+  .mf-btn:hover{background:linear-gradient(135deg, rgba(0,151,178,.14), rgba(0,191,166,.14))}
+
+  .mf-kpi{
+    display:flex; align-items:center; gap:.65rem;
+  }
+  .mf-kpi .ico{
+    width:40px; height:40px;
+    border-radius:14px;
+    display:grid; place-items:center;
+    background:linear-gradient(135deg, rgba(0,151,178,.12), rgba(0,191,166,.12));
+    border:1px solid rgba(0,151,178,.20);
+    color:var(--mf-blue);
+  }
+  .mf-meta{
+    color:var(--mf-muted);
+    font-size:.85rem;
+    display:flex;
+    gap:.5rem;
+    align-items:center;
+    flex-wrap:wrap;
+  }
+  .mf-meta .dot{width:5px;height:5px;border-radius:50%;background:rgba(15,23,42,.25)}
+  .mf-modal-head{
+    background:linear-gradient(135deg, rgba(0,151,178,.16), rgba(0,191,166,.12));
+    border-bottom:1px solid rgba(0,151,178,.18);
+  }
+  .mf-pre{
+    white-space:pre-wrap;
+    word-break:break-word;
+    background:#fbfdff;
+    border:1px solid rgba(15,23,42,.08);
+    border-radius:14px;
+    padding:14px;
+    color:var(--mf-text);
+  }
+
+  /* ✅ FIX: empêcher le flou du thème quand un modal est ouvert */
+  .modal-backdrop{ opacity:.55 !important; }
+  body.modal-open,
+  body.modal-open .page-content,
+  body.modal-open main,
+  body.modal-open .container-fluid,
+  body.modal-open .content,
+  body.modal-open .nxl-container,
+  body.modal-open .nxl-content,
+  body.modal-open .main-content{
+    filter:none !important;
+    backdrop-filter:none !important;
+  }
+</style>
+
+<div class="container-fluid py-3 mf-wrap">
+
+  {# ===== HERO / HEADER ===== #}
+  <div class="mf-hero mb-3">
+    <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
+      <div>
+        <h4 class="mb-1">Tableau des posts</h4>
+        <div class="text-muted">Total : <strong>{{ total }}</strong></div>
+      </div>
+
+      <div class="d-flex gap-2 flex-wrap">
+        <span class="mf-chip">
+          <i class="bi bi-hourglass-split"></i>
+          <span>En attente</span>
+          <span class="ms-1 badge rounded-pill text-bg-light border">{{ pending }}</span>
+        </span>
+        <span class="mf-chip">
+          <i class="bi bi-check2-circle"></i>
+          <span>Approuvés</span>
+          <span class="ms-1 badge rounded-pill text-bg-light border">{{ approved }}</span>
+        </span>
+        <span class="mf-chip">
+          <i class="bi bi-x-circle"></i>
+          <span>Rejetés</span>
+          <span class="ms-1 badge rounded-pill text-bg-light border">{{ rejected }}</span>
+        </span>
+      </div>
     </div>
   </div>
 
-  <div class="card shadow-sm border-0">
-    <div class="card-body">
+  {# ===== TABLE CARD ===== #}
+  <div class="mf-card">
+    <div class="card-body p-0">
 
       <div class="table-responsive">
-        <table class="table align-middle table-hover">
-          <thead class="table-light">
+        <table class="table mf-table align-middle mb-0">
+          <thead>
             <tr>
-              <th>#</th>
+              {# ✅ plus d'affichage ID #}
               <th>Titre</th>
-              <th>Auteur</th>
-              <th>Catégorie</th>
-              <th>Visibilité</th>
-              <th>Statut</th>
-              <th>Stats</th>
-              <th>Créé le</th>
+              <th style="width:210px">Auteur</th>
+              <th style="width:160px">Statut</th>
+              <th style="width:170px">Créé le</th>
+              <th style="width:130px" class="text-end">Action</th>
             </tr>
           </thead>
 
           <tbody>
           {% for post in posts %}
             <tr>
-              <td class="fw-bold">#{{ post.id }}</td>
-
+              {# ✅ Titre seulement (sans description) #}
               <td>
-                <div class="fw-semibold">{{ post.titre }}</div>
-                <div class="small text-muted">
-                  {{ post.contenu|slice(0, 60) }}{% if post.contenu|length > 60 %}...{% endif %}
-                </div>
+                <div class="mf-title">{{ post.titre }}</div>
               </td>
 
               <td>
                 {% if post.user %}
-                  <i class="bi bi-person-circle me-1"></i>
-                  {{ post.user.nom }} {{ post.user.prenom }}
+                  <div class="mf-kpi">
+                    <div class="ico"><i class="bi bi-person"></i></div>
+                    <div>
+                      <div class="fw-bold">{{ post.user.nom }} {{ post.user.prenom }}</div>
+                      <div class="small text-muted">Auteur</div>
+                    </div>
+                  </div>
                 {% else %}
-                  <span class="badge bg-secondary">Anonyme</span>
-                {% endif %}
-              </td>
-
-              <td>
-                <span class="badge bg-light text-dark border">{{ post.categorie }}</span>
-              </td>
-
-              <td>
-                {% if post.visibilite == 'PUBLIC' %}
-                  <span class="badge bg-success">Public</span>
-                {% elseif post.visibilite == 'AMIS' %}
-                  <span class="badge bg-info text-dark">Amis</span>
-                {% else %}
-                  <span class="badge bg-secondary">Privé</span>
+                  <span class="mf-badge soft-secondary"><i class="bi bi-person-x me-1"></i>Anonyme</span>
                 {% endif %}
               </td>
 
               <td>
                 {% if post.moderationStatus == 'APPROVED' %}
-                  <span class="badge bg-success"><i class="bi bi-check2 me-1"></i>Approuvé</span>
+                  <span class="mf-badge soft-success"><i class="bi bi-check2 me-1"></i>Approuvé</span>
                 {% elseif post.moderationStatus == 'PENDING' %}
-                  <span class="badge bg-warning text-dark"><i class="bi bi-hourglass-split me-1"></i>En attente</span>
+                  <span class="mf-badge soft-warning"><i class="bi bi-hourglass-split me-1"></i>En attente</span>
                 {% else %}
-                  <span class="badge bg-danger"><i class="bi bi-x-circle me-1"></i>Rejeté</span>
+                  <span class="mf-badge soft-danger"><i class="bi bi-x-circle me-1"></i>Rejeté</span>
                 {% endif %}
               </td>
 
-              <td class="small text-muted">
-                ❤️ {{ post.nbrReactions }} <br>
-                💬 {{ post.nbrCommentaires }}
+              <td>
+                <div class="mf-meta">
+                  <i class="bi bi-clock"></i>
+                  <span>{{ post.dateCreation|date('d/m/Y H:i') }}</span>
+                </div>
               </td>
 
-              <td class="small">
-                {{ post.dateCreation|date('d/m/Y H:i') }}
+              <td class="text-end">
+                <button
+                  type="button"
+                  class="btn mf-btn btn-sm"
+                  data-bs-toggle="modal"
+                  data-bs-target="#postDetailsModal-{{ post.id }}"
+                >
+                  <i class="bi bi-eye me-1"></i>Détails
+                </button>
               </td>
             </tr>
+
+            {# ===== MODAL DETAILS (1 modal par post) ===== #}
+            <div class="modal fade" id="postDetailsModal-{{ post.id }}" tabindex="-1" aria-hidden="true">
+              <div class="modal-dialog modal-lg modal-dialog-scrollable">
+                <div class="modal-content" style="border-radius:18px; overflow:hidden;">
+                  <div class="modal-header mf-modal-head">
+                    <div>
+                      {# ✅ plus d'id dans le titre modal #}
+                      <div class="fw-bold" style="color:var(--mf-blue); font-size:1.05rem">
+                        {{ post.titre }}
+                      </div>
+
+                      <div class="mf-meta mt-1">
+                        <span class="mf-badge soft-info">
+                          <i class="bi bi-tag me-1"></i>{{ post.categorie }}
+                        </span>
+
+                        {% if post.visibilite == 'PUBLIC' %}
+                          <span class="mf-badge soft-success"><i class="bi bi-globe2 me-1"></i>Public</span>
+                        {% elseif post.visibilite == 'AMIS' %}
+                          <span class="mf-badge soft-info"><i class="bi bi-people me-1"></i>Amis</span>
+                        {% else %}
+                          <span class="mf-badge soft-secondary"><i class="bi bi-lock me-1"></i>Privé</span>
+                        {% endif %}
+
+                        {% if post.moderationStatus == 'APPROVED' %}
+                          <span class="mf-badge soft-success"><i class="bi bi-check2 me-1"></i>Approuvé</span>
+                        {% elseif post.moderationStatus == 'PENDING' %}
+                          <span class="mf-badge soft-warning"><i class="bi bi-hourglass-split me-1"></i>En attente</span>
+                        {% else %}
+                          <span class="mf-badge soft-danger"><i class="bi bi-x-circle me-1"></i>Rejeté</span>
+                        {% endif %}
+
+                        <span class="dot"></span>
+                        <span><i class="bi bi-calendar2 me-1"></i>{{ post.dateCreation|date('d/m/Y H:i') }}</span>
+                      </div>
+                    </div>
+
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
+                  </div>
+
+                  <div class="modal-body">
+                    <div class="row g-3">
+                      <div class="col-md-7">
+                        <div class="fw-bold mb-2"><i class="bi bi-file-text me-1"></i>Contenu</div>
+                        <div class="mf-pre">{{ post.contenu|striptags }}</div>
+                      </div>
+
+                      <div class="col-md-5">
+                        <div class="fw-bold mb-2"><i class="bi bi-info-circle me-1"></i>Informations</div>
+
+                        <div class="p-3 rounded-4" style="border:1px solid rgba(15,23,42,.08); background:#fff;">
+                          <div class="mb-2">
+                            <div class="small text-muted">Auteur</div>
+                            <div class="fw-bold">
+                              {% if post.user %}
+                                {{ post.user.nom }} {{ post.user.prenom }}
+                              {% else %}
+                                Anonyme
+                              {% endif %}
+                            </div>
+                          </div>
+
+                          <div class="mb-2">
+                            <div class="small text-muted">Statistiques</div>
+                            <div class="d-flex gap-2 flex-wrap">
+                              <span class="mf-badge soft-secondary"><i class="bi bi-heart-fill me-1"></i>{{ post.nbrReactions }}</span>
+                              <span class="mf-badge soft-secondary"><i class="bi bi-chat-dots me-1"></i>{{ post.nbrCommentaires }}</span>
+                            </div>
+                          </div>
+
+                          <div class="mb-0">
+                            <div class="small text-muted">Visibilité</div>
+                            <div class="fw-bold">{{ post.visibilite }}</div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="modal-footer" style="border-top:1px solid rgba(15,23,42,.08);">
+                    <button type="button" class="btn btn-light border" data-bs-dismiss="modal">
+                      Fermer
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
           {% else %}
             <tr>
-              <td colspan="8" class="text-center text-muted py-4">
-                Aucun post trouvé.
+              <td colspan="5" class="text-center text-muted py-5">
+                <i class="bi bi-inbox me-1"></i> Aucun post trouvé.
               </td>
             </tr>
           {% endfor %}
@@ -112,5 +344,11 @@
 
     </div>
   </div>
+
 </div>
+
+{# ✅ si ton base_admin n'inclut pas bootstrap.bundle, laisse cette ligne.
+   sinon, tu peux la supprimer pour éviter double inclusion. #}
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
 {% endblock %}

@@ -27,7 +27,7 @@ class Post
         minMessage: "Le titre doit contenir au moins {{ limit }} caractères.",
         maxMessage: "Le titre ne doit pas dépasser {{ limit }} caractères."
     )]
-    private ?string $titre = null;
+    private string $titre;
 
     #[ORM\Column(type: Types::TEXT)]
     #[Assert\NotBlank(message: "Le contenu est obligatoire.")]
@@ -35,7 +35,7 @@ class Post
         min: 20,
         minMessage: "Le contenu doit contenir au moins {{ limit }} caractères."
     )]
-    private ?string $contenu = null;
+    private string $contenu;
 
     #[ORM\Column(length: 255)]
 #[Assert\NotBlank(message: "La localisation est obligatoire.")]
@@ -49,11 +49,11 @@ class Post
     pattern: "/^[\p{L}0-9\s,'-]+$/u",
     message: "La localisation contient des caractères invalides."
 )]
-private ?string $localisation = null;
+private string $localisation;
 
 
     #[ORM\Column(length: 255)]
-    private ?string $img_post = null;
+    private string $img_post;
 
     #[ORM\Column(length: 255, nullable: true)]
     #[Assert\Regex(
@@ -73,16 +73,16 @@ private ?string $localisation = null;
         choices: ["PUBLIC", "AMIS", "PRIVE"],
         message: "Visibilité invalide. Choisir : PUBLIC, AMIS ou PRIVE."
     )]
-    private ?string $visibilite = null;
+    private string $visibilite;
 
     #[ORM\Column]
-    private ?\DateTimeImmutable $date_creation = null;
+    private \DateTimeImmutable $date_creation;
 
     #[ORM\Column(nullable: true)]
     private ?\DateTimeImmutable $date_modification = null;
 
     #[ORM\Column]
-    private ?bool $est_anonyme = null;
+    private bool $est_anonyme;
 
     #[ORM\Column(length: 255)]
     #[Assert\NotBlank(message: "La catégorie est obligatoire.")]
@@ -90,7 +90,7 @@ private ?string $localisation = null;
         choices: ["Actualité","Service","Rendez-vous","Laboratoire","Santé","Conseils","Urgence","Business"],
         message: "Catégorie invalide."
     )]
-    private ?string $categorie = null;
+    private string $categorie;
 
      #[ORM\Column(length: 255)]
     #[Assert\NotBlank(message: "L'humeur' est obligatoire.")]
@@ -98,7 +98,7 @@ private ?string $localisation = null;
         choices: ["Heureux","Stressé","Motivé","Calme","Confiant","Fatigué","Triste","En colère","inquiet"],
         message: "humeur invalide."
     )]
-    private ?string $humeur= null;
+    private string $humeur;
 
     #[ORM\Column]
     #[Assert\PositiveOrZero(message: "Le nombre de réactions doit être >= 0.")]
@@ -152,7 +152,7 @@ public function setModerationSeen(bool $seen): self
 
 
     #[ORM\ManyToOne(targetEntity: User::class, inversedBy: 'posts')]
-    #[ORM\JoinColumn(nullable: true, onDelete: 'CASCADE')]
+    #[ORM\JoinColumn(nullable: true, onDelete: 'SET NULL')]
     private ?User $user = null;
 
   /** @var Collection<int, Commentaire> */
@@ -314,11 +314,11 @@ public function setIsApproved(bool $isApproved): self
         return $this->humeur;
     }
 
-    public function setHumeur(?string $humeur): static
-    {
-        $this->humeur = $humeur;
-        return $this;
-    }
+public function setHumeur(string $humeur): static
+{
+    $this->humeur = $humeur;
+    return $this;
+}
 
     public function getNbrReactions(): int
     {
