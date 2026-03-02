@@ -140,8 +140,8 @@ final class FaceLoginController extends AbstractController
             if ($ok) {
                 $user
                     ->setFaceFailedAttempts(0)
-                    ->setFaceLockedUntil(null)
-                    ->setFaceLastVerifiedAt(new \DateTime());
+                    ->clearFaceLock()
+                    ->markFaceLastVerifiedAt();
 
                 $em->persist($user);
                 $em->flush();
@@ -163,7 +163,7 @@ final class FaceLoginController extends AbstractController
 
             $user->incrementFaceFailedAttempts();
             if ($user->getFaceFailedAttempts() >= $face->getLockMaxFails()) {
-                $user->setFaceLockedUntil((new \DateTime())->modify('+' . $face->getLockMinutes() . ' minutes'));
+                $user->lockFaceUntil((new \DateTime())->modify('+' . $face->getLockMinutes() . ' minutes'));
             }
 
             $em->persist($user);

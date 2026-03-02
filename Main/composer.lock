@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "9a06d4ec9bbd0d86791dba325d66c0a1",
+    "content-hash": "83c8bbb7c20fab3d3c567a70fa95a2ac",
     "packages": [
         {
             "name": "bacon/bacon-qr-code",
@@ -11465,28 +11465,28 @@
         },
         {
             "name": "webmozart/assert",
-            "version": "1.12.1",
+            "version": "1.11.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/webmozarts/assert.git",
-                "reference": "9be6926d8b485f55b9229203f962b51ed377ba68"
+                "reference": "11cb2199493b2f8a3b53e7f19068fc6aac760991"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/webmozarts/assert/zipball/9be6926d8b485f55b9229203f962b51ed377ba68",
-                "reference": "9be6926d8b485f55b9229203f962b51ed377ba68",
+                "url": "https://api.github.com/repos/webmozarts/assert/zipball/11cb2199493b2f8a3b53e7f19068fc6aac760991",
+                "reference": "11cb2199493b2f8a3b53e7f19068fc6aac760991",
                 "shasum": ""
             },
             "require": {
                 "ext-ctype": "*",
-                "ext-date": "*",
-                "ext-filter": "*",
                 "php": "^7.2 || ^8.0"
             },
-            "suggest": {
-                "ext-intl": "",
-                "ext-simplexml": "",
-                "ext-spl": ""
+            "conflict": {
+                "phpstan/phpstan": "<0.12.20",
+                "vimeo/psalm": "<4.6.1 || 4.6.2"
+            },
+            "require-dev": {
+                "phpunit/phpunit": "^8.5.13"
             },
             "type": "library",
             "extra": {
@@ -11517,24 +11517,24 @@
             ],
             "support": {
                 "issues": "https://github.com/webmozarts/assert/issues",
-                "source": "https://github.com/webmozarts/assert/tree/1.12.1"
+                "source": "https://github.com/webmozarts/assert/tree/1.11.0"
             },
-            "time": "2025-10-29T15:56:20+00:00"
+            "time": "2022-06-03T18:03:27+00:00"
         }
     ],
     "packages-dev": [
         {
             "name": "ahmed-bhs/doctrine-doctor",
-            "version": "v1.0.0",
+            "version": "v1.0.4",
             "source": {
                 "type": "git",
                 "url": "https://github.com/ahmed-bhs/doctrine-doctor.git",
-                "reference": "c679438aa4bbc4ee82d04931a511a05cf527ab2d"
+                "reference": "b19d58e19316f557e0166185df161d8fb49a687c"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/ahmed-bhs/doctrine-doctor/zipball/c679438aa4bbc4ee82d04931a511a05cf527ab2d",
-                "reference": "c679438aa4bbc4ee82d04931a511a05cf527ab2d",
+                "url": "https://api.github.com/repos/ahmed-bhs/doctrine-doctor/zipball/b19d58e19316f557e0166185df161d8fb49a687c",
+                "reference": "b19d58e19316f557e0166185df161d8fb49a687c",
                 "shasum": ""
             },
             "require": {
@@ -11625,7 +11625,7 @@
                 "issues": "https://github.com/ahmed-bhs/doctrine-doctor/issues",
                 "source": "https://github.com/ahmed-bhs/doctrine-doctor"
             },
-            "time": "2025-12-30T13:11:11+00:00"
+            "time": "2026-02-26T09:32:04+00:00"
         },
         {
             "name": "myclabs/deep-copy",

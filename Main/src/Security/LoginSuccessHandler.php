@@ -34,21 +34,27 @@ class LoginSuccessHandler implements AuthenticationSuccessHandlerInterface
         $user = $token->getUser();
         $appUser = $user instanceof User ? $user : null;
 
-        $session = $request->getSession();
-        if ($session instanceof SessionInterface) {
+        // Session is already SessionInterface if it exists.
+        // Use hasSession() to avoid PHPStan "instanceof always true".
+        if ($request->hasSession()) {
+            $session = $request->getSession();
+
             if ($appUser instanceof User && $appUser->isTotpEnabled()) {
                 $session->set('2fa_passed', false);
             } else {
                 $session->remove('2fa_passed');
             }
+        } else {
+            // Fallback (should not happen in normal web login)
+            $session = null;
         }
 
+        // Geo / unusual country check
         if ($appUser instanceof User) {
             $geo = [];
             try {
                 $geo = $this->ipinfoClient->lookupCurrentRequest();
             } catch (\Throwable) {
-                // Fail-open if geo provider is down/misconfigured
                 $geo = [];
             }
 
@@ -56,12 +62,15 @@ class LoginSuccessHandler implements AuthenticationSuccessHandlerInterface
             $previousCountry = $appUser->getLastLoginCountry() ? strtoupper((string) $appUser->getLastLoginCountry()) : null;
 
             if ($previousCountry !== null && $currentCountry !== null && $previousCountry !== $currentCountry) {
-                $flashSession = $request->getSession();
-                if ($flashSession instanceof Session) {
-                    $flashSession->getFlashBag()->add(
-                        'danger',
-                        sprintf('Connexion bloquée: pays de connexion inhabituel (%s).', $currentCountry)
-                    );
+                // Flash requires a real Session (concrete) for FlashBag
+                if ($request->hasSession()) {
+                    $flashSession = $request->getSession();
+                    if ($flashSession instanceof Session) {
+                        $flashSession->getFlashBag()->add(
+                            'danger',
+                            sprintf('Connexion bloquée: pays de connexion inhabituel (%s).', $currentCountry)
+                        );
+                    }
                 }
 
                 $this->tokenStorage->setToken(null);
@@ -71,62 +80,83 @@ class LoginSuccessHandler implements AuthenticationSuccessHandlerInterface
             if ($currentCountry !== null) {
                 $appUser->setLastLoginIp($geo['ip'] ?? $request->getClientIp());
                 $appUser->setLastLoginCountry($currentCountry);
-                $appUser->setLastLoginAt(new \DateTime());
+                $appUser->touchLastLoginAt();
                 $this->entityManager->persist($appUser);
                 $this->entityManager->flush();
             }
         }
 
         // Set patient_id or doctor_id in session based on user role
-        if ($appUser instanceof User) {
+        if ($appUser instanceof User && $request->hasSession()) {
             $roles = $token->getRoleNames();
+            $sess = $request->getSession();
+
             if (in_array('ROLE_PATIENT', $roles, true)) {
-                $request->getSession()->set('patient_id', $appUser->getId());
+                $sess->set('patient_id', $appUser->getId());
             }
             // Doctor can be STAFF or ADMIN
             if (in_array('ROLE_STAFF', $roles, true) || in_array('ROLE_ADMIN', $roles, true)) {
-                $request->getSession()->set('doctor_id', $appUser->getId());
+                $sess->set('doctor_id', $appUser->getId());
             }
         }
-        // ✅ Si l'utilisateur a été intercepté en voulant accéder à une page protégée
-        // (ex: /admin), Symfony a mémorisé cette destination => on respecte ça.
-        $roles = $token->getRoleNames();
 
+        // Redirect logic
+        $roles = $token->getRoleNames();
         $redirectTo = null;
-        if ($targetPath = $this->getTargetPath($request->getSession(), 'main')) {
-            $redirectTo = $targetPath;
-        } elseif (in_array('ROLE_ADMIN', $roles, true)) {
-            $redirectTo = $this->router->generate('ad_commandes_liste');
-        } elseif (in_array('ROLE_STAFF', $roles, true) && $appUser instanceof User) {
-            $typeStaff = method_exists($appUser, 'getTypeStaff') ? $appUser->getTypeStaff() : null;
-            if ($typeStaff === 'RESP_PATIENTS') {
-                $redirectTo = $this->router->generate('app_fiche_by_staff', ['idStaff' => $appUser->getId()]);
-            } elseif ($typeStaff === 'RESP_BLOG') {
-                $redirectTo = $this->router->generate('admin_reclamations');
-            } elseif ($typeStaff === 'RESP_USERS') {
-                $redirectTo = $this->router->generate('staff_patients_list');
-            } elseif ($typeStaff === 'RESP_PRODUCTS') {
-                $redirectTo = $this->router->generate('admin_produits_index');
-            } elseif ($typeStaff === 'RESP_EVEN') {
-                $redirectTo = $this->router->generate('admin_evenement_cards');
-            } else {
-                $redirectTo = $this->router->generate('app_admin');
+
+        if ($request->hasSession()) {
+            $targetPath = $this->getTargetPath($request->getSession(), 'main');
+            if (is_string($targetPath) && $targetPath !== '') {
+                $redirectTo = $targetPath;
             }
-        } else {
-            $redirectTo = $this->router->generate('app_home');
+        }
+
+        if ($redirectTo === null) {
+            if (in_array('ROLE_ADMIN', $roles, true)) {
+                $redirectTo = $this->router->generate('ad_commandes_liste');
+            } elseif (in_array('ROLE_STAFF', $roles, true) && $appUser instanceof User) {
+                // PHPStan: method_exists($appUser,'getTypeStaff') always true (because $appUser is User)
+                $typeStaff = $appUser->getTypeStaff();
+
+                if ($typeStaff === 'RESP_PATIENTS') {
+                    $redirectTo = $this->router->generate('app_fiche_by_staff', ['idStaff' => $appUser->getId()]);
+                } elseif ($typeStaff === 'RESP_BLOG') {
+                    $redirectTo = $this->router->generate('admin_reclamations');
+                } elseif ($typeStaff === 'RESP_USERS') {
+                    $redirectTo = $this->router->generate('staff_patients_list');
+                } elseif ($typeStaff === 'RESP_PRODUCTS') {
+                    $redirectTo = $this->router->generate('admin_produits_index');
+                } elseif ($typeStaff === 'RESP_EVEN') {
+                    $redirectTo = $this->router->generate('admin_evenement_cards');
+                } else {
+                    $redirectTo = $this->router->generate('app_admin');
+                }
+            } else {
+                $redirectTo = $this->router->generate('app_home');
+            }
         }
 
         // Enforce 2FA immediately after login to avoid timing/bypass issues.
-        if ($appUser instanceof User && $appUser->isTotpEnabled() && $appUser->getTotpSecret() !== null && $session instanceof SessionInterface) {
+        if (
+            $appUser instanceof User
+            && $appUser->isTotpEnabled()
+            && $appUser->getTotpSecret() !== null
+            && $request->hasSession()
+        ) {
+            $sess = $request->getSession();
+
             // Trusted device cookie: allow direct redirect without challenge.
             if ($this->rememberDevice->isRemembered($request, $appUser)) {
-                $session->set('2fa_passed', true);
+                $sess->set('2fa_passed', true);
                 return new RedirectResponse((string) $redirectTo);
             }
-            if (is_string($redirectTo) && $redirectTo !== '') {
-                $session->set('2fa_target_path', $redirectTo);
+
+            // PHPStan: is_string($redirectTo) always true (Router generate + targetPath are strings)
+            if ($redirectTo !== '') {
+                $sess->set('2fa_target_path', $redirectTo);
             }
-            $session->set('2fa_passed', false);
+
+            $sess->set('2fa_passed', false);
             return new RedirectResponse($this->router->generate('app_2fa_challenge'));
         }
 
