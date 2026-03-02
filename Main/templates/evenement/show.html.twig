@@ -281,18 +281,25 @@
                 </div>
 
                 <div class="card shadow-sm mt-4 p-3">
-                <h5 class="mb-3">🌤 Météo à {{ evenement.villeEvent }}</h5>
-                {% if meteo is defined %}
-                 <p>
-                 🌡 Température : <strong>{{ meteo.main.temp }}°C</strong><br>
-                  🌥 {{ meteo.weather[0].description }}<br>
-                  💨 Vent : {{ meteo.wind.speed }} m/s
-                  </p>
-                  {% else %}
-                  <p class="text-muted">Météo indisponible</p>
-                  {% endif %}
-                </div>
-                </div>
+  <h5 class="mb-3">🌤️ Météo à {{ evenement.villeEvent }}</h5>
+
+  {% if meteo is defined and meteo %}
+    <p class="mb-0">
+      🌡️ Température : <strong>{{ meteo.temperature }} °C</strong><br>
+
+      {% if meteo.icon is defined and meteo.icon %}
+        <img src="https://openweathermap.org/img/wn/{{ meteo.icon }}@2x.png"
+             alt="icon meteo" style="height:48px;width:48px;vertical-align:middle">
+      {% endif %}
+
+      📝 {{ meteo.description }}<br>
+      💧 Humidité : {{ meteo.humidity }} %<br>
+      💨 Vent : {{ meteo.wind_speed }} m/s
+    </p>
+  {% else %}
+    <p class="text-muted mb-0">Météo indisponible</p>
+  {% endif %}
+</div>
               </div>
 
             

@@ -39,28 +39,31 @@ class EvenementController extends AbstractController
 
     
 #[Route('/evenements', name: 'app_evenements', methods: ['GET'])]
-public function index(EvenementRepository $repo): Response
+public function index(Request $request, EvenementRepository $repo): Response
 {
-    // ✅ Ta liste reste triée par date de début (comme avant)
-    $evenements = $repo->findBy([], ['date_debut_event' => 'DESC']);
+    $page = max(1, (int)$request->query->get('page', 1));
+    $limit = 12;
+    $offset = ($page - 1) * $limit;
 
-    // ✅ Dernier événement AJOUTÉ (tri par date_creation_event)
+    $evenements = $repo->findBy([], ['date_debut_event' => 'DESC'], $limit, $offset);
+
     $latestCreated = $repo->findOneBy([], ['date_creation_event' => 'DESC']);
 
     $hasNew = false;
     $latestNewTitle = null;
 
-    if ($latestCreated && $latestCreated->getDateCreationEvent()) {
-        $limit = new \DateTime('-2 days');
-
-        if ($latestCreated->getDateCreationEvent() > $limit) {
-            $hasNew = true;
-            $latestNewTitle = $latestCreated->getTitreEvent();
-        }
+   if ($latestCreated) {
+    $limitDt = new \DateTime('-2 days');
+    if ($latestCreated->getDateCreationEvent() > $limitDt) {
+        $hasNew = true;
+        $latestNewTitle = $latestCreated->getTitreEvent();
     }
+}
 
     return $this->render('evenement/index.html.twig', [
         'evenements' => $evenements,
+        'page' => $page,
+        'limit' => $limit,
         'hasNew' => $hasNew,
         'latestNewTitle' => $latestNewTitle,
     ]);
@@ -68,34 +71,37 @@ public function index(EvenementRepository $repo): Response
 
 #[Route('/evenements/{id}', name: 'app_evenement_show', requirements: ['id' => '\d+'], methods: ['GET'])]
 public function show(
-    Evenement $evenement,
+    int $id,
     WeatherService $weather,
     EvenementRepository $repo,
     AiEventRecommenderService $aiRec,
     SessionInterface $session
-): Response
-{
-    // =============================
-    // 1) METEO
-    // =============================
-    $meteo = null;
+): Response {
+    $evenement = $repo->findOneWithRessources($id);
+
+    if (!$evenement) {
+        throw $this->createNotFoundException('Événement introuvable.');
+    }
+   // =============================
+// 1) METEO
+// =============================
+$meteo = null;
+
+$city = trim((string) $evenement->getVilleEvent());
+if ($city !== '') {
     try {
-        $meteo = $weather->getWeather($evenement->getVilleEvent());
+        $meteo = $weather->getWeather($city);
     } catch (\Throwable $e) {
         $meteo = null;
     }
-
+}
     // =============================
     // 2) RECO IA (scoring + user prefs)
     // =============================
-    $user = $this->getUser();
+  $user = $this->getUser();
+$mfUser = $user instanceof \App\Entity\User ? $user : null;
 
-    // retourne une liste d'Evenement (déjà filtrée/triée côté repo)
-    $recs = $repo->findRecommendedForUser(
-        $evenement,
-        ($user instanceof \App\Entity\User) ? $user : null,
-        6
-    );
+$recs = $repo->findRecommendedForUser($evenement, $mfUser, 6);
 
     // =============================
     // 3) Construire "recommended" : score + raisons + popularité
@@ -117,62 +123,74 @@ $hist['villes'] = array_values(array_slice(array_unique($hist['villes']), -5));
 $session->set('rec_hist', $hist);
 
 // (B) récupérer des candidats
+/** @var Evenement[] $candidates */
 $candidates = $repo->findCandidatesForAiRecommendation($evenement, 25);
 
 // (C) construire payloads
 $currentPayload = [
-    'id' => $evenement->getId(),
-    'titre' => (string)$evenement->getTitreEvent(),
-    'ville' => (string)$evenement->getVilleEvent(),
-    'type'  => (string)$evenement->getTypeEvent(),
-    'date_debut' => $evenement->getDateDebutEvent()?->format('Y-m-d'),
-    'date_fin'   => $evenement->getDateFinEvent()?->format('Y-m-d'),
+    'id'        => $evenement->getId(),
+    'titre'     => (string) $evenement->getTitreEvent(),
+    'ville'     => (string) $evenement->getVilleEvent(),
+    'type'      => (string) $evenement->getTypeEvent(),
+    'date_debut'=> $evenement->getDateDebutEvent()->format('Y-m-d'),
+    'date_fin'  => $evenement->getDateFinEvent()->format('Y-m-d'),
 ];
-
 $userPayload = [
     'is_logged' => $user instanceof \App\Entity\User,
     'session_preferences' => $hist,
 ];
 
 if ($user instanceof \App\Entity\User) {
-    $userPayload['id'] = $user->getId();
-    $userPayload['nom'] = (string)$user->getNom().' '.(string)$user->getPrenom();
-    // si tu as des champs préférences, ajoute-les ici
-    // $userPayload['ville'] = $user->getVilleUser();
-    // $userPayload['interets'] = $user->getInterets();
+    $uid = $user->getId();
+    if ($uid !== null) {
+        $userPayload['id'] = (int) $uid;
+    }
+    $userPayload['nom'] = trim((string)$user->getNom().' '.(string)$user->getPrenom());
 }
-
 $candsPayload = [];
 foreach ($candidates as $ev) {
+    $eid = $ev->getId();
+    if ($eid === null) {
+        continue; // ✅ PHPStan: id must be int
+    }
+
+    $dateDebut = $ev->getDateDebutEvent();
+
     $candsPayload[] = [
-        'id' => $ev->getId(),
-        'titre' => (string)$ev->getTitreEvent(),
-        'ville' => (string)$ev->getVilleEvent(),
-        'type'  => (string)$ev->getTypeEvent(),
-        'date_debut' => $ev->getDateDebutEvent()?->format('Y-m-d'),
-        'popularite' => method_exists($ev, 'countAcceptedDemandes') ? (int)$ev->countAcceptedDemandes() : 0,
+        'id' => (int) $eid,
+        'titre' => (string) $ev->getTitreEvent(),
+        'ville' => (string) $ev->getVilleEvent(),
+        'type'  => (string) $ev->getTypeEvent(),
+        'date_debut' => $ev->getDateDebutEvent()->format('Y-m-d'),
+        'popularite' => (int) $ev->countAcceptedDemandes(),
     ];
 }
-
 // (D) appel IA : renvoie [{id, score, reasons}]
 $aiRanks = $aiRec->recommend($currentPayload, $userPayload, $candsPayload, 6);
 
 // (E) reconstruire le tableau "recommended" attendu par Twig
-$byId = [];
-foreach ($candidates as $ev) $byId[$ev->getId()] = $ev;
 
+/** @var array<int, Evenement> $byId */
+$byId = [];
+foreach ($candidates as $ev) {
+    $byId[$ev->getId()] = $ev;
+}
 $recommended = [];
 foreach ($aiRanks as $row) {
-    $id = (int)$row['id'];
-    if (!isset($byId[$id])) continue;
+    $id = (int) $row['id'];
+    if (!isset($byId[$id])) {
+        continue;
+    }
+
+    $evObj = $byId[$id];
 
     $recommended[] = [
-        'event' => $byId[$id],
-        'score' => $row['score'], // 0-10
-        'accepted' => method_exists($byId[$id], 'countAcceptedDemandes') ? (int)$byId[$id]->countAcceptedDemandes() : 0,
-        'reasons' => $row['reasons'] ?? [],
+        'event' => $evObj,
+        'score' => (float) $row['score'],                 // ✅ plus de ??
+        'accepted' => (int) $evObj->countAcceptedDemandes(),
+        'reasons' => array_slice($row['reasons'], 0, 3),  // ✅ plus de is_array + ??
     ];
-  }
+}
 
     // =============================
     // 4) Render
@@ -226,7 +244,11 @@ public function adminIndex(Request $request, EvenementRepository $repo): Respons
             ]);
     }
 
-    $evenements = $repo->findBy([], $orderBy);
+   $page = max(1, (int)$request->query->get('page', 1));
+$limit = 20;
+$offset = ($page - 1) * $limit;
+
+$evenements = $repo->findBy([], $orderBy, $limit, $offset);
 
     return $this->render('admin/adminEvent_index.html.twig', [
         'evenements' => $evenements,
@@ -285,7 +307,8 @@ public function adminIndex(Request $request, EvenementRepository $repo): Respons
     #[Route('/admin/evenements/{id}/delete', name: 'admin_evenement_delete', requirements: ['id' => '\d+'], methods: ['POST'])]
     public function delete(Request $request, Evenement $evenement, EntityManagerInterface $em): Response
     {
-        if ($this->isCsrfTokenValid('delete_evenement_'.$evenement->getId(), $request->request->get('_token'))) {
+       $token = (string) $request->request->get('_token', '');
+       if ($this->isCsrfTokenValid('delete_evenement_'.$evenement->getId(), $token)) {
             $em->remove($evenement);
             $em->flush();
             $this->addFlash('success', 'Événement supprimé 🗑️');
@@ -298,7 +321,7 @@ public function adminIndex(Request $request, EvenementRepository $repo): Respons
     #[Route('/admin/evenements/cards', name: 'admin_evenement_cards', methods: ['GET'])]
     public function adminCards(EvenementRepository $repo): Response
     {
-           $evenements = $repo->findBy([], ['date_debut_event' => 'DESC']);
+        $evenements = $repo->findBy([], ['date_debut_event' => 'DESC'], 50);
              return $this->render('admin/cardsEvents.html.twig', [
                     'evenements' => $evenements,
                     ]);
@@ -311,8 +334,8 @@ public function adminShow(Evenement $evenement, EvenementRepository $repo, AiRis
     'ville' => (string) $evenement->getVilleEvent(),
     'type'  => (string) $evenement->getTypeEvent(),
     'statut'=> (string) $evenement->getStatutEvent(),
-    'date_debut' => $evenement->getDateDebutEvent()?->format('Y-m-d'),
-    'date_fin'   => $evenement->getDateFinEvent()?->format('Y-m-d'),
+    'date_debut' => $evenement->getDateDebutEvent()->format('Y-m-d'),
+    'date_fin'   => $evenement->getDateFinEvent()->format('Y-m-d'),
     'accepted'   => (int) $evenement->countAcceptedDemandes(),
     'pending'    => (int) $evenement->countDemandesByStatus('pending'),
     'refused'    => (int) $evenement->countDemandesByStatus('refused'),
@@ -378,11 +401,17 @@ public function demanderParticipation(Request $request, Evenement $evenement, En
 
 
 #[Route('/admin/evenements/demandes', name: 'admin_evenement_demandes_index', methods: ['GET'])]
-public function demandesIndex(EvenementRepository $repo): Response
+public function demandesIndex(Request $request, EvenementRepository $repo): Response
 {
-    $events = $repo->findBy([], ['date_debut_event' => 'DESC']);
+    $page  = max(1, (int) $request->query->get('page', 1));
+    $limit = 12; // ou 9 selon ton design
+    $offset = ($page - 1) * $limit;
 
-    
+    $events = $repo->findBy([], ['date_debut_event' => 'DESC'], $limit, $offset);
+
+    $total = $repo->count([]);
+    $pages = (int) ceil($total / $limit);
+
     $totalPending = 0;
     foreach ($events as $ev) {
         $totalPending += $ev->countDemandesByStatus('pending');
@@ -391,9 +420,11 @@ public function demandesIndex(EvenementRepository $repo): Response
     return $this->render('admin/demandesEvents_index.html.twig', [
         'events' => $events,
         'totalPending' => $totalPending,
+        'page' => $page,
+        'pages' => $pages,
+        'limit' => $limit,
     ]);
 }
-
 #[Route('/admin/evenements/{id}/demandes', name: 'admin_evenement_demandes_show', requirements: ['id' => '\d+'], methods: ['GET'])]
 public function demandesShow(Evenement $evenement, EvenementRepository $repo, AiRiskService $ai): Response
 {
@@ -412,8 +443,8 @@ public function demandesShow(Evenement $evenement, EvenementRepository $repo, Ai
     'ville' => (string) $evenement->getVilleEvent(),
     'type'  => (string) $evenement->getTypeEvent(),
     'statut'=> (string) $evenement->getStatutEvent(),
-    'date_debut' => $evenement->getDateDebutEvent()?->format('Y-m-d'),
-    'date_fin'   => $evenement->getDateFinEvent()?->format('Y-m-d'),
+    'date_debut' => $evenement->getDateDebutEvent()->format('Y-m-d'),
+    'date_fin'   => $evenement->getDateFinEvent()->format('Y-m-d'),
     'accepted'   => (int) $evenement->countAcceptedDemandes(),
     'pending'    => (int) $evenement->countDemandesByStatus('pending'),
     'refused'    => (int) $evenement->countDemandesByStatus('refused'),
@@ -430,8 +461,12 @@ $riskData = $ai->analyzeEventRisk($payload);
     ]);
 }
 
-
-#[Route('/admin/evenements/{id}/demandes/{demandeId}/decide', name: 'admin_evenement_demandes_decide', requirements: ['id' => '\d+'], methods: ['POST'])]
+#[Route(
+    '/admin/evenements/{id}/demandes/{demandeId}/decide',
+    name: 'admin_evenement_demandes_decide',
+    requirements: ['id' => '\d+'],
+    methods: ['POST']
+)]
 public function decideDemande(
     Request $request,
     Evenement $evenement,
@@ -439,15 +474,17 @@ public function decideDemande(
     EntityManagerInterface $em,
     VonageSmsService $sms
 ): Response {
-    $status = (string) $request->request->get('status', 'pending'); // accepted / refused
+    $status = (string) $request->request->get('status', 'pending'); // accepted / refused / pending
     $note   = trim((string) $request->request->get('note', ''));
 
-    // 1) chercher la demande dans JSON
+    // 1) Récupérer les demandes (JSON)
+    /** @var array<int, array<string, mixed>> $demandes */
     $demandes = $evenement->getDemandesJson();
-    $index = null;
 
+    // 2) Trouver l’index de la demande
+    $index = null;
     foreach ($demandes as $i => $d) {
-        if (($d['id'] ?? null) == $demandeId) {
+        if ((string) ($d['id'] ?? '') === $demandeId) {
             $index = $i;
             break;
         }
@@ -458,30 +495,32 @@ public function decideDemande(
         return $this->redirectToRoute('admin_evenement_demandes_show', ['id' => $evenement->getId()]);
     }
 
+    // 3) Charger la demande + sécuriser tel
     $demande = $demandes[$index];
-    $nom = $demande['nom'] ?? 'Participant';
-    $tel = $demande['tel'] ?? null;
 
-    if (!$tel) {
+    $nom = (string) ($demande['nom'] ?? 'Participant');
+    $tel = trim((string) ($demande['tel'] ?? ''));
+
+    if ($tel === '') {
         $this->addFlash('danger', "Téléphone du participant introuvable.");
         return $this->redirectToRoute('admin_evenement_demandes_show', ['id' => $evenement->getId()]);
     }
 
-   
-    $tel = trim((string)$tel);
-    if ($tel && $tel[0] !== '+') {
-       
+    if (!str_starts_with($tel, '+')) {
         $tel = '+' . $tel;
     }
 
-    
+    // ✅ 4) Détecter si ticket déjà existant (AVANT modifications)
+    /** @var mixed $rawTicket */
+    $rawTicket = $demande['ticket_code'] ?? null;
+    $alreadyHadTicket = is_string($rawTicket) && trim($rawTicket) !== '';
+
+    // 5) Appliquer la décision
     $demandes[$index]['status'] = $status;
     $demandes[$index]['admin_note'] = $note;
     $demandes[$index]['decided_at'] = (new \DateTime())->format('Y-m-d H:i:s');
 
-   
-    $alreadyHadTicket = !empty($demandes[$index]['ticket_code']);
-
+    // 6) Générer ticket si accepted et pas déjà
     if ($status === 'accepted' && !$alreadyHadTicket) {
         $ticketCode = strtoupper('MF-' . $evenement->getId() . '-' . substr(md5(uniqid('', true)), 0, 6));
         $demandes[$index]['ticket_code'] = $ticketCode;
@@ -489,27 +528,28 @@ public function decideDemande(
     }
 
     try {
-        
-        $evenement->setDemandesJsonArray($demandes);
+        // ✅ Important: array_values => list<> pour PHPStan
+        $evenement->setDemandesJsonArray(array_values($demandes));
         $evenement->setDateMiseAJourEvent(new \DateTime());
 
         $em->flush();
 
+        // Préparer message SMS
         $eventTitre = (string) $evenement->getTitreEvent();
-        $dates = $evenement->getDateDebutEvent()->format('d/m/Y') . " -> " . $evenement->getDateFinEvent()->format('d/m/Y');
+        $deb = $evenement->getDateDebutEvent();
+        $fin = $evenement->getDateFinEvent();
+        $dates = $deb->format('d/m/Y') . ' -> ' . $fin->format('d/m/Y');
 
-    
         if ($status === 'accepted') {
-            $ticketCode = $demandes[$index]['ticket_code'] ?? '';
+            $ticketCode = (string) ($demandes[$index]['ticket_code'] ?? '');
             $msg = "MedFlow\nParticipation ACCEPTEE\nEvent: $eventTitre\nDates: $dates\nCode: $ticketCode";
 
-          
+            // envoyer SMS seulement si ticket vient d’être généré (pas déjà existant)
             if (!$alreadyHadTicket) {
                 $smsResult = $sms->sendSms($tel, $msg);
 
-               
                 $vonageStatus = $smsResult['messages'][0]['status'] ?? null;
-                if ((string)$vonageStatus === '0') {
+                if ((string) $vonageStatus === '0') {
                     $this->addFlash('success', "✅ Acceptée + SMS envoyé.");
                 } else {
                     $err = $smsResult['messages'][0]['error-text'] ?? 'SMS non délivré';
@@ -520,18 +560,17 @@ public function decideDemande(
             }
 
         } elseif ($status === 'refused') {
-
-            $reason = $note ? "Raison: $note" : "";
+            $reason = $note !== '' ? "Raison: $note" : "";
             $msg = "MedFlow\nParticipation REFUSEE\nEvent: $eventTitre\n$reason";
 
             $smsResult = $sms->sendSms($tel, $msg);
             $vonageStatus = $smsResult['messages'][0]['status'] ?? null;
 
-            if ((string)$vonageStatus === '0') {
+            if ((string) $vonageStatus === '0') {
                 $this->addFlash('success', "❌ Refusée + SMS envoyé.");
             } else {
                 $err = $smsResult['messages'][0]['error-text'] ?? 'SMS non délivré';
-                $this->addFlash('warning', "❌ RefuséeSMS : $err");
+                $this->addFlash('warning', "❌ Refusée SMS : $err");
             }
 
         } else {
@@ -542,25 +581,28 @@ public function decideDemande(
         $this->addFlash('danger', "Erreur: " . $e->getMessage());
     }
 
-    return $this->redirectToRoute('admin_evenement_demandes_show', ['id' => $evenement->getId()]); 
+    return $this->redirectToRoute('admin_evenement_demandes_show', ['id' => $evenement->getId()]);
 }
 
 
-
-  #[Route('/participation/check/{id}/{demandeId}', name: 'participation_check', requirements: ['id' => '\d+'], methods: ['GET'])]
+#[Route('/participation/check/{id}/{demandeId}', name: 'participation_check', requirements: ['id' => '\d+'], methods: ['GET'])]
 public function checkParticipation(Evenement $evenement, string $demandeId): Response
 {
+    /** @var array<int, array<string, mixed>> $demandes */
     $demandes = $evenement->getDemandesJson();
+
+    /** @var array<string, mixed>|null $demandeFound */
     $demandeFound = null;
 
     foreach ($demandes as $d) {
-        if (($d['id'] ?? null) == $demandeId) {
+        $id = (string)($d['id'] ?? '');
+        if ($id !== '' && $id === $demandeId) {
             $demandeFound = $d;
             break;
         }
     }
 
-    if (!$demandeFound) {
+    if ($demandeFound === null) {
         throw $this->createNotFoundException("QR invalide ou demande introuvable.");
     }
 
@@ -577,17 +619,16 @@ public function statsPage(): Response
 #[Route('/admin/evenements/stats/data', name: 'admin_evenements_stats_data', methods: ['GET'])]
 public function statsData(EvenementRepository $repo): JsonResponse
 {
-    $events = $repo->findAll();
-
+  $events = $repo->findBy([], ['date_debut_event' => 'DESC'], 99); 
     $byType = [];
     $byVille = [];
     $byStatut = [];
     $demandes = ['total'=>0,'accepted'=>0,'pending'=>0,'refused'=>0];
 
     foreach ($events as $ev) {
-        $type = $ev->getTypeEvent() ?? 'N/A';
-        $ville = $ev->getVilleEvent() ?? 'N/A';
-        $statut = $ev->getStatutEvent() ?? 'N/A';
+       $type = (string) $ev->getTypeEvent();
+$ville = (string) $ev->getVilleEvent();
+$statut = (string) $ev->getStatutEvent();
 
         $byType[$type] = ($byType[$type] ?? 0) + 1;
         $byVille[$ville] = ($byVille[$ville] ?? 0) + 1;
@@ -687,7 +728,7 @@ public function testEmail(MailerInterface $mailer): Response
 public function calendarFront(Request $request, EvenementRepository $repo): Response
 {
     // Pour remplir les listes des filtres
-    $events = $repo->findAll();
+ $events = $repo->findBy([], ['date_debut_event' => 'DESC'], 99);
 
     $villes = [];
     $types = [];
@@ -710,40 +751,39 @@ public function calendarFront(Request $request, EvenementRepository $repo): Resp
 #[Route('/evenements/calendar/data', name: 'app_evenements_calendar_data', methods: ['GET'])]
 public function calendarFrontData(Request $request, EvenementRepository $repo): JsonResponse
 {
-    $start = $request->query->get('start');
-    $end   = $request->query->get('end');
+    $start = trim((string) $request->query->get('start', ''));
+$end   = trim((string) $request->query->get('end', ''));
+
+$startDt = null;
+$endDt   = null;
+
+if ($start !== '' && $end !== '') {
+    $startDt = new \DateTimeImmutable($start);
+    $endDt   = new \DateTimeImmutable($end);
+}
 
     $ville  = trim((string) $request->query->get('ville', ''));
     $type   = trim((string) $request->query->get('type', ''));
     $statut = trim((string) $request->query->get('statut', ''));
     $q      = trim((string) $request->query->get('q', ''));
 
-    $events = $repo->findAll();
+  $events = $repo->findBy([], ['date_debut_event' => 'DESC'], 99);
 
-    $startDt = $start ? new \DateTimeImmutable($start) : null;
-    $endDt   = $end ? new \DateTimeImmutable($end) : null;
 
     $data = [];
 
     foreach ($events as $ev) {
-        $deb = $ev->getDateDebutEvent(); // peut être DateTimeInterface|string|null
-        $fin = $ev->getDateFinEvent();
+      $deb = $ev->getDateDebutEvent();
+$fin = $ev->getDateFinEvent();
 
-        if (!$deb || !$fin) continue;
-
-        // ✅ Convertir EN SÛR en DateTimeImmutable (sans modify)
-        $debDt = $deb instanceof \DateTimeInterface
-            ? \DateTimeImmutable::createFromInterface($deb)
-            : new \DateTimeImmutable((string) $deb);
-
-        $finDt = $fin instanceof \DateTimeInterface
-            ? \DateTimeImmutable::createFromInterface($fin)
-            : new \DateTimeImmutable((string) $fin);
+// ✅ PHPStan: non-nullable => pas de check
+$debDt = \DateTimeImmutable::createFromInterface($deb);
+$finDt = \DateTimeImmutable::createFromInterface($fin);
 
         // Filtre fenêtre calendrier
-        if ($startDt && $endDt) {
-            if ($finDt < $startDt || $debDt > $endDt) continue;
-        }
+    if ($startDt && $endDt) {
+    if ($finDt < $startDt || $debDt > $endDt) continue;
+}
 
         // Filtres
         if ($ville && strcasecmp((string) $ev->getVilleEvent(), $ville) !== 0) continue;
@@ -805,7 +845,7 @@ public function calendarAdmin(Request $request, EvenementRepository $repo): Resp
 {
     $this->denyAccessUnlessGranted('ROLE_STAFF');
 
-    $events = $repo->findAll();
+   $events = $repo->findBy([], ['date_debut_event' => 'DESC'], 99);
 
     $villes = [];
     $types = [];
@@ -871,8 +911,12 @@ public function calendarAdminMove(Request $request, EntityManagerInterface $em, 
 
         } else {
             // si pas d'end, on garde la même durée
-            $duration = $ev->getDateDebutEvent()->diff($ev->getDateFinEvent());
-            $newEnd = (clone $newStart)->add($duration);
+           $oldStart = $ev->getDateDebutEvent();
+$oldEnd   = $ev->getDateFinEvent();
+
+// PHPStan: dates considérées non-nullables => pas besoin de if
+$duration = $oldStart->diff($oldEnd);
+$newEnd = (clone $newStart)->add($duration);
         }
 
         if ($newEnd < $newStart) {
@@ -895,6 +939,9 @@ public function calendarAdminMove(Request $request, EntityManagerInterface $em, 
 /* =========================================================
  *  Helper : Couleurs selon statut
  * ========================================================= */
+/**
+ * @return array{0:string,1:string,2:string}
+ */
 private function mapStatutColors(string $statut): array
 {
     $s = strtolower(trim($statut));
@@ -922,23 +969,23 @@ public function accessLive(Evenement $evenement): Response
     ]);
 }
 #[Route('/evenements/{id}/accessibilite/save', name: 'app_evenement_access_save', requirements: ['id' => '\d+'], methods: ['POST'])]
-public function saveTranscript(Request $request, Evenement $evenement, EntityManagerInterface $em): JsonResponse
+public function saveTranscript(Request $request, int $id, EntityManagerInterface $em): JsonResponse
 {
-   $text = trim((string)$request->request->get('text', ''));
-
-
+    $text = trim((string)$request->request->get('text', ''));
     if ($text === '' || mb_strlen($text) < 2) {
         return $this->json(['ok' => false, 'message' => 'Transcription vide.'], 400);
     }
 
+    $evenementRef = $em->getReference(\App\Entity\Evenement::class, $id);
+
     $liveUrl = $this->generateUrl(
         'app_evenement_access_live',
-        ['id' => $evenement->getId()],
+        ['id' => $id],
         UrlGeneratorInterface::ABSOLUTE_URL
     );
 
     $r = new Ressource();
-    $r->setEvenement($evenement);
+    $r->setEvenement($evenementRef); // ✅ no SELECT
     $r->setNomRessource('Transcription Accessibilité — ' . (new \DateTime())->format('d/m/Y H:i'));
     $r->setCategorieRessource('Accessibilité');
     $r->setTypeRessource('external_link');
@@ -961,8 +1008,8 @@ public function riskAi(Evenement $evenement, AiRiskService $ai): JsonResponse
         'ville' => (string) $evenement->getVilleEvent(),
         'type'  => (string) $evenement->getTypeEvent(),
         'statut'=> (string) $evenement->getStatutEvent(),
-        'date_debut' => $evenement->getDateDebutEvent()?->format('Y-m-d'),
-        'date_fin'   => $evenement->getDateFinEvent()?->format('Y-m-d'),
+        'date_debut' => $evenement->getDateDebutEvent()->format('Y-m-d'),
+        'date_fin'   => $evenement->getDateFinEvent()->format('Y-m-d'),
         'accepted'   => (int) $evenement->countAcceptedDemandes(),
         'pending'    => (int) $evenement->countDemandesByStatus('pending'),
         'refused'    => (int) $evenement->countDemandesByStatus('refused'),

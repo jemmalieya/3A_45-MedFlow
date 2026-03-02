@@ -10,7 +10,7 @@ use App\Entity\Ressource;
 use App\Form\RessourceType;
 use App\Repository\RessourceRepository;
 use Symfony\Component\HttpFoundation\Request;
-
+use App\Entity\Evenement;
 use App\Form\RessourceBatchType;
 use App\Form\Model\RessourceBatch;
 
@@ -23,47 +23,43 @@ final class RessourceController extends AbstractController
 
 {
    
-    #[Route('/', name: 'admin_ressource_index', methods: ['GET'])]
+#[Route('/', name: 'admin_ressource_index', methods: ['GET'])]
 public function index(Request $request, RessourceRepository $repo): Response
 {
     $search = trim((string) $request->query->get('search', ''));
     $sort = (string) $request->query->get('sort', 'date_desc');
 
-    // ordre
+    $page  = max(1, (int) $request->query->get('page', 1));
+    $limit = 10;
+    $offset = ($page - 1) * $limit;
+
+    // ordre (comme chez toi)
     $orderBy = ['date_creation_ressource' => 'DESC'];
-
     switch ($sort) {
-        case 'date_asc':
-            $orderBy = ['date_creation_ressource' => 'ASC'];
-            break;
-        case 'nom_asc':
-            $orderBy = ['nom_ressource' => 'ASC'];
-            break;
-        case 'nom_desc':
-            $orderBy = ['nom_ressource' => 'DESC'];
-            break;
-        case 'cat_asc':
-            $orderBy = ['categorie_ressource' => 'ASC'];
-            break;
-        case 'type_asc':
-            $orderBy = ['type_ressource' => 'ASC'];
-            break;
+        case 'date_asc': $orderBy = ['date_creation_ressource' => 'ASC']; break;
+        case 'nom_asc':  $orderBy = ['nom_ressource' => 'ASC']; break;
+        case 'nom_desc': $orderBy = ['nom_ressource' => 'DESC']; break;
+        case 'cat_asc':  $orderBy = ['categorie_ressource' => 'ASC']; break;
+        case 'type_asc': $orderBy = ['type_ressource' => 'ASC']; break;
     }
 
-    // recherche
-    if ($search !== '') {
-        $ressources = $repo->searchAdmin($search, $orderBy);
-    } else {
-        $ressources = $repo->findBy([], $orderBy);
-    }
+    // ✅ paginé + count
+    $ressources = $repo->searchAdminPaginated($search, $orderBy, $limit, $offset);
+    $total = $repo->countAdminForSearch($search);
+    $pages = (int) ceil(max(1, $total) / $limit);
 
     return $this->render('ressource/index.html.twig', [
         'ressources' => $ressources,
         'search' => $search,
         'sort' => $sort,
+
+        // ✅ indispensables pour Twig pagination
+        'page' => $page,
+        'pages' => $pages,
+        'limit' => $limit,
+        'total' => $total,
     ]);
 }
-
 
 #[Route('/new', name: 'admin_ressource_new', methods: ['GET', 'POST'])]
 public function new(
@@ -80,28 +76,36 @@ public function new(
     if ($form->isSubmitted() && $form->isValid()) {
 
         foreach ($form->get('ressources') as $i => $ressourceForm) {
-            /** @var Ressource $ressource */
-            $ressource = $batch->ressources[$i];
+    /** @var Ressource $ressource */
+    $ressource = $batch->ressources[$i];
 
-            $uploadedFile = $ressourceForm->has('uploadFile')
-                ? $ressourceForm->get('uploadFile')->getData()
-                : null;
+    // ✅ Si ton form envoie un ID (ex: hidden/select "evenement_id")
+    if ($ressourceForm->has('evenement_id')) {
+        $evenementId = (int) $ressourceForm->get('evenement_id')->getData();
 
-            if ($ressource->getTypeRessource() === 'file') {
-                if ($uploadedFile) {
-                    $result = $cloud->upload($uploadedFile->getPathname(), 'medflow/ressources');
-
-                    // URL Cloudinary dans ton champ existant
-                    $ressource->setCheminFichierRessource($result['secure_url']);
-                    $ressource->setCloudinaryPublicId($result['public_id']);
-
-                    $ressource->setMimeTypeRessource($uploadedFile->getMimeType());
-                    $ressource->setTailleKbRessource((int) ceil($uploadedFile->getSize() / 1024));
-                }
-            }
-
-            $em->persist($ressource);
+        if ($evenementId > 0) {
+            $ressource->setEvenement(
+                $em->getReference(Evenement::class, $evenementId)
+            );
         }
+    }
+
+    // upload...
+    $uploadedFile = $ressourceForm->has('uploadFile')
+        ? $ressourceForm->get('uploadFile')->getData()
+        : null;
+
+    if ($ressource->getTypeRessource() === 'file' && $uploadedFile) {
+        $result = $cloud->upload($uploadedFile->getPathname(), 'medflow/ressources');
+
+        $ressource->setCheminFichierRessource($result['secure_url']);
+        $ressource->setCloudinaryPublicId($result['public_id']);
+        $ressource->setMimeTypeRessource($uploadedFile->getMimeType());
+        $ressource->setTailleKbRessource((int) ceil($uploadedFile->getSize() / 1024));
+    }
+
+    $em->persist($ressource);
+}
 
         $em->flush();
         $this->addFlash('success', 'Ressources ajoutées avec succès');
@@ -165,29 +169,31 @@ if ($ressource->getTypeRessource() === 'file' && $uploadedFile) {
         ]);
     }
 
-    #[Route('/{id}/delete', name: 'admin_ressource_delete', requirements: ['id' => '\d+'], methods: ['POST'])]
-   public function delete(
+#[Route('/{id}/delete', name: 'admin_ressource_delete', requirements: ['id' => '\d+'], methods: ['POST'])]
+public function delete(
     Request $request,
     Ressource $ressource,
     EntityManagerInterface $em,
     \App\Service\CalusinaryEventservice $cloud
-): Response
-    {
-        if ($this->isCsrfTokenValid('delete'.$ressource->getId(), $request->request->get('_token'))) {
-            if ($ressource->getCloudinaryPublicId()) {
-    $cloud->destroy($ressource->getCloudinaryPublicId());
-}
-            $em->remove($ressource);
-            
-            $em->flush();
+): Response {
+    $token = (string) $request->request->get('_token', '');
 
-            $this->addFlash('success', 'Ressource supprimée');
+    if ($this->isCsrfTokenValid('delete'.$ressource->getId(), $token)) {
+
+        if ($ressource->getCloudinaryPublicId()) {
+            $cloud->destroy($ressource->getCloudinaryPublicId());
         }
 
-        return $this->redirectToRoute('admin_ressource_index');
-    }
-    
+        $em->remove($ressource);
+        $em->flush();
 
+        $this->addFlash('success', 'Ressource supprimée');
+    } else {
+        $this->addFlash('danger', 'CSRF invalide');
+    }
+
+    return $this->redirectToRoute('admin_ressource_index');
+}
 
 
 

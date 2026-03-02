@@ -3,6 +3,7 @@
 namespace App\Service;
 
 use Cloudinary\Cloudinary;
+use Cloudinary\Api\ApiResponse;
 
 final class CalusinaryEventservice
 {
@@ -13,8 +14,12 @@ final class CalusinaryEventservice
         $this->cloudinary = new Cloudinary($cloudinaryUrl);
     }
 
+    /**
+     * @return array{secure_url:string, public_id:string}
+     */
     public function upload(string $localPath, string $folder = 'medflow/events'): array
     {
+        /** @var ApiResponse $result */
         $result = $this->cloudinary->uploadApi()->upload($localPath, [
             'folder' => $folder,
             'resource_type' => 'auto',
