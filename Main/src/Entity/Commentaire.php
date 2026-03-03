@@ -33,7 +33,7 @@ class Commentaire
 
     #[ORM\ManyToOne(inversedBy: 'commentaires')]
 #[ORM\JoinColumn(nullable: false, onDelete: 'CASCADE')]
-private User $user;
+private ?User $user = null;
  
     // src/Entity/Commentaire.php
 
@@ -104,7 +104,7 @@ public function getModeratedAt(): ?\DateTimeImmutable
         return $this->user;
     }
 
-public function setUser(User $user): self
+public function setUser(?User $user): self
 {
     $this->user = $user;
     return $this;

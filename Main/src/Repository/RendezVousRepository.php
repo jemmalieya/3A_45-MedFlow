@@ -66,10 +66,10 @@
             ->getResult();
     }
     /**
-     * @param int|User $doctor
+     * @param int|\App\Entity\User $doctor
      * @return RendezVous[]
      */
-    public function findTodayAppointmentsForDoctor($doctor, \DateTimeInterface $start, \DateTimeInterface $end): array
+    public function findTodayAppointmentsForDoctor(\App\Entity\User|int $doctor, \DateTimeInterface $start, \DateTimeInterface $end): array
     {
         return $this->createQueryBuilder('r')
             ->andWhere('r.staff = :staff')

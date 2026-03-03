@@ -1213,7 +1213,8 @@ public function statsRessources(RessourceRepository $repo): Response
         UserRepository $userRepo,
         \App\Repository\RendezVousRepository $rendezVousRepo,
         \App\Repository\FicheMedicaleRepository $ficheRepo,
-        \App\Repository\PrescriptionRepository $prescRepo
+        \App\Repository\PrescriptionRepository $prescRepo,
+        EntityManagerInterface $em
     ): Response {
         // Total counts
         // Limit doctor list to 100 for performance (adjust as needed)
@@ -1245,7 +1246,8 @@ public function statsRessources(RessourceRepository $repo): Response
         //     ) {}
         // }
 
-        $diagnostics = $ficheRepo->getEntityManager()->createQuery('
+        // Use injected EntityManagerInterface for DQL
+        $diagnostics = $em->createQuery('
             SELECT NEW App\\DTO\\FicheDiagnosticCount(f.diagnostic, COUNT(f.id))
             FROM App\\Entity\\FicheMedicale f
             GROUP BY f.diagnostic
@@ -1262,7 +1264,7 @@ public function statsRessources(RessourceRepository $repo): Response
             $doctorsConsultationsLabels = [];
             $doctorsConsultationsCounts = [];
             // Fetch all counts in one query to avoid N+1
-            $conn = $rendezVousRepo->getEntityManager()->getConnection();
+            $conn = $em->getConnection();
             $sql = 'SELECT idStaff, COUNT(*) AS cnt FROM rendez_vous GROUP BY idStaff';
             $stmt = $conn->prepare($sql);
             $result = $stmt->executeQuery()->fetchAllAssociative();
@@ -1317,6 +1319,11 @@ public function statsRessources(RessourceRepository $repo): Response
             $ficheDayCounts[] = $count;
         }
 
+        // Define missing variables as empty arrays
+        $rdvMonthLabels = [];
+        $rdvMonthCounts = [];
+        $ficheMonthLabels = [];
+        $ficheMonthCounts = [];
         return $this->render('dashboard_ad/stat_cons.html.twig', [
             'controller_name' => 'AdController',
             'totalDoctors' => $totalDoctors,
@@ -1328,16 +1335,17 @@ public function statsRessources(RessourceRepository $repo): Response
             'ficheDiagnosticCounts' => $ficheDiagnosticCounts,
             'doctorsConsultationsLabels' => $doctorsConsultationsLabels,
             'doctorsConsultationsCounts' => $doctorsConsultationsCounts,
-            'rdvMonthLabels' => isset($rdvMonthLabels) ? $rdvMonthLabels : [],
-            'rdvMonthCounts' => isset($rdvMonthCounts) ? $rdvMonthCounts : [],
-            'ficheMonthLabels' => isset($ficheMonthLabels) ? $ficheMonthLabels : [],
-            'ficheMonthCounts' => isset($ficheMonthCounts) ? $ficheMonthCounts : [],
+            'rdvMonthLabels' => $rdvMonthLabels,
+            'rdvMonthCounts' => $rdvMonthCounts,
+            'ficheMonthLabels' => $ficheMonthLabels,
+            'ficheMonthCounts' => $ficheMonthCounts,
             'rdvDayLabels' => $rdvDayLabels,
             'rdvDayCounts' => $rdvDayCounts,
             'ficheDayLabels' => $ficheDayLabels,
             'ficheDayCounts' => $ficheDayCounts,
         ]);
     }
+
     #[Route('/reclamations', name: 'ad_reclamations_liste', methods: ['GET'])]
     public function reclamationsListe(
         \App\Repository\ReclamationRepository $recRepo

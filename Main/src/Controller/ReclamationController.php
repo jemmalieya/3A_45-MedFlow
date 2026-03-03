@@ -144,8 +144,8 @@ if ($urgence !== null) {
 
         // timestamps IA (optionnel mais pro)
         if ($langOrig !== null || $sentiment !== null || $urgence !== null) {
-            $reclamation->setTranslatedAt(new \DateTimeImmutable());
-            $reclamation->setAnalysisAt(new \DateTimeImmutable());
+            $reclamation->markAsTranslated();
+            $reclamation->markAsAnalyzed();
         }
 
         // ✅ priorité auto (tu la gardes dans l'entité)
@@ -207,8 +207,7 @@ $analysis = $ml->analyze(
 $reclamation->setLangueOriginale($analysis["lang"]);
 $reclamation->setUrgenceScore($analysis["urgenceScore"]);
 $reclamation->setPriorite($analysis["priority"]);
-$reclamation->setAnalysisAt(new \DateTimeImmutable());
-        // =========================
+$reclamation->markAsAnalyzed();        // =========================
         // ✅ TON CODE (SAVE + EMAIL)
         // =========================
         $em->persist($reclamation);

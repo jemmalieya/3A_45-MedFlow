@@ -184,20 +184,24 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     
     #[ORM\Column(type: Types::TEXT, nullable: true)]
     private ?string $staffRequestReason = null;
-    /**
-     * @var Collection<int, Post>
-     */
-    #[ORM\OneToMany(mappedBy: 'user', targetEntity: Post::class)]
-    private Collection $posts;
+     /**
+      * @var Collection<int, Post>
+      */
 
 #[ORM\OneToMany(mappedBy: 'user', targetEntity: Post::class, cascade: ['persist'])]
 private Collection $posts;
 
-   #[ORM\OneToMany(mappedBy: 'user', targetEntity: Commentaire::class, orphanRemoval: true, cascade: ['persist', 'remove'])]
+    /**
+     * @var Collection<int, Commentaire>
+     */
+    #[ORM\OneToMany(mappedBy: 'user', targetEntity: Commentaire::class, orphanRemoval: true, cascade: ['persist', 'remove'])]
 private Collection $commentaires;
 
-    #[ORM\OneToMany(mappedBy: 'user', targetEntity: Reclamation::class, cascade: ['persist'])]
-    private Collection $reclamations;
+     /**
+      * @var Collection<int, Reclamation>
+      */
+     #[ORM\OneToMany(mappedBy: 'user', targetEntity: Reclamation::class, cascade: ['persist'])]
+     private Collection $reclamations;
 
 
     #[ORM\Column(nullable: true)]

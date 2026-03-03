@@ -6,6 +6,9 @@ use Symfony\Component\HttpFoundation\File\UploadedFile;
 
 class DocumentIntelligenceService
 {
+    /**
+     * @return array{raw_text: string, parsed: array<string, string>}
+     */
     public function extractText(UploadedFile $file): array
     {
         $ext = strtolower($file->getClientOriginalExtension());
@@ -18,12 +21,17 @@ class DocumentIntelligenceService
         } else {
             throw new \Exception('Unsupported file type.');
         }
+
+        $normalizedText = is_string($text) ? $text : '';
         return [
-            'raw_text' => $text,
-            'parsed' => $this->parseMedicalData($text)
+            'raw_text' => $normalizedText,
+            'parsed' => $this->parseMedicalData($normalizedText)
         ];
     }
 
+    /**
+     * @return array<string, string>
+     */
     private function parseMedicalData(string $text): array
     {
         // Improved regex parsing for diagnostic, observations, exam results, prescriptions

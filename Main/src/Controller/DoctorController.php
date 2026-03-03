@@ -16,7 +16,10 @@ class DoctorController extends AbstractController
         $events = [];
         foreach ($appointments as $rdv) {
             $start = $rdv->getDatetime();
-            $end = (clone $start)->modify('+1 hour');
+            if (!$start instanceof \DateTimeImmutable) {
+                continue; // skip if no datetime
+            }
+            $end = $start->modify('+1 hour');
             $events[] = [
                 'title' => 'Occupé(e)',
                 'start' => $start->format('Y-m-d\TH:i:s'),

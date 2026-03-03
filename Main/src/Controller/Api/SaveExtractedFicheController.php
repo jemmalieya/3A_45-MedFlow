@@ -23,18 +23,30 @@ class SaveExtractedFicheController extends AbstractController
         $fiche->setObservations($data['observations']);
         $fiche->setResultatsExamens($data['resultatsExamens']);
         if (!empty($data['startTime'])) {
-            $fiche->setStartTime(\DateTime::createFromFormat('d/m/Y H:i', $data['startTime']) ?: new \DateTime($data['startTime']));
+            $dt = \DateTimeImmutable::createFromFormat('d/m/Y H:i', $data['startTime']);
+            if (!$dt) {
+                $dt = new \DateTimeImmutable($data['startTime']);
+            }
+            $fiche->setStartTime($dt);
         }
         if (!empty($data['endTime'])) {
-            $fiche->setEndTime(\DateTime::createFromFormat('d/m/Y H:i', $data['endTime']) ?: new \DateTime($data['endTime']));
+            $dt = \DateTimeImmutable::createFromFormat('d/m/Y H:i', $data['endTime']);
+            if (!$dt) {
+                $dt = new \DateTimeImmutable($data['endTime']);
+            }
+            $fiche->setEndTime($dt);
         }
         if (!empty($data['dureeMinutes'])) {
             $fiche->setDureeMinutes((int)$data['dureeMinutes']);
         }
         if (!empty($data['createdAt'])) {
-            $fiche->setCreatedAt(\DateTime::createFromFormat('d/m/Y H:i', $data['createdAt']) ?: new \DateTime($data['createdAt']));
+            $dt = \DateTimeImmutable::createFromFormat('d/m/Y H:i', $data['createdAt']);
+            if (!$dt) {
+                $dt = new \DateTimeImmutable($data['createdAt']);
+            }
+            $fiche->setCreatedAt($dt);
         } else {
-            $fiche->setCreatedAt(new \DateTime());
+            $fiche->setCreatedAt(new \DateTimeImmutable());
         }
         // Link to RendezVous entity if possible
         if (!empty($data['rendez_vous_id'])) {

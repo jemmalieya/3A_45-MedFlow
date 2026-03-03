@@ -22,7 +22,8 @@ class DoctorDashboardController extends AbstractController
         $today = new \DateTimeImmutable('today');
         $tomorrow = (new \DateTimeImmutable('today'))->modify('+1 day');
 
-        $appointments = $rendezVousRepository->findTodayAppointmentsForDoctor($doctor, $today, $tomorrow);
+        $doctorId = method_exists($doctor, 'getId') ? $doctor->getId() : $doctor;
+        $appointments = $rendezVousRepository->findTodayAppointmentsForDoctor($doctorId, $today, $tomorrow);
         $urgentAppointments = $rendezVousRepository->createQueryBuilder('r')
             ->where('r.staff = :staff')
             ->andWhere('r.urgencyLevel IN (:levels)')

@@ -35,8 +35,6 @@ final class FicheMedicaleController extends AbstractController
         $staffUser = $entityManager->getRepository(\App\Entity\User::class)->find($idStaff);
         // Fetch all RendezVous for a specific staff member, eager load 'mode' to avoid N+1
         $qb = $repo->createQueryBuilder('r')
-            ->leftJoin('r.mode', 'm')
-            ->addSelect('m')
             ->where('r.staff = :staff')
             ->setParameter('staff', $staffUser)
             ->orderBy('r.datetime', 'DESC');

@@ -5,7 +5,6 @@ parameters:
 
     ignoreErrors:
         - '~Property App\\Entity\\.*::\$id[a-zA-Z0-9_]* \(int\|null\) is never assigned int so it can be removed from the property type~'
-        - '~Call to an undefined method~'
 
     
 

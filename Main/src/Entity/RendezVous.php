@@ -57,7 +57,20 @@ class RendezVous
         return $this->datetime;
     }
 
-    // Setter removed to enforce automatic timestamp management
+    /**
+     * Accepts DateTimeImmutable, DateTime, or null for compatibility with tests and legacy code.
+     */
+    public function setDatetime(null|\DateTimeInterface $datetime): static
+    {
+        if ($datetime instanceof \DateTime) {
+            $datetime = \DateTimeImmutable::createFromMutable($datetime);
+        }
+        if ($datetime !== null && !$datetime instanceof \DateTimeImmutable) {
+            throw new \InvalidArgumentException('datetime must be DateTimeImmutable, DateTime, or null');
+        }
+        $this->datetime = $datetime;
+        return $this;
+    }
 
     public function getStatut(): ?string
     {
@@ -100,7 +113,21 @@ class RendezVous
         return $this->createdAt;
     }
 
-    // Setter removed to enforce automatic timestamp management
+    /**
+     * Accepts DateTimeImmutable, DateTime, or null for compatibility with legacy code.
+     */
+    public function setCreatedAt(null|\DateTimeInterface $createdAt): static
+    {
+        if ($createdAt instanceof \DateTime) {
+            $createdAt = \DateTimeImmutable::createFromMutable($createdAt);
+        }
+        if ($createdAt !== null && !$createdAt instanceof \DateTimeImmutable) {
+            throw new \InvalidArgumentException('createdAt must be DateTimeImmutable, DateTime, or null');
+        }
+
+        $this->createdAt = $createdAt;
+        return $this;
+    }
 
     public function getPatient(): ?User
     {

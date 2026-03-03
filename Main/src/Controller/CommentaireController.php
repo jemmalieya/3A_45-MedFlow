@@ -76,7 +76,7 @@ $decision = $moderation->moderate($contenu);
 
 $commentaire->setModerationScore($decision['score']);
 $commentaire->setModerationLabel($decision['label']);
-$commentaire->setModeratedAt(new \DateTimeImmutable());
+$commentaire->markAsModerated();
 
 if (!$decision['allow']) {
 
@@ -170,7 +170,7 @@ $commentaire->setContenu($contenu);
 
 $commentaire->setModerationScore($decision['score']);
 $commentaire->setModerationLabel($decision['label']);
-$commentaire->setModeratedAt(new \DateTimeImmutable());
+$commentaire->markAsModerated();
 
 if (!$decision['allow']) {
     $commentaire->setStatus('blocked');
@@ -316,7 +316,7 @@ $commentaire->setUser($user);
 
     $commentaire->setModerationScore($decision['score']);
     $commentaire->setModerationLabel($decision['label']);
-    $commentaire->setModeratedAt(new \DateTimeImmutable());
+    $commentaire->markAsModerated();
 
     if (!$decision['allow']) {
         $commentaire->setStatus('blocked');
@@ -389,7 +389,7 @@ public function inlineEdit(
 
     $commentaire->setModerationScore($decision['score']);
     $commentaire->setModerationLabel($decision['label']);
-    $commentaire->setModeratedAt(new \DateTimeImmutable());
+    $commentaire->markAsModerated();
 
     if (!$decision['allow']) {
         $commentaire->setStatus('blocked');
